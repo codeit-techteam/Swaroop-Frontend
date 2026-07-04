@@ -1,0 +1,74 @@
+import { type ReactNode, useEffect } from 'react';
+
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+  useFonts,
+} from '@expo-google-fonts/inter';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
+
+import { ErrorBoundary } from '@/components/error-boundary';
+import { useNetworkListener } from '@/hooks/use-network';
+import { queryClient } from '@/lib/query-client';
+import { ThemeProvider } from '@/providers/theme-provider';
+import { configureNotifications } from '@/services/notification-service';
+import { hydrateSecureStorage } from '@/utils/storage';
+
+type AppProvidersProps = {
+  children: ReactNode;
+};
+
+const NetworkListener = (): null => {
+  useNetworkListener();
+  return null;
+};
+
+const NotificationConfigurator = (): null => {
+  configureNotifications();
+  return null;
+};
+
+export const AppProviders = ({ children }: AppProvidersProps) => {
+  const [fontsLoaded] = useFonts({
+    'Inter-Regular': Inter_400Regular,
+    'Inter-Medium': Inter_500Medium,
+    'Inter-SemiBold': Inter_600SemiBold,
+    'Inter-Bold': Inter_700Bold,
+  });
+
+  useEffect(() => {
+    void hydrateSecureStorage();
+  }, []);
+
+  if (!fontsLoaded) {
+    return null;
+  }
+
+  return (
+    <ErrorBoundary>
+      <GestureHandlerRootView className="flex-1">
+        <SafeAreaProvider>
+          <KeyboardProvider>
+            <QueryClientProvider client={queryClient}>
+              <ThemeProvider>
+                <BottomSheetModalProvider>
+                  <NetworkListener />
+                  <NotificationConfigurator />
+                  {children}
+                  <Toast />
+                </BottomSheetModalProvider>
+              </ThemeProvider>
+            </QueryClientProvider>
+          </KeyboardProvider>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </ErrorBoundary>
+  );
+};
