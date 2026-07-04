@@ -39,3 +39,17 @@ export type PaymentComparisonRow = {
   credit: string;
   bestFor: string;
 };
+
+export type PaymentComparisonOption = {
+  id: PaymentMethodId;
+  title: string;
+  subtitle: string;
+  discount: string;
+  timeline: string;
+  interest: string;
+  eligibility: string;
+  recommended: boolean;
+  description: string;
+  benefits: string[];
+  risk: string;
+};

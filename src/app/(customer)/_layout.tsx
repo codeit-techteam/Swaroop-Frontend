@@ -39,6 +39,12 @@ export default function CustomerLayout() {
         }}
       />
       <Stack.Screen
+        name="payment/compare"
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen
         name="order-confirmation/index"
         options={{
           animation: 'slide_from_right',

@@ -6,5 +6,6 @@ export { CustomerProductDetailsScreen } from '@/features/customer/product-detail
 export { CustomerCartScreen } from '@/features/customer/cart-screen';
 export { CustomerCheckoutScreen } from '@/features/customer/checkout-screen';
 export { CustomerPaymentSelectionScreen } from '@/features/customer/payment-selection-screen';
+export { CustomerPaymentCompareScreen } from '@/features/customer/payment-compare-screen';
 export { CustomerOrderConfirmationScreen } from '@/features/customer/order-confirmation-screen';
 

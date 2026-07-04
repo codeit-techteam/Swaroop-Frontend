@@ -1,15 +1,13 @@
-import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
+import { memo, useCallback, useEffect, useMemo } from 'react';
 
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { type Href, useRouter } from 'expo-router';
 
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import Toast from 'react-native-toast-message';
 
 import {
-  PaymentComparisonSheet,
   PaymentHeader,
   PaymentMethodCard,
   PaymentSummaryCard,
@@ -54,7 +52,6 @@ const buildBlindProductName = (productType: string, name: string): string => {
 
 export const CustomerPaymentSelectionScreen = memo(function CustomerPaymentSelectionScreen() {
   const router = useRouter();
-  const comparisonSheetRef = useRef<BottomSheetModal>(null);
 
   const cartItems = useCartStore(selectCartItems);
   const cartDelivery = useCartStore(selectCartDelivery);
@@ -130,8 +127,8 @@ export const CustomerPaymentSelectionScreen = memo(function CustomerPaymentSelec
   );
 
   const handleCompare = useCallback(() => {
-    comparisonSheetRef.current?.present();
-  }, []);
+    router.push(ROUTES.CUSTOMER.PAYMENT_COMPARE as Href);
+  }, [router]);
 
   const handleContinue = useCallback(() => {
     router.push(ROUTES.CUSTOMER.ORDER_CONFIRMATION as Href);
@@ -194,7 +191,7 @@ export const CustomerPaymentSelectionScreen = memo(function CustomerPaymentSelec
             >
               <PhoneIcon size={iconSizes.sm} color={brandColors.heading} />
               <Typography variant="roleTitle" className="ml-sm text-[14px] text-brand-heading">
-                Compare Payments
+                Compare Payment Options
               </Typography>
             </Pressable>
           </Animated.View>
@@ -215,8 +212,6 @@ export const CustomerPaymentSelectionScreen = memo(function CustomerPaymentSelec
           onContinue={handleContinue}
         />
       </Animated.View>
-
-      <PaymentComparisonSheet ref={comparisonSheetRef} selectedMethodId={selectedMethodId} />
     </View>
   );
 });

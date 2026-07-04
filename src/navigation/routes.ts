@@ -24,6 +24,7 @@ export const ROUTES = {
     CART: '/(customer)/cart',
     CHECKOUT: '/(customer)/checkout',
     PAYMENT: '/(customer)/payment',
+    PAYMENT_COMPARE: '/(customer)/payment/compare',
     ORDER_CONFIRMATION: '/(customer)/order-confirmation',
     DASHBOARD: '/(customer)/(tabs)/home',
   },
@@ -60,6 +61,7 @@ export type CustomerRoute =
   | typeof ROUTES.CUSTOMER.CART
   | typeof ROUTES.CUSTOMER.CHECKOUT
   | typeof ROUTES.CUSTOMER.PAYMENT
+  | typeof ROUTES.CUSTOMER.PAYMENT_COMPARE
   | typeof ROUTES.CUSTOMER.ORDER_CONFIRMATION
   | typeof ROUTES.CUSTOMER.DASHBOARD;
 
