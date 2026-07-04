@@ -9,6 +9,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   slug: 'swaroop',
   version: APP_VERSION,
   orientation: 'portrait',
+
+
   icon: './assets/images/icon.png',
   scheme: 'swaroop',
   userInterfaceStyle: 'automatic',
@@ -74,14 +76,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'expo-build-properties',
       {
         android: {
-          compileSdkVersion: 35,
-          targetSdkVersion: 35,
-          buildToolsVersion: '35.0.0',
+          compileSdkVersion: 36,
+          targetSdkVersion: 36,
+          buildToolsVersion: '36.0.0',
           minSdkVersion: 24,
         },
         ios: {
-          deploymentTarget: '16.4',
+          deploymentTarget: '15.1',
         },
+
       },
     ],
     [
