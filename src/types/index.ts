@@ -85,6 +85,14 @@ export type {
 } from '@/types/product';
 
 export type {
+  PaymentMethodId,
+  PaymentBadgeVariant,
+  PaymentMethod,
+  PaymentCalculation,
+  PaymentComparisonRow,
+} from '@/types/payment';
+
+export type {
   UserRole,
   AuthPayload,
   UserProfilePayload,

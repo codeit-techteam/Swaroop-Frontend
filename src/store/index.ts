@@ -32,4 +32,13 @@ export {
   selectCartMeetsMoq,
   selectOrderSummary,
 } from '@/store/cart-store';
+export {
+  usePaymentStore,
+  selectPaymentMethodId,
+  selectPaymentDiscount,
+  selectPaymentInterest,
+  selectPaymentPayable,
+  selectPaymentBaseAmount,
+  selectPaymentCalculation,
+} from '@/store/payment-store';
 

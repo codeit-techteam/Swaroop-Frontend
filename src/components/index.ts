@@ -51,6 +51,14 @@ export {
   EmptyCart,
   CartSkeleton,
 } from '@/components/cart';
+export {
+  PaymentHeader,
+  PaymentMethodCard,
+  PaymentSummaryCard,
+  PaymentComparisonSheet,
+  SupportCard,
+  StickyPaymentBar,
+} from '@/components/payment';
 
 export {
   Typography,

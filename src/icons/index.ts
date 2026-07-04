@@ -47,6 +47,7 @@ export { TrashIcon } from '@/icons/trash';
 export { HeadsetIcon } from '@/icons/headset';
 export { ClipboardCheckIcon } from '@/icons/clipboard-check';
 export { AlertCircleIcon } from '@/icons/alert-circle';
+export { PhoneIcon } from '@/icons/phone';
 
 export { iconSizes } from '@/theme/icons';
 

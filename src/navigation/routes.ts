@@ -23,6 +23,8 @@ export const ROUTES = {
     PRODUCT_DETAILS: '/(customer)/product/[id]',
     CART: '/(customer)/cart',
     CHECKOUT: '/(customer)/checkout',
+    PAYMENT: '/(customer)/payment',
+    ORDER_CONFIRMATION: '/(customer)/order-confirmation',
     DASHBOARD: '/(customer)/(tabs)/home',
   },
 
@@ -57,6 +59,8 @@ export type CustomerRoute =
   | typeof ROUTES.CUSTOMER.PRODUCT_DETAILS
   | typeof ROUTES.CUSTOMER.CART
   | typeof ROUTES.CUSTOMER.CHECKOUT
+  | typeof ROUTES.CUSTOMER.PAYMENT
+  | typeof ROUTES.CUSTOMER.ORDER_CONFIRMATION
   | typeof ROUTES.CUSTOMER.DASHBOARD;
 
 

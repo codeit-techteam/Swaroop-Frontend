@@ -1,23 +1,28 @@
-import { memo, useMemo } from 'react';
+import { memo, useCallback, useEffect, useMemo } from 'react';
 
 import { Pressable, View } from 'react-native';
 
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Typography } from '@/components/ui/typography';
 import { formatCartCurrency } from '@/constants/cart';
 import { formatPricePerKg, getProductDetailsById } from '@/constants/productDetails';
-import { BackArrowIcon } from '@/icons';
+import { ArrowRightIcon, BackArrowIcon } from '@/icons';
+import { ROUTES } from '@/navigation/routes';
 import { selectCartItems, selectOrderSummary, useCartStore } from '@/store/cart-store';
+import { usePaymentStore } from '@/store/payment-store';
 import { brandColors } from '@/theme/colors';
+import { iconSizes } from '@/theme/icons';
 
 export const CustomerCheckoutScreen = memo(function CustomerCheckoutScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const cartItems = useCartStore(selectCartItems);
   const cartSummary = useCartStore(selectOrderSummary);
+  const setBaseAmount = usePaymentStore((state) => state.setBaseAmount);
+
   const params = useLocalSearchParams<{
     productId?: string | string[];
     quantityMt?: string | string[];
@@ -31,7 +36,30 @@ export const CustomerCheckoutScreen = memo(function CustomerCheckoutScreen() {
 
   const product = useMemo(() => (productId ? getProductDetailsById(productId) : null), [productId]);
 
-  const hasCartItems = cartItems.length > 0 && !product;
+  const buyNowTotal = useMemo(() => {
+    if (!quantityMt || Number.isNaN(quantityMt) || !unitPrice || Number.isNaN(unitPrice)) {
+      return 0;
+    }
+    return Math.round(unitPrice * quantityMt * 1000);
+  }, [quantityMt, unitPrice]);
+
+  const orderTotal = cartItems.length > 0 ? cartSummary.totalLandedCost : buyNowTotal;
+
+  useEffect(() => {
+    if (orderTotal > 0) {
+      setBaseAmount(orderTotal);
+    }
+  }, [orderTotal, setBaseAmount]);
+
+  const handleContinueToPayment = useCallback(() => {
+    if (orderTotal > 0) {
+      setBaseAmount(orderTotal);
+    }
+    router.push(ROUTES.CUSTOMER.PAYMENT as Href);
+  }, [orderTotal, router, setBaseAmount]);
+
+  const hasCartItems = cartItems.length > 0;
+  const canContinue = orderTotal > 0 || hasCartItems;
 
   return (
     <View className="flex-1 bg-brand-white px-lg" style={{ paddingTop: insets.top + 16 }}>
@@ -48,7 +76,7 @@ export const CustomerCheckoutScreen = memo(function CustomerCheckoutScreen() {
         Checkout
       </Typography>
       <Typography variant="subheadingLeft" className="mt-sm">
-        Frontend placeholder only. No payment or order APIs are connected.
+        Review your order, then continue to payment selection. Frontend only — no payment APIs.
       </Typography>
 
       {product ? (
@@ -69,6 +97,11 @@ export const CustomerCheckoutScreen = memo(function CustomerCheckoutScreen() {
               Unit Price: {formatPricePerKg(unitPrice)} / KG
             </Typography>
           ) : null}
+          {buyNowTotal > 0 ? (
+            <Typography variant="roleTitle" className="mt-md text-[15px] text-brand-primary">
+              Estimated Total: {formatCartCurrency(buyNowTotal)}
+            </Typography>
+          ) : null}
         </View>
       ) : null}
 
@@ -87,6 +120,30 @@ export const CustomerCheckoutScreen = memo(function CustomerCheckoutScreen() {
           </Typography>
         </View>
       ) : null}
+
+      {!product && !hasCartItems ? (
+        <View className="mt-xl rounded-xl border border-brand-border bg-brand-surface p-lg">
+          <Typography variant="roleDescription" className="text-brand-body">
+            Your cart is empty. Add materials from the marketplace to continue.
+          </Typography>
+        </View>
+      ) : null}
+
+      <Pressable
+        onPress={handleContinueToPayment}
+        disabled={!canContinue}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: !canContinue }}
+        accessibilityLabel="Continue to payment selection"
+        className={`mt-xl h-12 flex-row items-center justify-center rounded-xl ${
+          canContinue ? 'bg-brand-heading' : 'bg-brand-disabled'
+        }`}
+      >
+        <Typography variant="button" className="mr-xs text-[14px] tracking-normal">
+          Continue to Payment
+        </Typography>
+        <ArrowRightIcon size={iconSizes.sm} color={brandColors.white} />
+      </Pressable>
     </View>
   );
 });
