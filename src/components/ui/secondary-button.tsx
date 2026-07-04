@@ -1,37 +1,30 @@
 import { memo } from 'react';
 
-import { ActivityIndicator, type GestureResponderEvent, Pressable, View } from 'react-native';
+import { type GestureResponderEvent, Pressable } from 'react-native';
 
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 import { Typography } from '@/components/ui/typography';
-import { ArrowRightIcon } from '@/icons/arrow-right';
-import { brandColors } from '@/theme/colors';
 import { cn } from '@/utils/cn';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-type PrimaryButtonProps = {
+type SecondaryButtonProps = {
   label: string;
   onPress: (event: GestureResponderEvent) => void;
   className?: string;
-  showArrow?: boolean;
   disabled?: boolean;
-  loading?: boolean;
   accessibilityLabel?: string;
 };
 
-export const PrimaryButton = memo(function PrimaryButton({
+export const SecondaryButton = memo(function SecondaryButton({
   label,
   onPress,
   className,
-  showArrow = false,
   disabled = false,
-  loading = false,
   accessibilityLabel,
-}: PrimaryButtonProps) {
+}: SecondaryButtonProps) {
   const scale = useSharedValue(1);
-  const isDisabled = disabled || loading;
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -40,9 +33,9 @@ export const PrimaryButton = memo(function PrimaryButton({
   return (
     <AnimatedPressable
       onPress={onPress}
-      disabled={isDisabled}
+      disabled={disabled}
       onPressIn={() => {
-        if (!isDisabled) {
+        if (!disabled) {
           scale.value = withSpring(0.97, { damping: 15, stiffness: 300 });
         }
       }}
@@ -50,23 +43,16 @@ export const PrimaryButton = memo(function PrimaryButton({
         scale.value = withSpring(1, { damping: 15, stiffness: 300 });
       }}
       accessibilityRole="button"
-      accessibilityState={{ disabled: isDisabled }}
+      accessibilityState={{ disabled }}
       accessibilityLabel={accessibilityLabel ?? label}
       className={cn(
-        'w-full flex-row items-center justify-center rounded-md px-xl py-lg shadow-sm',
-        isDisabled ? 'bg-brand-disabled' : 'bg-brand-primary',
+        'w-full items-center justify-center rounded-md px-xl py-lg',
+        disabled ? 'bg-brand-disabled' : 'bg-brand-secondary',
         className,
       )}
       style={animatedStyle}
     >
-      {loading ? (
-        <ActivityIndicator color={brandColors.white} />
-      ) : (
-        <View className="flex-row items-center justify-center gap-sm">
-          <Typography variant="button">{label}</Typography>
-          {showArrow ? <ArrowRightIcon /> : null}
-        </View>
-      )}
+      <Typography variant="buttonSecondary">{label}</Typography>
     </AnimatedPressable>
   );
 });

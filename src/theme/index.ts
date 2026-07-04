@@ -6,6 +6,8 @@ export { spacing, getSpacing } from '@/theme/spacing';
 export type { Spacing } from '@/theme/spacing';
 export { borderRadius } from '@/theme/border-radius';
 export type { BorderRadius } from '@/theme/border-radius';
+export { radius } from '@/theme/radius';
+export type { Radius } from '@/theme/radius';
 export { getShadow, elevation } from '@/theme/shadows';
 export { iconSizes } from '@/theme/icons';
 export type { IconSize } from '@/theme/icons';

@@ -1,5 +1,7 @@
-import { SplashScreen } from '@/features/splash';
+import { Redirect, type Href } from 'expo-router';
+
+import { ROUTES } from '@/navigation/routes';
 
 export default function IndexRoute() {
-  return <SplashScreen />;
+  return <Redirect href={ROUTES.ONBOARDING.SPLASH as Href} />;
 }

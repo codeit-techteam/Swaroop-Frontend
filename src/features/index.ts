@@ -1,6 +1,12 @@
 export { SplashScreen } from '@/features/splash';
 export { OnboardingScreen, ONBOARDING_COPY, ONBOARDING_TOTAL_PAGES } from '@/features/onboarding';
-export { LoginPlaceholder } from '@/features/auth';
+export {
+  RoleSelectionScreen,
+  CustomerLoginScreen,
+  CustomerRegisterScreen,
+  OtpVerificationScreen,
+} from '@/features/auth';
+export { CustomerDashboardScreen } from '@/features/customer';
 
 export type FeatureConfig = {
   name: string;

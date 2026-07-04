@@ -33,7 +33,7 @@ export const SplashScreen = () => {
   const contentOpacity = useSharedValue(0);
 
   const navigateToOnboarding = useCallback(() => {
-    router.replace(ROUTES.ONBOARDING.SCREEN_ONE as Href);
+    router.replace(ROUTES.ONBOARDING.INTRO_ONE as Href);
   }, [router]);
 
   useEffect(() => {

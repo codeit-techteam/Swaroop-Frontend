@@ -13,11 +13,11 @@ export default function OnboardingLayout() {
           backgroundColor: brandColors.background,
         },
         gestureEnabled: true,
-        fullScreenGestureEnabled: true,
       }}
     >
-      <Stack.Screen name="screen-one" />
-      <Stack.Screen name="screen-two" />
+      <Stack.Screen name="splash" options={{ animation: 'fade' }} />
+      <Stack.Screen name="intro-one" />
+      <Stack.Screen name="intro-two" />
     </Stack>
   );
 }

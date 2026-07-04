@@ -31,6 +31,7 @@ const RootLayoutNav = () => {
         <Stack.Screen name="index" options={{ animation: 'none' }} />
         <Stack.Screen name="(onboarding)" options={{ animation: 'fade' }} />
         <Stack.Screen name="(auth)" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="(customer)" options={{ animation: 'fade' }} />
         <Stack.Screen name="(public)" />
         <Stack.Screen name="(private)" />
         <Stack.Screen name="+not-found" />

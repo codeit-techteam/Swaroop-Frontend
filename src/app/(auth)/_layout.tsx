@@ -10,11 +10,15 @@ export default function AuthLayout() {
         animation: 'slide_from_right',
         animationDuration: 320,
         contentStyle: {
-          backgroundColor: brandColors.white,
+          backgroundColor: brandColors.background,
         },
+        gestureEnabled: true,
       }}
     >
-      <Stack.Screen name="login" />
+      <Stack.Screen name="role-selection" />
+      <Stack.Screen name="customer-login" />
+      <Stack.Screen name="customer-register" />
+      <Stack.Screen name="otp-verification" />
     </Stack>
   );
 }

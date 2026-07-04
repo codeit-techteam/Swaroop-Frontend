@@ -8,16 +8,16 @@ import { TradingIllustration } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
 import { wp } from '@/utils/responsive';
 
-export default function OnboardingScreenOne() {
+export default function IntroOneRoute() {
   const router = useRouter();
   const copy = ONBOARDING_COPY.screenOne;
 
   const handleContinue = useCallback(() => {
-    router.push(ROUTES.ONBOARDING.SCREEN_TWO as Href);
+    router.push(ROUTES.ONBOARDING.INTRO_TWO as Href);
   }, [router]);
 
   const handleSkip = useCallback(() => {
-    router.replace(ROUTES.AUTH.LOGIN as Href);
+    router.replace(ROUTES.AUTH.ROLE_SELECTION as Href);
   }, [router]);
 
   return (

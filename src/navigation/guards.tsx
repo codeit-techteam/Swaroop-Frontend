@@ -18,7 +18,7 @@ export const PrivateRouteGuard = ({ children }: AuthGuardProps): ReactNode => {
   }
 
   if (!isAuthenticated) {
-    return <Redirect href={ROUTES.AUTH.LOGIN as Href} />;
+    return <Redirect href={ROUTES.AUTH.CUSTOMER_LOGIN as Href} />;
   }
 
   return children;
@@ -33,7 +33,7 @@ export const PublicRouteGuard = ({ children }: AuthGuardProps): ReactNode => {
   }
 
   if (isAuthenticated) {
-    return <Redirect href={ROUTES.PRIVATE.ROOT as Href} />;
+    return <Redirect href={ROUTES.CUSTOMER.DASHBOARD as Href} />;
   }
 
   return children;

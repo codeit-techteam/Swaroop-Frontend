@@ -4,21 +4,17 @@ export { ArrowRightIcon } from '@/icons/arrow-right';
 export { ShieldSmallIcon } from '@/icons/shield-small';
 export { TradingIllustration } from '@/icons/trading-illustration';
 export { TrustIllustration } from '@/icons/trust-illustration';
-
-export type IconName =
-  | 'home'
-  | 'settings'
-  | 'user'
-  | 'search'
-  | 'bell'
-  | 'menu'
-  | 'close'
-  | 'chevron-right'
-  | 'chevron-left'
-  | 'arrow-right'
-  | 'shield'
-  | 'factory'
-  | 'petrotrade-logo';
+export { MenuIcon } from '@/icons/menu';
+export { ProfileIcon } from '@/icons/profile';
+export { CartIcon } from '@/icons/cart';
+export { StoreIcon } from '@/icons/store';
+export { CheckCircleIcon } from '@/icons/check-circle';
+export { BackArrowIcon } from '@/icons/back-arrow';
+export { LockIcon } from '@/icons/lock';
+export { ClockIcon } from '@/icons/clock';
+export { IndiaFlagIcon } from '@/icons/india-flag';
+export { IndustrialTanks } from '@/icons/industrial-tanks';
+export { OtpIllustration } from '@/icons/otp-illustration';
 
 export { iconSizes } from '@/theme/icons';
 export type { IconSize } from '@/theme/icons';

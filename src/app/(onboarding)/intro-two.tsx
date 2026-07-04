@@ -8,12 +8,12 @@ import { TrustIllustration } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
 import { wp } from '@/utils/responsive';
 
-export default function OnboardingScreenTwo() {
+export default function IntroTwoRoute() {
   const router = useRouter();
   const copy = ONBOARDING_COPY.screenTwo;
 
   const handleGetStarted = useCallback(() => {
-    router.replace(ROUTES.AUTH.LOGIN as Href);
+    router.replace(ROUTES.AUTH.ROLE_SELECTION as Href);
   }, [router]);
 
   return (

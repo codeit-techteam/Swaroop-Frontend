@@ -76,7 +76,7 @@ export const OnboardingScreen = memo(function OnboardingScreen({
         </View>
 
         <View style={{ paddingBottom: spacing.screenBottom }}>
-          <PrimaryButton label={buttonLabel} onPress={onContinue} />
+          <PrimaryButton label={buttonLabel} showArrow onPress={onContinue} />
 
           {footerLabel ? (
             <View
