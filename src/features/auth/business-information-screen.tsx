@@ -58,6 +58,7 @@ export const BusinessInformationScreen = () => {
     handleSubmit,
     watch,
     setValue,
+    clearErrors,
     formState: { isValid, errors },
   } = useZodForm(businessInfoSchema, {
     defaultValues: businessInfo,
@@ -69,11 +70,12 @@ export const BusinessInformationScreen = () => {
   useEffect(() => {
     const subscription = watch((_values, info) => {
       if (info.name === 'state') {
-        setValue('city', '', { shouldValidate: true });
+        setValue('city', '', { shouldValidate: false, shouldDirty: true });
+        clearErrors('city');
       }
     });
     return () => subscription.unsubscribe();
-  }, [setValue, watch]);
+  }, [clearErrors, setValue, watch]);
 
   const handleBack = useCallback(() => {
     router.back();
@@ -107,7 +109,12 @@ export const BusinessInformationScreen = () => {
       <ProgressStepper steps={getKycStepperSteps('basic-info')} className="mt-2xl" />
 
       <View className="mt-2xl">
-        <BusinessInfoForm control={control} errors={errors} stateValue={stateValue} />
+        <BusinessInfoForm
+          control={control}
+          errors={errors}
+          stateValue={stateValue}
+          clearErrors={clearErrors}
+        />
       </View>
 
       <PrimaryButton

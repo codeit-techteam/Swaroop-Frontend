@@ -1,64 +1,234 @@
 import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
 
-import { STORAGE_KEYS } from '@/constants';
+import {
+  clearAll,
+  getAppSettings,
+  getAuth,
+  getUser,
+  saveAppSettings,
+  saveAuth,
+  saveKYC,
+  saveUser,
+} from '@/services/storage';
+import {
+  getCurrentUser,
+  isDemoUser,
+  logout as logoutSession,
+  seedDemoUser,
+} from '@/services/user-session';
+import { useKycStore } from '@/store/kyc-store';
+import type { DeliveryLocation } from '@/types/home';
+import type { LoginResult, UserRole } from '@/types/session';
 import type { AuthStore } from '@/types/store';
-import { getStorageItem, removeStorageItem, setStorageItem } from '@/utils/storage';
 
-const zustandStorage = {
-  getItem: (name: string): string | null => getStorageItem(name) ?? null,
-  setItem: (name: string, value: string): void => {
-    setStorageItem(name, value);
-  },
-  removeItem: (name: string): void => {
-    removeStorageItem(name);
-  },
+const initialState = {
+  accessToken: null as string | null,
+  refreshToken: null as string | null,
+  isAuthenticated: false,
+  isLoggedIn: false,
+  isHydrated: false,
+  mobileNumber: null as string | null,
+  kycApproved: false,
+  reviewSubmitted: false,
+  onboardingCompleted: false,
+  selectedRole: null as UserRole | null,
+  location: null as DeliveryLocation | null,
+  userProfile: null as AuthStore['userProfile'],
+  referenceId: null as string | null,
 };
 
-export const useAuthStore = create<AuthStore>()(
-  persist(
-    (set) => ({
+const applyCurrentUserToStore = (
+  set: (partial: Partial<AuthStore>) => void,
+  current: ReturnType<typeof getCurrentUser>,
+): void => {
+  useKycStore.getState().hydrateKyc();
+
+  const userProfile = getUser();
+
+  set({
+    isLoggedIn: current.isLoggedIn,
+    isAuthenticated: current.isLoggedIn,
+    mobileNumber: current.mobileNumber,
+    kycApproved: current.isKycApproved,
+    reviewSubmitted: current.reviewCompleted || current.applicationSubmitted,
+    referenceId: current.referenceId,
+    selectedRole: current.selectedRole,
+    userProfile,
+  });
+};
+
+export const useAuthStore = create<AuthStore>((set, get) => ({
+  ...initialState,
+
+  hydrateSession: () => {
+    const auth = getAuth();
+
+    // Demo account stays verified across restarts while DEVELOPMENT_MODE is on.
+    if (auth.isLoggedIn && isDemoUser(auth.mobileNumber)) {
+      seedDemoUser();
+    }
+
+    const current = getCurrentUser();
+    const settings = getAppSettings();
+    const userProfile = getUser();
+
+    set({
+      isLoggedIn: current.isLoggedIn,
+      isAuthenticated: current.isLoggedIn,
+      mobileNumber: current.mobileNumber,
+      kycApproved: current.isKycApproved,
+      reviewSubmitted: current.reviewCompleted || current.applicationSubmitted,
+      referenceId: current.referenceId,
+      onboardingCompleted: settings.onboardingCompleted,
+      location: settings.location,
+      selectedRole: userProfile?.selectedRole ?? null,
+      userProfile,
+      isHydrated: true,
+    });
+  },
+
+  setTokens: (accessToken, refreshToken) => {
+    set({
+      accessToken,
+      refreshToken,
+      isAuthenticated: true,
+      isLoggedIn: true,
+    });
+  },
+
+  clearTokens: () => {
+    set({
       accessToken: null,
       refreshToken: null,
       isAuthenticated: false,
-      isHydrated: false,
-      setTokens: (accessToken, refreshToken) => {
-        setStorageItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
-        setStorageItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
-        set({
-          accessToken,
-          refreshToken,
-          isAuthenticated: true,
-        });
-      },
-      clearTokens: () => {
-        removeStorageItem(STORAGE_KEYS.ACCESS_TOKEN);
-        removeStorageItem(STORAGE_KEYS.REFRESH_TOKEN);
-        set({
-          accessToken: null,
-          refreshToken: null,
-          isAuthenticated: false,
-        });
-      },
-      setHydrated: (hydrated) => set({ isHydrated: hydrated }),
-    }),
-    {
-      name: 'swaroop-auth-store',
-      storage: createJSONStorage(() => zustandStorage),
-      partialize: (state) => ({
-        accessToken: state.accessToken,
-        refreshToken: state.refreshToken,
-        isAuthenticated: state.isAuthenticated,
-      }),
-      onRehydrateStorage: () => (state) => {
-        state?.setHydrated(true);
-      },
-    },
-  ),
-);
+      isLoggedIn: false,
+    });
+  },
+
+  setHydrated: (hydrated) => set({ isHydrated: hydrated }),
+
+  completeOnboarding: () => {
+    const settings = getAppSettings();
+    const nextSettings = { ...settings, onboardingCompleted: true };
+    saveAppSettings(nextSettings);
+    set({ onboardingCompleted: true });
+  },
+
+  setSelectedRole: (role) => {
+    const mobileNumber = get().mobileNumber ?? '';
+    const userProfile = {
+      mobileNumber,
+      selectedRole: role,
+      displayName: get().userProfile?.displayName,
+    };
+    saveUser(userProfile);
+    set({ selectedRole: role, userProfile });
+  },
+
+  setMobileNumber: (mobileNumber) => {
+    saveAuth({
+      isLoggedIn: get().isLoggedIn,
+      mobileNumber,
+    });
+    set({ mobileNumber });
+  },
+
+  completeLogin: (mobileNumber): LoginResult => {
+    const demoAccount = isDemoUser(mobileNumber);
+
+    if (demoAccount) {
+      seedDemoUser();
+    } else {
+      const existingUser = getUser();
+      const auth = {
+        isLoggedIn: true,
+        mobileNumber,
+      };
+      const userProfile = {
+        mobileNumber,
+        selectedRole: existingUser?.selectedRole ?? get().selectedRole ?? ('buyer' as UserRole),
+        displayName: existingUser?.displayName ?? get().userProfile?.displayName,
+      };
+
+      saveAuth(auth);
+      saveUser(userProfile);
+    }
+
+    const current = getCurrentUser();
+    applyCurrentUserToStore(set, current);
+
+    return {
+      kycApproved: current.isKycApproved,
+      isDemoUser: demoAccount,
+    };
+  },
+
+  setReviewSubmitted: (referenceId) => {
+    const kyc = {
+      kycApproved: get().kycApproved,
+      reviewSubmitted: true,
+      referenceId,
+    };
+    saveKYC(kyc);
+    set({
+      reviewSubmitted: true,
+      referenceId,
+    });
+  },
+
+  approveKyc: () => {
+    const kyc = {
+      kycApproved: true,
+      reviewSubmitted: true,
+      referenceId: get().referenceId,
+    };
+    saveKYC(kyc);
+    set({
+      kycApproved: true,
+      reviewSubmitted: true,
+    });
+  },
+
+  setLocation: (location) => {
+    const settings = getAppSettings();
+    const nextSettings = { ...settings, location };
+    saveAppSettings(nextSettings);
+    set({ location });
+  },
+
+  logout: async () => {
+    logoutSession();
+    set({
+      accessToken: null,
+      refreshToken: null,
+      isAuthenticated: false,
+      isLoggedIn: false,
+      isHydrated: true,
+    });
+  },
+
+  resetDemoAccount: async () => {
+    await clearAll();
+    useKycStore.getState().resetKyc();
+    set({
+      ...initialState,
+      isHydrated: true,
+    });
+  },
+}));
 
 export const selectIsAuthenticated = (state: AuthStore): boolean => state.isAuthenticated;
+
+export const selectIsLoggedIn = (state: AuthStore): boolean => state.isLoggedIn;
 
 export const selectIsHydrated = (state: AuthStore): boolean => state.isHydrated;
 
 export const selectAccessToken = (state: AuthStore): string | null => state.accessToken;
+
+export const selectKycApproved = (state: AuthStore): boolean => state.kycApproved;
+
+export const selectOnboardingCompleted = (state: AuthStore): boolean => state.onboardingCompleted;
+
+export const selectMobileNumber = (state: AuthStore): string | null => state.mobileNumber;
+
+export const selectLocation = (state: AuthStore): DeliveryLocation | null => state.location;

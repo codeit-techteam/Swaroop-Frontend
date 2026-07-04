@@ -18,32 +18,26 @@ type DocumentUploadCardProps = {
   className?: string;
 };
 
+const iconColorForStatus = (status: DocumentItem['status']): string => {
+  if (status === 'uploading') {
+    return brandColors.primary;
+  }
+  if (status === 'uploaded' || status === 'verified') {
+    return brandColors.uploadedText;
+  }
+  return brandColors.muted;
+};
+
 const iconForDocument = (id: DocumentId, status: DocumentItem['status']): ReactNode => {
-  const successColor =
-    status === 'verified' || status === 'uploaded' ? brandColors.success : brandColors.primary;
-  const idleColor = brandColors.muted;
+  const color = iconColorForStatus(status);
 
   if (id === 'pan') {
-    return (
-      <BriefcaseIcon color={status === 'idle' || status === 'error' ? idleColor : successColor} />
-    );
+    return <BriefcaseIcon color={color} />;
   }
   if (id === 'aadhaar') {
-    return (
-      <IdCardIcon color={status === 'idle' || status === 'error' ? idleColor : successColor} />
-    );
+    return <IdCardIcon color={color} />;
   }
-  return (
-    <DocumentFileIcon
-      color={
-        status === 'uploading'
-          ? brandColors.primary
-          : status === 'idle' || status === 'error'
-            ? idleColor
-            : successColor
-      }
-    />
-  );
+  return <DocumentFileIcon color={color} />;
 };
 
 export const DocumentUploadCard = memo(function DocumentUploadCard({
@@ -52,19 +46,19 @@ export const DocumentUploadCard = memo(function DocumentUploadCard({
   className,
 }: DocumentUploadCardProps) {
   const { id, title, description, status, progress, file, errorMessage, required } = document;
-  const isVerified = status === 'verified';
-  const isUploaded = status === 'uploaded';
+  // Frontend always shows UPLOADED until admin verification exists on the backend.
+  const isUploadedState = status === 'uploaded' || status === 'verified';
   const isUploading = status === 'uploading';
   const isRejected = status === 'rejected';
   const isIdle = status === 'idle' || status === 'error';
-  const canReplace = isVerified || isUploaded || isRejected;
+  const canReplace = isUploadedState || isRejected;
 
   return (
     <Animated.View
       entering={FadeIn.duration(250)}
       className={cn(
         'w-full rounded-lg border bg-brand-white px-lg py-lg',
-        (isVerified || isUploaded) && 'border-brand-success',
+        isUploadedState && 'border-brand-uploaded-text',
         isUploading && 'border-brand-primary',
         isRejected && 'border-brand-error',
         isIdle && 'border-dashed border-brand-border',
@@ -75,7 +69,7 @@ export const DocumentUploadCard = memo(function DocumentUploadCard({
         <View
           className={cn(
             'mr-md h-11 w-11 items-center justify-center rounded-md',
-            (isVerified || isUploaded) && 'bg-brand-success-light',
+            isUploadedState && 'bg-brand-uploaded',
             isUploading && 'bg-brand-primary-light',
             isRejected && 'bg-brand-surface',
             isIdle && 'bg-brand-surface',
@@ -100,8 +94,7 @@ export const DocumentUploadCard = memo(function DocumentUploadCard({
               </Typography>
             </View>
 
-            {isVerified ? <StatusBadge label="✔ VERIFIED" variant="success" /> : null}
-            {isUploaded ? <StatusBadge label="UPLOADED" variant="primary" /> : null}
+            {isUploadedState ? <StatusBadge label="UPLOADED" variant="uploaded" /> : null}
             {isRejected ? <StatusBadge label="REJECTED" variant="muted" /> : null}
             {isUploading ? (
               <Typography variant="badge" className="text-brand-primary">
@@ -123,10 +116,14 @@ export const DocumentUploadCard = memo(function DocumentUploadCard({
             ) : null}
           </View>
 
-          {(isVerified || isUploaded) && file ? (
+          {isUploadedState && file ? (
             <View className="mt-md flex-row items-center gap-xs">
               <PaperclipIcon />
-              <Typography variant="success" className="flex-1" numberOfLines={1}>
+              <Typography
+                variant="success"
+                className="flex-1 text-brand-uploaded-text"
+                numberOfLines={1}
+              >
                 {file.name}
               </Typography>
             </View>
@@ -136,7 +133,7 @@ export const DocumentUploadCard = memo(function DocumentUploadCard({
 
           {canReplace ? (
             <Pressable onPress={() => onUpload(id)} className="mt-sm self-start" hitSlop={8}>
-              <Typography variant="link">Replace</Typography>
+              <Typography variant="link">Replace File</Typography>
             </Pressable>
           ) : null}
 

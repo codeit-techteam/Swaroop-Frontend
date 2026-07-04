@@ -56,4 +56,31 @@ export type {
   KycActions,
   KycStore,
 } from '@/types/kyc';
+export type {
+  HomeBanner,
+  PriceTrend,
+  WatchlistItem,
+  TrendingProduct,
+  MarketInsight,
+  DeliveryLocation,
+  QuickSummaryItem,
+  LowestLandedCost,
+} from '@/types/home';
+export type {
+  MarketCategory,
+  MarketAvailabilityBadge,
+  MarketProduct,
+  StockLevel,
+} from '@/types/market';
+
+export type {
+  UserRole,
+  AuthPayload,
+  UserProfilePayload,
+  KycPayload,
+  AppSettingsPayload,
+  CurrentUser,
+  LoginResult,
+  SessionSnapshot,
+} from '@/types/session';
 

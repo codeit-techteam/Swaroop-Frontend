@@ -47,12 +47,6 @@ export const useDocumentUpload = () => {
             status: 'uploaded',
             progress: 100,
           });
-          setTimeout(() => {
-            updateDocument(id, {
-              status: 'verified',
-              progress: 100,
-            });
-          }, 350);
           return;
         }
 

@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 
 import {
   Inter_400Regular,
@@ -19,6 +19,8 @@ import { useNetworkListener } from '@/hooks/use-network';
 import { queryClient } from '@/lib/query-client';
 import { ThemeProvider } from '@/providers/theme-provider';
 import { configureNotifications } from '@/services/notification-service';
+import { useAuthStore } from '@/store/auth-store';
+import { useKycStore } from '@/store/kyc-store';
 import { hydrateSecureStorage } from '@/utils/storage';
 
 type AppProvidersProps = {
@@ -42,12 +44,31 @@ export const AppProviders = ({ children }: AppProvidersProps) => {
     'Inter-SemiBold': Inter_600SemiBold,
     'Inter-Bold': Inter_700Bold,
   });
+  const [sessionReady, setSessionReady] = useState(false);
+  const hydrateSession = useAuthStore((state) => state.hydrateSession);
+  const hydrateKyc = useKycStore((state) => state.hydrateKyc);
 
   useEffect(() => {
-    void hydrateSecureStorage();
-  }, []);
+    let active = true;
 
-  if (!fontsLoaded) {
+    const bootstrap = async () => {
+      await hydrateSecureStorage();
+      if (!active) {
+        return;
+      }
+      hydrateSession();
+      hydrateKyc();
+      setSessionReady(true);
+    };
+
+    void bootstrap();
+
+    return () => {
+      active = false;
+    };
+  }, [hydrateKyc, hydrateSession]);
+
+  if (!fontsLoaded || !sessionReady) {
     return null;
   }
 

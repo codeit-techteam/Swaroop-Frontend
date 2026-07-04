@@ -1,5 +1,33 @@
 export { ErrorBoundary } from '@/components/error-boundary';
 export {
+  HomeHeader,
+  LocationSelector,
+  LocationBottomSheet,
+  SearchBar,
+  HeroCarousel,
+  HeroBanner,
+  QuickSummaryCard,
+  WatchlistCard,
+  TrendingMaterialCard,
+  LowestCostCard,
+  InsightCard,
+  SectionHeader,
+  BottomNavigation,
+  NotificationBadge,
+  BannerIndicator,
+  ProductImageCard,
+  StatCard,
+  PrimaryCTAButton,
+} from '@/components/home';
+export {
+  MarketHeader,
+  SearchBar as MarketSearchBar,
+  CategoryFilter,
+  ProductCard,
+  EmptyState as MarketEmptyState,
+} from '@/components/market';
+
+export {
   Typography,
   ScreenContainer,
   ScreenWrapper,
@@ -13,6 +41,7 @@ export {
   InputField,
   TextInputField,
   DropdownField,
+  AppBottomSheetPicker,
   OtpInput,
   CountryPicker,
   IllustrationContainer,

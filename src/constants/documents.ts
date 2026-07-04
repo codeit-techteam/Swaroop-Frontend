@@ -33,7 +33,16 @@ export const INDIAN_STATES: Record<string, string[]> = {
   Telangana: ['Hyderabad', 'Warangal', 'Nizamabad'],
   Rajasthan: ['Jaipur', 'Jodhpur', 'Udaipur', 'Kota'],
   'Uttar Pradesh': ['Lucknow', 'Noida', 'Kanpur', 'Ghaziabad'],
-  'West Bengal': ['Kolkata', 'Howrah', 'Durgapur'],
+  'West Bengal': [
+    'Kolkata',
+    'Howrah',
+    'Durgapur',
+    'Asansol',
+    'Kalyani',
+    'Siliguri',
+    'Bardhaman',
+    'Haldia',
+  ],
   Haryana: ['Gurugram', 'Faridabad', 'Panipat'],
 };
 

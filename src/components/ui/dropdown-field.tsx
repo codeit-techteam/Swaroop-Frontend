@@ -1,7 +1,8 @@
-import { memo, useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 
-import { Modal, Pressable, ScrollView, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
+import { AppBottomSheetPicker } from '@/components/ui/app-bottom-sheet-picker';
 import { Typography } from '@/components/ui/typography';
 import { cn } from '@/utils/cn';
 
@@ -26,8 +27,26 @@ export const DropdownField = memo(function DropdownField({
   disabled = false,
   containerClassName,
 }: DropdownFieldProps) {
-  const [open, setOpen] = useState(false);
+  const [visible, setVisible] = useState(false);
   const hasValue = Boolean(value);
+
+  const openPicker = useCallback(() => {
+    if (disabled) {
+      return;
+    }
+    setVisible(true);
+  }, [disabled]);
+
+  const closePicker = useCallback(() => {
+    setVisible(false);
+  }, []);
+
+  const handleSelect = useCallback(
+    (selected: string) => {
+      onChange(selected);
+    },
+    [onChange],
+  );
 
   return (
     <View className={cn('w-full', containerClassName)}>
@@ -36,7 +55,7 @@ export const DropdownField = memo(function DropdownField({
       </Typography>
       <Pressable
         disabled={disabled}
-        onPress={() => setOpen(true)}
+        onPress={openPicker}
         accessibilityRole="button"
         accessibilityLabel={label}
         className={cn(
@@ -63,45 +82,14 @@ export const DropdownField = memo(function DropdownField({
         </Typography>
       ) : null}
 
-      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-        <Pressable
-          className="flex-1 items-center justify-end bg-black/40"
-          onPress={() => setOpen(false)}
-        >
-          <Pressable
-            className="max-h-[50%] w-full rounded-t-2xl bg-brand-white px-xl pb-2xl pt-lg"
-            onPress={(event) => event.stopPropagation()}
-          >
-            <Typography variant="headingLeft" className="mb-md text-[18px]">
-              {label}
-            </Typography>
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {options.map((option) => {
-                const selected = option === value;
-                return (
-                  <Pressable
-                    key={option}
-                    onPress={() => {
-                      onChange(option);
-                      setOpen(false);
-                    }}
-                    className={cn('rounded-md px-md py-md', selected && 'bg-brand-primary-light')}
-                  >
-                    <Typography
-                      variant="body"
-                      className={
-                        selected ? 'font-semibold text-brand-primary' : 'text-brand-heading'
-                      }
-                    >
-                      {option}
-                    </Typography>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      <AppBottomSheetPicker
+        title={label}
+        items={options}
+        selectedValue={value}
+        onSelect={handleSelect}
+        visible={visible}
+        onClose={closePicker}
+      />
     </View>
   );
 });

@@ -25,6 +25,24 @@ export { DocumentFileIcon } from '@/icons/document-file';
 export { IdCardIcon } from '@/icons/id-card';
 export { BriefcaseIcon } from '@/icons/briefcase';
 export { SuccessShield } from '@/icons/success-shield';
+export { HelpIcon } from '@/icons/help';
+export { BellIcon } from '@/icons/bell';
+export { LocationPinIcon } from '@/icons/location-pin';
+export { ChevronDownIcon } from '@/icons/chevron-down';
+export { ChevronRightIcon } from '@/icons/chevron-right';
+export { SearchIcon } from '@/icons/search';
+export { FilterIcon } from '@/icons/filter';
+export { HomeTabIcon } from '@/icons/home-tab';
+export { MarketTabIcon } from '@/icons/market-tab';
+export { OrdersTabIcon } from '@/icons/orders-tab';
+export { TruckIcon } from '@/icons/truck';
+export { WalletIcon } from '@/icons/wallet';
+export { ShieldCheckIcon } from '@/icons/shield-check';
+export { SavingsArrowIcon } from '@/icons/savings-arrow';
+export { LightningIcon } from '@/icons/lightning';
+export { CurrencyIcon } from '@/icons/currency';
+export { StarBadgeIcon } from '@/icons/star-badge';
 
 export { iconSizes } from '@/theme/icons';
+
 export type { IconSize } from '@/theme/icons';

@@ -14,6 +14,8 @@ import {
 } from '@/components';
 import { ClockIcon, OtpIllustration } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
+import { getInvalidOtpMessage, validateDevOtp } from '@/services/dev-auth';
+import { useAuthStore } from '@/store/auth-store';
 import { wp } from '@/utils/responsive';
 
 const RESEND_SECONDS = 44;
@@ -36,7 +38,9 @@ const formatPhone = (phone?: string): string => {
 export const OtpVerificationScreen = () => {
   const router = useRouter();
   const params = useLocalSearchParams<{ phone?: string; source?: string }>();
+  const completeLogin = useAuthStore((state) => state.completeLogin);
   const [otp, setOtp] = useState('');
+  const [otpError, setOtpError] = useState<string | undefined>();
   const [secondsLeft, setSecondsLeft] = useState(RESEND_SECONDS);
 
   const phoneDisplay = useMemo(() => formatPhone(params.phone), [params.phone]);
@@ -62,15 +66,35 @@ export const OtpVerificationScreen = () => {
       return;
     }
     setOtp('');
+    setOtpError(undefined);
     setSecondsLeft(RESEND_SECONDS);
   }, [canResend]);
+
+  const handleOtpChange = useCallback((value: string) => {
+    setOtp(value);
+    setOtpError(undefined);
+  }, []);
 
   const handleVerify = useCallback(() => {
     if (!isOtpComplete) {
       return;
     }
+
+    if (!validateDevOtp(otp)) {
+      setOtpError(getInvalidOtpMessage());
+      return;
+    }
+
+    const mobileNumber = params.phone ?? '';
+    const { kycApproved } = completeLogin(mobileNumber);
+
+    if (kycApproved) {
+      router.replace(ROUTES.CUSTOMER.HOME as Href);
+      return;
+    }
+
     router.replace(ROUTES.AUTH.BUSINESS_INFORMATION as Href);
-  }, [isOtpComplete, router]);
+  }, [completeLogin, isOtpComplete, otp, params.phone, router]);
 
   return (
     <ScreenWrapper className="bg-brand-white">
@@ -88,7 +112,7 @@ export const OtpVerificationScreen = () => {
           Enter the 6-digit code sent to {phoneDisplay}
         </Typography>
 
-        <OtpInput value={otp} onChange={setOtp} className="mt-2xl" />
+        <OtpInput value={otp} onChange={handleOtpChange} error={otpError} className="mt-2xl" />
 
         <View className="mt-xl items-center gap-sm">
           <View className="flex-row items-center gap-xs">

@@ -62,7 +62,6 @@ export const KycDocumentsScreen = () => {
 
       <BusinessSummaryCard
         businessInfo={businessInfo}
-        showVerifiedBadge
         compact
         className="mt-2xl"
         onEdit={handleEditBusiness}

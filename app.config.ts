@@ -9,8 +9,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   slug: 'swaroop',
   version: APP_VERSION,
   orientation: 'portrait',
-
-
   icon: './assets/images/icon.png',
   scheme: 'swaroop',
   userInterfaceStyle: 'automatic',
@@ -84,7 +82,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         ios: {
           deploymentTarget: '15.1',
         },
-
       },
     ],
     [

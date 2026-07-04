@@ -16,8 +16,8 @@ type DocumentSummaryCardProps = {
 const statusLabel = (status: DocumentItem['status']): string => {
   switch (status) {
     case 'verified':
-      return 'VERIFIED';
     case 'uploaded':
+      // Frontend always shows UPLOADED until admin verification exists on the backend.
       return 'UPLOADED';
     case 'uploading':
       return 'UPLOADING';
@@ -30,11 +30,13 @@ const statusLabel = (status: DocumentItem['status']): string => {
   }
 };
 
-const statusVariant = (status: DocumentItem['status']): 'success' | 'primary' | 'muted' => {
-  if (status === 'verified') {
-    return 'success';
+const statusVariant = (
+  status: DocumentItem['status'],
+): 'success' | 'primary' | 'muted' | 'uploaded' => {
+  if (status === 'verified' || status === 'uploaded') {
+    return 'uploaded';
   }
-  if (status === 'uploaded' || status === 'uploading') {
+  if (status === 'uploading') {
     return 'primary';
   }
   return 'muted';

@@ -7,21 +7,24 @@ import { type Href, useRouter } from 'expo-router';
 import { AppHeader, PrimaryButton, RoleCard, ScreenWrapper, SectionTitle } from '@/components';
 import { CartIcon, IndustrialTanks, StoreIcon } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
+import { useAuthStore } from '@/store/auth-store';
 import { brandColors } from '@/theme/colors';
+import type { UserRole } from '@/types/session';
 import { wp } from '@/utils/responsive';
-
-type RoleType = 'buyer' | 'seller';
 
 export const RoleSelectionScreen = () => {
   const router = useRouter();
-  const [selectedRole, setSelectedRole] = useState<RoleType>('buyer');
+  const persistRole = useAuthStore((state) => state.setSelectedRole);
+  const storedRole = useAuthStore((state) => state.selectedRole);
+  const [selectedRole, setSelectedRole] = useState<UserRole>(storedRole ?? 'buyer');
 
   const handleContinue = useCallback(() => {
     if (selectedRole !== 'buyer') {
       return;
     }
+    persistRole(selectedRole);
     router.push(ROUTES.AUTH.CUSTOMER_LOGIN as Href);
-  }, [router, selectedRole]);
+  }, [persistRole, router, selectedRole]);
 
   return (
     <ScreenWrapper padded={false} edges={['bottom']} className="bg-brand-surface">

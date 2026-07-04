@@ -7,6 +7,12 @@ export const STORAGE_KEYS = {
   REFRESH_TOKEN: 'swaroop_refresh_token',
   THEME_MODE: 'swaroop_theme_mode',
   ONBOARDING_COMPLETE: 'swaroop_onboarding_complete',
+  AUTH_STORAGE_KEY: 'swaroop_auth',
+  USER_PROFILE_KEY: 'swaroop_user_profile',
+  BUSINESS_INFO_KEY: 'swaroop_business_info',
+  DOCUMENTS_KEY: 'swaroop_documents',
+  KYC_STATUS_KEY: 'swaroop_kyc_status',
+  APP_SETTINGS_KEY: 'swaroop_app_settings',
 } as const;
 
 export const QUERY_KEYS = {

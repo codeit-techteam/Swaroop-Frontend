@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 
 import { View } from 'react-native';
 
@@ -20,6 +20,8 @@ import {
 } from '@/constants/documents';
 import { SuccessShield } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
+import { shouldAutoApproveKyc } from '@/services/dev-auth';
+import { useAuthStore } from '@/store/auth-store';
 import { useKycStore } from '@/store/kyc-store';
 import { wp } from '@/utils/responsive';
 
@@ -28,6 +30,8 @@ export const ApplicationSubmittedScreen = () => {
   const params = useLocalSearchParams<{ referenceId?: string }>();
   const businessInfo = useKycStore((state) => state.businessInfo);
   const storedReferenceId = useKycStore((state) => state.referenceId);
+  const approveKyc = useAuthStore((state) => state.approveKyc);
+  const setReviewSubmitted = useAuthStore((state) => state.setReviewSubmitted);
 
   const referenceId = useMemo(
     () => params.referenceId ?? storedReferenceId ?? generateKycReferenceId(),
@@ -36,12 +40,19 @@ export const ApplicationSubmittedScreen = () => {
   const timeline = useMemo(() => buildSubmissionTimeline(), []);
   const companyName = businessInfo.businessEntityName || 'your business';
 
+  useEffect(() => {
+    setReviewSubmitted(referenceId);
+    if (shouldAutoApproveKyc()) {
+      approveKyc();
+    }
+  }, [approveKyc, referenceId, setReviewSubmitted]);
+
   const handleDashboard = useCallback(() => {
-    router.replace({
-      pathname: ROUTES.CUSTOMER.DASHBOARD,
-      params: { referenceId, kycStatus: 'pending' },
-    } as unknown as Href);
-  }, [referenceId, router]);
+    if (shouldAutoApproveKyc()) {
+      approveKyc();
+    }
+    router.replace(ROUTES.CUSTOMER.HOME as Href);
+  }, [approveKyc, router]);
 
   const handleSupport = useCallback(() => {
     // Frontend-only contact action

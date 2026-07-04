@@ -2,7 +2,12 @@ import { memo, useMemo } from 'react';
 
 import { View } from 'react-native';
 
-import { Controller, type Control, type FieldErrors } from 'react-hook-form';
+import {
+  Controller,
+  type Control,
+  type FieldErrors,
+  type UseFormClearErrors,
+} from 'react-hook-form';
 
 import { CountryPicker } from '@/components/ui/country-picker';
 import { DropdownField } from '@/components/ui/dropdown-field';
@@ -13,6 +18,7 @@ import {
   NATURE_OF_BUSINESS_OPTIONS,
   STATE_OPTIONS,
 } from '@/constants/documents';
+
 type BusinessFormValues = {
   businessEntityName: string;
   companyType: string;
@@ -33,12 +39,14 @@ type BusinessInfoFormProps = {
   control: Control<BusinessFormValues>;
   errors: FieldErrors<BusinessFormValues>;
   stateValue: string;
+  clearErrors: UseFormClearErrors<BusinessFormValues>;
 };
 
 export const BusinessInfoForm = memo(function BusinessInfoForm({
   control,
   errors,
   stateValue,
+  clearErrors,
 }: BusinessInfoFormProps) {
   const cityOptions = useMemo(
     () => (stateValue ? (INDIAN_STATES[stateValue] ?? []) : []),
@@ -72,7 +80,10 @@ export const BusinessInfoForm = memo(function BusinessInfoForm({
             value={value}
             options={COMPANY_TYPE_OPTIONS}
             placeholder="Select company type"
-            onChange={onChange}
+            onChange={(selected) => {
+              onChange(selected);
+              clearErrors('companyType');
+            }}
             error={errors.companyType?.message}
           />
         )}
@@ -170,7 +181,10 @@ export const BusinessInfoForm = memo(function BusinessInfoForm({
             value={value}
             options={STATE_OPTIONS}
             placeholder="Select state"
-            onChange={onChange}
+            onChange={(selected) => {
+              onChange(selected);
+              clearErrors('state');
+            }}
             error={errors.state?.message}
           />
         )}
@@ -185,8 +199,11 @@ export const BusinessInfoForm = memo(function BusinessInfoForm({
             value={value}
             options={cityOptions}
             placeholder={stateValue ? 'Select city' : 'Select state first'}
-            onChange={onChange}
-            disabled={!stateValue}
+            onChange={(city) => {
+              onChange(city);
+              clearErrors('city');
+            }}
+            disabled={!stateValue || cityOptions.length === 0}
             error={errors.city?.message}
           />
         )}
@@ -218,7 +235,10 @@ export const BusinessInfoForm = memo(function BusinessInfoForm({
             value={value}
             options={NATURE_OF_BUSINESS_OPTIONS}
             placeholder="Select nature of business"
-            onChange={onChange}
+            onChange={(selected) => {
+              onChange(selected);
+              clearErrors('natureOfBusiness');
+            }}
             error={errors.natureOfBusiness?.message}
           />
         )}

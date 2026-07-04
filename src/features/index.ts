@@ -10,7 +10,12 @@ export {
   ReviewSubmissionScreen,
   ApplicationSubmittedScreen,
 } from '@/features/auth';
-export { CustomerDashboardScreen } from '@/features/customer';
+export {
+  CustomerHomeScreen,
+  CustomerMarketScreen,
+  CustomerOrdersScreen,
+  CustomerProfileScreen,
+} from '@/features/customer';
 
 export type FeatureConfig = {
   name: string;

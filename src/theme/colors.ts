@@ -28,6 +28,8 @@ export const brandColors = {
   verified: '#3D7AB0',
   success: '#16A34A',
   successLight: '#DCFCE7',
+  uploaded: '#E8F3FF',
+  uploadedText: '#2563EB',
   badgeBg: '#E8F1F8',
   badgeText: '#3D6A94',
   overlay: '#E8ECF0',
@@ -35,6 +37,12 @@ export const brandColors = {
   disabledText: '#FFFFFF',
   link: '#5B84B1',
   error: '#EF4444',
+  errorLight: '#FEE2E2',
+  invoice: '#E11D48',
+  notificationDot: '#EF4444',
+  cardBlue: '#4A78B0',
+  cardBlueDark: '#3A6496',
+  bannerOverlay: 'rgba(16, 52, 96, 0.72)',
   otpCircuit: '#0F2744',
 } as const;
 

@@ -13,7 +13,14 @@ export default function CustomerLayout() {
         },
       }}
     >
-      <Stack.Screen name="dashboard" />
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen
+        name="product-details"
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
     </Stack>
+
   );
 }

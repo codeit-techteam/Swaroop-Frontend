@@ -6,15 +6,18 @@ import { OnboardingScreen } from '@/features/onboarding';
 import { ONBOARDING_COPY } from '@/features/onboarding/constants';
 import { TrustIllustration } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
+import { useAuthStore } from '@/store/auth-store';
 import { wp } from '@/utils/responsive';
 
 export default function IntroTwoRoute() {
   const router = useRouter();
+  const completeOnboarding = useAuthStore((state) => state.completeOnboarding);
   const copy = ONBOARDING_COPY.screenTwo;
 
   const handleGetStarted = useCallback(() => {
+    completeOnboarding();
     router.replace(ROUTES.AUTH.ROLE_SELECTION as Href);
-  }, [router]);
+  }, [completeOnboarding, router]);
 
   return (
     <OnboardingScreen
