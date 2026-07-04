@@ -19,7 +19,9 @@ export default function AuthLayout() {
       <Stack.Screen name="customer-login" />
       <Stack.Screen name="customer-register" />
       <Stack.Screen name="otp-verification" />
+      <Stack.Screen name="business-information" />
       <Stack.Screen name="kyc-documents" />
+      <Stack.Screen name="review-submission" />
       <Stack.Screen name="application-submitted" />
     </Stack>
   );

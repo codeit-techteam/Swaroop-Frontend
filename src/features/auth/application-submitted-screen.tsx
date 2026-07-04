@@ -15,22 +15,26 @@ import {
 } from '@/components';
 import {
   buildSubmissionTimeline,
-  BUSINESS_ENTITY,
   generateKycReferenceId,
   SUPPORT_PHONE,
 } from '@/constants/documents';
 import { SuccessShield } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
+import { useKycStore } from '@/store/kyc-store';
 import { wp } from '@/utils/responsive';
 
 export const ApplicationSubmittedScreen = () => {
   const router = useRouter();
   const params = useLocalSearchParams<{ referenceId?: string }>();
+  const businessInfo = useKycStore((state) => state.businessInfo);
+  const storedReferenceId = useKycStore((state) => state.referenceId);
+
   const referenceId = useMemo(
-    () => params.referenceId ?? generateKycReferenceId(),
-    [params.referenceId],
+    () => params.referenceId ?? storedReferenceId ?? generateKycReferenceId(),
+    [params.referenceId, storedReferenceId],
   );
   const timeline = useMemo(() => buildSubmissionTimeline(), []);
+  const companyName = businessInfo.businessEntityName || 'your business';
 
   const handleDashboard = useCallback(() => {
     router.replace({
@@ -55,7 +59,7 @@ export const ApplicationSubmittedScreen = () => {
           Application Submitted
         </Typography>
         <Typography variant="subheading" className="mt-sm px-sm">
-          Your KYC documents for {BUSINESS_ENTITY.name} have been successfully submitted for review.
+          Your KYC documents for {companyName} have been successfully submitted for review.
         </Typography>
       </View>
 

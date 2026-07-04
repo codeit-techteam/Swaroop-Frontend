@@ -49,4 +49,11 @@ export type {
   TimelineStepStatus,
   TimelineStep,
 } from '@/types/document';
+export type {
+  CompanyType,
+  BusinessInformation,
+  KycState,
+  KycActions,
+  KycStore,
+} from '@/types/kyc';
 

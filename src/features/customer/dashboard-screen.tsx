@@ -15,14 +15,17 @@ import {
 } from '@/components';
 import { generateKycReferenceId } from '@/constants/documents';
 import { ClockIcon, SuccessShield } from '@/icons';
+import { useKycStore } from '@/store/kyc-store';
 import { brandColors } from '@/theme/colors';
 import { wp } from '@/utils/responsive';
 
 export const CustomerDashboardScreen = () => {
   const params = useLocalSearchParams<{ referenceId?: string; kycStatus?: string }>();
+  const storedReferenceId = useKycStore((state) => state.referenceId);
+  const businessName = useKycStore((state) => state.businessInfo.businessEntityName);
   const referenceId = useMemo(
-    () => params.referenceId ?? generateKycReferenceId(),
-    [params.referenceId],
+    () => params.referenceId ?? storedReferenceId ?? generateKycReferenceId(),
+    [params.referenceId, storedReferenceId],
   );
 
   const handleRefresh = useCallback(() => {
@@ -43,7 +46,9 @@ export const CustomerDashboardScreen = () => {
           Waiting For Verification
         </Typography>
         <Typography variant="subheading" className="mt-sm">
-          Your account is under review.
+          {businessName
+            ? `${businessName} is under review.`
+            : 'Your account is under review.'}
         </Typography>
 
         <View className="mt-lg flex-row items-center gap-xs rounded-full bg-brand-primary-light px-md py-sm">

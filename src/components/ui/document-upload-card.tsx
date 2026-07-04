@@ -19,17 +19,31 @@ type DocumentUploadCardProps = {
 };
 
 const iconForDocument = (id: DocumentId, status: DocumentItem['status']): ReactNode => {
+  const successColor =
+    status === 'verified' || status === 'uploaded' ? brandColors.success : brandColors.primary;
+  const idleColor = brandColors.muted;
+
   if (id === 'pan') {
     return (
-      <BriefcaseIcon color={status === 'verified' ? brandColors.success : brandColors.primary} />
+      <BriefcaseIcon color={status === 'idle' || status === 'error' ? idleColor : successColor} />
     );
   }
-  if (id === 'gst') {
+  if (id === 'aadhaar') {
     return (
-      <DocumentFileIcon color={status === 'uploading' ? brandColors.primary : brandColors.muted} />
+      <IdCardIcon color={status === 'idle' || status === 'error' ? idleColor : successColor} />
     );
   }
-  return <IdCardIcon color={brandColors.muted} />;
+  return (
+    <DocumentFileIcon
+      color={
+        status === 'uploading'
+          ? brandColors.primary
+          : status === 'idle' || status === 'error'
+            ? idleColor
+            : successColor
+      }
+    />
+  );
 };
 
 export const DocumentUploadCard = memo(function DocumentUploadCard({
@@ -37,18 +51,22 @@ export const DocumentUploadCard = memo(function DocumentUploadCard({
   onUpload,
   className,
 }: DocumentUploadCardProps) {
-  const { id, title, description, status, progress, file, errorMessage } = document;
+  const { id, title, description, status, progress, file, errorMessage, required } = document;
   const isVerified = status === 'verified';
+  const isUploaded = status === 'uploaded';
   const isUploading = status === 'uploading';
+  const isRejected = status === 'rejected';
   const isIdle = status === 'idle' || status === 'error';
+  const canReplace = isVerified || isUploaded || isRejected;
 
   return (
     <Animated.View
       entering={FadeIn.duration(250)}
       className={cn(
         'w-full rounded-lg border bg-brand-white px-lg py-lg',
-        isVerified && 'border-brand-success',
+        (isVerified || isUploaded) && 'border-brand-success',
         isUploading && 'border-brand-primary',
+        isRejected && 'border-brand-error',
         isIdle && 'border-dashed border-brand-border',
         className,
       )}
@@ -57,8 +75,9 @@ export const DocumentUploadCard = memo(function DocumentUploadCard({
         <View
           className={cn(
             'mr-md h-11 w-11 items-center justify-center rounded-md',
-            isVerified && 'bg-brand-success-light',
+            (isVerified || isUploaded) && 'bg-brand-success-light',
             isUploading && 'bg-brand-primary-light',
+            isRejected && 'bg-brand-surface',
             isIdle && 'bg-brand-surface',
           )}
         >
@@ -68,13 +87,22 @@ export const DocumentUploadCard = memo(function DocumentUploadCard({
         <View className="min-w-0 flex-1">
           <View className="flex-row items-start justify-between">
             <View className="mr-sm flex-1">
-              <Typography variant="roleTitle">{title}</Typography>
+              <View className="flex-row items-center gap-xs">
+                <Typography variant="roleTitle">{title}</Typography>
+                {!required ? (
+                  <Typography variant="legal" className="text-brand-muted">
+                    Optional
+                  </Typography>
+                ) : null}
+              </View>
               <Typography variant="roleDescription" className="mt-xs">
                 {description}
               </Typography>
             </View>
 
             {isVerified ? <StatusBadge label="✔ VERIFIED" variant="success" /> : null}
+            {isUploaded ? <StatusBadge label="UPLOADED" variant="primary" /> : null}
+            {isRejected ? <StatusBadge label="REJECTED" variant="muted" /> : null}
             {isUploading ? (
               <Typography variant="badge" className="text-brand-primary">
                 {progress}%
@@ -95,7 +123,7 @@ export const DocumentUploadCard = memo(function DocumentUploadCard({
             ) : null}
           </View>
 
-          {isVerified && file ? (
+          {(isVerified || isUploaded) && file ? (
             <View className="mt-md flex-row items-center gap-xs">
               <PaperclipIcon />
               <Typography variant="success" className="flex-1" numberOfLines={1}>
@@ -105,6 +133,18 @@ export const DocumentUploadCard = memo(function DocumentUploadCard({
           ) : null}
 
           {isUploading ? <UploadProgress progress={progress} className="mt-md" /> : null}
+
+          {canReplace ? (
+            <Pressable onPress={() => onUpload(id)} className="mt-sm self-start" hitSlop={8}>
+              <Typography variant="link">Replace</Typography>
+            </Pressable>
+          ) : null}
+
+          {isRejected ? (
+            <Typography variant="error" className="mt-sm">
+              Document rejected. Please upload again.
+            </Typography>
+          ) : null}
 
           {errorMessage ? (
             <Typography variant="error" className="mt-sm">

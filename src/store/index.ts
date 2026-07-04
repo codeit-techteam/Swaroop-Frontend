@@ -10,3 +10,11 @@ export {
   selectIsConnected,
   selectIsInternetReachable,
 } from '@/store/network-store';
+export {
+  useKycStore,
+  selectBusinessInfo,
+  selectDocuments,
+  selectReferenceId,
+  selectMandatoryDocsReady,
+} from '@/store/kyc-store';
+

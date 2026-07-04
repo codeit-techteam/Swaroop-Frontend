@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 
 import { View } from 'react-native';
 
@@ -6,59 +6,43 @@ import { type Href, useRouter } from 'expo-router';
 
 import {
   AppHeader,
+  BusinessSummaryCard,
   DocumentUploadCard,
   PrimaryButton,
   ProgressStepper,
   ScreenWrapper,
-  StatusBadge,
   Typography,
   VerificationBanner,
 } from '@/components';
-import { BUSINESS_ENTITY, generateKycReferenceId, KYC_STEPPER_STEPS } from '@/constants/documents';
+import { getKycStepperSteps } from '@/constants/documents';
 import { useDocumentUpload } from '@/hooks/use-document-upload';
 import { LockIcon, TrustIllustration } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
+import { useKycStore } from '@/store/kyc-store';
 import { brandColors } from '@/theme/colors';
 import { wp } from '@/utils/responsive';
 
 export const KycDocumentsScreen = () => {
   const router = useRouter();
-  const { documents, pickDocument, allVerified, isUploading } = useDocumentUpload();
+  const businessInfo = useKycStore((state) => state.businessInfo);
+  const { documents, pickDocument, mandatoryReady, isUploading } = useDocumentUpload();
 
-  const canSubmit = allVerified && !isUploading;
+  const canContinue = mandatoryReady && !isUploading;
 
   const handleBack = useCallback(() => {
     router.back();
   }, [router]);
 
-  const handleSubmit = useCallback(() => {
-    if (!canSubmit) {
+  const handleEditBusiness = useCallback(() => {
+    router.push(ROUTES.AUTH.BUSINESS_INFORMATION as Href);
+  }, [router]);
+
+  const handleContinue = useCallback(() => {
+    if (!canContinue) {
       return;
     }
-    const referenceId = generateKycReferenceId();
-    router.push({
-      pathname: ROUTES.AUTH.APPLICATION_SUBMITTED,
-      params: { referenceId },
-    } as unknown as Href);
-  }, [canSubmit, router]);
-
-  const businessCard = useMemo(
-    () => (
-      <View className="w-full flex-row items-center justify-between rounded-lg border border-brand-border bg-brand-white px-lg py-lg shadow-sm">
-        <View className="flex-1 pr-md">
-          <Typography variant="fieldLabel">Business Entity</Typography>
-          <Typography variant="roleTitle" className="mt-xs text-brand-primary">
-            {BUSINESS_ENTITY.name}
-          </Typography>
-          <Typography variant="roleDescription" className="mt-xs">
-            {BUSINESS_ENTITY.type}
-          </Typography>
-        </View>
-        <StatusBadge label="✔ Verified" variant="success" />
-      </View>
-    ),
-    [],
-  );
+    router.push(ROUTES.AUTH.REVIEW_SUBMISSION as Href);
+  }, [canContinue, router]);
 
   return (
     <ScreenWrapper scrollable className="bg-brand-white" contentClassName="pb-xl">
@@ -70,20 +54,26 @@ export const KycDocumentsScreen = () => {
           KYC Verification
         </Typography>
         <Typography variant="subheading" className="mt-sm px-sm">
-          Complete your business profile to start trading on the PetroTrade Global exchange.
+          Upload valid digital copies for authentication.
         </Typography>
       </View>
 
-      <ProgressStepper steps={KYC_STEPPER_STEPS} className="mt-2xl" />
+      <ProgressStepper steps={getKycStepperSteps('documents')} className="mt-2xl" />
 
-      <View className="mt-2xl">{businessCard}</View>
+      <BusinessSummaryCard
+        businessInfo={businessInfo}
+        showVerifiedBadge
+        compact
+        className="mt-2xl"
+        onEdit={handleEditBusiness}
+      />
 
       <View className="mt-2xl">
         <Typography variant="headingLeft" className="text-[18px] text-brand-primary">
           Required Documents
         </Typography>
         <Typography variant="subheadingLeft" className="mt-xs">
-          Upload valid digital copies for authentication.
+          PAN, GST and Aadhaar are mandatory. Other documents are optional.
         </Typography>
       </View>
 
@@ -96,10 +86,10 @@ export const KycDocumentsScreen = () => {
       <VerificationBanner className="mt-xl" />
 
       <PrimaryButton
-        label="Submit for Review"
+        label="Continue to Review"
         className="mt-xl"
-        disabled={!canSubmit}
-        onPress={handleSubmit}
+        disabled={!canContinue}
+        onPress={handleContinue}
         leftIcon={<LockIcon color={brandColors.white} size={16} />}
       />
     </ScreenWrapper>

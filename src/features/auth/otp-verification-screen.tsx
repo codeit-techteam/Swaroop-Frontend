@@ -69,7 +69,7 @@ export const OtpVerificationScreen = () => {
     if (!isOtpComplete) {
       return;
     }
-    router.replace(ROUTES.AUTH.KYC_DOCUMENTS as Href);
+    router.replace(ROUTES.AUTH.BUSINESS_INFORMATION as Href);
   }, [isOtpComplete, router]);
 
   return (

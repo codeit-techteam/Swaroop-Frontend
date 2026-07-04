@@ -1,6 +1,19 @@
-export type DocumentId = 'pan' | 'gst' | 'aadhaar';
+export type DocumentId =
+  | 'pan'
+  | 'gst'
+  | 'aadhaar'
+  | 'cancelled_cheque'
+  | 'msme'
+  | 'incorporation'
+  | 'authorization_letter';
 
-export type DocumentStatus = 'idle' | 'uploading' | 'verified' | 'error';
+export type DocumentStatus =
+  | 'idle'
+  | 'uploading'
+  | 'uploaded'
+  | 'verified'
+  | 'rejected'
+  | 'error';
 
 export type DocumentFile = {
   name: string;
@@ -15,6 +28,7 @@ export type DocumentItem = {
   description: string;
   status: DocumentStatus;
   progress: number;
+  required: boolean;
   file?: DocumentFile;
   errorMessage?: string;
 };

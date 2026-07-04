@@ -1,20 +1,22 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 
 import * as DocumentPicker from 'expo-document-picker';
 
 import {
   ALLOWED_DOCUMENT_TYPES,
-  INITIAL_DOCUMENTS,
+  MANDATORY_DOCUMENT_IDS,
   MAX_DOCUMENT_SIZE_BYTES,
 } from '@/constants/documents';
-import type { DocumentId, DocumentItem } from '@/types/document';
+import { useKycStore } from '@/store/kyc-store';
+import type { DocumentId } from '@/types/document';
 
 const UPLOAD_DURATION_MS = 1600;
 const UPLOAD_TICK_MS = 40;
 
-export const useDocumentUpload = (initialDocuments: DocumentItem[] = INITIAL_DOCUMENTS) => {
-  const [documents, setDocuments] = useState<DocumentItem[]>(initialDocuments);
-  const timersRef = useRef<Record<string, ReturnType<typeof setInterval>>>({});
+export const useDocumentUpload = () => {
+  const documents = useKycStore((state) => state.documents);
+  const updateDocument = useKycStore((state) => state.updateDocument);
+  const timersRef = useRef<Partial<Record<DocumentId, ReturnType<typeof setInterval>>>>({});
 
   const clearTimer = useCallback((id: DocumentId) => {
     const timer = timersRef.current[id];
@@ -22,10 +24,6 @@ export const useDocumentUpload = (initialDocuments: DocumentItem[] = INITIAL_DOC
       clearInterval(timer);
       delete timersRef.current[id];
     }
-  }, []);
-
-  const updateDocument = useCallback((id: DocumentId, patch: Partial<DocumentItem>) => {
-    setDocuments((prev) => prev.map((doc) => (doc.id === id ? { ...doc, ...patch } : doc)));
   }, []);
 
   const animateUpload = useCallback(
@@ -46,9 +44,15 @@ export const useDocumentUpload = (initialDocuments: DocumentItem[] = INITIAL_DOC
         if (progress >= 100) {
           clearTimer(id);
           updateDocument(id, {
-            status: 'verified',
+            status: 'uploaded',
             progress: 100,
           });
+          setTimeout(() => {
+            updateDocument(id, {
+              status: 'verified',
+              progress: 100,
+            });
+          }, 350);
           return;
         }
 
@@ -97,8 +101,13 @@ export const useDocumentUpload = (initialDocuments: DocumentItem[] = INITIAL_DOC
     [animateUpload, updateDocument],
   );
 
-  const allVerified = useMemo(
-    () => documents.every((doc) => doc.status === 'verified'),
+  const mandatoryReady = useMemo(
+    () =>
+      documents
+        .filter((doc) =>
+          MANDATORY_DOCUMENT_IDS.includes(doc.id as (typeof MANDATORY_DOCUMENT_IDS)[number]),
+        )
+        .every((doc) => doc.status === 'verified' || doc.status === 'uploaded'),
     [documents],
   );
 
@@ -110,7 +119,7 @@ export const useDocumentUpload = (initialDocuments: DocumentItem[] = INITIAL_DOC
   return {
     documents,
     pickDocument,
-    allVerified,
+    mandatoryReady,
     isUploading,
   };
 };
