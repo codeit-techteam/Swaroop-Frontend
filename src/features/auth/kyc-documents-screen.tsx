@@ -73,8 +73,9 @@ export const KycDocumentsScreen = () => {
           Required Documents
         </Typography>
         <Typography variant="subheadingLeft" className="mt-xs">
-          PAN, GST and Aadhaar are mandatory. Other documents are optional.
+          PAN, GST and Aadhaar are mandatory. Cancelled cheque is optional.
         </Typography>
+
       </View>
 
       <View className="mt-lg gap-md">

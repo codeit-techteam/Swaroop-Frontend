@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import { View } from 'react-native';
 
@@ -19,11 +19,25 @@ import { ROUTES } from '@/navigation/routes';
 import { useKycStore } from '@/store/kyc-store';
 import { wp } from '@/utils/responsive';
 
+const isDocumentUploaded = (status: string): boolean =>
+  status === 'verified' || status === 'uploaded';
+
 export const ReviewSubmissionScreen = () => {
   const router = useRouter();
   const businessInfo = useKycStore((state) => state.businessInfo);
   const documents = useKycStore((state) => state.documents);
   const setReferenceId = useKycStore((state) => state.setReferenceId);
+
+  const reviewDocuments = useMemo(
+    () =>
+      documents.filter(
+        (document) =>
+          document.required ||
+          (document.id === 'cancelled_cheque' && isDocumentUploaded(document.status)),
+      ),
+    [documents],
+  );
+
 
   const handleBack = useCallback(() => {
     router.back();
@@ -74,7 +88,12 @@ export const ReviewSubmissionScreen = () => {
       <Typography variant="headingLeft" className="mt-2xl text-[18px] text-brand-primary">
         Documents
       </Typography>
-      <DocumentSummaryCard documents={documents} className="mt-md" onEdit={handleEditDocuments} />
+      <DocumentSummaryCard
+        documents={reviewDocuments}
+        className="mt-md"
+        onEdit={handleEditDocuments}
+      />
+
 
       <PrimaryButton label="Submit Application" className="mt-2xl" onPress={handleSubmit} />
     </ScreenWrapper>

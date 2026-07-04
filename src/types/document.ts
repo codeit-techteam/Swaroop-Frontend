@@ -1,11 +1,4 @@
-export type DocumentId =
-  | 'pan'
-  | 'gst'
-  | 'aadhaar'
-  | 'cancelled_cheque'
-  | 'msme'
-  | 'incorporation'
-  | 'authorization_letter';
+export type DocumentId = 'pan' | 'gst' | 'aadhaar' | 'cancelled_cheque';
 
 export type DocumentStatus =
   | 'idle'

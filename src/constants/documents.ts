@@ -59,7 +59,7 @@ export const INITIAL_DOCUMENTS: DocumentItem[] = [
   {
     id: 'pan',
     title: 'PAN Card',
-    description: 'Permanent Account Number issued by Income Tax Department.',
+    description: 'Permanent Account Number issued by the Income Tax Department.',
     status: 'idle',
     progress: 0,
     required: true,
@@ -67,7 +67,7 @@ export const INITIAL_DOCUMENTS: DocumentItem[] = [
   {
     id: 'gst',
     title: 'GST Certificate',
-    description: 'Goods and Services Tax registration certificate.',
+    description: 'Goods and Services Tax Registration Certificate.',
     status: 'idle',
     progress: 0,
     required: true,
@@ -75,7 +75,7 @@ export const INITIAL_DOCUMENTS: DocumentItem[] = [
   {
     id: 'aadhaar',
     title: 'Aadhaar Card (Authorized Person)',
-    description: 'Unique identification document for authorized signatory.',
+    description: 'Government identity proof of the authorized business representative.',
     status: 'idle',
     progress: 0,
     required: true,
@@ -88,31 +88,8 @@ export const INITIAL_DOCUMENTS: DocumentItem[] = [
     progress: 0,
     required: false,
   },
-  {
-    id: 'msme',
-    title: 'MSME Certificate',
-    description: 'Udyam / MSME registration certificate (if applicable).',
-    status: 'idle',
-    progress: 0,
-    required: false,
-  },
-  {
-    id: 'incorporation',
-    title: 'Company Incorporation Certificate',
-    description: 'Certificate of incorporation issued by MCA.',
-    status: 'idle',
-    progress: 0,
-    required: false,
-  },
-  {
-    id: 'authorization_letter',
-    title: 'Authorization Letter',
-    description: 'Letter authorizing the person to trade on PetroTrade.',
-    status: 'idle',
-    progress: 0,
-    required: false,
-  },
 ];
+
 
 export const MANDATORY_DOCUMENT_IDS = ['pan', 'gst', 'aadhaar'] as const;
 
