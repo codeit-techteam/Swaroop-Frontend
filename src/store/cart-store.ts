@@ -101,6 +101,39 @@ const meetsMoqForItems = (items: CartItem[]): boolean => {
   return items.every((item) => item.quantityMt >= item.moq);
 };
 
+const buildOrderSummary = (items: CartItem[]): CartOrderSummary => ({
+  baseSubtotal: baseSubtotal(items),
+  freight: freightForItems(items),
+  gst: gstForItems(items),
+  platformFee: CART_PLATFORM_FEE,
+  insuranceIncluded: true,
+  totalLandedCost: totalForItems(items),
+  totalQuantityMt: totalQuantityMt(items),
+  meetsMoq: meetsMoqForItems(items),
+});
+
+const isSameOrderSummary = (a: CartOrderSummary, b: CartOrderSummary): boolean =>
+  a.baseSubtotal === b.baseSubtotal &&
+  a.freight === b.freight &&
+  a.gst === b.gst &&
+  a.platformFee === b.platformFee &&
+  a.insuranceIncluded === b.insuranceIncluded &&
+  a.totalLandedCost === b.totalLandedCost &&
+  a.totalQuantityMt === b.totalQuantityMt &&
+  a.meetsMoq === b.meetsMoq;
+
+/** Cached so useSyncExternalStore does not loop on a fresh object each read. */
+let cachedOrderSummary: CartOrderSummary | null = null;
+
+const getStableOrderSummary = (items: CartItem[]): CartOrderSummary => {
+  const next = buildOrderSummary(items);
+  if (cachedOrderSummary && isSameOrderSummary(cachedOrderSummary, next)) {
+    return cachedOrderSummary;
+  }
+  cachedOrderSummary = next;
+  return next;
+};
+
 export const useCartStore = create<CartStore>((set, get) => ({
   items: [],
   delivery: DEFAULT_CART_DELIVERY,
@@ -205,19 +238,7 @@ export const useCartStore = create<CartStore>((set, get) => ({
 
   calculateTotal: () => totalForItems(get().items),
 
-  getOrderSummary: (): CartOrderSummary => {
-    const { items } = get();
-    return {
-      baseSubtotal: baseSubtotal(items),
-      freight: freightForItems(items),
-      gst: gstForItems(items),
-      platformFee: CART_PLATFORM_FEE,
-      insuranceIncluded: true,
-      totalLandedCost: totalForItems(items),
-      totalQuantityMt: totalQuantityMt(items),
-      meetsMoq: meetsMoqForItems(items),
-    };
-  },
+  getOrderSummary: (): CartOrderSummary => getStableOrderSummary(get().items),
 
   meetsMoq: () => meetsMoqForItems(get().items),
 }));
@@ -228,4 +249,5 @@ export const selectCartDelivery = (state: CartStore) => state.delivery;
 export const selectCartHydrated = (state: CartStore) => state.isHydrated;
 export const selectCartTotal = (state: CartStore) => state.calculateTotal();
 export const selectCartMeetsMoq = (state: CartStore) => state.meetsMoq();
-export const selectOrderSummary = (state: CartStore): CartOrderSummary => state.getOrderSummary();
+export const selectOrderSummary = (state: CartStore): CartOrderSummary =>
+  getStableOrderSummary(state.items);

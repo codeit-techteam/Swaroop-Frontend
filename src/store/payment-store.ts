@@ -74,6 +74,50 @@ const applyMethod = (
 const initialMethod = DEFAULT_PAYMENT_METHOD_ID;
 const initialAmounts = calculatePaymentAmounts(0, initialMethod);
 
+const buildPaymentCalculation = (
+  state: Pick<
+    PaymentState,
+    'selectedMethodId' | 'baseAmount' | 'discount' | 'interest' | 'interestRate' | 'payableAmount'
+  >,
+): PaymentCalculation => {
+  const method = getPaymentMethodById(state.selectedMethodId);
+  return {
+    methodId: state.selectedMethodId,
+    methodTitle: method.title,
+    baseAmount: state.baseAmount,
+    discount: state.discount,
+    interest: state.interest,
+    interestRate: state.interestRate,
+    payableAmount: state.payableAmount,
+  };
+};
+
+const isSamePaymentCalculation = (a: PaymentCalculation, b: PaymentCalculation): boolean =>
+  a.methodId === b.methodId &&
+  a.methodTitle === b.methodTitle &&
+  a.baseAmount === b.baseAmount &&
+  a.discount === b.discount &&
+  a.interest === b.interest &&
+  a.interestRate === b.interestRate &&
+  a.payableAmount === b.payableAmount;
+
+/** Cached so useSyncExternalStore does not loop on a fresh object each read. */
+let cachedPaymentCalculation: PaymentCalculation | null = null;
+
+const getStablePaymentCalculation = (
+  state: Pick<
+    PaymentState,
+    'selectedMethodId' | 'baseAmount' | 'discount' | 'interest' | 'interestRate' | 'payableAmount'
+  >,
+): PaymentCalculation => {
+  const next = buildPaymentCalculation(state);
+  if (cachedPaymentCalculation && isSamePaymentCalculation(cachedPaymentCalculation, next)) {
+    return cachedPaymentCalculation;
+  }
+  cachedPaymentCalculation = next;
+  return next;
+};
+
 export const usePaymentStore = create<PaymentStore>((set, get) => ({
   selectedMethodId: initialMethod,
   baseAmount: 0,
@@ -138,19 +182,7 @@ export const usePaymentStore = create<PaymentStore>((set, get) => ({
     });
   },
 
-  getCalculation: (): PaymentCalculation => {
-    const { selectedMethodId, baseAmount, discount, interest, interestRate, payableAmount } = get();
-    const method = getPaymentMethodById(selectedMethodId);
-    return {
-      methodId: selectedMethodId,
-      methodTitle: method.title,
-      baseAmount,
-      discount,
-      interest,
-      interestRate,
-      payableAmount,
-    };
-  },
+  getCalculation: (): PaymentCalculation => getStablePaymentCalculation(get()),
 }));
 
 export const selectPaymentMethodId = (state: PaymentStore) => state.selectedMethodId;
@@ -159,4 +191,4 @@ export const selectPaymentInterest = (state: PaymentStore) => state.interest;
 export const selectPaymentPayable = (state: PaymentStore) => state.payableAmount;
 export const selectPaymentBaseAmount = (state: PaymentStore) => state.baseAmount;
 export const selectPaymentCalculation = (state: PaymentStore): PaymentCalculation =>
-  state.getCalculation();
+  getStablePaymentCalculation(state);
