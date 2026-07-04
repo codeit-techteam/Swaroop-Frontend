@@ -14,6 +14,7 @@ type SecondaryButtonProps = {
   onPress: (event: GestureResponderEvent) => void;
   className?: string;
   disabled?: boolean;
+  variant?: 'solid' | 'outline';
   accessibilityLabel?: string;
 };
 
@@ -22,9 +23,11 @@ export const SecondaryButton = memo(function SecondaryButton({
   onPress,
   className,
   disabled = false,
+  variant = 'solid',
   accessibilityLabel,
 }: SecondaryButtonProps) {
   const scale = useSharedValue(1);
+  const isOutline = variant === 'outline';
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -47,12 +50,21 @@ export const SecondaryButton = memo(function SecondaryButton({
       accessibilityLabel={accessibilityLabel ?? label}
       className={cn(
         'w-full items-center justify-center rounded-md px-xl py-lg',
-        disabled ? 'bg-brand-disabled' : 'bg-brand-secondary',
+        isOutline
+          ? 'border border-brand-primary bg-brand-white'
+          : disabled
+            ? 'bg-brand-disabled'
+            : 'bg-brand-secondary',
         className,
       )}
       style={animatedStyle}
     >
-      <Typography variant="buttonSecondary">{label}</Typography>
+      <Typography
+        variant="buttonSecondary"
+        className={isOutline ? 'text-brand-primary' : undefined}
+      >
+        {label}
+      </Typography>
     </AnimatedPressable>
   );
 });

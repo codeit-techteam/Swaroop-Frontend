@@ -15,6 +15,16 @@ export { ClockIcon } from '@/icons/clock';
 export { IndiaFlagIcon } from '@/icons/india-flag';
 export { IndustrialTanks } from '@/icons/industrial-tanks';
 export { OtpIllustration } from '@/icons/otp-illustration';
+export { UploadIcon } from '@/icons/upload';
+export { PaperclipIcon } from '@/icons/paperclip';
+export { CopyIcon } from '@/icons/copy';
+export { HourglassIcon } from '@/icons/hourglass';
+export { InfoIcon } from '@/icons/info';
+export { RefreshIcon } from '@/icons/refresh';
+export { DocumentFileIcon } from '@/icons/document-file';
+export { IdCardIcon } from '@/icons/id-card';
+export { BriefcaseIcon } from '@/icons/briefcase';
+export { SuccessShield } from '@/icons/success-shield';
 
 export { iconSizes } from '@/theme/icons';
 export type { IconSize } from '@/theme/icons';

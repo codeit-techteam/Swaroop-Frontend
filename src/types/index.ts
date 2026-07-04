@@ -39,3 +39,14 @@ export type StorageAdapter = {
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 export type { ApiRequestConfig, TokenRefreshHandler, ApiClientConfig } from '@/types/api';
+export type {
+  DocumentId,
+  DocumentStatus,
+  DocumentFile,
+  DocumentItem,
+  StepperStepStatus,
+  StepperStep,
+  TimelineStepStatus,
+  TimelineStep,
+} from '@/types/document';
+

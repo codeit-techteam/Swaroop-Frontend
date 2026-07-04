@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, type ReactNode } from 'react';
 
 import { ActivityIndicator, type GestureResponderEvent, Pressable, View } from 'react-native';
 
@@ -16,6 +16,7 @@ type PrimaryButtonProps = {
   onPress: (event: GestureResponderEvent) => void;
   className?: string;
   showArrow?: boolean;
+  leftIcon?: ReactNode;
   disabled?: boolean;
   loading?: boolean;
   accessibilityLabel?: string;
@@ -26,6 +27,7 @@ export const PrimaryButton = memo(function PrimaryButton({
   onPress,
   className,
   showArrow = false,
+  leftIcon,
   disabled = false,
   loading = false,
   accessibilityLabel,
@@ -63,6 +65,7 @@ export const PrimaryButton = memo(function PrimaryButton({
         <ActivityIndicator color={brandColors.white} />
       ) : (
         <View className="flex-row items-center justify-center gap-sm">
+          {leftIcon}
           <Typography variant="button">{label}</Typography>
           {showArrow ? <ArrowRightIcon /> : null}
         </View>

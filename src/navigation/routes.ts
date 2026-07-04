@@ -10,6 +10,8 @@ export const ROUTES = {
     CUSTOMER_LOGIN: '/(auth)/customer-login',
     CUSTOMER_REGISTER: '/(auth)/customer-register',
     OTP_VERIFICATION: '/(auth)/otp-verification',
+    KYC_DOCUMENTS: '/(auth)/kyc-documents',
+    APPLICATION_SUBMITTED: '/(auth)/application-submitted',
   },
   CUSTOMER: {
     DASHBOARD: '/(customer)/dashboard',
@@ -31,7 +33,9 @@ export type AuthRoute =
   | typeof ROUTES.AUTH.ROLE_SELECTION
   | typeof ROUTES.AUTH.CUSTOMER_LOGIN
   | typeof ROUTES.AUTH.CUSTOMER_REGISTER
-  | typeof ROUTES.AUTH.OTP_VERIFICATION;
+  | typeof ROUTES.AUTH.OTP_VERIFICATION
+  | typeof ROUTES.AUTH.KYC_DOCUMENTS
+  | typeof ROUTES.AUTH.APPLICATION_SUBMITTED;
 
 export type CustomerRoute = typeof ROUTES.CUSTOMER.DASHBOARD;
 

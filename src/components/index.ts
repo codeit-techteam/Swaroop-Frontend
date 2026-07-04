@@ -20,4 +20,11 @@ export {
   FooterLinks,
   AuthCard,
   Divider,
+  ProgressStepper,
+  DocumentUploadCard,
+  UploadProgress,
+  ReferenceCard,
+  TimelineCard,
+  StatusBadge,
+  VerificationBanner,
 } from '@/components/ui';

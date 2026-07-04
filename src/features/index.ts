@@ -5,6 +5,8 @@ export {
   CustomerLoginScreen,
   CustomerRegisterScreen,
   OtpVerificationScreen,
+  KycDocumentsScreen,
+  ApplicationSubmittedScreen,
 } from '@/features/auth';
 export { CustomerDashboardScreen } from '@/features/customer';
 
