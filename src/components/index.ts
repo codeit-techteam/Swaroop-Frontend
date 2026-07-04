@@ -26,6 +26,20 @@ export {
   ProductCard,
   EmptyState as MarketEmptyState,
 } from '@/components/market';
+export {
+  ProductHero,
+  ProductInfoCard,
+  ProductSpecs,
+  PricingTiersCard,
+  TrustCard,
+  QuantitySelector,
+  BottomActionBar,
+  InfoGrid,
+  ApplicationCard,
+  ProductHeader,
+  ProductBreadcrumb,
+  ProductSkeleton,
+} from '@/components/product';
 
 export {
   Typography,

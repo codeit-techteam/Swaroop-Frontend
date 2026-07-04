@@ -13,6 +13,7 @@ export const STORAGE_KEYS = {
   DOCUMENTS_KEY: 'swaroop_documents',
   KYC_STATUS_KEY: 'swaroop_kyc_status',
   APP_SETTINGS_KEY: 'swaroop_app_settings',
+  CART_KEY: 'swaroop_cart',
 } as const;
 
 export const QUERY_KEYS = {

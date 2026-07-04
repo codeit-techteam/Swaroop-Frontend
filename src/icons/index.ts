@@ -42,6 +42,7 @@ export { SavingsArrowIcon } from '@/icons/savings-arrow';
 export { LightningIcon } from '@/icons/lightning';
 export { CurrencyIcon } from '@/icons/currency';
 export { StarBadgeIcon } from '@/icons/star-badge';
+export { BarChartIcon } from '@/icons/bar-chart';
 
 export { iconSizes } from '@/theme/icons';
 

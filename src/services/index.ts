@@ -35,3 +35,4 @@ export {
   isDemoUser,
   logout as logoutSession,
 } from '@/services/user-session';
+export { addToCart, getCart, clearCart } from '@/services/cart';

@@ -71,19 +71,7 @@ export const CustomerMarketScreen = () => {
     (product: MarketProduct) => {
       router.push({
         pathname: ROUTES.CUSTOMER.PRODUCT_DETAILS,
-        params: {
-          id: product.id,
-          name: product.name,
-          grade: product.grade,
-          price: String(product.price),
-          origin: product.origin,
-          stock: String(product.stock),
-          moq: String(product.moq),
-          eta: product.eta,
-          category: product.category,
-          badge: product.badge,
-          image: product.image,
-        },
+        params: { id: product.id },
       } as unknown as Href);
     },
     [router],

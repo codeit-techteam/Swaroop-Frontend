@@ -72,6 +72,15 @@ export type {
   MarketProduct,
   StockLevel,
 } from '@/types/market';
+export type {
+  PriceTrendDirection,
+  ProductSpec,
+  PricingTier,
+  TrustFeature,
+  ProductInfoItem,
+  ProductDetails,
+  CartItem,
+} from '@/types/product';
 
 export type {
   UserRole,

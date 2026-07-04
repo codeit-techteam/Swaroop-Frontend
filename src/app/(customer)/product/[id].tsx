@@ -1,5 +1,5 @@
 import { CustomerProductDetailsScreen } from '@/features/customer';
 
-export default function CustomerProductDetailsRoute() {
+export default function ProductDetailsRoute() {
   return <CustomerProductDetailsScreen />;
 }
