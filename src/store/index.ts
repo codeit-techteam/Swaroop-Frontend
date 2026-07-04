@@ -22,4 +22,14 @@ export {
   selectReferenceId,
   selectMandatoryDocsReady,
 } from '@/store/kyc-store';
+export {
+  useCartStore,
+  selectCartItems,
+  selectCartCount,
+  selectCartDelivery,
+  selectCartHydrated,
+  selectCartTotal,
+  selectCartMeetsMoq,
+  selectOrderSummary,
+} from '@/store/cart-store';
 

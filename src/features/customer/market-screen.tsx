@@ -58,6 +58,10 @@ export const CustomerMarketScreen = () => {
     });
   }, []);
 
+  const handleCartPress = useCallback(() => {
+    router.push(ROUTES.CUSTOMER.CART as Href);
+  }, [router]);
+
   const handleFilterPress = useCallback(() => {
     Toast.show({
       type: 'info',
@@ -103,7 +107,7 @@ export const CustomerMarketScreen = () => {
 
   return (
     <View className="flex-1 bg-brand-white">
-      <MarketHeader onLocationPress={handleLocationPress} />
+      <MarketHeader onLocationPress={handleLocationPress} onCartPress={handleCartPress} />
 
       <FlatList
         data={filteredProducts}

@@ -43,6 +43,10 @@ export { LightningIcon } from '@/icons/lightning';
 export { CurrencyIcon } from '@/icons/currency';
 export { StarBadgeIcon } from '@/icons/star-badge';
 export { BarChartIcon } from '@/icons/bar-chart';
+export { TrashIcon } from '@/icons/trash';
+export { HeadsetIcon } from '@/icons/headset';
+export { ClipboardCheckIcon } from '@/icons/clipboard-check';
+export { AlertCircleIcon } from '@/icons/alert-circle';
 
 export { iconSizes } from '@/theme/icons';
 

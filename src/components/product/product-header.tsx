@@ -7,14 +7,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NotificationBadge } from '@/components/home/notification-badge';
 import { AppLogo } from '@/components/ui/app-logo';
 import { Typography } from '@/components/ui/typography';
-import { BackArrowIcon, BellIcon } from '@/icons';
+import { BackArrowIcon, BellIcon, CartIcon } from '@/icons';
+import { selectCartCount, useCartStore } from '@/store/cart-store';
 import { brandColors } from '@/theme/colors';
+import { iconSizes } from '@/theme/icons';
 import { cn } from '@/utils/cn';
 
 type ProductHeaderProps = {
   avatarInitials?: string;
   hasNotification?: boolean;
   onBackPress: () => void;
+  onCartPress?: () => void;
   onNotificationPress?: () => void;
   onProfilePress?: () => void;
   className?: string;
@@ -24,11 +27,13 @@ export const ProductHeader = memo(function ProductHeader({
   avatarInitials = 'PD',
   hasNotification = true,
   onBackPress,
+  onCartPress,
   onNotificationPress,
   onProfilePress,
   className,
 }: ProductHeaderProps) {
   const insets = useSafeAreaInsets();
+  const cartCount = useCartStore(selectCartCount);
 
   return (
     <View
@@ -50,6 +55,19 @@ export const ProductHeader = memo(function ProductHeader({
         </View>
 
         <View className="flex-row items-center gap-sm">
+          {onCartPress ? (
+            <Pressable
+              onPress={onCartPress}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel={`Cart${cartCount > 0 ? `, ${cartCount} items` : ''}`}
+              className="h-10 w-10 items-center justify-center"
+            >
+              <CartIcon size={iconSizes.lg} color={brandColors.heading} />
+              <NotificationBadge visible={cartCount > 0} />
+            </Pressable>
+          ) : null}
+
           <Pressable
             onPress={onNotificationPress}
             hitSlop={10}

@@ -6,13 +6,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { NotificationBadge } from '@/components/home/notification-badge';
 import { AppLogo } from '@/components/ui/app-logo';
-import { BellIcon, HelpIcon } from '@/icons';
+import { BellIcon, CartIcon, HelpIcon } from '@/icons';
+import { selectCartCount, useCartStore } from '@/store/cart-store';
 import { brandColors } from '@/theme/colors';
+import { iconSizes } from '@/theme/icons';
 import { cn } from '@/utils/cn';
 
 type HomeHeaderProps = {
   hasNotification?: boolean;
   onHelpPress?: () => void;
+  onCartPress?: () => void;
   onNotificationPress?: () => void;
   className?: string;
 };
@@ -20,10 +23,12 @@ type HomeHeaderProps = {
 export const HomeHeader = memo(function HomeHeader({
   hasNotification = true,
   onHelpPress,
+  onCartPress,
   onNotificationPress,
   className,
 }: HomeHeaderProps) {
   const insets = useSafeAreaInsets();
+  const cartCount = useCartStore(selectCartCount);
 
   return (
     <View
@@ -43,6 +48,19 @@ export const HomeHeader = memo(function HomeHeader({
           >
             <HelpIcon color={brandColors.primary} />
           </Pressable>
+
+          {onCartPress ? (
+            <Pressable
+              onPress={onCartPress}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel={`Cart${cartCount > 0 ? `, ${cartCount} items` : ''}`}
+              className="h-10 w-10 items-center justify-center"
+            >
+              <CartIcon size={iconSizes.lg} color={brandColors.primary} />
+              <NotificationBadge visible={cartCount > 0} />
+            </Pressable>
+          ) : null}
 
           <Pressable
             onPress={onNotificationPress}

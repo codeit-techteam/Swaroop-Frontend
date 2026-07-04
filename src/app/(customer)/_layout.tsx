@@ -21,6 +21,12 @@ export default function CustomerLayout() {
         }}
       />
       <Stack.Screen
+        name="cart/index"
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen
         name="checkout"
         options={{
           animation: 'slide_from_right',

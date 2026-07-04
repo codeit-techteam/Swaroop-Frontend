@@ -67,6 +67,10 @@ export const CustomerHomeScreen = () => {
     router.push(ROUTES.CUSTOMER.MARKET as Href);
   }, [router]);
 
+  const navigateToCart = useCallback(() => {
+    router.push(ROUTES.CUSTOMER.CART as Href);
+  }, [router]);
+
   const navigateToOrders = useCallback(() => {
     router.push(ROUTES.CUSTOMER.ORDERS as Href);
   }, [router]);
@@ -121,6 +125,7 @@ export const CustomerHomeScreen = () => {
         onHelpPress={() =>
           showInfoToast('Help Centre', 'Our support team is available 24×7 for buyers.')
         }
+        onCartPress={navigateToCart}
         onNotificationPress={() => showInfoToast('Notifications', 'You have 2 new market alerts.')}
       />
 

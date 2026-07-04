@@ -80,6 +80,8 @@ export type {
   ProductInfoItem,
   ProductDetails,
   CartItem,
+  CartDeliveryLocation,
+  CartOrderSummary,
 } from '@/types/product';
 
 export type {

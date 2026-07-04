@@ -67,12 +67,42 @@ export type ProductDetails = {
   quantityIncrement: number;
 };
 
+/** Blind-marketplace cart line — no supplier / manufacturer fields. */
 export type CartItem = {
+  id: string;
   productId: string;
+  /** Display name, e.g. "PP H110MA Homopolymer" */
   name: string;
+  /** Grade badge label, e.g. "POLYPROPYLENE" */
+  productType: string;
   grade: string;
   quantityMt: number;
-  unitPricePerKg: number;
+  /** Unit price in ₹ per MT */
+  unitPricePerMt: number;
   tierId: string;
+  imageUrl: string;
+  moq: number;
+  quantityIncrement: number;
+  packaging: string;
+  warehouseRegion: string;
+  eta: string;
   addedAt: string;
+};
+
+export type CartDeliveryLocation = {
+  city: string;
+  state: string;
+  label: string;
+  etaLabel: string;
+};
+
+export type CartOrderSummary = {
+  baseSubtotal: number;
+  freight: number;
+  gst: number;
+  platformFee: number;
+  insuranceIncluded: boolean;
+  totalLandedCost: number;
+  totalQuantityMt: number;
+  meetsMoq: boolean;
 };

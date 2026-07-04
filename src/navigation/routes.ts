@@ -21,6 +21,7 @@ export const ROUTES = {
     ORDERS: '/(customer)/(tabs)/orders',
     PROFILE: '/(customer)/(tabs)/profile',
     PRODUCT_DETAILS: '/(customer)/product/[id]',
+    CART: '/(customer)/cart',
     CHECKOUT: '/(customer)/checkout',
     DASHBOARD: '/(customer)/(tabs)/home',
   },
@@ -54,6 +55,7 @@ export type CustomerRoute =
   | typeof ROUTES.CUSTOMER.ORDERS
   | typeof ROUTES.CUSTOMER.PROFILE
   | typeof ROUTES.CUSTOMER.PRODUCT_DETAILS
+  | typeof ROUTES.CUSTOMER.CART
   | typeof ROUTES.CUSTOMER.CHECKOUT
   | typeof ROUTES.CUSTOMER.DASHBOARD;
 

@@ -40,6 +40,17 @@ export {
   ProductBreadcrumb,
   ProductSkeleton,
 } from '@/components/product';
+export {
+  CartHeader,
+  CartItemCard,
+  CartQuantitySelector,
+  OrderSummaryCard,
+  DeliveryCard,
+  TrustFeatures,
+  CheckoutBar,
+  EmptyCart,
+  CartSkeleton,
+} from '@/components/cart';
 
 export {
   Typography,

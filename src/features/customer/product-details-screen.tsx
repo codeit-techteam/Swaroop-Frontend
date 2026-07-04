@@ -3,6 +3,7 @@ import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
+
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
@@ -20,6 +21,7 @@ import {
   TrustCard,
 } from '@/components/product';
 import { Typography } from '@/components/ui/typography';
+import { buildBlindProductName, buildProductTypeBadge } from '@/constants/cart';
 import {
   getProductDetailsById,
   getTierForQuantity,
@@ -27,7 +29,7 @@ import {
 } from '@/constants/productDetails';
 import { BackArrowIcon } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
-import { addToCart } from '@/services/cart';
+import { useCartStore } from '@/store/cart-store';
 import { brandColors } from '@/theme/colors';
 
 export const CustomerProductDetailsScreen = memo(function CustomerProductDetailsScreen() {
@@ -45,10 +47,7 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
     return null;
   }, [params.id]);
 
-  const product = useMemo(
-    () => (productId ? getProductDetailsById(productId) : null),
-    [productId],
-  );
+  const product = useMemo(() => (productId ? getProductDetailsById(productId) : null), [productId]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [quantityMt, setQuantityMt] = useState(25);
@@ -142,22 +141,35 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
       return;
     }
 
-    addToCart({
+    const productTypeSource = product.name.replace(/\(.*?\)/g, '').trim() || product.nameLine2;
+
+    useCartStore.getState().addItem({
       productId: product.id,
-      name: `${product.name} ${product.nameLine2}`.trim(),
+      name: buildBlindProductName(product.grade, product.nameLine2),
+      productType: buildProductTypeBadge(productTypeSource),
       grade: product.grade,
       quantityMt,
-      unitPricePerKg: selectedTier.unitPrice,
+      unitPricePerMt: Math.round(selectedTier.unitPrice * 1000),
       tierId: selectedTier.id,
+      imageUrl: product.heroImage,
+      moq: product.moq,
+      quantityIncrement: product.quantityIncrement,
+      packaging: product.packaging,
+      warehouseRegion: product.warehouseRegion,
+      eta: product.eta,
     });
 
     Toast.show({
       type: 'success',
       text1: 'Added to cart',
-      text2: `${quantityMt} MT of ${product.breadcrumbProduct} saved locally.`,
+      text2: `${quantityMt} MT of ${buildBlindProductName(product.grade, product.nameLine2)} added.`,
       visibilityTime: 2200,
     });
   }, [product, quantityMt, selectedTier]);
+
+  const handleOpenCart = useCallback(() => {
+    router.push(ROUTES.CUSTOMER.CART as Href);
+  }, [router]);
 
   const handleBuyNow = useCallback(() => {
     if (!product || !selectedTier) {
@@ -198,7 +210,7 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
 
   return (
     <View className="flex-1 bg-brand-background">
-      <ProductHeader onBackPress={handleBack} />
+      <ProductHeader onBackPress={handleBack} onCartPress={handleOpenCart} />
       <ProductBreadcrumb
         category={product.breadcrumbCategory}
         productName={product.breadcrumbProduct}
