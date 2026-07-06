@@ -227,15 +227,18 @@ export const usePaymentProof = (orderId: string, amount: number): UsePaymentProo
       setTimeout(resolve, SUBMIT_DELAY_MS);
     });
 
+    const normalizedUtr = normalizeUtr(utr);
+
     const proof: PaymentProof = {
       orderId,
+      transactionId: normalizedUtr,
       amount,
       bank,
       paymentMode,
       transactionDate: dayjs(transactionDate).format('YYYY-MM-DD'),
-      utr: normalizeUtr(utr),
-      receipt: receipt as PaymentProofReceipt,
       submittedAt: new Date().toISOString(),
+      utr: normalizedUtr,
+      receipt: receipt as PaymentProofReceipt,
       status: 'submitted',
     };
 

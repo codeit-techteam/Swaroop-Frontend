@@ -1,117 +1,180 @@
-import { memo, useCallback, useMemo } from 'react';
+import { memo, useCallback } from 'react';
 
-import { View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
 import { type Href, useRouter } from 'expo-router';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { PrimaryButton, ReferenceCard, TimelineCard, Typography } from '@/components';
-import { formatPaymentCurrency } from '@/constants/payment';
-import { HourglassIcon } from '@/icons';
+import {
+  EstimatedVerificationChip,
+  TransactionDetailsCard,
+  VerificationErrorCard,
+  VerificationInfoCard,
+  VerificationTimeline,
+} from '@/components/payment';
+import { PrimaryButton, Typography } from '@/components/ui';
+import { VERIFICATION_SCREEN_COPY } from '@/constants/verificationStatus';
+import { usePaymentVerification } from '@/hooks/use-payment-verification';
+import { BackArrowIcon, BellIcon, PaymentVerificationIllustration } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
-import { selectCurrentOrder, selectPaymentProof, useOrderStore } from '@/store/order-store';
 import { brandColors } from '@/theme/colors';
-import type { TimelineStep } from '@/types/document';
-import { formatDateTime } from '@/utils/date';
-import { wp } from '@/utils/responsive';
-
-const buildPaymentVerificationTimeline = (submittedAt?: string): TimelineStep[] => [
-  {
-    id: 'submitted',
-    title: 'Payment Proof Submitted',
-    description: 'Your transaction details and receipt have been received.',
-    status: 'completed',
-    meta: submittedAt
-      ? `Submitted ${formatDateTime(submittedAt, 'DD MMM YYYY, hh:mm A')}`
-      : undefined,
-  },
-  {
-    id: 'verification',
-    title: 'Payment Verification',
-    description: 'Our team is verifying your bank transfer against the order amount.',
-    status: 'in_progress',
-    meta: 'In Progress — Est. 15–30 minutes',
-  },
-  {
-    id: 'confirmation',
-    title: 'Procurement Confirmation',
-    description: 'Once verified, your order moves to procurement confirmation.',
-    status: 'pending',
-    meta: 'Pending verification',
-  },
-];
+import { iconSizes } from '@/theme/icons';
 
 export const CustomerPaymentVerificationInitiatedScreen = memo(
   function CustomerPaymentVerificationInitiatedScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
-    const order = useOrderStore(selectCurrentOrder);
-    const paymentProof = useOrderStore(selectPaymentProof);
+    const {
+      order,
+      paymentProof,
+      timeline,
+      badgeStatus,
+      verificationError,
+      handleGoToOrders,
+      handleBack,
+    } = usePaymentVerification();
 
-    const timeline = useMemo(
-      () => buildPaymentVerificationTimeline(paymentProof?.submittedAt),
-      [paymentProof?.submittedAt],
-    );
-
-    const handleContinue = useCallback(() => {
-      router.replace(ROUTES.CUSTOMER.ORDER_CONFIRMATION as Href);
+    const handleNotifications = useCallback(() => {
+      router.push(ROUTES.CUSTOMER.HOME as Href);
     }, [router]);
 
-    const handleBack = useCallback(() => {
-      if (router.canGoBack()) {
-        router.back();
-        return;
-      }
-      router.replace(ROUTES.CUSTOMER.HOME as Href);
-    }, [router]);
+    if (!order || !paymentProof) {
+      return (
+        <View className="flex-1 bg-brand-background">
+          <View
+            className="border-b border-brand-border bg-brand-white px-lg"
+            style={{ paddingTop: insets.top }}
+          >
+            <View className="h-14 flex-row items-center">
+              <Pressable
+                onPress={handleBack}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="Go back"
+                className="h-10 w-10 items-center justify-center"
+              >
+                <BackArrowIcon color={brandColors.heading} />
+              </Pressable>
+              <Typography variant="roleTitle" className="ml-sm text-[17px] text-brand-heading">
+                Payment Verification
+              </Typography>
+            </View>
+          </View>
+          <View className="flex-1 items-center justify-center px-lg">
+            <Typography variant="subheadingLeft" className="text-center text-brand-body">
+              Payment proof not found. Please submit your payment proof to continue.
+            </Typography>
+            <PrimaryButton
+              label="Upload Payment Proof"
+              onPress={() => router.replace(ROUTES.CUSTOMER.PAYMENT_UPLOAD_PROOF as Href)}
+              className="mt-lg"
+            />
+          </View>
+        </View>
+      );
+    }
 
     return (
-      <View
-        className="flex-1 bg-brand-white px-lg"
-        style={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16 }}
-      >
-        <View className="mt-lg items-center">
-          <View className="mb-lg h-20 w-20 items-center justify-center rounded-full bg-brand-primary-light">
-            <HourglassIcon size={wp(10)} color={brandColors.primary} />
+      <View className="flex-1 bg-brand-background">
+        <View
+          className="border-b border-brand-border bg-brand-white px-lg"
+          style={{ paddingTop: insets.top }}
+        >
+          <View className="h-14 flex-row items-center justify-between">
+            <View className="min-w-0 flex-1 flex-row items-center">
+              <Pressable
+                onPress={handleBack}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="Go back"
+                className="mr-sm h-10 w-10 items-center justify-center"
+              >
+                <BackArrowIcon color={brandColors.heading} />
+              </Pressable>
+              <Typography
+                variant="roleTitle"
+                className="text-[17px] text-brand-heading"
+                numberOfLines={1}
+              >
+                Payment Verification
+              </Typography>
+            </View>
+            <Pressable
+              onPress={handleNotifications}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="Notifications"
+              className="h-10 w-10 items-center justify-center"
+            >
+              <BellIcon size={iconSizes.lg} color={brandColors.primary} />
+            </Pressable>
+          </View>
+        </View>
+
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{
+            paddingHorizontal: 16,
+            paddingTop: 20,
+            paddingBottom: insets.bottom + 100,
+          }}
+        >
+          <View className="items-center rounded-2xl border border-brand-border bg-brand-white px-md py-lg">
+            <PaymentVerificationIllustration width={200} height={160} />
+            <Typography
+              variant="illustrationLabel"
+              className="mt-md px-sm text-[11px] leading-4 text-brand-navy"
+            >
+              {VERIFICATION_SCREEN_COPY.illustrationLabel}
+            </Typography>
           </View>
 
-          <Typography variant="headingLeft" className="text-center text-[22px] text-brand-heading">
-            Payment Verification Initiated
+          <Typography
+            variant="headingLeft"
+            className="mt-xl text-center text-[22px] text-brand-heading"
+          >
+            {VERIFICATION_SCREEN_COPY.title}
           </Typography>
           <Typography
             variant="subheadingLeft"
-            className="mt-sm px-md text-center text-[14px] leading-[22px] text-brand-body"
+            className="mt-sm text-center text-[14px] leading-[22px] text-brand-body"
           >
-            Your payment proof for {order?.productName ?? 'this order'} is under review. We will
-            notify you once verification is complete.
+            {VERIFICATION_SCREEN_COPY.description}
           </Typography>
-        </View>
 
-        {order ? (
-          <View className="mt-xl rounded-2xl border border-brand-border bg-brand-surface p-lg">
-            <Typography
-              variant="fieldLabel"
-              className="text-[10px] tracking-[0.6px] text-brand-muted"
-            >
-              ORDER AMOUNT
+          <EstimatedVerificationChip className="mt-lg" />
+
+          <VerificationTimeline steps={timeline} className="mt-xl" />
+
+          <TransactionDetailsCard
+            paymentProof={paymentProof}
+            badgeStatus={badgeStatus}
+            className="mt-lg"
+          />
+
+          {verificationError ? (
+            <VerificationErrorCard error={verificationError} className="mt-lg" />
+          ) : null}
+
+          <VerificationInfoCard className="mt-lg" />
+        </ScrollView>
+
+        <View
+          className="absolute bottom-0 left-0 right-0 border-t border-brand-border bg-brand-white px-lg pt-md"
+          style={{ paddingBottom: insets.bottom + 12 }}
+        >
+          <Pressable
+            onPress={handleGoToOrders}
+            accessibilityRole="button"
+            accessibilityLabel="Go to orders"
+            className="w-full items-center justify-center rounded-md border border-brand-border bg-brand-white px-xl py-lg"
+            style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
+          >
+            <Typography variant="roleTitle" className="text-[15px] text-brand-heading">
+              Go to Orders
             </Typography>
-            <Typography variant="roleTitle" className="mt-xs text-[20px] text-brand-primary">
-              {formatPaymentCurrency(order.amount)}
-            </Typography>
-            <Typography variant="roleDescription" className="mt-sm text-brand-body">
-              {order.quantityMt} MT · {order.warehouse}
-            </Typography>
-          </View>
-        ) : null}
-
-        {order ? <ReferenceCard referenceId={order.id} className="mt-lg" /> : null}
-
-        <TimelineCard steps={timeline} className="mt-lg" />
-
-        <View className="mt-auto" style={{ gap: 12 }}>
-          <PrimaryButton label="Continue" onPress={handleContinue} showArrow />
-          <PrimaryButton label="Back to Home" onPress={handleBack} className="bg-brand-heading" />
+          </Pressable>
         </View>
       </View>
     );

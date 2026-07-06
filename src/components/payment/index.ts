@@ -13,6 +13,12 @@ export { PaymentModeSelector } from '@/components/payment/payment-mode-selector'
 export { ReceiptUploader } from '@/components/payment/receipt-uploader';
 export { TransactionForm } from '@/components/payment/transaction-form';
 export { PaymentVerificationInfoCard } from '@/components/payment/payment-verification-info-card';
+export { EstimatedVerificationChip } from '@/components/payment/estimated-verification-chip';
+export { VerificationTimeline } from '@/components/payment/verification-timeline';
+export { TransactionDetailsCard } from '@/components/payment/transaction-details-card';
+export { VerificationStatusBadge } from '@/components/payment/verification-status-badge';
+export { VerificationInfoCard } from '@/components/payment/verification-info-card';
+export { VerificationErrorCard } from '@/components/payment/verification-error-card';
 export { PaymentComparisonSheet } from '@/components/payment/payment-comparison-sheet';
 export { PaymentComparisonTable } from '@/components/payment/payment-comparison-table';
 export { PaymentComparisonRow } from '@/components/payment/payment-comparison-row';
