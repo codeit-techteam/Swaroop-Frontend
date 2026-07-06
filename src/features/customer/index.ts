@@ -7,5 +7,6 @@ export { CustomerCartScreen } from '@/features/customer/cart-screen';
 export { CustomerCheckoutScreen } from '@/features/customer/checkout-screen';
 export { CustomerPaymentSelectionScreen } from '@/features/customer/payment-selection-screen';
 export { CustomerPaymentCompareScreen } from '@/features/customer/payment-compare-screen';
+export { CustomerPaymentUploadProofScreen } from '@/features/customer/payment-upload-proof-screen';
+export { CustomerPaymentVerificationInitiatedScreen } from '@/features/customer/payment-verification-initiated-screen';
 export { CustomerOrderConfirmationScreen } from '@/features/customer/order-confirmation-screen';
-

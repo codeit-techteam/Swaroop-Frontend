@@ -4,4 +4,4 @@ export { useAuth, useRequireAuth } from '@/hooks/use-auth';
 export { useDebouncedValue, useDebouncedCallback } from '@/hooks/use-debounce';
 export { useThrottledCallback } from '@/hooks/use-throttle';
 export { useDocumentUpload } from '@/hooks/use-document-upload';
-
+export { usePaymentProof } from '@/hooks/use-payment-proof';

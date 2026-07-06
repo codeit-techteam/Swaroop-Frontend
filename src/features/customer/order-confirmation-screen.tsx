@@ -10,6 +10,7 @@ import { Typography } from '@/components/ui/typography';
 import { formatPaymentCurrency } from '@/constants/payment';
 import { BackArrowIcon, CheckCircleIcon } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
+import { selectCurrentOrder, selectPaymentProof, useOrderStore } from '@/store/order-store';
 import { selectPaymentCalculation, usePaymentStore } from '@/store/payment-store';
 import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
@@ -18,6 +19,10 @@ export const CustomerOrderConfirmationScreen = memo(function CustomerOrderConfir
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const payment = usePaymentStore(selectPaymentCalculation);
+  const order = useOrderStore(selectCurrentOrder);
+  const paymentProof = useOrderStore(selectPaymentProof);
+
+  const hasSubmittedProof = order?.paymentStatus === 'submitted';
 
   const handleBackHome = useCallback(() => {
     router.replace(ROUTES.CUSTOMER.HOME as Href);
@@ -52,12 +57,38 @@ export const CustomerOrderConfirmationScreen = memo(function CustomerOrderConfir
           variant="subheadingLeft"
           className="mt-sm text-center text-[14px] leading-[22px] text-brand-body"
         >
-          Frontend placeholder only. No order has been placed and no payment was processed.
+          {hasSubmittedProof
+            ? `Your order for ${order?.productName ?? 'industrial material'} is awaiting payment verification.`
+            : 'Frontend placeholder only. No order has been placed and no payment was processed.'}
         </Typography>
       </View>
 
       <View className="mt-xl rounded-2xl border border-brand-border bg-brand-surface p-lg">
-        <Typography variant="fieldLabel" className="text-[10px] tracking-[0.6px] text-brand-muted">
+        {order ? (
+          <>
+            <Typography
+              variant="fieldLabel"
+              className="text-[10px] tracking-[0.6px] text-brand-muted"
+            >
+              ORDER REFERENCE
+            </Typography>
+            <Typography variant="roleTitle" className="mt-xs text-[16px] text-brand-heading">
+              {order.id}
+            </Typography>
+            <Typography variant="roleDescription" className="mt-sm text-brand-body">
+              {order.productName} · {order.quantityMt} MT
+            </Typography>
+          </>
+        ) : null}
+
+        <Typography
+          variant="fieldLabel"
+          className={
+            order
+              ? 'mt-md text-[10px] tracking-[0.6px] text-brand-muted'
+              : 'text-[10px] tracking-[0.6px] text-brand-muted'
+          }
+        >
           SELECTED PAYMENT METHOD
         </Typography>
         <Typography variant="roleTitle" className="mt-xs text-[16px] text-brand-heading">
@@ -77,8 +108,14 @@ export const CustomerOrderConfirmationScreen = memo(function CustomerOrderConfir
         ) : null}
 
         <Typography variant="roleTitle" className="mt-md text-[18px] text-brand-primary">
-          Payable: {formatPaymentCurrency(payment.payableAmount)}
+          Payable: {formatPaymentCurrency(order?.amount ?? payment.payableAmount)}
         </Typography>
+
+        {paymentProof ? (
+          <Typography variant="roleDescription" className="mt-sm text-brand-body">
+            UTR: {paymentProof.utr} · {paymentProof.paymentMode}
+          </Typography>
+        ) : null}
       </View>
 
       <Pressable

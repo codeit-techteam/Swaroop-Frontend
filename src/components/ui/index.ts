@@ -12,6 +12,7 @@ export { InputField } from '@/components/ui/input-field';
 export { InputField as TextInputField } from '@/components/ui/input-field';
 export { DropdownField } from '@/components/ui/dropdown-field';
 export { AppBottomSheetPicker } from '@/components/ui/app-bottom-sheet-picker';
+export { DatePickerField } from '@/components/ui/date-picker-field';
 export { OtpInput } from '@/components/ui/otp-input';
 export { CountryPicker } from '@/components/ui/country-picker';
 export { IllustrationContainer } from '@/components/ui/illustration-container';

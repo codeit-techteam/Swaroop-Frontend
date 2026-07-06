@@ -48,4 +48,10 @@ export {
   selectCheckoutAddress,
   selectCheckoutOrderSummary,
 } from '@/store/checkout-store';
-
+export {
+  useOrderStore,
+  selectCurrentOrder,
+  selectPaymentProof,
+  selectOrderHydrated,
+  createOrderId,
+} from '@/store/order-store';

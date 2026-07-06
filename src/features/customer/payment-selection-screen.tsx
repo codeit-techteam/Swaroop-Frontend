@@ -17,14 +17,8 @@ import { Typography } from '@/components/ui/typography';
 import { getPaymentMethodById, PAYMENT_METHODS } from '@/constants/payment';
 import { PhoneIcon } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
-import {
-  selectCartItems,
-  useCartStore,
-} from '@/store/cart-store';
-import {
-  selectCheckoutAddress,
-  useCheckoutStore,
-} from '@/store/checkout-store';
+import { selectCartItems, useCartStore } from '@/store/cart-store';
+import { selectCheckoutAddress, useCheckoutStore } from '@/store/checkout-store';
 import {
   selectPaymentCalculation,
   selectPaymentMethodId,
@@ -106,7 +100,12 @@ export const CustomerPaymentSelectionScreen = memo(function CustomerPaymentSelec
       destinationLabel: `${shippingAddress.warehouseName}, ${shippingAddress.state}`,
       totalAmount: checkoutSummary.totalPayable,
     };
-  }, [cartItems, checkoutSummary.totalPayable, shippingAddress.state, shippingAddress.warehouseName]);
+  }, [
+    cartItems,
+    checkoutSummary.totalPayable,
+    shippingAddress.state,
+    shippingAddress.warehouseName,
+  ]);
 
   const selectedMethod = getPaymentMethodById(selectedMethodId);
 
@@ -139,8 +138,12 @@ export const CustomerPaymentSelectionScreen = memo(function CustomerPaymentSelec
   }, [router]);
 
   const handleContinue = useCallback(() => {
+    if (selectedMethodId === 'advance') {
+      router.push(ROUTES.CUSTOMER.PAYMENT_UPLOAD_PROOF as Href);
+      return;
+    }
     router.push(ROUTES.CUSTOMER.ORDER_CONFIRMATION as Href);
-  }, [router]);
+  }, [router, selectedMethodId]);
 
   return (
     <View className="flex-1 bg-brand-background">

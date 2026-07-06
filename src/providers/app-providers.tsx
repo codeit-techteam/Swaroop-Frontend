@@ -22,6 +22,7 @@ import { configureNotifications } from '@/services/notification-service';
 import { useAuthStore } from '@/store/auth-store';
 import { useCartStore } from '@/store/cart-store';
 import { useKycStore } from '@/store/kyc-store';
+import { useOrderStore } from '@/store/order-store';
 import { usePaymentStore } from '@/store/payment-store';
 import { hydrateSecureStorage } from '@/utils/storage';
 
@@ -51,6 +52,7 @@ export const AppProviders = ({ children }: AppProvidersProps) => {
   const hydrateKyc = useKycStore((state) => state.hydrateKyc);
   const hydrateCart = useCartStore((state) => state.hydrateCart);
   const hydratePayment = usePaymentStore((state) => state.hydratePayment);
+  const hydrateOrder = useOrderStore((state) => state.hydrateOrder);
 
   useEffect(() => {
     let active = true;
@@ -64,6 +66,7 @@ export const AppProviders = ({ children }: AppProvidersProps) => {
       hydrateKyc();
       hydrateCart();
       hydratePayment();
+      hydrateOrder();
       setSessionReady(true);
     };
 
@@ -72,7 +75,7 @@ export const AppProviders = ({ children }: AppProvidersProps) => {
     return () => {
       active = false;
     };
-  }, [hydrateCart, hydrateKyc, hydratePayment, hydrateSession]);
+  }, [hydrateCart, hydrateKyc, hydrateOrder, hydratePayment, hydrateSession]);
 
   if (!fontsLoaded || !sessionReady) {
     return null;

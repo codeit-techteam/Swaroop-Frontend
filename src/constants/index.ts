@@ -16,6 +16,7 @@ export const STORAGE_KEYS = {
   CART_KEY: 'swaroop_cart',
   PAYMENT_KEY: 'swaroop_payment',
   CHECKOUT_KEY: 'swaroop_checkout',
+  ORDER_KEY: 'swaroop_order',
 } as const;
 
 export const QUERY_KEYS = {
