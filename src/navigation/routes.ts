@@ -30,6 +30,7 @@ export const ROUTES = {
     PROCUREMENT_CONFIRMATION: '/(customer)/procurement/confirmation',
     ORDER_AWAITING_CONFIRMATION: '/(customer)/order-awaiting-confirmation',
     PURCHASE_ORDER_GENERATED: '/(customer)/purchase-order-generated',
+    DISPATCH_PLANNING: '/(customer)/dispatch-planning',
     ORDER_CONFIRMATION: '/(customer)/order-confirmation',
     DASHBOARD: '/(customer)/(tabs)/home',
   },
@@ -72,6 +73,7 @@ export type CustomerRoute =
   | typeof ROUTES.CUSTOMER.PROCUREMENT_CONFIRMATION
   | typeof ROUTES.CUSTOMER.ORDER_AWAITING_CONFIRMATION
   | typeof ROUTES.CUSTOMER.PURCHASE_ORDER_GENERATED
+  | typeof ROUTES.CUSTOMER.DISPATCH_PLANNING
   | typeof ROUTES.CUSTOMER.ORDER_CONFIRMATION
   | typeof ROUTES.CUSTOMER.DASHBOARD;
 

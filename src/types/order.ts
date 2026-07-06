@@ -7,6 +7,7 @@ import type {
 } from '@/types/orderConfirmation';
 import type { PaymentMethodId } from '@/types/payment';
 import type { ProcurementState } from '@/types/procurement';
+import type { DispatchStatus, WorkflowTimelineState } from '@/types/purchaseOrder';
 
 export type PaymentMode = 'RTGS' | 'NEFT' | 'IMPS' | 'UPI';
 
@@ -57,5 +58,13 @@ export type Order = {
   confirmationStatus: ConfirmationStatus;
   supplierConfirmation: SupplierConfirmationStatus;
   inventoryReserved: boolean;
+  poNumber: string | null;
+  poGenerated: boolean;
+  procurementCompleted: boolean;
+  dispatchStatus: DispatchStatus | null;
+  documentsReady: boolean;
+  workflowTimeline: WorkflowTimelineState | null;
+  dispatchReadiness: string | null;
+  transitWindow: string | null;
   createdAt: string;
 };

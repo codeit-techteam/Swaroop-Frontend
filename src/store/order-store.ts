@@ -56,6 +56,14 @@ const readPersistedOrderState = (): PersistedOrderState => {
           confirmationStatus: parsed.currentOrder.confirmationStatus ?? 'pending_petrotrade',
           supplierConfirmation: parsed.currentOrder.supplierConfirmation ?? 'pending',
           inventoryReserved: parsed.currentOrder.inventoryReserved ?? false,
+          poNumber: parsed.currentOrder.poNumber ?? null,
+          poGenerated: parsed.currentOrder.poGenerated ?? false,
+          procurementCompleted: parsed.currentOrder.procurementCompleted ?? false,
+          dispatchStatus: parsed.currentOrder.dispatchStatus ?? null,
+          documentsReady: parsed.currentOrder.documentsReady ?? false,
+          workflowTimeline: parsed.currentOrder.workflowTimeline ?? null,
+          dispatchReadiness: parsed.currentOrder.dispatchReadiness ?? null,
+          transitWindow: parsed.currentOrder.transitWindow ?? null,
         }
       : null;
 

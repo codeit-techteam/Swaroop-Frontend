@@ -75,7 +75,7 @@ export const useOrderConfirmation = (): UseOrderConfirmationResult => {
   }, [hydrateOrder, isOrderHydrated]);
 
   useEffect(() => {
-    if (!order || hasInitializedRef.current || order.orderStatus === 'confirmed') {
+    if (!order || hasInitializedRef.current || order.orderStatus === 'purchase_order_generated') {
       return;
     }
 
@@ -146,7 +146,7 @@ export const useOrderConfirmation = (): UseOrderConfirmationResult => {
         inventoryReserved: true,
         supplierConfirmation: 'confirmed',
         confirmationStatus: 'confirmed',
-        orderStatus: 'confirmed',
+        orderStatus: 'purchase_order_generated',
       });
       navigateToPurchaseOrderGenerated();
       return;
@@ -174,7 +174,7 @@ export const useOrderConfirmation = (): UseOrderConfirmationResult => {
     if (
       !ORDER_CONFIRMATION_DEMO_MODE ||
       !order?.validationTimeline ||
-      order.orderStatus === 'confirmed' ||
+      order.orderStatus === 'purchase_order_generated' ||
       isValidationComplete(order.validationTimeline) ||
       activeSimulationOrderId === order.id
     ) {
@@ -250,12 +250,21 @@ export const useOrderConfirmation = (): UseOrderConfirmationResult => {
             confirmationStatus: 'pending_petrotrade',
             supplierConfirmation: 'pending',
             inventoryReserved: false,
+            poNumber: null,
+            poGenerated: false,
+            procurementCompleted: false,
+            dispatchStatus: null,
+            documentsReady: false,
+            workflowTimeline: null,
+            dispatchReadiness: null,
+            transitWindow: null,
             createdAt: new Date().toISOString(),
           }),
     [order],
   );
 
-  const isComplete = order?.orderStatus === 'confirmed';
+  const isComplete =
+    order?.orderStatus === 'purchase_order_generated' || order?.orderStatus === 'confirmed';
 
   const handleTrackStatus = useCallback(() => {
     router.replace(ROUTES.CUSTOMER.ORDER_AWAITING_CONFIRMATION as Href);

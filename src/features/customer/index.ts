@@ -12,4 +12,5 @@ export { CustomerPaymentVerificationInitiatedScreen } from '@/features/customer/
 export { CustomerProcurementConfirmationScreen } from '@/features/customer/procurement-confirmation-screen';
 export { CustomerOrderAwaitingConfirmationScreen } from '@/features/customer/order-awaiting-confirmation-screen';
 export { CustomerPurchaseOrderGeneratedScreen } from '@/features/customer/purchase-order-generated-screen';
+export { CustomerDispatchPlanningScreen } from '@/features/customer/dispatch-planning-screen';
 export { CustomerOrderConfirmationScreen } from '@/features/customer/order-confirmation-screen';

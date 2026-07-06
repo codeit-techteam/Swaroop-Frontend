@@ -82,6 +82,14 @@ const buildOrderFromStores = (
     confirmationStatus: 'pending_petrotrade',
     supplierConfirmation: 'pending',
     inventoryReserved: false,
+    poNumber: null,
+    poGenerated: false,
+    procurementCompleted: false,
+    dispatchStatus: null,
+    documentsReady: false,
+    workflowTimeline: null,
+    dispatchReadiness: null,
+    transitWindow: null,
     createdAt: new Date().toISOString(),
   };
 };

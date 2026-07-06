@@ -1,38 +1,37 @@
-import { memo, useCallback } from 'react';
+import { memo } from 'react';
 
 import { Pressable, ScrollView, View } from 'react-native';
 
-import { type Href, useRouter } from 'expo-router';
-
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { OrderDetailsCard } from '@/components/order';
-import { PrimaryButton, Typography } from '@/components/ui';
-import { formatPaymentCurrency } from '@/constants/payment';
-import { BackArrowIcon, CheckCircleIcon } from '@/icons';
-import { ROUTES } from '@/navigation/routes';
-import { selectCurrentOrder, useOrderStore } from '@/store/order-store';
+import { NotificationBadge } from '@/components/home/notification-badge';
+import {
+  BlindMarketplaceNotice,
+  OrderDocumentsCard,
+  PurchaseOrderInfoCard,
+  PurchaseOrderSuccessCard,
+  TransactionScopeCard,
+  WorkflowVerificationTimeline,
+} from '@/components/order';
+import { PrimaryButton, SecondaryButton, Typography } from '@/components/ui';
+import { PURCHASE_ORDER_COPY } from '@/constants/purchaseOrderTimeline';
+import { usePurchaseOrder } from '@/hooks/usePurchaseOrder';
+import { BackArrowIcon, BellIcon, OrdersTabIcon, PetroTradeLogo, TruckIcon } from '@/icons';
 import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
 
 export const CustomerPurchaseOrderGeneratedScreen = memo(
   function CustomerPurchaseOrderGeneratedScreen() {
-    const router = useRouter();
     const insets = useSafeAreaInsets();
-    const order = useOrderStore(selectCurrentOrder);
-
-    const handleBackHome = useCallback(() => {
-      router.replace(ROUTES.CUSTOMER.HOME as Href);
-    }, [router]);
-
-    const handleBack = useCallback(() => {
-      if (router.canGoBack()) {
-        router.back();
-        return;
-      }
-
-      handleBackHome();
-    }, [handleBackHome, router]);
+    const {
+      order,
+      poNumber,
+      timelineSteps,
+      handleTrackShipment,
+      handleGoToOrders,
+      handleBack,
+      handleNotifications,
+    } = usePurchaseOrder();
 
     return (
       <View className="flex-1 bg-brand-background">
@@ -40,19 +39,39 @@ export const CustomerPurchaseOrderGeneratedScreen = memo(
           className="border-b border-brand-border bg-brand-white px-lg"
           style={{ paddingTop: insets.top }}
         >
-          <View className="h-14 flex-row items-center">
-            <Pressable
-              onPress={handleBack}
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel="Go back"
-              className="h-10 w-10 items-center justify-center"
-            >
-              <BackArrowIcon color={brandColors.heading} />
-            </Pressable>
-            <Typography variant="roleTitle" className="ml-sm text-[17px] text-brand-heading">
-              Purchase Order Generated
-            </Typography>
+          <View className="h-14 flex-row items-center justify-between">
+            <View className="min-w-0 flex-1 flex-row items-center">
+              <Pressable
+                onPress={handleBack}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="Go back"
+                className="mr-sm h-10 w-10 items-center justify-center"
+              >
+                <BackArrowIcon color={brandColors.heading} />
+              </Pressable>
+              <Typography
+                variant="roleTitle"
+                className="text-[17px] text-brand-heading"
+                numberOfLines={1}
+              >
+                {PURCHASE_ORDER_COPY.headerTitle}
+              </Typography>
+            </View>
+
+            <View className="flex-row items-center">
+              <PetroTradeLogo size={32} />
+              <Pressable
+                onPress={handleNotifications}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="Notifications"
+                className="relative ml-sm h-10 w-10 items-center justify-center"
+              >
+                <BellIcon size={iconSizes.lg} color={brandColors.primary} />
+                <NotificationBadge visible />
+              </Pressable>
+            </View>
           </View>
         </View>
 
@@ -61,54 +80,53 @@ export const CustomerPurchaseOrderGeneratedScreen = memo(
           contentContainerStyle={{
             paddingHorizontal: 16,
             paddingTop: 20,
-            paddingBottom: insets.bottom + 24,
+            paddingBottom: insets.bottom + 140,
           }}
         >
-          <View className="items-center rounded-2xl border border-brand-border bg-brand-white px-lg py-xl">
-            <View className="h-14 w-14 items-center justify-center rounded-full bg-brand-success-light">
-              <CheckCircleIcon size={iconSizes.xl} color={brandColors.success} />
-            </View>
-            <Typography
-              variant="headingLeft"
-              className="mt-md text-center text-[22px] text-brand-heading"
-            >
-              Purchase Order Generated
-            </Typography>
-            <Typography
-              variant="subheadingLeft"
-              className="mt-sm text-center text-[14px] leading-[22px] text-brand-body"
-            >
-              PetroTrade has confirmed your order and generated a digitally signed purchase order.
-            </Typography>
-          </View>
+          <PurchaseOrderSuccessCard />
 
-          {order ? (
+          {order && poNumber ? (
             <>
-              <OrderDetailsCard
-                order={order}
-                destination={order.destination}
+              <PurchaseOrderInfoCard
+                poNumber={poNumber}
+                orderNumber={order.id}
                 className="mt-lg"
               />
-              <View className="mt-lg rounded-2xl border border-brand-border bg-brand-white px-lg py-lg">
-                <Typography
-                  variant="fieldLabel"
-                  className="text-[10px] tracking-[0.8px] text-brand-muted"
-                >
-                  CONFIRMED PAYABLE
-                </Typography>
-                <Typography variant="headingLeft" className="mt-xs text-[24px] text-brand-primary">
-                  {formatPaymentCurrency(order.amount)}
-                </Typography>
-              </View>
+
+              <TransactionScopeCard
+                material={order.productName}
+                netWeight={`${order.quantityMt} MT`}
+                originHub={order.warehouse}
+                dispatchReadiness={order.dispatchReadiness ?? ''}
+                transitWindow={order.transitWindow ?? ''}
+                className="mt-lg"
+              />
             </>
           ) : null}
+
+          <WorkflowVerificationTimeline steps={timelineSteps} className="mt-lg" />
+
+          <OrderDocumentsCard className="mt-lg" />
+
+          <BlindMarketplaceNotice className="mt-lg" />
         </ScrollView>
 
         <View
-          className="border-t border-brand-border bg-brand-white px-lg pt-md"
-          style={{ paddingBottom: insets.bottom + 12 }}
+          className="absolute bottom-0 left-0 right-0 border-t border-brand-border bg-brand-white px-lg pt-md"
+          style={{ paddingBottom: insets.bottom + 12, gap: 12 }}
         >
-          <PrimaryButton label="Back to Home" onPress={handleBackHome} />
+          <PrimaryButton
+            label={PURCHASE_ORDER_COPY.trackShipment}
+            onPress={handleTrackShipment}
+            leftIcon={<TruckIcon size={iconSizes.md} color={brandColors.white} />}
+            className="bg-brand-heading"
+          />
+          <SecondaryButton
+            label={PURCHASE_ORDER_COPY.goToOrders}
+            onPress={handleGoToOrders}
+            variant="outline"
+            leftIcon={<OrdersTabIcon size={iconSizes.md} color={brandColors.primary} />}
+          />
         </View>
       </View>
     );

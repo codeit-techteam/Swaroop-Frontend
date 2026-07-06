@@ -1,6 +1,6 @@
-import { memo } from 'react';
+import { memo, type ReactNode } from 'react';
 
-import { type GestureResponderEvent, Pressable } from 'react-native';
+import { type GestureResponderEvent, Pressable, View } from 'react-native';
 
 import { Typography } from '@/components/ui/typography';
 import { cn } from '@/utils/cn';
@@ -11,6 +11,7 @@ type SecondaryButtonProps = {
   className?: string;
   disabled?: boolean;
   variant?: 'solid' | 'outline';
+  leftIcon?: ReactNode;
   accessibilityLabel?: string;
 };
 
@@ -20,6 +21,7 @@ export const SecondaryButton = memo(function SecondaryButton({
   className,
   disabled = false,
   variant = 'solid',
+  leftIcon,
   accessibilityLabel,
 }: SecondaryButtonProps) {
   const isOutline = variant === 'outline';
@@ -32,7 +34,7 @@ export const SecondaryButton = memo(function SecondaryButton({
       accessibilityState={{ disabled }}
       accessibilityLabel={accessibilityLabel ?? label}
       className={cn(
-        'w-full items-center justify-center rounded-md px-xl py-lg',
+        'w-full flex-row items-center justify-center rounded-md px-xl py-lg',
         isOutline
           ? 'border border-brand-primary bg-brand-white'
           : disabled
@@ -42,12 +44,15 @@ export const SecondaryButton = memo(function SecondaryButton({
       )}
       style={({ pressed }) => ({ opacity: !disabled && pressed ? 0.85 : 1 })}
     >
-      <Typography
-        variant="buttonSecondary"
-        className={isOutline ? 'text-brand-primary' : undefined}
-      >
-        {label}
-      </Typography>
+      <View className="flex-row items-center justify-center gap-sm">
+        {leftIcon}
+        <Typography
+          variant="buttonSecondary"
+          className={isOutline ? 'text-brand-primary' : undefined}
+        >
+          {label}
+        </Typography>
+      </View>
     </Pressable>
   );
 });

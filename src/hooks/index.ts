@@ -10,3 +10,4 @@ export { useProcurement } from '@/hooks/use-procurement';
 export { useProcurementSimulation } from '@/hooks/useProcurementSimulation';
 export { useCountdown } from '@/hooks/useCountdown';
 export { useOrderConfirmation } from '@/hooks/useOrderConfirmation';
+export { usePurchaseOrder } from '@/hooks/usePurchaseOrder';

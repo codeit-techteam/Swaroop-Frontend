@@ -1,4 +1,8 @@
-export type OrderLifecycleStatus = 'draft' | 'awaiting_confirmation' | 'confirmed';
+export type OrderLifecycleStatus =
+  | 'draft'
+  | 'awaiting_confirmation'
+  | 'confirmed'
+  | 'purchase_order_generated';
 
 export type PriceLockStatus = 'active' | 'expired';
 
