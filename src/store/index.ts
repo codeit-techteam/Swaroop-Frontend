@@ -41,4 +41,11 @@ export {
   selectPaymentBaseAmount,
   selectPaymentCalculation,
 } from '@/store/payment-store';
+export {
+  useCheckoutStore,
+  selectCheckoutAddressId,
+  selectCheckoutHydrated,
+  selectCheckoutAddress,
+  selectCheckoutOrderSummary,
+} from '@/store/checkout-store';
 

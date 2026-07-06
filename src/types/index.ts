@@ -93,6 +93,12 @@ export type {
 } from '@/types/payment';
 
 export type {
+  CheckoutShippingAddress,
+  CheckoutOrderSummary,
+  CheckoutProductLine,
+} from '@/types/checkout';
+
+export type {
   UserRole,
   AuthPayload,
   UserProfilePayload,

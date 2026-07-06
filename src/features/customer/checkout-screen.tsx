@@ -1,149 +1,162 @@
-import { memo, useCallback, useEffect, useMemo } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 
-import { Pressable, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
-import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
+import { type Href, useRouter } from 'expo-router';
 
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
+import {
+  AddressBottomSheet,
+  CheckoutBottomBar,
+  CheckoutHeader,
+  CheckoutOrderSummaryCard,
+  IndustrialBanner,
+  PaymentProtocolCard,
+  ShippingCard,
+} from '@/components/checkout';
 import { Typography } from '@/components/ui/typography';
-import { formatCartCurrency } from '@/constants/cart';
-import { formatPricePerKg, getProductDetailsById } from '@/constants/productDetails';
-import { ArrowRightIcon, BackArrowIcon } from '@/icons';
+import {
+  formatCheckoutPackaging,
+  formatCheckoutProductSubtitle,
+  formatCheckoutProductTitle,
+} from '@/constants/checkout';
 import { ROUTES } from '@/navigation/routes';
-import { selectCartItems, selectOrderSummary, useCartStore } from '@/store/cart-store';
+import { selectCartHydrated, selectCartItems, useCartStore } from '@/store/cart-store';
+import {
+  selectCheckoutAddress,
+  selectCheckoutAddressId,
+  selectCheckoutHydrated,
+  useCheckoutStore,
+} from '@/store/checkout-store';
 import { usePaymentStore } from '@/store/payment-store';
-import { brandColors } from '@/theme/colors';
-import { iconSizes } from '@/theme/icons';
+import type { CheckoutProductLine } from '@/types/checkout';
 
 export const CustomerCheckoutScreen = memo(function CustomerCheckoutScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
+  const addressSheetRef = useRef<BottomSheetModal>(null);
+
   const cartItems = useCartStore(selectCartItems);
-  const cartSummary = useCartStore(selectOrderSummary);
+  const isCartHydrated = useCartStore(selectCartHydrated);
+  const hydrateCart = useCartStore((state) => state.hydrateCart);
+
+  const selectedAddressId = useCheckoutStore(selectCheckoutAddressId);
+  const shippingAddress = useCheckoutStore(selectCheckoutAddress);
+  const isCheckoutHydrated = useCheckoutStore(selectCheckoutHydrated);
+  const hydrateCheckout = useCheckoutStore((state) => state.hydrateCheckout);
+  const changeAddress = useCheckoutStore((state) => state.changeAddress);
+  const getOrderSummary = useCheckoutStore((state) => state.getOrderSummary);
+
+  const orderSummary = useMemo(
+    () => getOrderSummary(cartItems),
+    [cartItems, getOrderSummary, selectedAddressId],
+  );
   const setBaseAmount = usePaymentStore((state) => state.setBaseAmount);
 
-  const params = useLocalSearchParams<{
-    productId?: string | string[];
-    quantityMt?: string | string[];
-    tierId?: string | string[];
-    unitPrice?: string | string[];
-  }>();
-
-  const productId = typeof params.productId === 'string' ? params.productId : undefined;
-  const quantityMt = typeof params.quantityMt === 'string' ? Number(params.quantityMt) : undefined;
-  const unitPrice = typeof params.unitPrice === 'string' ? Number(params.unitPrice) : undefined;
-
-  const product = useMemo(() => (productId ? getProductDetailsById(productId) : null), [productId]);
-
-  const buyNowTotal = useMemo(() => {
-    if (!quantityMt || Number.isNaN(quantityMt) || !unitPrice || Number.isNaN(unitPrice)) {
-      return 0;
+  useEffect(() => {
+    if (!isCartHydrated) {
+      hydrateCart();
     }
-    return Math.round(unitPrice * quantityMt * 1000);
-  }, [quantityMt, unitPrice]);
-
-  const orderTotal = cartItems.length > 0 ? cartSummary.totalLandedCost : buyNowTotal;
+  }, [hydrateCart, isCartHydrated]);
 
   useEffect(() => {
-    if (orderTotal > 0) {
-      setBaseAmount(orderTotal);
+    if (!isCheckoutHydrated) {
+      hydrateCheckout();
     }
-  }, [orderTotal, setBaseAmount]);
+  }, [hydrateCheckout, isCheckoutHydrated]);
 
-  const handleContinueToPayment = useCallback(() => {
-    if (orderTotal > 0) {
-      setBaseAmount(orderTotal);
+  useEffect(() => {
+    if (orderSummary.totalPayable > 0) {
+      setBaseAmount(orderSummary.totalPayable);
     }
+  }, [orderSummary.totalPayable, setBaseAmount]);
+
+  const productLines = useMemo<CheckoutProductLine[]>(
+    () =>
+      cartItems.map((item) => ({
+        id: item.id,
+        title: formatCheckoutProductTitle(item.productType, item.grade),
+        subtitle: formatCheckoutProductSubtitle(item.name),
+        quantityMt: item.quantityMt,
+        packaging: formatCheckoutPackaging(item.packaging, item.quantityMt),
+      })),
+    [cartItems],
+  );
+
+  const handleBack = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+    router.replace(ROUTES.CUSTOMER.CART as Href);
+  }, [router]);
+
+  const handleEditAddress = useCallback(() => {
+    addressSheetRef.current?.present();
+  }, []);
+
+  const handleSelectAddress = useCallback(
+    (addressId: string) => {
+      changeAddress(addressId);
+      addressSheetRef.current?.dismiss();
+    },
+    [changeAddress],
+  );
+
+  const handlePlaceOrder = useCallback(() => {
+    if (cartItems.length === 0) {
+      return;
+    }
+    setBaseAmount(orderSummary.totalPayable);
     router.push(ROUTES.CUSTOMER.PAYMENT as Href);
-  }, [orderTotal, router, setBaseAmount]);
+  }, [cartItems.length, orderSummary.totalPayable, router, setBaseAmount]);
 
-  const hasCartItems = cartItems.length > 0;
-  const canContinue = orderTotal > 0 || hasCartItems;
+  const isReady = isCartHydrated && isCheckoutHydrated;
+  const hasItems = cartItems.length > 0;
 
   return (
-    <View className="flex-1 bg-brand-white px-lg" style={{ paddingTop: insets.top + 16 }}>
-      <Pressable
-        onPress={() => router.back()}
-        accessibilityRole="button"
-        accessibilityLabel="Go back"
-        className="h-10 w-10 items-center justify-center"
-      >
-        <BackArrowIcon color={brandColors.heading} />
-      </Pressable>
+    <View className="flex-1 bg-brand-background">
+      <CheckoutHeader onBackPress={handleBack} />
 
-      <Typography variant="headingLeft" className="mt-lg text-brand-heading">
-        Checkout
-      </Typography>
-      <Typography variant="subheadingLeft" className="mt-sm">
-        Review your order, then continue to payment selection. Frontend only — no payment APIs.
-      </Typography>
+      {isReady ? (
+        <Animated.View entering={FadeIn.duration(260)} className="flex-1">
+          {hasItems ? (
+            <>
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingTop: 16, paddingBottom: 24, gap: 16 }}
+                className="flex-1"
+              >
+                <ShippingCard address={shippingAddress} onEditPress={handleEditAddress} />
+                <CheckoutOrderSummaryCard products={productLines} summary={orderSummary} />
+                <PaymentProtocolCard />
+                <IndustrialBanner />
+              </ScrollView>
 
-      {product ? (
-        <View className="mt-xl rounded-xl border border-brand-border bg-brand-surface p-lg">
-          <Typography variant="roleTitle" className="text-[16px] text-brand-heading">
-            {product.breadcrumbProduct}
-          </Typography>
-          <Typography variant="roleDescription" className="mt-sm text-brand-body">
-            Grade {product.grade}
-          </Typography>
-          {quantityMt && !Number.isNaN(quantityMt) ? (
-            <Typography variant="roleDescription" className="mt-sm text-brand-body">
-              Quantity: {quantityMt} MT
-            </Typography>
-          ) : null}
-          {unitPrice && !Number.isNaN(unitPrice) ? (
-            <Typography variant="roleDescription" className="mt-sm text-brand-body">
-              Unit Price: {formatPricePerKg(unitPrice)} / KG
-            </Typography>
-          ) : null}
-          {buyNowTotal > 0 ? (
-            <Typography variant="roleTitle" className="mt-md text-[15px] text-brand-primary">
-              Estimated Total: {formatCartCurrency(buyNowTotal)}
-            </Typography>
-          ) : null}
-        </View>
+              <CheckoutBottomBar enabled={hasItems} onPlaceOrder={handlePlaceOrder} />
+            </>
+          ) : (
+            <View className="flex-1 items-center justify-center px-lg">
+              <Typography variant="roleTitle" className="text-center text-[16px] text-brand-heading">
+                Your cart is empty
+              </Typography>
+              <Typography
+                variant="roleDescription"
+                className="mt-sm text-center text-[13px] text-brand-body"
+              >
+                Add materials from the marketplace to review your order.
+              </Typography>
+            </View>
+          )}
+        </Animated.View>
       ) : null}
 
-      {hasCartItems ? (
-        <View className="mt-xl rounded-xl border border-brand-border bg-brand-surface p-lg">
-          <Typography variant="roleTitle" className="text-[16px] text-brand-heading">
-            Cart Order
-          </Typography>
-          {cartItems.map((item) => (
-            <Typography key={item.id} variant="roleDescription" className="mt-sm text-brand-body">
-              {item.name} · {item.quantityMt} MT
-            </Typography>
-          ))}
-          <Typography variant="roleTitle" className="mt-md text-[15px] text-brand-primary">
-            Total Payable: {formatCartCurrency(cartSummary.totalLandedCost)}
-          </Typography>
-        </View>
-      ) : null}
-
-      {!product && !hasCartItems ? (
-        <View className="mt-xl rounded-xl border border-brand-border bg-brand-surface p-lg">
-          <Typography variant="roleDescription" className="text-brand-body">
-            Your cart is empty. Add materials from the marketplace to continue.
-          </Typography>
-        </View>
-      ) : null}
-
-      <Pressable
-        onPress={handleContinueToPayment}
-        disabled={!canContinue}
-        accessibilityRole="button"
-        accessibilityState={{ disabled: !canContinue }}
-        accessibilityLabel="Continue to payment selection"
-        className={`mt-xl h-12 flex-row items-center justify-center rounded-xl ${
-          canContinue ? 'bg-brand-heading' : 'bg-brand-disabled'
-        }`}
-      >
-        <Typography variant="button" className="mr-xs text-[14px] tracking-normal">
-          Continue to Payment
-        </Typography>
-        <ArrowRightIcon size={iconSizes.sm} color={brandColors.white} />
-      </Pressable>
+      <AddressBottomSheet
+        ref={addressSheetRef}
+        selectedId={selectedAddressId}
+        onSelect={handleSelectAddress}
+      />
     </View>
   );
 });

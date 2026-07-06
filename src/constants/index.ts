@@ -15,6 +15,7 @@ export const STORAGE_KEYS = {
   APP_SETTINGS_KEY: 'swaroop_app_settings',
   CART_KEY: 'swaroop_cart',
   PAYMENT_KEY: 'swaroop_payment',
+  CHECKOUT_KEY: 'swaroop_checkout',
 } as const;
 
 export const QUERY_KEYS = {

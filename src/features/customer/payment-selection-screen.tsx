@@ -19,11 +19,13 @@ import { getPaymentMethodById, PAYMENT_METHODS } from '@/constants/payment';
 import { PhoneIcon } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
 import {
-  selectCartDelivery,
   selectCartItems,
-  selectOrderSummary,
   useCartStore,
 } from '@/store/cart-store';
+import {
+  selectCheckoutAddress,
+  useCheckoutStore,
+} from '@/store/checkout-store';
 import {
   selectPaymentCalculation,
   selectPaymentMethodId,
@@ -54,8 +56,13 @@ export const CustomerPaymentSelectionScreen = memo(function CustomerPaymentSelec
   const router = useRouter();
 
   const cartItems = useCartStore(selectCartItems);
-  const cartDelivery = useCartStore(selectCartDelivery);
-  const cartSummary = useCartStore(selectOrderSummary);
+  const shippingAddress = useCheckoutStore(selectCheckoutAddress);
+  const getCheckoutOrderSummary = useCheckoutStore((state) => state.getOrderSummary);
+
+  const checkoutSummary = useMemo(
+    () => getCheckoutOrderSummary(cartItems),
+    [cartItems, getCheckoutOrderSummary, shippingAddress.id],
+  );
 
   const selectedMethodId = usePaymentStore(selectPaymentMethodId);
   const payment = usePaymentStore(selectPaymentCalculation);
@@ -71,8 +78,10 @@ export const CustomerPaymentSelectionScreen = memo(function CustomerPaymentSelec
   }, [hydratePayment, isHydrated]);
 
   useEffect(() => {
-    setBaseAmount(cartSummary.totalLandedCost);
-  }, [cartSummary.totalLandedCost, setBaseAmount]);
+    if (checkoutSummary.totalPayable > 0) {
+      setBaseAmount(checkoutSummary.totalPayable);
+    }
+  }, [checkoutSummary.totalPayable, setBaseAmount]);
 
   const orderSummary = useMemo(() => {
     const primary = cartItems[0];
@@ -82,8 +91,8 @@ export const CustomerPaymentSelectionScreen = memo(function CustomerPaymentSelec
         grade: '—',
         quantityMt: 0,
         pickupLabel: 'Warehouse Region',
-        destinationLabel: cartDelivery.label,
-        totalAmount: cartSummary.totalLandedCost,
+        destinationLabel: `${shippingAddress.warehouseName}, ${shippingAddress.state}`,
+        totalAmount: checkoutSummary.totalPayable,
       };
     }
 
@@ -95,10 +104,10 @@ export const CustomerPaymentSelectionScreen = memo(function CustomerPaymentSelec
       quantityMt: totalQty,
       imageUrl: primary.imageUrl,
       pickupLabel: primary.warehouseRegion,
-      destinationLabel: cartDelivery.label,
-      totalAmount: cartSummary.totalLandedCost,
+      destinationLabel: `${shippingAddress.warehouseName}, ${shippingAddress.state}`,
+      totalAmount: checkoutSummary.totalPayable,
     };
-  }, [cartDelivery.label, cartItems, cartSummary.totalLandedCost]);
+  }, [cartItems, checkoutSummary.totalPayable, shippingAddress.state, shippingAddress.warehouseName]);
 
   const selectedMethod = getPaymentMethodById(selectedMethodId);
 

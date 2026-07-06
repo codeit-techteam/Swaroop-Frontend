@@ -59,6 +59,15 @@ export {
   SupportCard,
   StickyPaymentBar,
 } from '@/components/payment';
+export {
+  CheckoutHeader,
+  ShippingCard,
+  CheckoutOrderSummaryCard,
+  PaymentProtocolCard,
+  IndustrialBanner,
+  AddressBottomSheet,
+  CheckoutBottomBar,
+} from '@/components/checkout';
 
 export {
   Typography,
