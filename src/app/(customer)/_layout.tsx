@@ -23,6 +23,7 @@ export default function CustomerLayout() {
       <Stack.Screen name="payment/verification-initiated" />
       <Stack.Screen name="procurement/confirmation" />
       <Stack.Screen name="order-awaiting-confirmation/index" />
+      <Stack.Screen name="purchase-order-generated/index" />
       <Stack.Screen name="order-confirmation/index" />
     </Stack>
   );

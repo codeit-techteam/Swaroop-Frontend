@@ -1,3 +1,10 @@
+import type {
+  ConfirmationStatus,
+  OrderLifecycleStatus,
+  PriceLockStatus,
+  SupplierConfirmationStatus,
+  ValidationTimelineState,
+} from '@/types/orderConfirmation';
 import type { PaymentMethodId } from '@/types/payment';
 import type { ProcurementState } from '@/types/procurement';
 
@@ -34,6 +41,7 @@ export type Order = {
   productName: string;
   quantityMt: number;
   warehouse: string;
+  destination: string;
   amount: number;
   paymentMethod: string;
   paymentMethodId: PaymentMethodId;
@@ -41,5 +49,13 @@ export type Order = {
   verificationStatus: OrderVerificationStatus;
   procurement: ProcurementState | null;
   paymentVerifiedAt: string | null;
+  orderStatus: OrderLifecycleStatus;
+  priceLockStatus: PriceLockStatus;
+  priceLockStartedAt: string | null;
+  priceLockDurationSeconds: number;
+  validationTimeline: ValidationTimelineState | null;
+  confirmationStatus: ConfirmationStatus;
+  supplierConfirmation: SupplierConfirmationStatus;
+  inventoryReserved: boolean;
   createdAt: string;
 };

@@ -11,4 +11,5 @@ export { CustomerPaymentUploadProofScreen } from '@/features/customer/payment-up
 export { CustomerPaymentVerificationInitiatedScreen } from '@/features/customer/payment-verification-initiated-screen';
 export { CustomerProcurementConfirmationScreen } from '@/features/customer/procurement-confirmation-screen';
 export { CustomerOrderAwaitingConfirmationScreen } from '@/features/customer/order-awaiting-confirmation-screen';
+export { CustomerPurchaseOrderGeneratedScreen } from '@/features/customer/purchase-order-generated-screen';
 export { CustomerOrderConfirmationScreen } from '@/features/customer/order-confirmation-screen';

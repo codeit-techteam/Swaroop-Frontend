@@ -66,6 +66,7 @@ const buildOrderFromStores = (
     productName: buildBlindProductName(primary.productType, primary.name),
     quantityMt: totalQty,
     warehouse: shippingAddress.warehouseName,
+    destination: `${shippingAddress.line2}, ${shippingAddress.state}`,
     amount: payment.payableAmount,
     paymentMethod: payment.methodTitle,
     paymentMethodId: payment.methodId,
@@ -73,6 +74,14 @@ const buildOrderFromStores = (
     verificationStatus: 'none',
     procurement: null,
     paymentVerifiedAt: null,
+    orderStatus: 'draft',
+    priceLockStatus: 'active',
+    priceLockStartedAt: null,
+    priceLockDurationSeconds: 0,
+    validationTimeline: null,
+    confirmationStatus: 'pending_petrotrade',
+    supplierConfirmation: 'pending',
+    inventoryReserved: false,
     createdAt: new Date().toISOString(),
   };
 };
