@@ -51,6 +51,7 @@ export { BarChartIcon } from '@/icons/bar-chart';
 export { TrashIcon } from '@/icons/trash';
 export { HeadsetIcon } from '@/icons/headset';
 export { ClipboardCheckIcon } from '@/icons/clipboard-check';
+export { MoreVerticalIcon } from '@/icons/more-vertical';
 export { AlertCircleIcon } from '@/icons/alert-circle';
 export { PhoneIcon } from '@/icons/phone';
 export { PaymentVerificationIllustration } from '@/icons/payment-verification-illustration';

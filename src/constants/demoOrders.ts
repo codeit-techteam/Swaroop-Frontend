@@ -1,0 +1,113 @@
+import { ORDER_DOCUMENTS } from '@/constants/purchaseOrderTimeline';
+import { syncOrderDerivedFields } from '@/constants/orderStatus';
+import type { Order } from '@/types/order';
+import { createInitialWorkflowTimeline } from '@/constants/purchaseOrderTimeline';
+
+const DEMO_ORDER_BASE = {
+  warehouse: 'PetroTrade Hub — Taloja',
+  destination: 'Port of Mumbai, MH',
+  amount: 1420000,
+  paymentMethod: 'RTGS',
+  paymentMethodId: 'advance' as const,
+  paymentStatus: 'verified' as const,
+  verificationStatus: 'verified' as const,
+  procurement: null,
+  paymentVerifiedAt: '2023-10-20T09:15:00.000Z',
+  orderStatus: 'purchase_order_generated' as const,
+  priceLockStatus: 'active' as const,
+  priceLockStartedAt: '2023-10-20T09:00:00.000Z',
+  priceLockDurationSeconds: 3600,
+  validationTimeline: null,
+  confirmationStatus: 'confirmed' as const,
+  supplierConfirmation: 'confirmed' as const,
+  inventoryReserved: true,
+  poGenerated: true,
+  procurementCompleted: true,
+  documentsReady: true,
+  documents: [...ORDER_DOCUMENTS],
+  insuranceCovered: true,
+  isMasterShipment: false,
+};
+
+export const createDemoOrders = (): Order[] => {
+  const orders: Order[] = [
+    syncOrderDerivedFields({
+      ...DEMO_ORDER_BASE,
+      id: 'PT-ORD-8821',
+      poNumber: 'PT-PO-2023-8821',
+      productName: 'Reliance PP H110MA',
+      grade: 'H110MA',
+      productCategory: 'PP',
+      quantityMt: 12,
+      eta: 'Tomorrow',
+      progress: 75,
+      shipmentStatus: 'in_transit',
+      dispatchStatus: 'shipment_started',
+      dispatchReadiness: 'Dispatched',
+      transitWindow: 'Arriving Tomorrow',
+      workflowTimeline: {
+        currentStep: 'shipment_started',
+        completedSteps: [
+          'payment_verified',
+          'procurement_approved',
+          'purchase_order_generated',
+          'dispatch_planning',
+          'vehicle_allocation',
+          'driver_assigned',
+          'shipment_ready',
+        ],
+      },
+      createdAt: '2023-10-24T14:30:00.000Z',
+    }),
+    syncOrderDerivedFields({
+      ...DEMO_ORDER_BASE,
+      id: 'PT-ORD-8794',
+      poNumber: 'PT-PO-2023-8794',
+      productName: 'HDPE TA001',
+      grade: 'TA001',
+      productCategory: 'HDPE',
+      quantityMt: 25,
+      eta: null,
+      progress: 15,
+      shipmentStatus: 'processing',
+      dispatchStatus: 'planning',
+      dispatchReadiness: 'Within 2 Days',
+      transitWindow: '3–5 Days ETA',
+      workflowTimeline: createInitialWorkflowTimeline(),
+      createdAt: '2023-10-22T11:00:00.000Z',
+    }),
+    syncOrderDerivedFields({
+      ...DEMO_ORDER_BASE,
+      id: 'PT-ORD-8610',
+      poNumber: 'PT-PO-2023-8610',
+      productName: 'PVC Resin',
+      grade: 'K-67',
+      productCategory: 'PVC',
+      quantityMt: 500,
+      eta: 'Nov 12, 2023',
+      progress: 100,
+      shipmentStatus: 'delivered',
+      dispatchStatus: 'delivered',
+      dispatchReadiness: 'Delivered',
+      transitWindow: 'Completed',
+      workflowTimeline: {
+        currentStep: 'delivered',
+        completedSteps: [
+          'payment_verified',
+          'procurement_approved',
+          'purchase_order_generated',
+          'dispatch_planning',
+          'vehicle_allocation',
+          'driver_assigned',
+          'shipment_ready',
+          'shipment_started',
+          'delivered',
+        ],
+      },
+      isMasterShipment: true,
+      createdAt: '2023-09-15T08:00:00.000Z',
+    }),
+  ];
+
+  return orders;
+};

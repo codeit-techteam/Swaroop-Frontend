@@ -53,5 +53,7 @@ export {
   selectCurrentOrder,
   selectPaymentProof,
   selectOrderHydrated,
+  selectOrders,
+  selectSelectedOrderId,
   createOrderId,
 } from '@/store/order-store';

@@ -25,6 +25,8 @@ export default function CustomerLayout() {
       <Stack.Screen name="order-awaiting-confirmation/index" />
       <Stack.Screen name="purchase-order-generated/index" />
       <Stack.Screen name="dispatch-planning/index" />
+      <Stack.Screen name="shipment-tracking/index" />
+      <Stack.Screen name="order-detail/index" />
       <Stack.Screen name="order-confirmation/index" />
     </Stack>
   );

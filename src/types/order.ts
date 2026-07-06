@@ -7,7 +7,19 @@ import type {
 } from '@/types/orderConfirmation';
 import type { PaymentMethodId } from '@/types/payment';
 import type { ProcurementState } from '@/types/procurement';
-import type { DispatchStatus, WorkflowTimelineState } from '@/types/purchaseOrder';
+import type {
+  DispatchStatus,
+  OrderDocument,
+  WorkflowTimelineState,
+} from '@/types/purchaseOrder';
+
+export type ProductCategory = 'PP' | 'PVC' | 'HDPE' | 'LLDPE' | 'PET';
+
+export type OrderDisplayStatus = 'processing' | 'in_transit' | 'delivered' | 'cancelled';
+
+export type OrderShipmentStage = 'placed' | 'dispatched' | 'transit' | 'delivered';
+
+export type OrderTabCategory = 'active' | 'completed' | 'cancelled';
 
 export type PaymentMode = 'RTGS' | 'NEFT' | 'IMPS' | 'UPI';
 
@@ -40,9 +52,17 @@ export type PaymentProof = {
 export type Order = {
   id: string;
   productName: string;
+  grade: string;
+  productCategory: ProductCategory;
   quantityMt: number;
   warehouse: string;
   destination: string;
+  eta: string | null;
+  progress: number;
+  shipmentStatus: OrderDisplayStatus;
+  insuranceCovered: boolean;
+  isMasterShipment: boolean;
+  documents: OrderDocument[];
   amount: number;
   paymentMethod: string;
   paymentMethodId: PaymentMethodId;
