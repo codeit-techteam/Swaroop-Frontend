@@ -27,6 +27,7 @@ const DEMO_ORDER_BASE = {
   documents: [...ORDER_DOCUMENTS],
   insuranceCovered: true,
   isMasterShipment: false,
+  trackingTimeline: null,
 };
 
 export const createDemoOrders = (): Order[] => {
@@ -57,6 +58,18 @@ export const createDemoOrders = (): Order[] => {
           'shipment_ready',
         ],
       },
+      trackingTimeline: {
+        currentStep: 'in_transit',
+        completedSteps: [
+          'order_submitted',
+          'payment_verified',
+          'procurement_approved',
+          'purchase_order_generated',
+          'dispatch_scheduled',
+          'vehicle_allocated',
+          'shipment_picked_up',
+        ],
+      },
       createdAt: '2023-10-24T14:30:00.000Z',
     }),
     syncOrderDerivedFields({
@@ -74,6 +87,15 @@ export const createDemoOrders = (): Order[] => {
       dispatchReadiness: 'Within 2 Days',
       transitWindow: '3–5 Days ETA',
       workflowTimeline: createInitialWorkflowTimeline(),
+      trackingTimeline: {
+        currentStep: 'dispatch_scheduled',
+        completedSteps: [
+          'order_submitted',
+          'payment_verified',
+          'procurement_approved',
+          'purchase_order_generated',
+        ],
+      },
       createdAt: '2023-10-22T11:00:00.000Z',
     }),
     syncOrderDerivedFields({
@@ -101,6 +123,22 @@ export const createDemoOrders = (): Order[] => {
           'driver_assigned',
           'shipment_ready',
           'shipment_started',
+          'delivered',
+        ],
+      },
+      trackingTimeline: {
+        currentStep: 'delivered',
+        completedSteps: [
+          'order_submitted',
+          'payment_verified',
+          'procurement_approved',
+          'purchase_order_generated',
+          'dispatch_scheduled',
+          'vehicle_allocated',
+          'shipment_picked_up',
+          'in_transit',
+          'reached_destination_hub',
+          'out_for_delivery',
           'delivered',
         ],
       },

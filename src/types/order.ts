@@ -12,6 +12,7 @@ import type {
   OrderDocument,
   WorkflowTimelineState,
 } from '@/types/purchaseOrder';
+import type { TrackingTimelineState } from '@/types/tracking';
 
 export type ProductCategory = 'PP' | 'PVC' | 'HDPE' | 'LLDPE' | 'PET';
 
@@ -86,5 +87,6 @@ export type Order = {
   workflowTimeline: WorkflowTimelineState | null;
   dispatchReadiness: string | null;
   transitWindow: string | null;
+  trackingTimeline?: TrackingTimelineState | null;
   createdAt: string;
 };

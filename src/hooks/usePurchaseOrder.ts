@@ -75,13 +75,13 @@ export const usePurchaseOrder = (): UsePurchaseOrderResult => {
     updateOrder(createPurchaseOrderPatch(order));
   }, [order, updateOrder]);
 
-  const navigateToDispatchPlanning = useCallback(() => {
+  const navigateToTrackOrder = useCallback(() => {
     if (hasNavigatedRef.current) {
       return;
     }
 
     hasNavigatedRef.current = true;
-    router.replace(ROUTES.CUSTOMER.DISPATCH_PLANNING as Href);
+    router.replace(ROUTES.CUSTOMER.SHIPMENT_TRACKING as Href);
   }, [router]);
 
   const advanceWorkflowStep = useCallback(() => {
@@ -104,7 +104,7 @@ export const usePurchaseOrder = (): UsePurchaseOrderResult => {
         },
         dispatchStatus: mapWorkflowStepToDispatchStatus(currentStep),
       });
-      navigateToDispatchPlanning();
+      navigateToTrackOrder();
       return;
     }
 
@@ -115,7 +115,7 @@ export const usePurchaseOrder = (): UsePurchaseOrderResult => {
       },
       dispatchStatus: mapWorkflowStepToDispatchStatus(nextStep),
     });
-  }, [navigateToDispatchPlanning, updateOrder]);
+  }, [navigateToTrackOrder, updateOrder]);
 
   useEffect(() => {
     if (
@@ -135,7 +135,7 @@ export const usePurchaseOrder = (): UsePurchaseOrderResult => {
       const latestOrder = useOrderStore.getState().currentOrder;
       if (!latestOrder?.workflowTimeline || isWorkflowDemoComplete(latestOrder.workflowTimeline)) {
         activePurchaseOrderSimulationId = null;
-        navigateToDispatchPlanning();
+        navigateToTrackOrder();
         return;
       }
 
@@ -152,7 +152,7 @@ export const usePurchaseOrder = (): UsePurchaseOrderResult => {
 
           if (isWorkflowDemoComplete(updatedOrder.workflowTimeline)) {
             activePurchaseOrderSimulationId = null;
-            navigateToDispatchPlanning();
+            navigateToTrackOrder();
             return;
           }
 
@@ -171,7 +171,7 @@ export const usePurchaseOrder = (): UsePurchaseOrderResult => {
     };
   }, [
     advanceWorkflowStep,
-    navigateToDispatchPlanning,
+    navigateToTrackOrder,
     order?.id,
     order?.poGenerated,
     order?.workflowTimeline,
@@ -186,8 +186,8 @@ export const usePurchaseOrder = (): UsePurchaseOrderResult => {
   );
 
   const handleTrackShipment = useCallback(() => {
-    navigateToDispatchPlanning();
-  }, [navigateToDispatchPlanning]);
+    router.push(ROUTES.CUSTOMER.SHIPMENT_TRACKING as Href);
+  }, [router]);
 
   const handleGoToOrders = useCallback(() => {
     router.replace(ROUTES.CUSTOMER.ORDERS as Href);

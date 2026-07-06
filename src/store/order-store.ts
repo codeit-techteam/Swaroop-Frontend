@@ -31,6 +31,7 @@ type OrderActions = {
   submitPaymentProof: (proof: PaymentProof) => void;
   resetOrder: () => void;
   setSelectedOrderId: (orderId: string | null) => void;
+  updateOrderById: (orderId: string, patch: Partial<Order>) => void;
 };
 
 export type OrderStore = OrderState &
@@ -82,6 +83,7 @@ const normalizeOrder = (order: Order): Order => {
     workflowTimeline: order.workflowTimeline ?? null,
     dispatchReadiness: order.dispatchReadiness ?? null,
     transitWindow: order.transitWindow ?? null,
+    trackingTimeline: order.trackingTimeline ?? null,
     documents: order.documents ?? [],
   };
 
@@ -232,6 +234,26 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
 
   setSelectedOrderId: (orderId) => {
     set({ selectedOrderId: orderId });
+  },
+
+  updateOrderById: (orderId, patch) => {
+    const { currentOrder, paymentProof, orders } = get();
+    const existingOrder = orders.find((item) => item.id === orderId);
+
+    if (!existingOrder) {
+      return;
+    }
+
+    const nextOrder = normalizeOrder({ ...existingOrder, ...patch });
+    const nextOrders = upsertOrderInList(orders, nextOrder);
+    const nextCurrentOrder = currentOrder?.id === orderId ? nextOrder : currentOrder;
+
+    persistOrderState({
+      currentOrder: nextCurrentOrder,
+      paymentProof,
+      orders: nextOrders,
+    });
+    set({ currentOrder: nextCurrentOrder, orders: nextOrders });
   },
 }));
 
