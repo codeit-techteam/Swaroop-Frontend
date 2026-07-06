@@ -6,3 +6,5 @@ export { useThrottledCallback } from '@/hooks/use-throttle';
 export { useDocumentUpload } from '@/hooks/use-document-upload';
 export { usePaymentProof } from '@/hooks/use-payment-proof';
 export { usePaymentVerification } from '@/hooks/use-payment-verification';
+export { useProcurement } from '@/hooks/use-procurement';
+export { useProcurementSimulation } from '@/hooks/useProcurementSimulation';

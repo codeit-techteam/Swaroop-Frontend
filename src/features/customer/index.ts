@@ -9,4 +9,6 @@ export { CustomerPaymentSelectionScreen } from '@/features/customer/payment-sele
 export { CustomerPaymentCompareScreen } from '@/features/customer/payment-compare-screen';
 export { CustomerPaymentUploadProofScreen } from '@/features/customer/payment-upload-proof-screen';
 export { CustomerPaymentVerificationInitiatedScreen } from '@/features/customer/payment-verification-initiated-screen';
+export { CustomerProcurementConfirmationScreen } from '@/features/customer/procurement-confirmation-screen';
+export { CustomerOrderAwaitingConfirmationScreen } from '@/features/customer/order-awaiting-confirmation-screen';
 export { CustomerOrderConfirmationScreen } from '@/features/customer/order-confirmation-screen';

@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 
 import { STORAGE_KEYS } from '@/constants';
+import { createInitialProcurementState } from '@/constants/procurementSteps';
 import type { Order, PaymentProof } from '@/types/order';
+import type { ProcurementState } from '@/types/procurement';
 import { generateOrderId } from '@/utils/payment-proof';
 import { getStorageItem, setStorageItem } from '@/utils/storage';
 
@@ -20,6 +22,8 @@ type OrderActions = {
   hydrateOrder: () => void;
   setCurrentOrder: (order: Order) => void;
   updateOrder: (patch: Partial<Order>) => void;
+  updateProcurement: (patch: Partial<ProcurementState>) => void;
+  startProcurement: (paymentVerifiedAt: string) => void;
   submitPaymentProof: (proof: PaymentProof) => void;
   resetOrder: () => void;
 };
@@ -37,7 +41,16 @@ const readPersistedOrderState = (): PersistedOrderState => {
   }
 
   try {
-    return JSON.parse(raw) as PersistedOrderState;
+    const parsed = JSON.parse(raw) as PersistedOrderState;
+    const currentOrder = parsed.currentOrder
+      ? {
+          ...parsed.currentOrder,
+          procurement: parsed.currentOrder.procurement ?? null,
+          paymentVerifiedAt: parsed.currentOrder.paymentVerifiedAt ?? null,
+        }
+      : null;
+
+    return { currentOrder, paymentProof: parsed.paymentProof };
   } catch {
     return { currentOrder: null, paymentProof: null };
   }
@@ -69,6 +82,43 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
       return;
     }
     const nextOrder: Order = { ...currentOrder, ...patch };
+    persistOrderState({ currentOrder: nextOrder, paymentProof });
+    set({ currentOrder: nextOrder });
+  },
+
+  updateProcurement: (patch) => {
+    const { currentOrder, paymentProof } = get();
+    if (!currentOrder?.procurement) {
+      return;
+    }
+
+    const nextProcurement: ProcurementState = {
+      ...currentOrder.procurement,
+      ...patch,
+      updatedAt: new Date().toISOString(),
+    };
+
+    const nextOrder: Order = {
+      ...currentOrder,
+      procurement: nextProcurement,
+    };
+
+    persistOrderState({ currentOrder: nextOrder, paymentProof });
+    set({ currentOrder: nextOrder });
+  },
+
+  startProcurement: (paymentVerifiedAt) => {
+    const { currentOrder, paymentProof } = get();
+    if (!currentOrder || currentOrder.procurement) {
+      return;
+    }
+
+    const nextOrder: Order = {
+      ...currentOrder,
+      paymentVerifiedAt,
+      procurement: createInitialProcurementState(paymentVerifiedAt),
+    };
+
     persistOrderState({ currentOrder: nextOrder, paymentProof });
     set({ currentOrder: nextOrder });
   },

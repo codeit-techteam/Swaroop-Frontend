@@ -1,4 +1,5 @@
 import type { PaymentMethodId } from '@/types/payment';
+import type { ProcurementState } from '@/types/procurement';
 
 export type PaymentMode = 'RTGS' | 'NEFT' | 'IMPS' | 'UPI';
 
@@ -38,5 +39,7 @@ export type Order = {
   paymentMethodId: PaymentMethodId;
   paymentStatus: OrderPaymentStatus;
   verificationStatus: OrderVerificationStatus;
+  procurement: ProcurementState | null;
+  paymentVerifiedAt: string | null;
   createdAt: string;
 };

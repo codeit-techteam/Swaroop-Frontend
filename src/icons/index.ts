@@ -54,6 +54,7 @@ export { ClipboardCheckIcon } from '@/icons/clipboard-check';
 export { AlertCircleIcon } from '@/icons/alert-circle';
 export { PhoneIcon } from '@/icons/phone';
 export { PaymentVerificationIllustration } from '@/icons/payment-verification-illustration';
+export { ProcurementIllustration } from '@/icons/procurement-illustration';
 
 export { iconSizes } from '@/theme/icons';
 

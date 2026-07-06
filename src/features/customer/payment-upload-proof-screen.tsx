@@ -71,6 +71,8 @@ const buildOrderFromStores = (
     paymentMethodId: payment.methodId,
     paymentStatus: 'pending',
     verificationStatus: 'none',
+    procurement: null,
+    paymentVerifiedAt: null,
     createdAt: new Date().toISOString(),
   };
 };

@@ -142,11 +142,13 @@ export const usePaymentVerification = (): UsePaymentVerificationResult => {
     }
 
     demoTimerRef.current = setTimeout(() => {
+      const verifiedAt = new Date().toISOString();
       updateOrder({
         verificationStatus: 'verified',
         paymentStatus: 'verified',
+        paymentVerifiedAt: verifiedAt,
       });
-      router.replace(ROUTES.CUSTOMER.ORDER_CONFIRMATION as Href);
+      router.replace(ROUTES.CUSTOMER.PROCUREMENT_CONFIRMATION as Href);
     }, DEMO_VERIFICATION_DELAY_MS);
 
     return () => {
@@ -158,12 +160,17 @@ export const usePaymentVerification = (): UsePaymentVerificationResult => {
 
   const handleGoToOrders = useCallback(() => {
     if (DEMO_MODE) {
+      if (order?.verificationStatus === 'verified') {
+        router.replace(ROUTES.CUSTOMER.PROCUREMENT_CONFIRMATION as Href);
+        return;
+      }
+
       router.replace(ROUTES.CUSTOMER.ORDER_CONFIRMATION as Href);
       return;
     }
 
     router.replace(ROUTES.CUSTOMER.ORDERS as Href);
-  }, [router]);
+  }, [order?.verificationStatus, router]);
 
   const handleBack = useCallback(() => {
     if (router.canGoBack()) {

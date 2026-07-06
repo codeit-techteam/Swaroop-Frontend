@@ -27,6 +27,8 @@ export const ROUTES = {
     PAYMENT_COMPARE: '/(customer)/payment/compare',
     PAYMENT_UPLOAD_PROOF: '/(customer)/payment/upload-proof',
     PAYMENT_VERIFICATION_INITIATED: '/(customer)/payment/verification-initiated',
+    PROCUREMENT_CONFIRMATION: '/(customer)/procurement/confirmation',
+    ORDER_AWAITING_CONFIRMATION: '/(customer)/order-awaiting-confirmation',
     ORDER_CONFIRMATION: '/(customer)/order-confirmation',
     DASHBOARD: '/(customer)/(tabs)/home',
   },
@@ -66,6 +68,8 @@ export type CustomerRoute =
   | typeof ROUTES.CUSTOMER.PAYMENT_COMPARE
   | typeof ROUTES.CUSTOMER.PAYMENT_UPLOAD_PROOF
   | typeof ROUTES.CUSTOMER.PAYMENT_VERIFICATION_INITIATED
+  | typeof ROUTES.CUSTOMER.PROCUREMENT_CONFIRMATION
+  | typeof ROUTES.CUSTOMER.ORDER_AWAITING_CONFIRMATION
   | typeof ROUTES.CUSTOMER.ORDER_CONFIRMATION
   | typeof ROUTES.CUSTOMER.DASHBOARD;
 
