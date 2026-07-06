@@ -2,7 +2,6 @@ import { memo } from 'react';
 
 import { View } from 'react-native';
 
-import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { Typography } from '@/components/ui/typography';
 import type { ProductInfoItem } from '@/types/product';
@@ -15,8 +14,8 @@ type InfoGridProps = {
 
 export const InfoGrid = memo(function InfoGrid({ items, className }: InfoGridProps) {
   return (
-    <Animated.View
-      entering={FadeInDown.delay(120).duration(360).springify().damping(18)}
+    <View
+
       className={cn(
         'mx-lg rounded-xl border border-brand-border bg-brand-white p-lg shadow-sm',
         className,
@@ -52,6 +51,6 @@ export const InfoGrid = memo(function InfoGrid({ items, className }: InfoGridPro
           </View>
         ))}
       </View>
-    </Animated.View>
+    </View>
   );
 });

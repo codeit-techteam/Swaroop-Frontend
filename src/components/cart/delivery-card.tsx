@@ -2,7 +2,6 @@ import { memo } from 'react';
 
 import { Pressable, View } from 'react-native';
 
-import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { Typography } from '@/components/ui/typography';
 import { TruckIcon } from '@/icons';
@@ -24,8 +23,8 @@ export const DeliveryCard = memo(function DeliveryCard({
   className,
 }: DeliveryCardProps) {
   return (
-    <Animated.View
-      entering={FadeInDown.delay(120).duration(360).springify().damping(18)}
+    <View
+
       className={cn(
         'mx-lg flex-row items-center rounded-2xl border border-brand-border bg-brand-white p-md',
         className,
@@ -59,6 +58,6 @@ export const DeliveryCard = memo(function DeliveryCard({
           Change
         </Typography>
       </Pressable>
-    </Animated.View>
+    </View>
   );
 });

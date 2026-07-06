@@ -2,8 +2,6 @@ import { memo } from 'react';
 
 import { type GestureResponderEvent, View } from 'react-native';
 
-import Animated, { FadeInDown } from 'react-native-reanimated';
-
 import { PrimaryCTAButton } from '@/components/home/primary-cta-button';
 import { StatCard } from '@/components/home/stat-card';
 import { Typography } from '@/components/ui/typography';
@@ -25,10 +23,7 @@ export const LowestCostCard = memo(function LowestCostCard({
   className,
 }: LowestCostCardProps) {
   return (
-    <Animated.View
-      entering={FadeInDown.delay(180).duration(420)}
-      className={cn('mx-lg overflow-hidden rounded-xl bg-brand-card-blue p-lg', className)}
-    >
+    <View className={cn('mx-lg overflow-hidden rounded-xl bg-brand-card-blue p-lg', className)}>
       <View className="mb-md flex-row items-start justify-between">
         <View className="rounded-full bg-white/20 px-md py-xs">
           <Typography variant="badge" className="text-[9px] tracking-[0.8px] text-brand-white">
@@ -60,6 +55,6 @@ export const LowestCostCard = memo(function LowestCostCard({
       </View>
 
       <PrimaryCTAButton label={data.ctaLabel} onPress={onPress} className="mt-lg" />
-    </Animated.View>
+    </View>
   );
 });

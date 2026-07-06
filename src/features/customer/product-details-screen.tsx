@@ -4,7 +4,6 @@ import { Pressable, ScrollView, View } from 'react-native';
 
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 
-import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
@@ -219,7 +218,7 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
       {isLoading ? (
         <ProductSkeleton />
       ) : (
-        <Animated.View entering={FadeIn.duration(280)} className="flex-1">
+        <View className="flex-1">
           <ScrollView
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 24 }}
@@ -252,7 +251,7 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
             onAddToCart={handleAddToCart}
             onBuyNow={handleBuyNow}
           />
-        </Animated.View>
+        </View>
       )}
     </View>
   );

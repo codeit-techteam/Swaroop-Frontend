@@ -2,7 +2,6 @@ import { memo } from 'react';
 
 import { View } from 'react-native';
 
-import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { ApplicationCard } from '@/components/product/application-card';
 import { Typography } from '@/components/ui/typography';
@@ -22,8 +21,8 @@ export const ProductSpecs = memo(function ProductSpecs({
   className,
 }: ProductSpecsProps) {
   return (
-    <Animated.View
-      entering={FadeInDown.delay(160).duration(360).springify().damping(18)}
+    <View
+
       className={cn(
         'mx-lg rounded-xl border border-brand-border bg-brand-white p-lg shadow-sm',
         className,
@@ -67,6 +66,6 @@ export const ProductSpecs = memo(function ProductSpecs({
         applications={product.applications}
         className="mt-md"
       />
-    </Animated.View>
+    </View>
   );
 });

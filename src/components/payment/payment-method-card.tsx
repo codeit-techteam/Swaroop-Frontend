@@ -6,7 +6,6 @@ import Animated, {
   interpolateColor,
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 
@@ -51,15 +50,13 @@ export const PaymentMethodCard = memo(function PaymentMethodCard({
   selected,
   onSelect,
 }: PaymentMethodCardProps) {
-  const scale = useSharedValue(1);
   const selectedProgress = useSharedValue(selected ? 1 : 0);
 
   useEffect(() => {
-    selectedProgress.value = withTiming(selected ? 1 : 0, { duration: 180 });
+    selectedProgress.value = withTiming(selected ? 1 : 0, { duration: 150 });
   }, [selected, selectedProgress]);
 
   const containerStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
     borderColor: interpolateColor(
       selectedProgress.value,
       [0, 1],
@@ -90,12 +87,6 @@ export const PaymentMethodCard = memo(function PaymentMethodCard({
   return (
     <AnimatedPressable
       onPress={() => onSelect(method.id)}
-      onPressIn={() => {
-        scale.value = withSpring(0.985, { damping: 16, stiffness: 320 });
-      }}
-      onPressOut={() => {
-        scale.value = withSpring(1, { damping: 16, stiffness: 320 });
-      }}
       accessibilityRole="radio"
       accessibilityState={{ selected }}
       accessibilityLabel={method.title}

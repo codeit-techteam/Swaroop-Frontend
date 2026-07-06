@@ -1,13 +1,6 @@
 import { memo } from 'react';
 
-import { Alert, Pressable } from 'react-native';
-
-import Animated, {
-  FadeInDown,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
+import { Alert, Pressable, View } from 'react-native';
 
 import { Typography } from '@/components/ui/typography';
 import { PhoneIcon } from '@/icons';
@@ -19,15 +12,7 @@ type SupportCardProps = {
   className?: string;
 };
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
 export const SupportCard = memo(function SupportCard({ className }: SupportCardProps) {
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
   const handleContact = () => {
     Alert.alert(
       'Contact Support',
@@ -37,10 +22,7 @@ export const SupportCard = memo(function SupportCard({ className }: SupportCardP
   };
 
   return (
-    <Animated.View
-      entering={FadeInDown.delay(180).duration(360).springify().damping(18)}
-      className={cn('rounded-2xl bg-brand-heading px-lg py-lg', className)}
-    >
+    <View className={cn('rounded-2xl bg-brand-heading px-lg py-lg', className)}>
       <Typography variant="roleTitle" className="text-[16px] text-brand-white">
         Need Assistance?
       </Typography>
@@ -52,24 +34,18 @@ export const SupportCard = memo(function SupportCard({ className }: SupportCardP
         options.
       </Typography>
 
-      <AnimatedPressable
+      <Pressable
         onPress={handleContact}
-        onPressIn={() => {
-          scale.value = withSpring(0.97, { damping: 16, stiffness: 320 });
-        }}
-        onPressOut={() => {
-          scale.value = withSpring(1, { damping: 16, stiffness: 320 });
-        }}
         accessibilityRole="button"
         accessibilityLabel="Contact support"
         className="mt-md flex-row items-center justify-center self-center rounded-full bg-brand-white px-lg py-sm"
-        style={animatedStyle}
+        style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
       >
         <PhoneIcon size={iconSizes.sm} color={brandColors.heading} />
         <Typography variant="roleTitle" className="ml-sm text-[13px] text-brand-heading">
           Contact Support
         </Typography>
-      </AnimatedPressable>
-    </Animated.View>
+      </Pressable>
+    </View>
   );
 });

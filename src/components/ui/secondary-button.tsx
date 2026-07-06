@@ -2,12 +2,8 @@ import { memo } from 'react';
 
 import { type GestureResponderEvent, Pressable } from 'react-native';
 
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-
 import { Typography } from '@/components/ui/typography';
 import { cn } from '@/utils/cn';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type SecondaryButtonProps = {
   label: string;
@@ -26,25 +22,12 @@ export const SecondaryButton = memo(function SecondaryButton({
   variant = 'solid',
   accessibilityLabel,
 }: SecondaryButtonProps) {
-  const scale = useSharedValue(1);
   const isOutline = variant === 'outline';
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
   return (
-    <AnimatedPressable
+    <Pressable
       onPress={onPress}
       disabled={disabled}
-      onPressIn={() => {
-        if (!disabled) {
-          scale.value = withSpring(0.97, { damping: 15, stiffness: 300 });
-        }
-      }}
-      onPressOut={() => {
-        scale.value = withSpring(1, { damping: 15, stiffness: 300 });
-      }}
       accessibilityRole="button"
       accessibilityState={{ disabled }}
       accessibilityLabel={accessibilityLabel ?? label}
@@ -57,7 +40,7 @@ export const SecondaryButton = memo(function SecondaryButton({
             : 'bg-brand-secondary',
         className,
       )}
-      style={animatedStyle}
+      style={({ pressed }) => ({ opacity: !disabled && pressed ? 0.85 : 1 })}
     >
       <Typography
         variant="buttonSecondary"
@@ -65,6 +48,6 @@ export const SecondaryButton = memo(function SecondaryButton({
       >
         {label}
       </Typography>
-    </AnimatedPressable>
+    </Pressable>
   );
 });

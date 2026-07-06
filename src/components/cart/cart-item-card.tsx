@@ -4,7 +4,7 @@ import { Alert, Pressable, View } from 'react-native';
 
 import { Image } from 'expo-image';
 
-import Animated, { FadeInDown, FadeOutRight, LinearTransition } from 'react-native-reanimated';
+import Animated, { FadeOutRight, LinearTransition } from 'react-native-reanimated';
 
 import { CartQuantitySelector } from '@/components/cart/quantity-selector';
 import { Typography } from '@/components/ui/typography';
@@ -18,7 +18,6 @@ import { cn } from '@/utils/cn';
 
 type CartItemCardProps = {
   item: CartItem;
-  index: number;
   onIncrease: (itemId: string) => void;
   onDecrease: (itemId: string) => void;
   onRemove: (itemId: string) => void;
@@ -27,7 +26,6 @@ type CartItemCardProps = {
 
 export const CartItemCard = memo(function CartItemCard({
   item,
-  index,
   onIncrease,
   onDecrease,
   onRemove,
@@ -49,12 +47,8 @@ export const CartItemCard = memo(function CartItemCard({
 
   return (
     <Animated.View
-      entering={FadeInDown.delay(index * 70)
-        .duration(360)
-        .springify()
-        .damping(18)}
-      exiting={FadeOutRight.duration(220)}
-      layout={LinearTransition.springify().damping(18)}
+      exiting={FadeOutRight.duration(150)}
+      layout={LinearTransition.duration(150)}
       className={cn(
         'mx-lg overflow-hidden rounded-2xl border border-brand-border bg-brand-white',
         className,
@@ -68,7 +62,7 @@ export const CartItemCard = memo(function CartItemCard({
               source={{ uri: item.imageUrl }}
               style={{ width: '100%', height: '100%' }}
               contentFit="cover"
-              transition={200}
+              transition={0}
               accessibilityLabel={`${item.name} product image`}
             />
           </View>

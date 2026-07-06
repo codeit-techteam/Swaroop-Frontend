@@ -4,7 +4,6 @@ import { Pressable, ScrollView, View } from 'react-native';
 
 import { type Href, useRouter } from 'expo-router';
 
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import Toast from 'react-native-toast-message';
 
 import {
@@ -147,13 +146,13 @@ export const CustomerPaymentSelectionScreen = memo(function CustomerPaymentSelec
     <View className="flex-1 bg-brand-background">
       <PaymentHeader onBackPress={handleBack} onHelpPress={handleHelp} />
 
-      <Animated.View entering={FadeIn.duration(260)} className="flex-1">
+      <View className="flex-1">
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 28 }}
           className="flex-1"
         >
-          <Animated.View entering={FadeInDown.duration(320).springify().damping(18)}>
+          <View>
             <Typography variant="headingLeft" className="text-[22px] text-brand-heading">
               Choose Payment Method
             </Typography>
@@ -163,7 +162,7 @@ export const CustomerPaymentSelectionScreen = memo(function CustomerPaymentSelec
             >
               Select the most suitable payment option for this order.
             </Typography>
-          </Animated.View>
+          </View>
 
           <View
             className="mt-lg"
@@ -171,39 +170,30 @@ export const CustomerPaymentSelectionScreen = memo(function CustomerPaymentSelec
             accessibilityRole="radiogroup"
             accessibilityLabel="Payment methods"
           >
-            {PAYMENT_METHODS.map((method, index) => (
-              <Animated.View
+            {PAYMENT_METHODS.map((method) => (
+              <PaymentMethodCard
                 key={method.id}
-                entering={FadeInDown.delay(40 + index * 40)
-                  .duration(320)
-                  .springify()
-                  .damping(18)}
-              >
-                <PaymentMethodCard
-                  method={method}
-                  selected={method.id === selectedMethodId}
-                  onSelect={handleSelect}
-                />
-              </Animated.View>
+                method={method}
+                selected={method.id === selectedMethodId}
+                onSelect={handleSelect}
+              />
             ))}
           </View>
 
-          <Animated.View
-            entering={FadeInDown.delay(280).duration(320).springify().damping(18)}
-            className="mt-lg"
-          >
+          <View className="mt-lg">
             <Pressable
               onPress={handleCompare}
               accessibilityRole="button"
               accessibilityLabel="Compare payment options"
               className="h-12 flex-row items-center justify-center rounded-xl border border-brand-border bg-brand-white"
+              style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
             >
               <PhoneIcon size={iconSizes.sm} color={brandColors.heading} />
               <Typography variant="roleTitle" className="ml-sm text-[14px] text-brand-heading">
                 Compare Payment Options
               </Typography>
             </Pressable>
-          </Animated.View>
+          </View>
 
           <View className="mt-lg">
             <PaymentSummaryCard summary={orderSummary} />
@@ -220,7 +210,7 @@ export const CustomerPaymentSelectionScreen = memo(function CustomerPaymentSelec
           payableAmount={payment.payableAmount}
           onContinue={handleContinue}
         />
-      </Animated.View>
+      </View>
     </View>
   );
 });

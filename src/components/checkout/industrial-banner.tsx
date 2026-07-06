@@ -4,7 +4,6 @@ import { View } from 'react-native';
 
 import { Image } from 'expo-image';
 
-import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { Typography } from '@/components/ui/typography';
 import { CHECKOUT_INDUSTRIAL_BANNER } from '@/constants/checkout';
@@ -17,8 +16,8 @@ type IndustrialBannerProps = {
 
 export const IndustrialBanner = memo(function IndustrialBanner({ className }: IndustrialBannerProps) {
   return (
-    <Animated.View
-      entering={FadeInDown.delay(260).duration(360).springify().damping(18)}
+    <View
+
       className={cn('mx-lg overflow-hidden rounded-2xl', className)}
       style={elevation.sm}
     >
@@ -27,7 +26,7 @@ export const IndustrialBanner = memo(function IndustrialBanner({ className }: In
           source={{ uri: CHECKOUT_INDUSTRIAL_BANNER.imageUrl }}
           style={{ width: '100%', height: '100%' }}
           contentFit="cover"
-          transition={240}
+          transition={0}
           accessibilityLabel="Industrial petrochemical facility"
         />
 
@@ -47,6 +46,6 @@ export const IndustrialBanner = memo(function IndustrialBanner({ className }: In
           ))}
         </View>
       </View>
-    </Animated.View>
+    </View>
   );
 });

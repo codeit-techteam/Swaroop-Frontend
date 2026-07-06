@@ -2,8 +2,6 @@ import { memo } from 'react';
 
 import { View } from 'react-native';
 
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
-
 import { Typography } from '@/components/ui/typography';
 import { elevation } from '@/theme/shadows';
 import type { PaymentComparisonOption } from '@/types/payment';
@@ -16,10 +14,8 @@ export const PaymentBenefitCard = memo(function PaymentBenefitCard({
   option,
 }: PaymentBenefitCardProps) {
   return (
-    <Animated.View
+    <View
       key={option.id}
-      entering={FadeIn.duration(280)}
-      exiting={FadeOut.duration(160)}
       className="rounded-2xl border border-brand-border bg-brand-white px-4 py-4"
       style={elevation.sm}
     >
@@ -58,6 +54,6 @@ export const PaymentBenefitCard = memo(function PaymentBenefitCard({
           {option.risk}
         </Typography>
       </View>
-    </Animated.View>
+    </View>
   );
 });

@@ -2,7 +2,6 @@ import { memo } from 'react';
 
 import { View } from 'react-native';
 
-import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { AnimatedCurrency } from '@/components/checkout/animated-currency';
 import { Typography } from '@/components/ui/typography';
@@ -50,8 +49,8 @@ export const CheckoutOrderSummaryCard = memo(function CheckoutOrderSummaryCard({
   const primary = products[0];
 
   return (
-    <Animated.View
-      entering={FadeInDown.delay(140).duration(360).springify().damping(18)}
+    <View
+
       className={cn('mx-lg overflow-hidden rounded-2xl border border-brand-border bg-brand-white', className)}
       style={elevation.sm}
     >
@@ -138,6 +137,6 @@ export const CheckoutOrderSummaryCard = memo(function CheckoutOrderSummaryCard({
           />
         </View>
       </View>
-    </Animated.View>
+    </View>
   );
 });

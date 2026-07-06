@@ -4,7 +4,6 @@ import { View } from 'react-native';
 
 import { Image } from 'expo-image';
 
-import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { Typography } from '@/components/ui/typography';
 import { formatPaymentCurrency } from '@/constants/payment';
@@ -34,8 +33,8 @@ export const PaymentSummaryCard = memo(function PaymentSummaryCard({
   className,
 }: PaymentSummaryCardProps) {
   return (
-    <Animated.View
-      entering={FadeInDown.delay(120).duration(360).springify().damping(18)}
+    <View
+
       className={cn('rounded-2xl border border-brand-border bg-brand-white p-lg', className)}
       style={elevation.sm}
     >
@@ -53,7 +52,7 @@ export const PaymentSummaryCard = memo(function PaymentSummaryCard({
               source={{ uri: summary.imageUrl }}
               style={{ width: '100%', height: '100%' }}
               contentFit="cover"
-              transition={200}
+              transition={0}
               accessibilityLabel={`${summary.productName} product image`}
             />
           </View>
@@ -98,6 +97,6 @@ export const PaymentSummaryCard = memo(function PaymentSummaryCard({
           {formatPaymentCurrency(summary.totalAmount)}
         </Typography>
       </View>
-    </Animated.View>
+    </View>
   );
 });

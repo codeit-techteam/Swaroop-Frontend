@@ -32,7 +32,7 @@ export const HeroBanner = memo(function HeroBanner({
         style={{ width, height: HERO_BANNER_HEIGHT }}
         contentFit="cover"
         contentPosition="center"
-        transition={200}
+        transition={0}
         cachePolicy="memory-disk"
         recyclingKey={banner.id}
         accessibilityIgnoresInvertColors

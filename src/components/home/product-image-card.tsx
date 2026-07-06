@@ -24,7 +24,7 @@ export const ProductImageCard = memo(function ProductImageCard({
         className="h-full w-full"
         style={{ width: '100%', height: '100%' }}
         contentFit="cover"
-        transition={180}
+        transition={0}
         cachePolicy="memory-disk"
         recyclingKey={recyclingKey}
       />

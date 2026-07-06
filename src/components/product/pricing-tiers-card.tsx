@@ -2,20 +2,11 @@ import { memo, useCallback } from 'react';
 
 import { Pressable, View } from 'react-native';
 
-import Animated, {
-  FadeInDown,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
-
 import { Typography } from '@/components/ui/typography';
 import { InfoIcon } from '@/icons';
 import { iconSizes } from '@/theme/icons';
 import type { PricingTier } from '@/types/product';
 import { cn } from '@/utils/cn';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type PricingTiersCardProps = {
   tiers: PricingTier[];
@@ -40,25 +31,13 @@ type TierRowProps = {
 };
 
 const TierSelectCard = memo(function TierSelectCard({ tier, selected, onPress }: TierRowProps) {
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
   return (
-    <AnimatedPressable
+    <Pressable
       onPress={() => onPress(tier.id)}
-      onPressIn={() => {
-        scale.value = withSpring(0.985, { damping: 16, stiffness: 320 });
-      }}
-      onPressOut={() => {
-        scale.value = withSpring(1, { damping: 16, stiffness: 320 });
-      }}
       accessibilityRole="button"
       accessibilityState={{ selected }}
       accessibilityLabel={`${tier.quantityLabel}, ${tier.rateLabel}, ${formatTierPrice(tier.unitPrice)}`}
-      style={animatedStyle}
+      style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
       className={cn(
         'flex-row items-center justify-between rounded-lg border bg-brand-white px-md py-md',
         selected ? 'border-brand-heading' : 'border-brand-border',
@@ -83,7 +62,7 @@ const TierSelectCard = memo(function TierSelectCard({ tier, selected, onPress }:
       <Typography variant="roleTitle" className="text-[16px] text-brand-heading">
         {formatTierPrice(tier.unitPrice)}
       </Typography>
-    </AnimatedPressable>
+    </Pressable>
   );
 });
 
@@ -102,8 +81,7 @@ export const PricingTiersCard = memo(function PricingTiersCard({
   );
 
   return (
-    <Animated.View
-      entering={FadeInDown.delay(200).duration(360).springify().damping(18)}
+    <View
       className={cn(
         'mx-lg rounded-xl border border-brand-border bg-brand-white p-lg shadow-sm',
         className,
@@ -206,6 +184,6 @@ export const PricingTiersCard = memo(function PricingTiersCard({
           </Typography>
         ))}
       </View>
-    </Animated.View>
+    </View>
   );
 });

@@ -7,50 +7,19 @@ export default function CustomerLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
-        animation: 'fade',
+        animation: 'none',
         contentStyle: {
           backgroundColor: brandColors.white,
         },
       }}
     >
       <Stack.Screen name="(tabs)" />
-      <Stack.Screen
-        name="product/[id]"
-        options={{
-          animation: 'slide_from_right',
-        }}
-      />
-      <Stack.Screen
-        name="cart/index"
-        options={{
-          animation: 'slide_from_right',
-        }}
-      />
-      <Stack.Screen
-        name="checkout"
-        options={{
-          animation: 'slide_from_right',
-        }}
-      />
-      <Stack.Screen
-        name="payment/index"
-        options={{
-          animation: 'slide_from_right',
-        }}
-      />
-      <Stack.Screen
-        name="payment/compare"
-        options={{
-          animation: 'slide_from_right',
-        }}
-      />
-      <Stack.Screen
-        name="order-confirmation/index"
-        options={{
-          animation: 'slide_from_right',
-        }}
-      />
+      <Stack.Screen name="product/[id]" />
+      <Stack.Screen name="cart/index" />
+      <Stack.Screen name="checkout" />
+      <Stack.Screen name="payment/index" />
+      <Stack.Screen name="payment/compare" />
+      <Stack.Screen name="order-confirmation/index" />
     </Stack>
-
   );
 }

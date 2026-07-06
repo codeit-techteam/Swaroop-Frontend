@@ -2,8 +2,6 @@ import { memo } from 'react';
 
 import { Pressable, View } from 'react-native';
 
-import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
-
 import { Typography } from '@/components/ui/typography';
 import { LocationPinIcon, TruckIcon } from '@/icons';
 import { brandColors } from '@/theme/colors';
@@ -24,9 +22,8 @@ export const ShippingCard = memo(function ShippingCard({
   className,
 }: ShippingCardProps) {
   return (
-    <Animated.View
+    <View
       key={address.id}
-      entering={FadeInDown.delay(80).duration(360).springify().damping(18)}
       className={cn('mx-lg rounded-2xl border border-brand-border bg-brand-white p-lg', className)}
       style={elevation.sm}
     >
@@ -47,6 +44,7 @@ export const ShippingCard = memo(function ShippingCard({
           accessibilityRole="button"
           accessibilityLabel="Edit shipping address"
           className="px-xs py-xs"
+          style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
         >
           <Typography variant="link" className="font-semibold text-[13px] text-brand-primary">
             Edit
@@ -54,7 +52,7 @@ export const ShippingCard = memo(function ShippingCard({
         </Pressable>
       </View>
 
-      <Animated.View entering={FadeInRight.duration(280)}>
+      <View>
         <Typography variant="roleTitle" className="text-[16px] text-brand-heading">
           {address.warehouseName}
         </Typography>
@@ -67,7 +65,7 @@ export const ShippingCard = memo(function ShippingCard({
         <Typography variant="roleDescription" className="text-[13px] leading-5 text-brand-body">
           {address.state} - {address.pincode}
         </Typography>
-      </Animated.View>
+      </View>
 
       <View className="mt-md self-start flex-row items-center rounded-full bg-brand-surface px-sm py-xs">
         <LocationPinIcon size={iconSizes.xs} color={brandColors.muted} />
@@ -75,6 +73,6 @@ export const ShippingCard = memo(function ShippingCard({
           {address.zoneLabel}
         </Typography>
       </View>
-    </Animated.View>
+    </View>
   );
 });

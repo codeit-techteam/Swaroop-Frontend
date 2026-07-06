@@ -2,12 +2,6 @@ import { memo } from 'react';
 
 import { Pressable, View } from 'react-native';
 
-import Animated, {
-  FadeInUp,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Typography } from '@/components/ui/typography';
@@ -26,8 +20,6 @@ type StickyPaymentBarProps = {
   className?: string;
 };
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
 export const StickyPaymentBar = memo(function StickyPaymentBar({
   methodTitle,
   discount,
@@ -36,15 +28,9 @@ export const StickyPaymentBar = memo(function StickyPaymentBar({
   className,
 }: StickyPaymentBarProps) {
   const insets = useSafeAreaInsets();
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
 
   return (
-    <Animated.View
-      entering={FadeInUp.duration(320).springify().damping(18)}
+    <View
       className={cn('border-t border-brand-border bg-brand-white px-lg pt-md', className)}
       style={[elevation.lg, { paddingBottom: Math.max(insets.bottom, 12) }]}
     >
@@ -100,24 +86,18 @@ export const StickyPaymentBar = memo(function StickyPaymentBar({
         </View>
       </View>
 
-      <AnimatedPressable
+      <Pressable
         onPress={onContinue}
-        onPressIn={() => {
-          scale.value = withSpring(0.98, { damping: 16, stiffness: 320 });
-        }}
-        onPressOut={() => {
-          scale.value = withSpring(1, { damping: 16, stiffness: 320 });
-        }}
         accessibilityRole="button"
         accessibilityLabel="Continue to order confirmation"
         className="h-12 flex-row items-center justify-center rounded-xl bg-brand-heading"
-        style={animatedStyle}
+        style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
       >
         <Typography variant="button" className="mr-xs text-[15px] tracking-normal">
           Continue
         </Typography>
         <ArrowRightIcon size={iconSizes.sm} color={brandColors.white} />
-      </AnimatedPressable>
-    </Animated.View>
+      </Pressable>
+    </View>
   );
 });

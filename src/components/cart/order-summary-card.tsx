@@ -2,7 +2,6 @@ import { memo } from 'react';
 
 import { View } from 'react-native';
 
-import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { Typography } from '@/components/ui/typography';
 import { formatCartCurrency } from '@/constants/cart';
@@ -61,8 +60,8 @@ export const OrderSummaryCard = memo(function OrderSummaryCard({
   className,
 }: OrderSummaryCardProps) {
   return (
-    <Animated.View
-      entering={FadeInDown.delay(180).duration(360).springify().damping(18)}
+    <View
+
       className={cn('mx-lg rounded-2xl border border-brand-border bg-brand-white p-lg', className)}
       style={elevation.sm}
     >
@@ -105,6 +104,6 @@ export const OrderSummaryCard = memo(function OrderSummaryCard({
           {formatCartCurrency(summary.totalLandedCost)}
         </Typography>
       </View>
-    </Animated.View>
+    </View>
   );
 });

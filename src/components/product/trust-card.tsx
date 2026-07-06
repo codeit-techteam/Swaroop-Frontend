@@ -2,7 +2,6 @@ import { memo } from 'react';
 
 import { Text, View } from 'react-native';
 
-import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { Typography } from '@/components/ui/typography';
 import { CheckCircleIcon, ShieldCheckIcon } from '@/icons';
@@ -27,8 +26,8 @@ export const TrustCard = memo(function TrustCard({ product, className }: TrustCa
     : '';
 
   return (
-    <Animated.View
-      entering={FadeInDown.delay(240).duration(360).springify().damping(18)}
+    <View
+
       className={cn(
         'mx-lg rounded-xl border border-brand-border bg-brand-white p-lg shadow-sm',
         className,
@@ -75,6 +74,6 @@ export const TrustCard = memo(function TrustCard({ product, className }: TrustCa
           </View>
         ))}
       </View>
-    </Animated.View>
+    </View>
   );
 });

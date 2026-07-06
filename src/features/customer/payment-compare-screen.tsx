@@ -4,14 +4,6 @@ import { Pressable, ScrollView, View } from 'react-native';
 
 import { type Href, useRouter } from 'expo-router';
 
-import Animated, {
-  FadeIn,
-  FadeInDown,
-  FadeInUp,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
@@ -30,8 +22,6 @@ import { selectPaymentMethodId, usePaymentStore } from '@/store/payment-store';
 import { elevation } from '@/theme/shadows';
 import type { PaymentMethodId } from '@/types/payment';
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
 export const CustomerPaymentCompareScreen = memo(function CustomerPaymentCompareScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -43,7 +33,6 @@ export const CustomerPaymentCompareScreen = memo(function CustomerPaymentCompare
 
   const [previewMethodId, setPreviewMethodId] = useState<PaymentMethodId>(storedMethodId);
   const [infoVisible, setInfoVisible] = useState(false);
-  const buttonScale = useSharedValue(1);
 
   useEffect(() => {
     if (!isHydrated) {
@@ -59,10 +48,6 @@ export const CustomerPaymentCompareScreen = memo(function CustomerPaymentCompare
     () => getPaymentComparisonOptionById(previewMethodId),
     [previewMethodId],
   );
-
-  const buttonStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: buttonScale.value }],
-  }));
 
   const handleBack = useCallback(() => {
     if (router.canGoBack()) {
@@ -111,7 +96,7 @@ export const CustomerPaymentCompareScreen = memo(function CustomerPaymentCompare
         onLocationPress={handleLocationPress}
       />
 
-      <Animated.View entering={FadeIn.duration(260)} className="flex-1">
+      <View className="flex-1">
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
@@ -128,20 +113,16 @@ export const CustomerPaymentCompareScreen = memo(function CustomerPaymentCompare
             onInfoPress={handleOpenInfo}
           />
 
-          <Animated.View
-            entering={FadeInDown.delay(80).duration(320).springify().damping(18)}
-            className="mt-4"
-          >
+          <View className="mt-4">
             <PaymentBenefitCard key={selectedOption.id} option={selectedOption} />
-          </Animated.View>
+          </View>
 
           <Typography variant="legal" className="mt-5 px-2 text-[11px] leading-[16px]">
             {PAYMENT_COMPARISON_DISCLAIMER}
           </Typography>
         </ScrollView>
 
-        <Animated.View
-          entering={FadeInUp.duration(320).springify().damping(18)}
+        <View
           className="border-t border-brand-border bg-brand-white px-lg pt-md"
           style={[elevation.lg, { paddingBottom: Math.max(insets.bottom, 12) }]}
         >
@@ -159,25 +140,19 @@ export const CustomerPaymentCompareScreen = memo(function CustomerPaymentCompare
             {selectedOption.title}
           </Typography>
 
-          <AnimatedPressable
+          <Pressable
             onPress={handleConfirmSelection}
-            onPressIn={() => {
-              buttonScale.value = withSpring(0.98, { damping: 16, stiffness: 320 });
-            }}
-            onPressOut={() => {
-              buttonScale.value = withSpring(1, { damping: 16, stiffness: 320 });
-            }}
             accessibilityRole="button"
             accessibilityLabel="Select this payment method"
             className="h-12 items-center justify-center rounded-xl bg-brand-heading"
-            style={buttonStyle}
+            style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
           >
             <Typography variant="button" className="text-[15px] tracking-normal">
               Select This Payment Method
             </Typography>
-          </AnimatedPressable>
-        </Animated.View>
-      </Animated.View>
+          </Pressable>
+        </View>
+      </View>
 
       <PaymentInfoModal visible={infoVisible} onClose={handleCloseInfo} />
     </View>

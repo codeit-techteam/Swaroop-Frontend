@@ -2,15 +2,11 @@ import { memo } from 'react';
 
 import { Pressable, View } from 'react-native';
 
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-
 import { Typography } from '@/components/ui/typography';
 import { ChevronRightIcon, TruckIcon, WalletIcon } from '@/icons';
 import { brandColors } from '@/theme/colors';
 import type { QuickSummaryItem } from '@/types/home';
 import { cn } from '@/utils/cn';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type QuickSummaryCardProps = {
   item: QuickSummaryItem;
@@ -23,29 +19,18 @@ export const QuickSummaryCard = memo(function QuickSummaryCard({
   onPress,
   className,
 }: QuickSummaryCardProps) {
-  const scale = useSharedValue(1);
   const isDanger = item.valueTone === 'danger';
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
   return (
-    <AnimatedPressable
+    <Pressable
       onPress={onPress}
-      onPressIn={() => {
-        scale.value = withSpring(0.97, { damping: 16, stiffness: 320 });
-      }}
-      onPressOut={() => {
-        scale.value = withSpring(1, { damping: 16, stiffness: 320 });
-      }}
       accessibilityRole="button"
       accessibilityLabel={`${item.label} ${item.value} ${item.subtitle}`.trim()}
       className={cn(
         'flex-1 rounded-xl border border-brand-border/60 bg-brand-white p-md shadow-sm',
         className,
       )}
-      style={animatedStyle}
+      style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
     >
       <View className="mb-md flex-row items-start justify-between">
         <View
@@ -83,6 +68,6 @@ export const QuickSummaryCard = memo(function QuickSummaryCard({
           </Typography>
         ) : null}
       </View>
-    </AnimatedPressable>
+    </Pressable>
   );
 });

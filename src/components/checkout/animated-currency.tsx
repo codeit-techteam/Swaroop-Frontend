@@ -1,7 +1,5 @@
 import { memo } from 'react';
 
-import Animated, { FadeIn } from 'react-native-reanimated';
-
 import { Typography } from '@/components/ui/typography';
 import { formatCheckoutCurrency } from '@/constants/checkout';
 
@@ -15,15 +13,13 @@ export const AnimatedCurrency = memo(function AnimatedCurrency({
   textClassName,
 }: AnimatedCurrencyProps) {
   return (
-    <Animated.View key={amount} entering={FadeIn.duration(220)}>
-      <Typography
-        variant="roleTitle"
-        className={textClassName}
-        accessibilityLiveRegion="polite"
-      >
-        {formatCheckoutCurrency(amount)}
-      </Typography>
-    </Animated.View>
+    <Typography
+      variant="roleTitle"
+      className={textClassName}
+      accessibilityLiveRegion="polite"
+    >
+      {formatCheckoutCurrency(amount)}
+    </Typography>
   );
 });
 
@@ -36,9 +32,5 @@ export const AnimatedFadeAmount = memo(function AnimatedFadeAmount({
   amount,
   children,
 }: AnimatedFadeAmountProps) {
-  return (
-    <Animated.View key={amount} entering={FadeIn.duration(220)}>
-      {children(formatCheckoutCurrency(amount))}
-    </Animated.View>
-  );
+  return <>{children(formatCheckoutCurrency(amount))}</>;
 });

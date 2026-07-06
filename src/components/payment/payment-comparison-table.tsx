@@ -2,7 +2,6 @@ import { memo, useCallback } from 'react';
 
 import { FlatList, Pressable, ScrollView, View, type ListRenderItem } from 'react-native';
 
-import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import {
   PAYMENT_COMPARISON_TABLE_MIN_WIDTH,
@@ -51,8 +50,8 @@ export const PaymentComparisonTable = memo(function PaymentComparisonTable({
   const keyExtractor = useCallback((item: PaymentComparisonOption) => item.id, []);
 
   return (
-    <Animated.View
-      entering={FadeInDown.duration(320).springify().damping(18)}
+    <View
+
       className="overflow-hidden rounded-2xl border border-brand-border bg-brand-white"
       style={elevation.sm}
     >
@@ -113,6 +112,6 @@ export const PaymentComparisonTable = memo(function PaymentComparisonTable({
           />
         </View>
       </ScrollView>
-    </Animated.View>
+    </View>
   );
 });

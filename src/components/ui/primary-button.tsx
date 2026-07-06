@@ -2,14 +2,10 @@ import { memo, type ReactNode } from 'react';
 
 import { ActivityIndicator, type GestureResponderEvent, Pressable, View } from 'react-native';
 
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-
 import { Typography } from '@/components/ui/typography';
 import { ArrowRightIcon } from '@/icons/arrow-right';
 import { brandColors } from '@/theme/colors';
 import { cn } from '@/utils/cn';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type PrimaryButtonProps = {
   label: string;
@@ -32,25 +28,12 @@ export const PrimaryButton = memo(function PrimaryButton({
   loading = false,
   accessibilityLabel,
 }: PrimaryButtonProps) {
-  const scale = useSharedValue(1);
   const isDisabled = disabled || loading;
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
   return (
-    <AnimatedPressable
+    <Pressable
       onPress={onPress}
       disabled={isDisabled}
-      onPressIn={() => {
-        if (!isDisabled) {
-          scale.value = withSpring(0.97, { damping: 15, stiffness: 300 });
-        }
-      }}
-      onPressOut={() => {
-        scale.value = withSpring(1, { damping: 15, stiffness: 300 });
-      }}
       accessibilityRole="button"
       accessibilityState={{ disabled: isDisabled }}
       accessibilityLabel={accessibilityLabel ?? label}
@@ -59,7 +42,7 @@ export const PrimaryButton = memo(function PrimaryButton({
         isDisabled ? 'bg-brand-disabled' : 'bg-brand-primary',
         className,
       )}
-      style={animatedStyle}
+      style={({ pressed }) => ({ opacity: !isDisabled && pressed ? 0.85 : 1 })}
     >
       {loading ? (
         <ActivityIndicator color={brandColors.white} />
@@ -70,6 +53,6 @@ export const PrimaryButton = memo(function PrimaryButton({
           {showArrow ? <ArrowRightIcon /> : null}
         </View>
       )}
-    </AnimatedPressable>
+    </Pressable>
   );
 });

@@ -2,13 +2,6 @@ import { memo, useCallback, type ReactElement } from 'react';
 
 import { Pressable, View } from 'react-native';
 
-import Animated, {
-  FadeInDown,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
-
 import { Typography } from '@/components/ui/typography';
 import {
   formatMarketPrice,
@@ -21,8 +14,6 @@ import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
 import type { MarketAvailabilityBadge, MarketProduct, StockLevel } from '@/types/market';
 import { cn } from '@/utils/cn';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 const STOCK_TEXT_CLASS: Record<StockLevel, string> = {
   high: 'text-brand-success',
@@ -100,31 +91,18 @@ type ProductCardProps = {
 
 export const ProductCard = memo(function ProductCard({
   product,
-  index,
   onBookNow,
   className,
 }: ProductCardProps) {
-  const scale = useSharedValue(1);
   const stockLevel = getStockLevel(product.stock);
   const badgeStyle = BADGE_STYLES[product.badge];
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
 
   const handleBookNow = useCallback(() => {
     onBookNow(product);
   }, [onBookNow, product]);
 
   return (
-    <Animated.View
-      entering={FadeInDown.delay(index * 50)
-        .duration(360)
-        .springify()
-        .damping(18)}
-      className={cn('mx-lg mb-md', className)}
-      style={animatedStyle}
-    >
+    <View className={cn('mx-lg mb-md', className)}>
       <View className="rounded-xl border border-brand-border bg-brand-white p-lg shadow-sm">
         <View className="flex-row items-start justify-between">
           <View
@@ -239,24 +217,19 @@ export const ProductCard = memo(function ProductCard({
             </Typography>
           </View>
 
-          <AnimatedPressable
+          <Pressable
             onPress={handleBookNow}
-            onPressIn={() => {
-              scale.value = withSpring(0.985, { damping: 16, stiffness: 320 });
-            }}
-            onPressOut={() => {
-              scale.value = withSpring(1, { damping: 16, stiffness: 320 });
-            }}
             accessibilityRole="button"
             accessibilityLabel={`Book ${product.name}`}
             className="rounded-lg bg-brand-primary px-lg py-sm"
+            style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
           >
             <Typography variant="button" className="text-[13px] tracking-normal">
               Book Now
             </Typography>
-          </AnimatedPressable>
+          </Pressable>
         </View>
       </View>
-    </Animated.View>
+    </View>
   );
 });

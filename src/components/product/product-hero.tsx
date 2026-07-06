@@ -3,7 +3,6 @@ import { memo, useState } from 'react';
 import { View, useWindowDimensions } from 'react-native';
 
 import { Image } from 'expo-image';
-import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { cn } from '@/utils/cn';
 
@@ -28,19 +27,17 @@ export const ProductHero = memo(function ProductHero({
       {!loaded ? (
         <View className="absolute inset-0 bg-brand-primary-light" style={{ height }} />
       ) : null}
-      <Animated.View entering={FadeIn.duration(400)}>
-        <Image
-          source={{ uri: imageUrl }}
-          style={{ width: contentWidth, height }}
-          contentFit="cover"
-          contentPosition="center"
-          transition={320}
-          cachePolicy="memory-disk"
-          onLoad={() => setLoaded(true)}
-          accessibilityLabel={accessibilityLabel}
-          accessibilityIgnoresInvertColors
-        />
-      </Animated.View>
+      <Image
+        source={{ uri: imageUrl }}
+        style={{ width: contentWidth, height }}
+        contentFit="cover"
+        contentPosition="center"
+        transition={0}
+        cachePolicy="memory-disk"
+        onLoad={() => setLoaded(true)}
+        accessibilityLabel={accessibilityLabel}
+        accessibilityIgnoresInvertColors
+      />
     </View>
   );
 });

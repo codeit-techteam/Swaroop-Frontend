@@ -2,13 +2,9 @@ import { memo } from 'react';
 
 import { Pressable, View } from 'react-native';
 
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-
 import { Typography } from '@/components/ui/typography';
 import type { WatchlistItem } from '@/types/home';
 import { cn } from '@/utils/cn';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type WatchlistCardProps = {
   item: WatchlistItem;
@@ -43,25 +39,13 @@ export const WatchlistCard = memo(function WatchlistCard({
   showDivider = false,
   className,
 }: WatchlistCardProps) {
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
   return (
-    <AnimatedPressable
+    <Pressable
       onPress={() => onPress?.(item)}
-      onPressIn={() => {
-        scale.value = withSpring(0.98, { damping: 16, stiffness: 320 });
-      }}
-      onPressOut={() => {
-        scale.value = withSpring(1, { damping: 16, stiffness: 320 });
-      }}
       accessibilityRole="button"
       accessibilityLabel={`${item.materialName}, ${item.priceLabel}, ${item.changePercent}`}
       className={cn('px-md py-md', showDivider && 'border-b border-brand-border', className)}
-      style={animatedStyle}
+      style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
     >
       <View className="flex-row items-center">
         <View className="mr-md h-11 w-11 items-center justify-center rounded-full bg-brand-primary-light">
@@ -95,6 +79,6 @@ export const WatchlistCard = memo(function WatchlistCard({
           {item.priceLabel}
         </Typography>
       </View>
-    </AnimatedPressable>
+    </Pressable>
   );
 });

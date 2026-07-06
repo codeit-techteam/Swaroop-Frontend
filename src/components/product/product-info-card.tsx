@@ -2,7 +2,6 @@ import { memo } from 'react';
 
 import { View } from 'react-native';
 
-import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { Typography } from '@/components/ui/typography';
 import { formatPricePerKg } from '@/constants/productDetails';
@@ -24,8 +23,8 @@ export const ProductInfoCard = memo(function ProductInfoCard({
   const isTrendUp = product.trendDirection === 'up';
 
   return (
-    <Animated.View
-      entering={FadeInDown.delay(80).duration(360).springify().damping(18)}
+    <View
+
       className={cn(
         'mx-lg rounded-xl border border-brand-border bg-brand-white p-lg shadow-sm',
         className,
@@ -147,6 +146,6 @@ export const ProductInfoCard = memo(function ProductInfoCard({
           </Typography>
         </View>
       </View>
-    </Animated.View>
+    </View>
   );
 });

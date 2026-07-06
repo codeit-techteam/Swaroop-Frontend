@@ -2,7 +2,7 @@ import { memo } from 'react';
 
 import { Modal, Pressable, View } from 'react-native';
 
-import Animated, { FadeIn, FadeOut, ZoomIn, ZoomOut } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import { Typography } from '@/components/ui/typography';
 import { PAYMENT_MATRIX_INFO } from '@/constants/payment-comparison';
@@ -35,14 +35,12 @@ export const PaymentInfoModal = memo(function PaymentInfoModal({
         accessibilityLabel="Close payment matrix information"
       >
         <Animated.View
-          entering={FadeIn.duration(180)}
-          exiting={FadeOut.duration(140)}
+          entering={FadeIn.duration(150)}
+          exiting={FadeOut.duration(150)}
           className="w-full"
         >
           <Pressable onPress={(event) => event.stopPropagation()}>
-            <Animated.View
-              entering={ZoomIn.duration(220).springify().damping(16)}
-              exiting={ZoomOut.duration(140)}
+            <View
               className="rounded-2xl border border-brand-border bg-brand-white px-5 py-5"
               style={elevation.md}
             >
@@ -67,12 +65,13 @@ export const PaymentInfoModal = memo(function PaymentInfoModal({
                 accessibilityRole="button"
                 accessibilityLabel="Got it"
                 className="mt-5 h-11 items-center justify-center rounded-xl bg-brand-heading"
+                style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
               >
                 <Typography variant="button" className="text-[14px] tracking-normal">
                   Got it
                 </Typography>
               </Pressable>
-            </Animated.View>
+            </View>
           </Pressable>
         </Animated.View>
       </Pressable>

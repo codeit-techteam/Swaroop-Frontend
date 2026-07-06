@@ -2,7 +2,6 @@ import { memo } from 'react';
 
 import { Text, View } from 'react-native';
 
-import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { Typography } from '@/components/ui/typography';
 import { CHECKOUT_PAYMENT_PROTOCOL } from '@/constants/checkout';
@@ -26,8 +25,8 @@ export const PaymentProtocolCard = memo(function PaymentProtocolCard({
   const { title, bodyPrefix, bodyMiddle, bodySuffix, highlights } = CHECKOUT_PAYMENT_PROTOCOL;
 
   return (
-    <Animated.View
-      entering={FadeInDown.delay(200).duration(360).springify().damping(18)}
+    <View
+
       className={cn(
         'mx-lg flex-row rounded-2xl border border-brand-primary/20 bg-brand-primary-tint p-lg',
         className,
@@ -52,6 +51,6 @@ export const PaymentProtocolCard = memo(function PaymentProtocolCard({
           {bodySuffix}
         </Typography>
       </View>
-    </Animated.View>
+    </View>
   );
 });

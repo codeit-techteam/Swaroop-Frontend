@@ -6,10 +6,8 @@ import { type Href, useRouter } from 'expo-router';
 
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { FlashList } from '@shopify/flash-list';
-import Animated, { FadeIn } from 'react-native-reanimated';
 import Toast from 'react-native-toast-message';
 
-import { listEntrance } from '@/animations';
 import {
   HeroCarousel,
   HomeHeader,
@@ -135,20 +133,20 @@ export const CustomerHomeScreen = () => {
         contentContainerClassName="pb-xl"
         contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + 24 }}
       >
-        <Animated.View entering={FadeIn.duration(350)}>
+        <View>
           <LocationSelector location={selectedLocation} onPress={openLocationSheet} />
           <SearchBar onPress={navigateToMarket} onFilterPress={navigateToMarket} />
-        </Animated.View>
+        </View>
 
         <HeroCarousel onActionPress={handleBannerAction} />
 
-        <Animated.View entering={listEntrance(0)} className="mt-lg flex-row gap-md px-lg">
+        <View className="mt-lg flex-row gap-md px-lg">
           {QUICK_SUMMARY_ITEMS.map((item) => (
             <QuickSummaryCard key={item.id} item={item} onPress={navigateToOrders} />
           ))}
-        </Animated.View>
+        </View>
 
-        <Animated.View entering={listEntrance(1)} className="mt-xl">
+        <View className="mt-xl">
           <SectionHeader
             title="Price Watchlist"
             actionLabel="EDIT"
@@ -166,9 +164,9 @@ export const CustomerHomeScreen = () => {
               />
             ))}
           </View>
-        </Animated.View>
+        </View>
 
-        <Animated.View entering={listEntrance(2)} className="mt-xl">
+        <View className="mt-xl">
           <SectionHeader title="Trending Materials" />
           <View className="mt-md h-[196px]">
             <FlashList
@@ -180,9 +178,9 @@ export const CustomerHomeScreen = () => {
               contentContainerStyle={{ paddingHorizontal: 16 }}
             />
           </View>
-        </Animated.View>
+        </View>
 
-        <Animated.View entering={listEntrance(3)} className="mt-lg">
+        <View className="mt-lg">
           <LowestCostCard
             onPress={() =>
               showInfoToast(
@@ -191,9 +189,9 @@ export const CustomerHomeScreen = () => {
               )
             }
           />
-        </Animated.View>
+        </View>
 
-        <Animated.View entering={listEntrance(4)} className="mb-lg mt-xl">
+        <View className="mb-lg mt-xl">
           <SectionHeader
             title="Market Insights"
             actionLabel="See All"
@@ -206,7 +204,7 @@ export const CustomerHomeScreen = () => {
               <InsightCard key={insight.id} insight={insight} onPress={handleInsightPress} />
             ))}
           </View>
-        </Animated.View>
+        </View>
       </ScrollView>
 
       <LocationBottomSheet

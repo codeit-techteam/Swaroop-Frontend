@@ -2,7 +2,6 @@ import { memo, type ReactElement } from 'react';
 
 import { View } from 'react-native';
 
-import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { Typography } from '@/components/ui/typography';
 import { CART_TRUST_FEATURES } from '@/constants/cart';
@@ -27,8 +26,8 @@ const ICON_MAP: Record<
 
 export const TrustFeatures = memo(function TrustFeatures({ className }: TrustFeaturesProps) {
   return (
-    <Animated.View
-      entering={FadeInDown.delay(240).duration(360).springify().damping(18)}
+    <View
+
       className={cn('mx-lg flex-row', className)}
       style={{ gap: 10 }}
     >
@@ -52,6 +51,6 @@ export const TrustFeatures = memo(function TrustFeatures({ className }: TrustFea
           </View>
         );
       })}
-    </Animated.View>
+    </View>
   );
 });

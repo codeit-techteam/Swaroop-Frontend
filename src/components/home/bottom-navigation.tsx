@@ -3,7 +3,6 @@ import { memo, useCallback, type ReactElement } from 'react';
 import { Pressable, View } from 'react-native';
 
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Typography } from '@/components/ui/typography';
@@ -53,13 +52,8 @@ const TabItem = memo(function TabItem({
   onPress,
   onLongPress,
 }: TabItemProps) {
-  const scale = useSharedValue(1);
   const color = focused ? brandColors.primary : brandColors.muted;
   const meta = TAB_META[routeName];
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
 
   if (!meta) {
     return null;
@@ -69,18 +63,13 @@ const TabItem = memo(function TabItem({
     <Pressable
       onPress={onPress}
       onLongPress={onLongPress}
-      onPressIn={() => {
-        scale.value = withSpring(0.92, { damping: 16, stiffness: 320 });
-      }}
-      onPressOut={() => {
-        scale.value = withSpring(1, { damping: 16, stiffness: 320 });
-      }}
       accessibilityRole="button"
       accessibilityState={{ selected: focused }}
       accessibilityLabel={label}
       className="flex-1 items-center justify-center"
+      style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
     >
-      <Animated.View className="items-center" style={animatedStyle}>
+      <View className="items-center">
         {meta.icon({ color, focused })}
         <Typography
           variant="fieldLabel"
@@ -91,7 +80,7 @@ const TabItem = memo(function TabItem({
         >
           {label}
         </Typography>
-      </Animated.View>
+      </View>
     </Pressable>
   );
 });

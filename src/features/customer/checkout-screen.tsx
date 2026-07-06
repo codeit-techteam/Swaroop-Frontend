@@ -5,7 +5,6 @@ import { ScrollView, View } from 'react-native';
 import { type Href, useRouter } from 'expo-router';
 
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
-import Animated, { FadeIn } from 'react-native-reanimated';
 
 import {
   AddressBottomSheet,
@@ -120,7 +119,7 @@ export const CustomerCheckoutScreen = memo(function CustomerCheckoutScreen() {
       <CheckoutHeader onBackPress={handleBack} />
 
       {isReady ? (
-        <Animated.View entering={FadeIn.duration(260)} className="flex-1">
+        <View className="flex-1">
           {hasItems ? (
             <>
               <ScrollView
@@ -149,7 +148,7 @@ export const CustomerCheckoutScreen = memo(function CustomerCheckoutScreen() {
               </Typography>
             </View>
           )}
-        </Animated.View>
+        </View>
       ) : null}
 
       <AddressBottomSheet

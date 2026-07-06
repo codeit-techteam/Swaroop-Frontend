@@ -6,7 +6,6 @@ import Animated, {
   interpolateColor,
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 
@@ -40,7 +39,6 @@ export const PaymentComparisonRow = memo(function PaymentComparisonRow({
   isLast = false,
   onSelect,
 }: PaymentComparisonRowProps) {
-  const scale = useSharedValue(1);
   const selectedProgress = useSharedValue(selected ? 1 : 0);
   const recommendedProgress = useSharedValue(option.recommended ? 1 : 0);
 
@@ -58,7 +56,6 @@ export const PaymentComparisonRow = memo(function PaymentComparisonRow({
     const tint = Math.max(baseTint, selectedTint);
 
     return {
-      transform: [{ scale: scale.value }],
       backgroundColor: interpolateColor(
         tint,
         [0, 0.55, 1],
@@ -78,12 +75,6 @@ export const PaymentComparisonRow = memo(function PaymentComparisonRow({
   return (
     <AnimatedPressable
       onPress={() => onSelect(option.id)}
-      onPressIn={() => {
-        scale.value = withSpring(0.985, { damping: 16, stiffness: 320 });
-      }}
-      onPressOut={() => {
-        scale.value = withSpring(1, { damping: 16, stiffness: 320 });
-      }}
       accessibilityRole="radio"
       accessibilityState={{ selected }}
       accessibilityLabel={`${option.title}, ${option.subtitle}`}

@@ -2,14 +2,10 @@ import { memo } from 'react';
 
 import { Pressable, View } from 'react-native';
 
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-
 import { ProductImageCard } from '@/components/home/product-image-card';
 import { Typography } from '@/components/ui/typography';
 import type { TrendingProduct } from '@/types/home';
 import { cn } from '@/utils/cn';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type TrendingMaterialCardProps = {
   product: TrendingProduct;
@@ -22,28 +18,16 @@ export const TrendingMaterialCard = memo(function TrendingMaterialCard({
   onPress,
   className,
 }: TrendingMaterialCardProps) {
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
   return (
-    <AnimatedPressable
+    <Pressable
       onPress={() => onPress?.(product)}
-      onPressIn={() => {
-        scale.value = withSpring(0.97, { damping: 16, stiffness: 320 });
-      }}
-      onPressOut={() => {
-        scale.value = withSpring(1, { damping: 16, stiffness: 320 });
-      }}
       accessibilityRole="button"
       accessibilityLabel={`${product.name}, grade ${product.grade}, ${product.priceLabel}`}
       className={cn(
         'mr-md w-[148px] rounded-xl border border-brand-border/50 bg-brand-white p-sm shadow-sm',
         className,
       )}
-      style={animatedStyle}
+      style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
     >
       <ProductImageCard
         imageUrl={product.imageUrl}
@@ -73,6 +57,6 @@ export const TrendingMaterialCard = memo(function TrendingMaterialCard({
           {product.priceLabel}
         </Typography>
       </View>
-    </AnimatedPressable>
+    </Pressable>
   );
 });

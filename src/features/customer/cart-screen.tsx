@@ -4,7 +4,6 @@ import { Alert, ScrollView, View } from 'react-native';
 
 import { type Href, useRouter } from 'expo-router';
 
-import Animated, { FadeIn } from 'react-native-reanimated';
 import Toast from 'react-native-toast-message';
 
 import {
@@ -132,17 +131,16 @@ export const CustomerCartScreen = memo(function CustomerCartScreen() {
       ) : isEmpty ? (
         <EmptyCart onBrowsePress={handleBrowseMarketplace} />
       ) : (
-        <Animated.View entering={FadeIn.duration(260)} className="flex-1">
+        <View className="flex-1">
           <ScrollView
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingTop: 16, paddingBottom: 24, gap: 16 }}
             className="flex-1"
           >
-            {items.map((item, index) => (
+            {items.map((item) => (
               <CartItemCard
                 key={item.id}
                 item={item}
-                index={index}
                 onIncrease={increaseQuantity}
                 onDecrease={decreaseQuantity}
                 onRemove={removeItem}
@@ -159,7 +157,7 @@ export const CustomerCartScreen = memo(function CustomerCartScreen() {
             enabled={summary.meetsMoq}
             onCheckout={handleCheckout}
           />
-        </Animated.View>
+        </View>
       )}
     </View>
   );
