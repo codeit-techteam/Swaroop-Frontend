@@ -35,6 +35,11 @@ export const ROUTES = {
     ORDER_DETAIL: '/(customer)/order-detail',
     ORDER_CONFIRMATION: '/(customer)/order-confirmation',
     DASHBOARD: '/(customer)/(tabs)/home',
+    PROFILE_EDIT: '/(customer)/profile/edit',
+    PROFILE_COMPANY_DETAILS: '/(customer)/profile/company-details',
+    PROFILE_SAVED_ADDRESSES: '/(customer)/profile/saved-addresses',
+    PROFILE_BANK_ACCOUNTS: '/(customer)/profile/bank-accounts',
+    PROFILE_TAX_DOCUMENTS: '/(customer)/profile/tax-documents',
   },
 
   PUBLIC: {
@@ -79,7 +84,12 @@ export type CustomerRoute =
   | typeof ROUTES.CUSTOMER.SHIPMENT_TRACKING
   | typeof ROUTES.CUSTOMER.ORDER_DETAIL
   | typeof ROUTES.CUSTOMER.ORDER_CONFIRMATION
-  | typeof ROUTES.CUSTOMER.DASHBOARD;
+  | typeof ROUTES.CUSTOMER.DASHBOARD
+  | typeof ROUTES.CUSTOMER.PROFILE_EDIT
+  | typeof ROUTES.CUSTOMER.PROFILE_COMPANY_DETAILS
+  | typeof ROUTES.CUSTOMER.PROFILE_SAVED_ADDRESSES
+  | typeof ROUTES.CUSTOMER.PROFILE_BANK_ACCOUNTS
+  | typeof ROUTES.CUSTOMER.PROFILE_TAX_DOCUMENTS;
 
 export type PublicRoute = typeof ROUTES.PUBLIC.ROOT;
 

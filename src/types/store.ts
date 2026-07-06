@@ -29,6 +29,7 @@ export type AuthActions = {
   setReviewSubmitted: (referenceId: string) => void;
   approveKyc: () => void;
   setLocation: (location: DeliveryLocation) => void;
+  updateUserProfile: (patch: Partial<UserProfilePayload>) => void;
   logout: () => Promise<void>;
   resetDemoAccount: () => Promise<void>;
 };

@@ -196,6 +196,25 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     set({ location });
   },
 
+  updateUserProfile: (patch) => {
+    const mobileNumber = get().mobileNumber ?? '';
+    const current = get().userProfile ?? {
+      mobileNumber,
+      selectedRole: get().selectedRole,
+    };
+    const userProfile = {
+      ...current,
+      ...patch,
+      mobileNumber: patch.mobileNumber ?? current.mobileNumber,
+    };
+
+    saveUser(userProfile);
+    set({
+      userProfile,
+      ...(patch.mobileNumber ? { mobileNumber: patch.mobileNumber } : {}),
+    });
+  },
+
   logout: async () => {
     logoutSession();
     set({

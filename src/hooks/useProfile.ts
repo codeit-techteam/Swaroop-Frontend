@@ -1,0 +1,199 @@
+import { useCallback, useMemo } from 'react';
+
+import {
+  DEFAULT_BANK_ACCOUNTS,
+  DEFAULT_TAX_DOCUMENTS,
+  buildSavedAddresses,
+  getComplianceValidTillLabel,
+} from '@/constants/profile';
+import { selectKycApproved, selectMobileNumber, useAuthStore } from '@/store/auth-store';
+import {
+  selectBusinessInfo,
+  selectDocuments,
+  selectMandatoryDocsReady,
+  useKycStore,
+} from '@/store/kyc-store';
+import type {
+  ComplianceStatus,
+  KycVerificationStatus,
+  MembershipTier,
+  ProfileData,
+  ProfileUpdatePayload,
+  TradingStatus,
+} from '@/types/profile';
+
+const deriveDisplayName = (
+  displayName: string | undefined,
+  companyName: string,
+  mobileNumber: string | null,
+): string => {
+  if (displayName?.trim()) {
+    return displayName.trim();
+  }
+
+  if (companyName.trim()) {
+    return companyName.trim();
+  }
+
+  return mobileNumber ? `+91 ${mobileNumber}` : 'PetroTrade User';
+};
+
+const deriveKycStatus = (kycApproved: boolean, docsReady: boolean): KycVerificationStatus => {
+  if (kycApproved) {
+    return 'verified';
+  }
+
+  if (docsReady) {
+    return 'pending';
+  }
+
+  return 'unverified';
+};
+
+const deriveMembership = (kycApproved: boolean): MembershipTier =>
+  kycApproved ? 'Prime Member' : 'Standard Member';
+
+const deriveTradingStatus = (kycApproved: boolean): TradingStatus =>
+  kycApproved ? 'Active' : 'Inactive';
+
+const buildComplianceStatus = (params: {
+  kycApproved: boolean;
+  gstUploaded: boolean;
+  panUploaded: boolean;
+  documentsComplete: boolean;
+}): ComplianceStatus => {
+  const { kycApproved, gstUploaded, panUploaded, documentsComplete } = params;
+
+  return {
+    kycVerified: kycApproved,
+    gstVerified: gstUploaded && kycApproved,
+    panVerified: panUploaded && kycApproved,
+    documentsComplete,
+    validTillLabel: getComplianceValidTillLabel(),
+    summary:
+      kycApproved && documentsComplete
+        ? 'All mandatory documents are verified and strictly compliant with regulations.'
+        : 'Complete KYC verification to unlock full enterprise compliance status.',
+  };
+};
+
+export const useProfile = () => {
+  const mobileNumber = useAuthStore(selectMobileNumber);
+  const kycApproved = useAuthStore(selectKycApproved);
+  const userProfile = useAuthStore((state) => state.userProfile);
+  const updateUserProfile = useAuthStore((state) => state.updateUserProfile);
+
+  const businessInfo = useKycStore(selectBusinessInfo);
+  const documents = useKycStore(selectDocuments);
+  const docsReady = useKycStore(selectMandatoryDocsReady);
+  const updateBusinessInfo = useKycStore((state) => state.updateBusinessInfo);
+
+  const profile = useMemo<ProfileData>(() => {
+    const gstUploaded = documents.some(
+      (document) =>
+        document.id === 'gst' && (document.status === 'uploaded' || document.status === 'verified'),
+    );
+    const panUploaded = documents.some(
+      (document) =>
+        document.id === 'pan' && (document.status === 'uploaded' || document.status === 'verified'),
+    );
+
+    const companyName = businessInfo.businessEntityName;
+    const savedAddresses = buildSavedAddresses({
+      businessAddress: businessInfo.businessAddress,
+      city: businessInfo.city,
+      state: businessInfo.state,
+      pincode: businessInfo.pincode,
+      companyName,
+    });
+
+    const bankAccounts = DEFAULT_BANK_ACCOUNTS.map((account) => ({
+      ...account,
+      accountHolder: companyName || account.accountHolder,
+    }));
+
+    return {
+      displayName: deriveDisplayName(userProfile?.displayName, companyName, mobileNumber),
+      companyName,
+      companyType: businessInfo.companyType,
+      profilePhotoUri: userProfile?.profilePhotoUri ?? null,
+      companyLogoUri: userProfile?.companyLogoUri ?? null,
+      email: businessInfo.businessEmail,
+      phone: businessInfo.mobileNumber || mobileNumber || '',
+      gstNumber: businessInfo.gstNumber,
+      panNumber: businessInfo.panNumber,
+      businessAddress: businessInfo.businessAddress,
+      state: businessInfo.state,
+      city: businessInfo.city,
+      pincode: businessInfo.pincode,
+      natureOfBusiness: businessInfo.natureOfBusiness,
+      establishedYear: userProfile?.establishedYear ?? '',
+      kycStatus: deriveKycStatus(kycApproved, docsReady),
+      membership: deriveMembership(kycApproved),
+      tradingStatus: deriveTradingStatus(kycApproved),
+      compliance: buildComplianceStatus({
+        kycApproved,
+        gstUploaded,
+        panUploaded,
+        documentsComplete: docsReady,
+      }),
+      savedAddresses,
+      bankAccounts,
+      taxDocuments: DEFAULT_TAX_DOCUMENTS,
+    };
+  }, [businessInfo, docsReady, documents, kycApproved, mobileNumber, userProfile]);
+
+  const updateProfile = useCallback(
+    (patch: ProfileUpdatePayload) => {
+      const userPatch: Parameters<typeof updateUserProfile>[0] = {};
+
+      if (patch.displayName !== undefined) {
+        userPatch.displayName = patch.displayName;
+      }
+
+      if (patch.profilePhotoUri !== undefined) {
+        userPatch.profilePhotoUri = patch.profilePhotoUri;
+      }
+
+      if (patch.companyLogoUri !== undefined) {
+        userPatch.companyLogoUri = patch.companyLogoUri;
+      }
+
+      if (patch.phone !== undefined) {
+        userPatch.mobileNumber = patch.phone;
+      }
+
+      if (Object.keys(userPatch).length > 0) {
+        updateUserProfile(userPatch);
+      }
+
+      const businessPatch: Partial<typeof businessInfo> = {};
+
+      if (patch.email !== undefined) {
+        businessPatch.businessEmail = patch.email;
+      }
+
+      if (patch.phone !== undefined) {
+        businessPatch.mobileNumber = patch.phone;
+      }
+
+      if (patch.businessAddress !== undefined) {
+        businessPatch.businessAddress = patch.businessAddress;
+      }
+
+      if (patch.natureOfBusiness !== undefined) {
+        businessPatch.natureOfBusiness = patch.natureOfBusiness;
+      }
+
+      if (Object.keys(businessPatch).length > 0) {
+        updateBusinessInfo(businessPatch);
+      }
+    },
+    [updateBusinessInfo, updateUserProfile],
+  );
+
+  return {
+    profile,
+    updateProfile,
+  };
+};

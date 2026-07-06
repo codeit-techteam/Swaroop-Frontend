@@ -58,6 +58,9 @@ export { PaymentVerificationIllustration } from '@/icons/payment-verification-il
 export { DownloadIcon } from '@/icons/download-icon';
 export { PurchaseOrderIllustration } from '@/icons/purchase-order-illustration';
 export { ProcurementIllustration } from '@/icons/procurement-illustration';
+export { EditIcon } from '@/icons/edit';
+export { LogoutIcon } from '@/icons/logout';
+export { BuildingIcon } from '@/icons/building';
 
 export { iconSizes } from '@/theme/icons';
 

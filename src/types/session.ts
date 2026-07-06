@@ -13,6 +13,9 @@ export type UserProfilePayload = {
   mobileNumber: string;
   selectedRole: UserRole | null;
   displayName?: string;
+  profilePhotoUri?: string | null;
+  companyLogoUri?: string | null;
+  establishedYear?: string;
 };
 
 export type KycPayload = {
