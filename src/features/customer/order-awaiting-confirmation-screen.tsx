@@ -13,10 +13,10 @@ import {
   OrderSubmittedCard,
   ValidationTimeline,
 } from '@/components/order';
-import { PrimaryButton, SecondaryButton, Typography } from '@/components/ui';
+import { SecondaryButton, Typography } from '@/components/ui';
 import { ORDER_CONFIRMATION_COPY } from '@/constants/orderTimeline';
 import { useOrderConfirmation } from '@/hooks/useOrderConfirmation';
-import { BackArrowIcon, BarChartIcon, BellIcon } from '@/icons';
+import { BackArrowIcon, BellIcon } from '@/icons';
 import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
 
@@ -28,7 +28,6 @@ export const CustomerOrderAwaitingConfirmationScreen = memo(
       destination,
       timelineSteps,
       countdown,
-      handleTrackStatus,
       handleContactSupport,
       handleBack,
       handleNotifications,
@@ -103,12 +102,6 @@ export const CustomerOrderAwaitingConfirmationScreen = memo(
           className="absolute bottom-0 left-0 right-0 border-t border-brand-border bg-brand-white px-lg pt-md"
           style={{ paddingBottom: insets.bottom + 12, gap: 12 }}
         >
-          <PrimaryButton
-            label={ORDER_CONFIRMATION_COPY.trackStatus}
-            onPress={handleTrackStatus}
-            leftIcon={<BarChartIcon size={iconSizes.md} color={brandColors.white} />}
-            className="bg-brand-heading"
-          />
           <SecondaryButton
             label={ORDER_CONFIRMATION_COPY.contactSupport}
             onPress={handleContactSupport}

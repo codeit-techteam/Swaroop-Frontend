@@ -32,8 +32,6 @@ export const CustomerProcurementConfirmationScreen = memo(
       procurement,
       timeline,
       statusLabel,
-      canContinue,
-      handleContinueTracking,
       handleBack,
       handleNotifications,
     } = useProcurement();
@@ -173,17 +171,6 @@ export const CustomerProcurementConfirmationScreen = memo(
 
           <BlindMarketplaceInfoCard className="mt-lg" />
         </ScrollView>
-
-        <View
-          className="absolute bottom-0 left-0 right-0 border-t border-brand-border bg-brand-white px-lg pt-md"
-          style={{ paddingBottom: insets.bottom + 12 }}
-        >
-          <PrimaryButton
-            label={PROCUREMENT_SCREEN_COPY.continueTracking}
-            onPress={handleContinueTracking}
-            disabled={!canContinue}
-          />
-        </View>
       </View>
     );
   },

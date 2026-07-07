@@ -8,7 +8,11 @@ export const formatCurrency = (
     maximumFractionDigits?: number;
   },
 ): string => {
-  const { showSymbol = true, minimumFractionDigits = 2, maximumFractionDigits = 2 } = options ?? {};
+  const { showSymbol = true, maximumFractionDigits = 2 } = options ?? {};
+  const minimumFractionDigits = Math.min(
+    options?.minimumFractionDigits ?? 2,
+    maximumFractionDigits,
+  );
 
   const formatted = new Intl.NumberFormat(CURRENCY.LOCALE, {
     style: 'currency',

@@ -31,7 +31,6 @@ export const CustomerPaymentVerificationInitiatedScreen = memo(
       timeline,
       badgeStatus,
       verificationError,
-      handleGoToOrders,
       handleBack,
     } = usePaymentVerification();
 
@@ -159,23 +158,6 @@ export const CustomerPaymentVerificationInitiatedScreen = memo(
 
           <VerificationInfoCard className="mt-lg" />
         </ScrollView>
-
-        <View
-          className="absolute bottom-0 left-0 right-0 border-t border-brand-border bg-brand-white px-lg pt-md"
-          style={{ paddingBottom: insets.bottom + 12 }}
-        >
-          <Pressable
-            onPress={handleGoToOrders}
-            accessibilityRole="button"
-            accessibilityLabel="Go to orders"
-            className="w-full items-center justify-center rounded-md border border-brand-border bg-brand-white px-xl py-lg"
-            style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
-          >
-            <Typography variant="roleTitle" className="text-[15px] text-brand-heading">
-              Go to Orders
-            </Typography>
-          </Pressable>
-        </View>
       </View>
     );
   },
