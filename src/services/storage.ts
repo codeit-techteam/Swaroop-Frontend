@@ -22,6 +22,7 @@ const DEFAULT_KYC: KycPayload = {
   kycApproved: false,
   reviewSubmitted: false,
   referenceId: null,
+  submittedAt: null,
 };
 
 const DEFAULT_APP_SETTINGS: AppSettingsPayload = {

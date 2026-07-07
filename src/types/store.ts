@@ -28,6 +28,8 @@ export type AuthActions = {
   completeLogin: (mobileNumber: string) => LoginResult;
   setReviewSubmitted: (referenceId: string) => void;
   approveKyc: () => void;
+  /** Approves KYC when the verification waiting period has elapsed. Returns true if approved. */
+  resolvePendingKycApproval: () => boolean;
   setLocation: (location: DeliveryLocation) => void;
   updateUserProfile: (patch: Partial<UserProfilePayload>) => void;
   logout: () => Promise<void>;

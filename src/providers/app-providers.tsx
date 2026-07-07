@@ -18,6 +18,7 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { useNetworkListener } from '@/hooks/use-network';
 import { queryClient } from '@/lib/query-client';
 import { ThemeProvider } from '@/providers/theme-provider';
+import { applyDevResetIfNeeded } from '@/services/dev-reset';
 import { configureNotifications } from '@/services/notification-service';
 import { useAuthStore } from '@/store/auth-store';
 import { useCartStore } from '@/store/cart-store';
@@ -59,6 +60,10 @@ export const AppProviders = ({ children }: AppProvidersProps) => {
 
     const bootstrap = async () => {
       await hydrateSecureStorage();
+      if (!active) {
+        return;
+      }
+      await applyDevResetIfNeeded();
       if (!active) {
         return;
       }

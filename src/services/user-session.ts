@@ -156,6 +156,7 @@ export const saveCurrentUser = (user: Partial<CurrentUser>): CurrentUser => {
     kycApproved: next.isKycApproved,
     reviewSubmitted: next.reviewCompleted || next.applicationSubmitted,
     referenceId: next.referenceId,
+    submittedAt: getKYC().submittedAt,
   });
 
   return getCurrentUser();
@@ -193,16 +194,15 @@ export const seedDemoUser = (): CurrentUser => {
     kycApproved: true,
     reviewSubmitted: true,
     referenceId: DEMO_REFERENCE_ID,
+    submittedAt: Date.now(),
   });
 
   return getCurrentUser();
 };
 
 /**
- * Wipes any KYC / business / document data left in storage so a fresh
- * (non-demo) user is routed through Business Info → Documents upload.
- * Used when switching away from a previous account (e.g. the demo account,
- * whose seeded data would otherwise mark KYC as already approved).
+ * Wipes KYC / business / document data so a fresh (non-demo) user starts the
+ * Business Info → Documents → Review flow from scratch.
  */
 export const resetKycData = (): void => {
   saveBusinessInfo({ ...EMPTY_BUSINESS_INFO });
@@ -211,6 +211,7 @@ export const resetKycData = (): void => {
     kycApproved: false,
     reviewSubmitted: false,
     referenceId: null,
+    submittedAt: null,
   });
 };
 

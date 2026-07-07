@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LoadingSpinner, Typography } from '@/components';
 import { PetroTradeLogo } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
+import { getLoggedInRoute } from '@/navigation/post-auth-route';
 import { useAuthStore } from '@/store/auth-store';
 import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
@@ -34,17 +35,16 @@ export const SplashScreen = () => {
   const contentOpacity = useSharedValue(0);
 
   const routeAfterSplash = useCallback(() => {
-    // Read the freshest hydrated session so the branded splash always shows on
-    // cold start, then hands off to the correct destination.
-    const { isLoggedIn, kycApproved, onboardingCompleted } = useAuthStore.getState();
+    const authStore = useAuthStore.getState();
+    authStore.resolvePendingKycApproval();
 
-    if (isLoggedIn && kycApproved) {
-      router.replace(ROUTES.CUSTOMER.HOME as Href);
-      return;
-    }
+    const { isLoggedIn, kycApproved, reviewSubmitted, onboardingCompleted } =
+      useAuthStore.getState();
 
-    if (isLoggedIn && !kycApproved) {
-      router.replace(ROUTES.AUTH.BUSINESS_INFORMATION as Href);
+    if (isLoggedIn) {
+      router.replace(
+        getLoggedInRoute({ kycApproved, reviewSubmitted }),
+      );
       return;
     }
 

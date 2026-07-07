@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { Pressable, View } from 'react-native';
 
-import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import {
   AppHeader,
@@ -13,7 +13,7 @@ import {
   Typography,
 } from '@/components';
 import { ClockIcon, OtpIllustration } from '@/icons';
-import { ROUTES } from '@/navigation/routes';
+import { getLoggedInRoute } from '@/navigation/post-auth-route';
 import { getInvalidOtpMessage, validateDevOtp } from '@/services/dev-auth';
 import { useAuthStore } from '@/store/auth-store';
 import { wp } from '@/utils/responsive';
@@ -86,14 +86,11 @@ export const OtpVerificationScreen = () => {
     }
 
     const mobileNumber = params.phone ?? '';
-    const { kycApproved } = completeLogin(mobileNumber);
+    completeLogin(mobileNumber);
+    useAuthStore.getState().resolvePendingKycApproval();
 
-    if (kycApproved) {
-      router.replace(ROUTES.CUSTOMER.HOME as Href);
-      return;
-    }
-
-    router.replace(ROUTES.AUTH.BUSINESS_INFORMATION as Href);
+    const { kycApproved, reviewSubmitted } = useAuthStore.getState();
+    router.replace(getLoggedInRoute({ kycApproved, reviewSubmitted }));
   }, [completeLogin, isOtpComplete, otp, params.phone, router]);
 
   return (

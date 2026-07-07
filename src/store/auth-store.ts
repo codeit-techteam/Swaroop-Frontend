@@ -4,12 +4,14 @@ import {
   clearAll,
   getAppSettings,
   getAuth,
+  getKYC,
   getUser,
   saveAppSettings,
   saveAuth,
   saveKYC,
   saveUser,
 } from '@/services/storage';
+import { canAccessHomeAfterSubmission } from '@/services/kyc-verification';
 import {
   getCurrentUser,
   isDemoUser,
@@ -144,16 +146,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       const isAccountSwitch =
         previousAuth.mobileNumber != null && previousAuth.mobileNumber !== mobileNumber;
 
-      // A brand-new number (or one switching away from the demo account) must
-      // start KYC from scratch. Otherwise stale data — especially the demo
-      // account's seeded `kycApproved: true` — would skip Business Info and
-      // Documents upload and drop the user straight on the dashboard.
       if (isAccountSwitch || isDemoUser(previousAuth.mobileNumber)) {
         resetKycData();
       }
 
-      // Ignore the previous account's profile when switching numbers so a new
-      // user never inherits another user's name/role.
       const existingUser = isAccountSwitch ? null : getUser();
       const auth = {
         isLoggedIn: true,
@@ -165,12 +161,15 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
           existingUser?.selectedRole ??
           (isAccountSwitch ? null : get().selectedRole) ??
           ('buyer' as UserRole),
-        displayName: existingUser?.displayName ?? (isAccountSwitch ? undefined : get().userProfile?.displayName),
+        displayName:
+          existingUser?.displayName ?? (isAccountSwitch ? undefined : get().userProfile?.displayName),
       };
 
       saveAuth(auth);
       saveUser(userProfile);
     }
+
+    get().resolvePendingKycApproval();
 
     const current = getCurrentUser();
     applyCurrentUserToStore(set, current);
@@ -182,10 +181,12 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   },
 
   setReviewSubmitted: (referenceId) => {
+    const existing = getKYC();
     const kyc = {
       kycApproved: get().kycApproved,
       reviewSubmitted: true,
       referenceId,
+      submittedAt: existing.submittedAt ?? Date.now(),
     };
     saveKYC(kyc);
     set({
@@ -195,16 +196,31 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   },
 
   approveKyc: () => {
+    const existing = getKYC();
     const kyc = {
       kycApproved: true,
       reviewSubmitted: true,
-      referenceId: get().referenceId,
+      referenceId: get().referenceId ?? existing.referenceId,
+      submittedAt: existing.submittedAt,
     };
     saveKYC(kyc);
     set({
       kycApproved: true,
       reviewSubmitted: true,
     });
+  },
+
+  resolvePendingKycApproval: () => {
+    if (get().kycApproved) {
+      return true;
+    }
+
+    if (!canAccessHomeAfterSubmission()) {
+      return false;
+    }
+
+    get().approveKyc();
+    return true;
   },
 
   setLocation: (location) => {

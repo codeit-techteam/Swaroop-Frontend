@@ -22,6 +22,8 @@ export type KycPayload = {
   kycApproved: boolean;
   reviewSubmitted: boolean;
   referenceId: string | null;
+  /** Unix ms when the application was submitted for review. */
+  submittedAt: number | null;
 };
 
 export type AppSettingsPayload = {

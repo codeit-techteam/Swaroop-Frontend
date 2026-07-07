@@ -1,6 +1,6 @@
 import { memo, type ReactNode } from 'react';
 
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 
 import {
   Header,
@@ -47,15 +47,6 @@ export const OnboardingScreen = memo(function OnboardingScreen({
   return (
     <ScreenContainer backgroundColor={brandColors.background}>
       <Header showSkip={showSkip} onSkip={onSkip} />
-
-      <View
-        style={{
-          height: StyleSheet.hairlineWidth,
-          backgroundColor: brandColors.border,
-          marginTop: spacing.md,
-          marginHorizontal: -spacing.screenHorizontal,
-        }}
-      />
 
       <View className="flex-1 justify-between" style={{ paddingTop: spacing['2xl'] }}>
         <View className="items-center">
