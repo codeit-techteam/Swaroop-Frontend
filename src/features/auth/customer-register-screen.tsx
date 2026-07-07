@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 
 import { Pressable, View } from 'react-native';
 
@@ -24,12 +24,10 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export const CustomerRegisterScreen = () => {
   const router = useRouter();
-  const [gstVerified, setGstVerified] = useState(false);
 
   const {
     control,
     handleSubmit,
-    getValues,
     formState: { isValid },
   } = useZodForm(registerSchema, {
     defaultValues: {
@@ -40,12 +38,6 @@ export const CustomerRegisterScreen = () => {
     },
     mode: 'onChange',
   });
-
-  const handleVerifyGst = useCallback(() => {
-    const gstNumber = getValues('gstNumber');
-    const result = gstSchema.safeParse(gstNumber);
-    setGstVerified(result.success);
-  }, [getValues]);
 
   const onRegister = useCallback(
     (values: RegisterFormValues) => {
@@ -133,15 +125,9 @@ export const CustomerRegisterScreen = () => {
               placeholder="22AAAAA0000A1Z5"
               autoCapitalize="characters"
               value={value}
-              onChangeText={(text) => {
-                setGstVerified(false);
-                onChange(text.toUpperCase());
-              }}
+              onChangeText={(text) => onChange(text.toUpperCase())}
               onBlur={onBlur}
               error={fieldState.error?.message}
-              rightActionLabel="VERIFY"
-              rightActionActive={gstVerified}
-              onRightActionPress={handleVerifyGst}
             />
           )}
         />
