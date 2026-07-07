@@ -1,10 +1,29 @@
 import * as ImagePicker from 'expo-image-picker';
 import * as LocalAuthentication from 'expo-local-authentication';
-import * as Notifications from 'expo-notifications';
 
+import { appConfig } from '@/config/env';
 import { logger } from '@/utils/logger';
 
 export type PermissionStatus = 'granted' | 'denied' | 'undetermined';
+
+type NotificationsModule = typeof import('expo-notifications');
+
+/**
+ * Lazily loads expo-notifications, skipping it in Expo Go where remote push was
+ * removed (SDK 53+). Avoids the module being evaluated at app startup.
+ */
+const loadNotifications = (): NotificationsModule | null => {
+  if (appConfig.isExpoGo) {
+    return null;
+  }
+
+  try {
+    return require('expo-notifications') as NotificationsModule;
+  } catch (error) {
+    logger.warn('expo-notifications unavailable', error);
+    return null;
+  }
+};
 
 export const requestCameraPermission = async (): Promise<PermissionStatus> => {
   const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -17,6 +36,11 @@ export const requestMediaLibraryPermission = async (): Promise<PermissionStatus>
 };
 
 export const requestNotificationPermission = async (): Promise<PermissionStatus> => {
+  const Notifications = loadNotifications();
+  if (!Notifications) {
+    return 'denied';
+  }
+
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   if (existingStatus === 'granted') {
     return 'granted';

@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LoadingSpinner, Typography } from '@/components';
 import { PetroTradeLogo } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
+import { useAuthStore } from '@/store/auth-store';
 import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
 import { spacing } from '@/theme/spacing';
@@ -32,7 +33,26 @@ export const SplashScreen = () => {
   const scale = useSharedValue(SCALE_FROM);
   const contentOpacity = useSharedValue(0);
 
-  const navigateToOnboarding = useCallback(() => {
+  const routeAfterSplash = useCallback(() => {
+    // Read the freshest hydrated session so the branded splash always shows on
+    // cold start, then hands off to the correct destination.
+    const { isLoggedIn, kycApproved, onboardingCompleted } = useAuthStore.getState();
+
+    if (isLoggedIn && kycApproved) {
+      router.replace(ROUTES.CUSTOMER.HOME as Href);
+      return;
+    }
+
+    if (isLoggedIn && !kycApproved) {
+      router.replace(ROUTES.AUTH.BUSINESS_INFORMATION as Href);
+      return;
+    }
+
+    if (onboardingCompleted) {
+      router.replace(ROUTES.AUTH.ROLE_SELECTION as Href);
+      return;
+    }
+
     router.replace(ROUTES.ONBOARDING.INTRO_ONE as Href);
   }, [router]);
 
@@ -56,14 +76,14 @@ export const SplashScreen = () => {
         { duration: FADE_OUT_MS, easing: Easing.in(Easing.cubic) },
         (finished) => {
           if (finished) {
-            runOnJS(navigateToOnboarding)();
+            runOnJS(routeAfterSplash)();
           }
         },
       );
     }, SPLASH_VISIBLE_MS);
 
     return () => clearTimeout(timer);
-  }, [contentOpacity, navigateToOnboarding, opacity, scale]);
+  }, [contentOpacity, routeAfterSplash, opacity, scale]);
 
   const screenStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,

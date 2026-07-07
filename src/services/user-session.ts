@@ -1,4 +1,4 @@
-import { INITIAL_DOCUMENTS } from '@/constants/documents';
+import { EMPTY_BUSINESS_INFO, INITIAL_DOCUMENTS } from '@/constants/documents';
 import { DEMO_PHONE, DEVELOPMENT_MODE } from '@/config/development';
 import {
   getAuth,
@@ -196,6 +196,22 @@ export const seedDemoUser = (): CurrentUser => {
   });
 
   return getCurrentUser();
+};
+
+/**
+ * Wipes any KYC / business / document data left in storage so a fresh
+ * (non-demo) user is routed through Business Info → Documents upload.
+ * Used when switching away from a previous account (e.g. the demo account,
+ * whose seeded data would otherwise mark KYC as already approved).
+ */
+export const resetKycData = (): void => {
+  saveBusinessInfo({ ...EMPTY_BUSINESS_INFO });
+  saveDocuments(INITIAL_DOCUMENTS.map((document) => ({ ...document })));
+  saveKYC({
+    kycApproved: false,
+    reviewSubmitted: false,
+    referenceId: null,
+  });
 };
 
 /** Clears login flag only — profile / KYC data is preserved. */

@@ -14,6 +14,7 @@ import {
   getCurrentUser,
   isDemoUser,
   logout as logoutSession,
+  resetKycData,
   seedDemoUser,
 } from '@/services/user-session';
 import { useKycStore } from '@/store/kyc-store';
@@ -139,15 +140,32 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     if (demoAccount) {
       seedDemoUser();
     } else {
-      const existingUser = getUser();
+      const previousAuth = getAuth();
+      const isAccountSwitch =
+        previousAuth.mobileNumber != null && previousAuth.mobileNumber !== mobileNumber;
+
+      // A brand-new number (or one switching away from the demo account) must
+      // start KYC from scratch. Otherwise stale data — especially the demo
+      // account's seeded `kycApproved: true` — would skip Business Info and
+      // Documents upload and drop the user straight on the dashboard.
+      if (isAccountSwitch || isDemoUser(previousAuth.mobileNumber)) {
+        resetKycData();
+      }
+
+      // Ignore the previous account's profile when switching numbers so a new
+      // user never inherits another user's name/role.
+      const existingUser = isAccountSwitch ? null : getUser();
       const auth = {
         isLoggedIn: true,
         mobileNumber,
       };
       const userProfile = {
         mobileNumber,
-        selectedRole: existingUser?.selectedRole ?? get().selectedRole ?? ('buyer' as UserRole),
-        displayName: existingUser?.displayName ?? get().userProfile?.displayName,
+        selectedRole:
+          existingUser?.selectedRole ??
+          (isAccountSwitch ? null : get().selectedRole) ??
+          ('buyer' as UserRole),
+        displayName: existingUser?.displayName ?? (isAccountSwitch ? undefined : get().userProfile?.displayName),
       };
 
       saveAuth(auth);

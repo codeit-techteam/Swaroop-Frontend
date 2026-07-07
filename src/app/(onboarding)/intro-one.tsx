@@ -33,6 +33,7 @@ export default function IntroOneRoute() {
       showSkip
       onSkip={handleSkip}
       onContinue={handleContinue}
+      showIllustrationCard
       illustration={<TradingIllustration width={wp(82)} height={wp(60)} />}
     />
   );
