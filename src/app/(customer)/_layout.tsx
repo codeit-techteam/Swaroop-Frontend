@@ -23,6 +23,7 @@ export default function CustomerLayout() {
       <Stack.Screen name="payment/verification-initiated" />
       <Stack.Screen name="order-submitted/index" />
       <Stack.Screen name="credit-approval/index" />
+      <Stack.Screen name="loading-scheduled/index" />
       <Stack.Screen name="loading-completed/index" />
       <Stack.Screen name="payment-reminder/index" />
       <Stack.Screen name="payment-success/index" />

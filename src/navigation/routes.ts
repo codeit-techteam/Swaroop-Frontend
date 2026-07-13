@@ -29,6 +29,7 @@ export const ROUTES = {
     PAYMENT_VERIFICATION_INITIATED: '/(customer)/payment/verification-initiated',
     ORDER_SUBMITTED: '/(customer)/order-submitted',
     CREDIT_APPROVAL: '/(customer)/credit-approval',
+    LOADING_SCHEDULED: '/(customer)/loading-scheduled',
     LOADING_COMPLETED: '/(customer)/loading-completed',
     PAYMENT_REMINDER: '/(customer)/payment-reminder',
     PAYMENT_SUCCESS: '/(customer)/payment-success',
@@ -85,6 +86,7 @@ export type CustomerRoute =
   | typeof ROUTES.CUSTOMER.PAYMENT_VERIFICATION_INITIATED
   | typeof ROUTES.CUSTOMER.ORDER_SUBMITTED
   | typeof ROUTES.CUSTOMER.CREDIT_APPROVAL
+  | typeof ROUTES.CUSTOMER.LOADING_SCHEDULED
   | typeof ROUTES.CUSTOMER.LOADING_COMPLETED
   | typeof ROUTES.CUSTOMER.PAYMENT_REMINDER
   | typeof ROUTES.CUSTOMER.PAYMENT_SUCCESS

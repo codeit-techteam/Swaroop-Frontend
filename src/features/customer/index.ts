@@ -11,6 +11,7 @@ export { CustomerPaymentUploadProofScreen } from '@/features/customer/payment-up
 export { CustomerPaymentVerificationInitiatedScreen } from '@/features/customer/payment-verification-initiated-screen';
 export { CustomerOrderSubmittedScreen } from '@/features/customer/order-submitted-screen';
 export { CustomerCreditApprovalScreen } from '@/features/customer/credit-approval-screen';
+export { CustomerLoadingScheduledScreen } from '@/features/customer/loading-scheduled-screen';
 export { CustomerLoadingCompletedScreen } from '@/features/customer/loading-completed-screen';
 export { CustomerPaymentReminderScreen } from '@/features/customer/payment-reminder-screen';
 export { CustomerPaymentSuccessScreen } from '@/features/customer/payment-success-screen';

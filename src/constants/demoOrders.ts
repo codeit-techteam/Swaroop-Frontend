@@ -59,7 +59,8 @@ export const createDemoOrders = (): Order[] => {
         completedSteps: [
           'order_submitted',
           'procurement',
-          'loading',
+          'loading_scheduled',
+          'loading_completed',
           'payment_verified',
           'dispatch_started',
         ],

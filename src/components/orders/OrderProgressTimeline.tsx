@@ -3,7 +3,7 @@ import { memo } from 'react';
 import { View } from 'react-native';
 
 import { Typography } from '@/components/ui/typography';
-import { isDispatchStarted } from '@/constants/dispatchStarted';
+import { isDispatchStarted, isDeferredLoadingPaymentFlow } from '@/constants/dispatchStarted';
 import {
   ORDER_LIFECYCLE_STAGES,
   ORDER_LIFECYCLE_STAGE_LABELS,
@@ -27,7 +27,12 @@ export const OrderProgressTimeline = memo(function OrderProgressTimeline({
   progressColor,
   className,
 }: OrderProgressTimelineProps) {
-  const useLifecycleStages = isDispatchStarted(order);
+  const useLifecycleStages =
+    isDispatchStarted(order) ||
+    (isDeferredLoadingPaymentFlow(order) &&
+      (order.loadingStatus === 'scheduled' ||
+        order.loadingStatus === 'completed' ||
+        order.procurementCompleted));
   const currentLifecycleStage = deriveOrderLifecycleStage(order);
   const currentLifecycleIndex = ORDER_LIFECYCLE_STAGES.indexOf(currentLifecycleStage);
   const currentStage = deriveOrderShipmentStage(order);

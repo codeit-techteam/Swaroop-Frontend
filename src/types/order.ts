@@ -17,6 +17,7 @@ import type {
   LoadingScheduleDetails,
   LoadingStatus,
 } from '@/types/loading';
+import type { DispatchTrackingTimelineState, TrackingTimelineState } from '@/types/tracking';
 
 export type ProductCategory = 'PP' | 'PVC' | 'HDPE' | 'LLDPE' | 'PET';
 

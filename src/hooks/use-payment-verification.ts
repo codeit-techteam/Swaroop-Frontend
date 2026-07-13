@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { type Href, useRouter } from 'expo-router';
 
+import type { DispatchTrackingStepId } from '@/types/tracking';
+import { isDeferredLoadingPaymentFlow } from '@/constants/dispatchStarted';
 import {
   DEMO_MODE,
   DEMO_VERIFICATION_DELAY_MS,
@@ -154,6 +156,19 @@ export const usePaymentVerification = (): UsePaymentVerificationResult => {
         verificationStatus: 'verified',
         paymentStatus: 'verified',
         paymentVerifiedAt: verifiedAt,
+        ...(isDeferredLoadingPaymentFlow(order) && order.loadingStatus === 'completed'
+          ? {
+              dispatchTrackingTimeline: {
+                currentStep: 'payment_verified' as DispatchTrackingStepId,
+                completedSteps: [
+                  'order_submitted',
+                  'procurement',
+                  'loading_scheduled',
+                  'loading_completed',
+                ] satisfies DispatchTrackingStepId[],
+              },
+            }
+          : {}),
       });
       router.replace(getRouteAfterPaymentVerification(nextOrder));
     }, DEMO_VERIFICATION_DELAY_MS);

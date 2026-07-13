@@ -17,7 +17,7 @@ export const PAYMENT_WORKFLOW_COPY = {
     title: 'Loading Verification Successful',
     subtitle:
       'All operational checks passed at terminal gates. Your consignment is ready for the next step.',
-    continueLabel: 'Continue',
+    continueLabel: 'Continue to Payment',
   },
   paymentReminder: {
     headerTitle: 'Payment Reminder',

@@ -8,7 +8,8 @@ export const DISPATCH_STARTED_PROGRESS = 20;
 export const DISPATCH_TRACKING_STEP_SEQUENCE: DispatchTrackingStepId[] = [
   'order_submitted',
   'procurement',
-  'loading',
+  'loading_scheduled',
+  'loading_completed',
   'payment_verified',
   'dispatch_started',
   'in_transit',
@@ -18,7 +19,8 @@ export const DISPATCH_TRACKING_STEP_SEQUENCE: DispatchTrackingStepId[] = [
 export const DISPATCH_TIMELINE_STEP_SEQUENCE: DispatchTrackingStepId[] = [
   'order_submitted',
   'procurement',
-  'loading',
+  'loading_scheduled',
+  'loading_completed',
   'payment_verified',
   'dispatch_started',
   'in_transit',
@@ -28,7 +30,8 @@ export const DISPATCH_TIMELINE_STEP_SEQUENCE: DispatchTrackingStepId[] = [
 const DISPATCH_TRACKING_STEP_TITLES: Record<DispatchTrackingStepId, string> = {
   order_submitted: 'Order Submitted',
   procurement: 'Procurement Completed',
-  loading: 'Loading Completed',
+  loading_scheduled: 'Loading Scheduled',
+  loading_completed: 'Loading Completed',
   payment_verified: 'Payment Verified',
   dispatch_started: 'Dispatch Started',
   in_transit: 'In Transit',
@@ -95,8 +98,100 @@ export const createInitialDispatchTrackingTimeline = (): {
   completedSteps: DispatchTrackingStepId[];
 } => ({
   currentStep: 'dispatch_started',
-  completedSteps: ['order_submitted', 'procurement', 'loading', 'payment_verified'],
+  completedSteps: ['order_submitted', 'procurement', 'loading_scheduled', 'loading_completed', 'payment_verified'],
 });
+
+export const isDeferredLoadingPaymentFlow = (order: Order): boolean =>
+  order.paymentMethodId === 'on_loading' || order.paymentMethodId === 'on_delivery';
+
+export const shouldUseDispatchTrackingTimeline = (order: Order): boolean =>
+  Boolean(
+    order.trackingAvailable ||
+      order.dispatchTrackingTimeline ||
+      (isDeferredLoadingPaymentFlow(order) &&
+        (order.loadingStatus === 'scheduled' ||
+          order.loadingStatus === 'completed' ||
+          order.procurementCompleted)),
+  );
+
+export const deriveDispatchTrackingTimelineFromOrder = (
+  order: Order,
+): {
+  currentStep: DispatchTrackingStepId;
+  completedSteps: DispatchTrackingStepId[];
+} => {
+  if (order.dispatchTrackingTimeline) {
+    return order.dispatchTrackingTimeline;
+  }
+
+  const preLoadingCompleted: DispatchTrackingStepId[] = ['order_submitted', 'procurement'];
+
+  if (order.loadingStatus === 'scheduled') {
+    return {
+      currentStep: 'loading_scheduled',
+      completedSteps: preLoadingCompleted,
+    };
+  }
+
+  if (order.loadingStatus === 'completed') {
+    const throughScheduled: DispatchTrackingStepId[] = [
+      ...preLoadingCompleted,
+      'loading_scheduled',
+    ];
+
+    if (order.paymentStatus !== 'verified') {
+      return {
+        currentStep: 'loading_completed',
+        completedSteps: throughScheduled,
+      };
+    }
+
+    const throughLoading: DispatchTrackingStepId[] = [...throughScheduled, 'loading_completed'];
+
+    if (order.trackingAvailable || order.dispatchStatus === 'shipment_started') {
+      if (order.dispatchStatus === 'delivered' || order.shipmentStatus === 'delivered') {
+        return {
+          currentStep: 'delivered',
+          completedSteps: [
+            ...throughLoading,
+            'payment_verified',
+            'dispatch_started',
+            'in_transit',
+          ],
+        };
+      }
+
+      if (order.shipmentStatus === 'in_transit') {
+        return {
+          currentStep: 'in_transit',
+          completedSteps: [...throughLoading, 'payment_verified', 'dispatch_started'],
+        };
+      }
+
+      return {
+        currentStep: 'dispatch_started',
+        completedSteps: [...throughLoading, 'payment_verified'],
+      };
+    }
+
+    return {
+      currentStep: 'payment_verified',
+      completedSteps: throughLoading,
+    };
+  }
+
+  if (order.procurementCompleted) {
+    return {
+      currentStep: 'procurement',
+      completedSteps: ['order_submitted'],
+    };
+  }
+
+  return {
+    currentStep: 'order_submitted',
+    completedSteps: [],
+  };
+};
 
 export const isDispatchStarted = (order: Order | null): boolean =>
   Boolean(
@@ -125,7 +220,7 @@ export const createInTransitWithoutPaymentPatch = (order: Order): Partial<Order>
     },
     dispatchTrackingTimeline: {
       currentStep: 'dispatch_started',
-      completedSteps: ['order_submitted', 'procurement', 'loading'],
+      completedSteps: ['order_submitted', 'procurement', 'loading_scheduled', 'loading_completed'],
     },
   };
 };
@@ -182,7 +277,7 @@ export const createDispatchStartedPatch = (order: Order): Partial<Order> => {
 export const buildDispatchTimelineSteps = (
   order: Order,
 ): DispatchTrackingTimelineItem[] => {
-  const timeline = order.dispatchTrackingTimeline ?? createInitialDispatchTrackingTimeline();
+  const timeline = deriveDispatchTrackingTimelineFromOrder(order);
 
   return DISPATCH_TIMELINE_STEP_SEQUENCE.map((stepId) => {
     let status: DispatchTrackingTimelineItem['status'] = 'pending';

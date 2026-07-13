@@ -10,7 +10,8 @@ import type {
 } from '@/types/tracking';
 import {
   DISPATCH_TRACKING_STEP_SEQUENCE,
-  createInitialDispatchTrackingTimeline,
+  deriveDispatchTrackingTimelineFromOrder,
+  shouldUseDispatchTrackingTimeline,
 } from '@/constants/dispatchStarted';
 import { brandColors } from '@/theme/colors';
 
@@ -51,7 +52,8 @@ export const DISPATCH_TRACKING_DEMO_SEQUENCE: DispatchTrackingStepId[] = [
 const DISPATCH_TRACKING_STEP_TITLES: Record<DispatchTrackingStepId, string> = {
   order_submitted: 'Order Submitted',
   procurement: 'Procurement',
-  loading: 'Loading',
+  loading_scheduled: 'Loading Scheduled',
+  loading_completed: 'Loading Completed',
   payment_verified: 'Payment Verified',
   dispatch_started: 'Dispatch Started',
   in_transit: 'In Transit',
@@ -303,7 +305,7 @@ export const deriveTrackingTimelineState = (order: Order): TrackingTimelineState
 };
 
 export const buildTrackingTimelineItems = (order: Order): TrackingTimelineItem[] => {
-  if (order.trackingAvailable) {
+  if (shouldUseDispatchTrackingTimeline(order)) {
     return buildDispatchTrackingTimelineItems(order);
   }
 
@@ -352,7 +354,7 @@ export const buildTrackingTimelineItems = (order: Order): TrackingTimelineItem[]
 };
 
 export const buildDispatchTrackingTimelineItems = (order: Order): TrackingTimelineItem[] => {
-  const timeline = order.dispatchTrackingTimeline ?? createInitialDispatchTrackingTimeline();
+  const timeline = deriveDispatchTrackingTimelineFromOrder(order);
 
   return DISPATCH_TRACKING_STEP_SEQUENCE.map((stepId) => {
     const title = DISPATCH_TRACKING_STEP_TITLES[stepId];
@@ -388,8 +390,9 @@ export const buildDispatchTrackingTimelineItems = (order: Order): TrackingTimeli
 };
 
 export const deriveTrackingOrderStatus = (order: Order): TrackingOrderStatus => {
-  if (order.trackingAvailable && order.dispatchTrackingTimeline) {
-    const { currentStep } = order.dispatchTrackingTimeline;
+  if (shouldUseDispatchTrackingTimeline(order)) {
+    const timeline = deriveDispatchTrackingTimelineFromOrder(order);
+    const { currentStep } = timeline;
 
     switch (currentStep) {
       case 'delivered':
@@ -398,8 +401,14 @@ export const deriveTrackingOrderStatus = (order: Order): TrackingOrderStatus => 
         return 'transit';
       case 'dispatch_started':
         return 'transit';
+      case 'loading_scheduled':
+      case 'loading_completed':
+      case 'payment_verified':
+      case 'procurement':
+      case 'order_submitted':
+        return 'preparing';
       default:
-        return 'dispatched';
+        return order.trackingAvailable ? 'dispatched' : 'preparing';
     }
   }
 
@@ -492,7 +501,7 @@ export const createDispatchTrackingAdvancePatch = (
   order: Order,
   nextStep: DispatchTrackingStepId,
 ): Partial<Order> => {
-  const timeline = order.dispatchTrackingTimeline ?? createInitialDispatchTrackingTimeline();
+  const timeline = deriveDispatchTrackingTimelineFromOrder(order);
   const completedSteps = timeline.completedSteps.includes(timeline.currentStep)
     ? timeline.completedSteps
     : [...timeline.completedSteps, timeline.currentStep];

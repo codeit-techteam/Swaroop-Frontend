@@ -164,6 +164,17 @@ export const deriveOrderLifecycleStage = (order: Order): OrderLifecycleStage => 
   }
 
   if (
+    order.paymentMethodId === 'on_loading' &&
+    order.loadingStatus === 'completed'
+  ) {
+    return 'payment';
+  }
+
+  if (order.loadingStatus === 'scheduled' || order.loadingStatus === 'completed') {
+    return 'loading';
+  }
+
+  if (
     order.dispatchStatus === 'shipment_ready' ||
     order.workflowTimeline?.completedSteps.includes('shipment_ready')
   ) {
@@ -280,6 +291,18 @@ export const getOrderProgressLabel = (order: Order): string => {
 
   if (order.dispatchStatus === 'shipment_ready') {
     return 'Ready for Dispatch';
+  }
+
+  if (order.loadingStatus === 'scheduled') {
+    return order.dispatchReadiness ?? 'Loading Scheduled';
+  }
+
+  if (order.loadingStatus === 'completed' && order.paymentStatus !== 'verified') {
+    return 'Loading Completed — Payment Pending';
+  }
+
+  if (order.dispatchReadiness) {
+    return order.dispatchReadiness;
   }
 
   return 'Preparing for Dispatch';

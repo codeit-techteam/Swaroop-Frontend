@@ -87,6 +87,9 @@ export const buildOrderFromCheckout = (
     dispatchProgress: 0,
     dispatchStartedAt: null,
     shipmentDetails: null,
+    loadingStatus: 'pending',
+    loadingSchedule: null,
+    loadingProof: null,
     createdAt: new Date().toISOString(),
   };
 };

@@ -5,22 +5,19 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
-  LoadingFinalWeightCard,
-  LoadingProofGrid,
-  LoadingSuccessCard,
-  LoadingVerificationTimeline,
+  LoadingLogisticsCard,
+  LoadingProgressTimeline,
 } from '@/components/loading';
-import { OrderDetailsCard } from '@/components/order';
 import { PrimaryButton, Typography } from '@/components/ui';
 import { LOADING_WORKFLOW_COPY } from '@/constants/loadingWorkflow';
-import { useLoadingCompleted } from '@/hooks/useLoadingCompleted';
+import { useLoadingScheduled } from '@/hooks/useLoadingScheduled';
 import { BackArrowIcon } from '@/icons';
 import { brandColors } from '@/theme/colors';
 
-export const CustomerLoadingCompletedScreen = memo(function CustomerLoadingCompletedScreen() {
+export const CustomerLoadingScheduledScreen = memo(function CustomerLoadingScheduledScreen() {
   const insets = useSafeAreaInsets();
-  const { order, timelineSteps, handleContinue, handleBack } = useLoadingCompleted();
-  const copy = LOADING_WORKFLOW_COPY.completed;
+  const { order, timelineSteps, handleContinue, handleBack } = useLoadingScheduled();
+  const copy = LOADING_WORKFLOW_COPY.scheduled;
 
   return (
     <View className="flex-1 bg-brand-background">
@@ -45,37 +42,34 @@ export const CustomerLoadingCompletedScreen = memo(function CustomerLoadingCompl
       </View>
 
       <ScrollView
-        showsVerticalScrollIndicator={false}
         contentContainerStyle={{
           paddingHorizontal: 16,
           paddingTop: 20,
           paddingBottom: insets.bottom + 120,
         }}
       >
-        <LoadingSuccessCard title={copy.successTitle} subtitle={copy.successSubtitle} />
-
+        <Typography variant="headingLeft" className="text-[20px] text-brand-heading">
+          {copy.pageTitle}
+        </Typography>
         {order ? (
-          <OrderDetailsCard
-            order={order}
-            destination={order.destination}
+          <Typography variant="subheadingLeft" className="mt-xs text-[13px] text-brand-primary">
+            Order Reference: {order.id}
+          </Typography>
+        ) : null}
+
+        {order?.loadingSchedule ? (
+          <LoadingLogisticsCard
+            schedule={order.loadingSchedule}
+            orderId={order.id}
             className="mt-lg"
           />
         ) : null}
 
-        {order?.loadingProof ? (
-          <>
-            <LoadingProofGrid items={order.loadingProof.items} className="mt-lg" />
-            <LoadingFinalWeightCard proof={order.loadingProof} className="mt-lg" />
-          </>
-        ) : null}
-
-        {timelineSteps.length > 0 ? (
-          <LoadingVerificationTimeline
-            steps={timelineSteps}
-            heading={copy.timelineHeading}
-            className="mt-lg"
-          />
-        ) : null}
+        <LoadingProgressTimeline
+          steps={timelineSteps}
+          heading={copy.timelineHeading}
+          className="mt-lg"
+        />
       </ScrollView>
 
       <View

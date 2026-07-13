@@ -37,7 +37,7 @@ export const getRouteAfterProcurementComplete = (order: Order): Href => {
   switch (order.paymentMethodId) {
     case 'on_loading':
     case 'on_delivery':
-      return ROUTES.CUSTOMER.LOADING_COMPLETED as Href;
+      return ROUTES.CUSTOMER.LOADING_SCHEDULED as Href;
     case 'credit_15':
     case 'credit_30':
       return ROUTES.CUSTOMER.PURCHASE_ORDER_GENERATED as Href;

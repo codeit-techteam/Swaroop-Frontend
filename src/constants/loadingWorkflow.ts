@@ -17,7 +17,7 @@ export const LOADING_WORKFLOW_COPY = {
   completed: {
     headerTitle: 'Loading Completed',
     successTitle: 'Loading Verification Successful',
-    successSubtitle: 'All operational checks passed at terminal gates.',
+    successSubtitle: 'All operational checks passed.',
     proofHeading: 'Loading Proof',
     finalWeightHeading: 'FINAL WEIGHT',
     timelineHeading: 'Order Lifecycle',
@@ -33,6 +33,7 @@ export const LOADING_LOGISTICS_LABELS = {
   loadingTeam: 'Loading Team',
   vehicleNumber: 'Vehicle Number',
   truckAllocated: 'Truck Allocated',
+  warehouseAssigned: 'Warehouse Assigned',
 } as const;
 
 const DEFAULT_VEHICLE_NUMBER = 'GJ-01-XX-9092';
@@ -67,6 +68,10 @@ export const createLoadingScheduledPatch = (order: Order): Partial<Order> => ({
   loadingSchedule: order.loadingSchedule ?? createLoadingScheduleDetails(order),
   loadingProof: order.loadingProof ?? createLoadingProofState(order),
   dispatchReadiness: 'Loading Scheduled',
+  dispatchTrackingTimeline: {
+    currentStep: 'loading_scheduled',
+    completedSteps: ['order_submitted', 'procurement'],
+  },
 });
 
 export const createLoadingCompletedPatch = (order: Order): Partial<Order> => {

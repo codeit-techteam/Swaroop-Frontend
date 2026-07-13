@@ -89,6 +89,9 @@ const normalizeOrder = (order: Order): Order => {
     dispatchProgress: order.dispatchProgress ?? 0,
     dispatchStartedAt: order.dispatchStartedAt ?? null,
     shipmentDetails: order.shipmentDetails ?? null,
+    loadingStatus: order.loadingStatus ?? 'pending',
+    loadingSchedule: order.loadingSchedule ?? null,
+    loadingProof: order.loadingProof ?? null,
     documents: order.documents ?? [],
   };
 

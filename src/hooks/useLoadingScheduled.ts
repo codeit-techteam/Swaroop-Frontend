@@ -1,13 +1,12 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 import { type Href, useRouter } from 'expo-router';
 
-import { createInTransitWithoutPaymentPatch } from '@/constants/dispatchStarted';
 import {
-  buildLoadingVerificationTimeline,
-  createLoadingProofState,
+  buildLoadingScheduledTimeline,
+  createLoadingCompletedPatch,
+  createLoadingScheduledPatch,
 } from '@/constants/loadingWorkflow';
-import { getRouteAfterLoadingCompleted } from '@/constants/paymentNavigation';
 import { ROUTES } from '@/navigation/routes';
 import {
   selectCurrentOrder,
@@ -15,15 +14,17 @@ import {
   useOrderStore,
 } from '@/store/order-store';
 
-type UseLoadingCompletedResult = {
+type UseLoadingScheduledResult = {
   order: ReturnType<typeof selectCurrentOrder>;
-  timelineSteps: ReturnType<typeof buildLoadingVerificationTimeline>;
+  timelineSteps: ReturnType<typeof buildLoadingScheduledTimeline>;
   handleContinue: () => void;
   handleBack: () => void;
 };
 
-export const useLoadingCompleted = (): UseLoadingCompletedResult => {
+export const useLoadingScheduled = (): UseLoadingScheduledResult => {
   const router = useRouter();
+  const hasAppliedStateRef = useRef(false);
+
   const order = useOrderStore(selectCurrentOrder);
   const isHydrated = useOrderStore(selectOrderHydrated);
   const hydrateOrder = useOrderStore((state) => state.hydrateOrder);
@@ -36,28 +37,18 @@ export const useLoadingCompleted = (): UseLoadingCompletedResult => {
   }, [hydrateOrder, isHydrated]);
 
   useEffect(() => {
-    if (!order || order.loadingStatus === 'completed') {
+    if (!order || hasAppliedStateRef.current || order.loadingStatus === 'scheduled') {
       return;
     }
 
-    if (order.loadingStatus === 'scheduled') {
+    if (order.loadingStatus === 'completed') {
+      hasAppliedStateRef.current = true;
       return;
     }
 
-    updateOrder({
-      loadingStatus: 'completed',
-      loadingProof: {
-        ...(order.loadingProof ?? createLoadingProofState(order)),
-        status: 'verified',
-      },
-      dispatchStatus: 'shipment_ready',
-    });
+    hasAppliedStateRef.current = true;
+    updateOrder(createLoadingScheduledPatch(order));
   }, [order, updateOrder]);
-
-  const timelineSteps = useMemo(
-    () => (order ? buildLoadingVerificationTimeline(order) : []),
-    [order],
-  );
 
   const handleContinue = useCallback(() => {
     if (!order) {
@@ -65,13 +56,8 @@ export const useLoadingCompleted = (): UseLoadingCompletedResult => {
       return;
     }
 
-    if (order.paymentMethodId === 'on_delivery') {
-      updateOrder(createInTransitWithoutPaymentPatch(order));
-      router.replace(ROUTES.CUSTOMER.DISPATCH_STARTED as Href);
-      return;
-    }
-
-    router.replace(getRouteAfterLoadingCompleted(order));
+    updateOrder(createLoadingCompletedPatch(order));
+    router.replace(ROUTES.CUSTOMER.LOADING_COMPLETED as Href);
   }, [order, router, updateOrder]);
 
   const handleBack = useCallback(() => {
@@ -84,7 +70,7 @@ export const useLoadingCompleted = (): UseLoadingCompletedResult => {
 
   return {
     order,
-    timelineSteps,
+    timelineSteps: buildLoadingScheduledTimeline(),
     handleContinue,
     handleBack,
   };
