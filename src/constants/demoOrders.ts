@@ -1,7 +1,7 @@
-import { ORDER_DOCUMENTS } from '@/constants/purchaseOrderTimeline';
+import { DEFAULT_SHIPMENT_DETAILS } from '@/constants/dispatchStarted';
 import { syncOrderDerivedFields } from '@/constants/orderStatus';
 import type { Order } from '@/types/order';
-import { createInitialWorkflowTimeline } from '@/constants/purchaseOrderTimeline';
+import { ORDER_DOCUMENTS, createInitialWorkflowTimeline } from '@/constants/purchaseOrderTimeline';
 
 const DEMO_ORDER_BASE = {
   warehouse: 'PetroTrade Hub — Taloja',
@@ -46,6 +46,24 @@ export const createDemoOrders = (): Order[] => {
       dispatchStatus: 'shipment_started',
       dispatchReadiness: 'Dispatched',
       transitWindow: 'Arriving Tomorrow',
+      orderStatus: 'dispatch_started',
+      trackingAvailable: true,
+      dispatchProgress: 20,
+      dispatchStartedAt: '2023-10-24T11:05:00.000Z',
+      shipmentDetails: {
+        ...DEFAULT_SHIPMENT_DETAILS,
+        dispatchTime: 'Today 04:35 PM',
+      },
+      dispatchTrackingTimeline: {
+        currentStep: 'in_transit',
+        completedSteps: [
+          'order_submitted',
+          'procurement',
+          'loading',
+          'payment_verified',
+          'dispatch_started',
+        ],
+      },
       workflowTimeline: {
         currentStep: 'shipment_started',
         completedSteps: [

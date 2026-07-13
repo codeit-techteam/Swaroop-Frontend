@@ -8,6 +8,7 @@ import {
   VERIFICATION_SCREEN_COPY,
   VERIFICATION_TIMELINE_STEP_IDS,
 } from '@/constants/verificationStatus';
+import { getRouteAfterPaymentVerification } from '@/constants/paymentNavigation';
 import { ROUTES } from '@/navigation/routes';
 import { useAuthStore } from '@/store/auth-store';
 import {
@@ -143,12 +144,18 @@ export const usePaymentVerification = (): UsePaymentVerificationResult => {
 
     demoTimerRef.current = setTimeout(() => {
       const verifiedAt = new Date().toISOString();
+      const nextOrder = {
+        ...order,
+        verificationStatus: 'verified' as const,
+        paymentStatus: 'verified' as const,
+        paymentVerifiedAt: verifiedAt,
+      };
       updateOrder({
         verificationStatus: 'verified',
         paymentStatus: 'verified',
         paymentVerifiedAt: verifiedAt,
       });
-      router.replace(ROUTES.CUSTOMER.PROCUREMENT_CONFIRMATION as Href);
+      router.replace(getRouteAfterPaymentVerification(nextOrder));
     }, DEMO_VERIFICATION_DELAY_MS);
 
     return () => {
@@ -159,18 +166,18 @@ export const usePaymentVerification = (): UsePaymentVerificationResult => {
   }, [isVerified, order, paymentProof, router, updateOrder]);
 
   const handleGoToOrders = useCallback(() => {
-    if (DEMO_MODE) {
-      if (order?.verificationStatus === 'verified') {
-        router.replace(ROUTES.CUSTOMER.PROCUREMENT_CONFIRMATION as Href);
-        return;
-      }
-
-      router.replace(ROUTES.CUSTOMER.ORDER_CONFIRMATION as Href);
+    if (!order) {
+      router.replace(ROUTES.CUSTOMER.ORDERS as Href);
       return;
     }
 
-    router.replace(ROUTES.CUSTOMER.ORDERS as Href);
-  }, [order?.verificationStatus, router]);
+    if (order.verificationStatus === 'verified') {
+      router.replace(getRouteAfterPaymentVerification(order));
+      return;
+    }
+
+    router.replace(ROUTES.CUSTOMER.PAYMENT_UPLOAD_PROOF as Href);
+  }, [order, router]);
 
   const handleBack = useCallback(() => {
     if (router.canGoBack()) {

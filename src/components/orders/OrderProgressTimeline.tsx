@@ -3,9 +3,13 @@ import { memo } from 'react';
 import { View } from 'react-native';
 
 import { Typography } from '@/components/ui/typography';
+import { isDispatchStarted } from '@/constants/dispatchStarted';
 import {
+  ORDER_LIFECYCLE_STAGES,
+  ORDER_LIFECYCLE_STAGE_LABELS,
   ORDER_SHIPMENT_STAGE_LABELS,
   ORDER_SHIPMENT_STAGES,
+  deriveOrderLifecycleStage,
   deriveOrderShipmentStage,
 } from '@/constants/orderStatus';
 import type { Order } from '@/types/order';
@@ -23,8 +27,15 @@ export const OrderProgressTimeline = memo(function OrderProgressTimeline({
   progressColor,
   className,
 }: OrderProgressTimelineProps) {
+  const useLifecycleStages = isDispatchStarted(order);
+  const currentLifecycleStage = deriveOrderLifecycleStage(order);
+  const currentLifecycleIndex = ORDER_LIFECYCLE_STAGES.indexOf(currentLifecycleStage);
   const currentStage = deriveOrderShipmentStage(order);
   const currentIndex = ORDER_SHIPMENT_STAGES.indexOf(currentStage);
+
+  const stages = useLifecycleStages ? ORDER_LIFECYCLE_STAGES : ORDER_SHIPMENT_STAGES;
+  const stageLabels = useLifecycleStages ? ORDER_LIFECYCLE_STAGE_LABELS : ORDER_SHIPMENT_STAGE_LABELS;
+  const activeIndex = useLifecycleStages ? currentLifecycleIndex : currentIndex;
 
   return (
     <View className={cn('w-full', className)}>
@@ -39,9 +50,9 @@ export const OrderProgressTimeline = memo(function OrderProgressTimeline({
       </View>
 
       <View className="mt-sm flex-row justify-between">
-        {ORDER_SHIPMENT_STAGES.map((stage, index) => {
-          const isActive = index === currentIndex;
-          const isCompleted = index < currentIndex;
+        {stages.map((stage, index) => {
+          const isActive = index === activeIndex;
+          const isCompleted = index < activeIndex;
 
           return (
             <Typography
@@ -57,20 +68,20 @@ export const OrderProgressTimeline = memo(function OrderProgressTimeline({
               )}
               style={isActive ? { color: progressColor } : undefined}
             >
-              {ORDER_SHIPMENT_STAGE_LABELS[stage]}
+              {stageLabels[stage as keyof typeof stageLabels]}
             </Typography>
           );
         })}
       </View>
 
       <View className="mt-xs flex-row justify-between px-1">
-        {ORDER_SHIPMENT_STAGES.map((stage, index) => (
+        {stages.map((stage, index) => (
           <View
             key={`tick-${stage}`}
             className="h-2 w-px"
             style={{
               backgroundColor:
-                index <= currentIndex ? progressColor : brandColors.border,
+                index <= activeIndex ? progressColor : brandColors.border,
             }}
           />
         ))}

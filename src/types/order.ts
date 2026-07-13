@@ -12,7 +12,11 @@ import type {
   OrderDocument,
   WorkflowTimelineState,
 } from '@/types/purchaseOrder';
-import type { TrackingTimelineState } from '@/types/tracking';
+import type {
+  LoadingProofState,
+  LoadingScheduleDetails,
+  LoadingStatus,
+} from '@/types/loading';
 
 export type ProductCategory = 'PP' | 'PVC' | 'HDPE' | 'LLDPE' | 'PET';
 
@@ -21,6 +25,15 @@ export type OrderDisplayStatus = 'processing' | 'in_transit' | 'delivered' | 'ca
 export type OrderShipmentStage = 'placed' | 'dispatched' | 'transit' | 'delivered';
 
 export type OrderTabCategory = 'active' | 'completed' | 'cancelled';
+
+export type DispatchShipmentDetails = {
+  vehicleNumber: string;
+  driverName: string;
+  driverContactMasked: string;
+  dispatchTime: string;
+  currentLocation: string;
+  transportPartner: string;
+};
 
 export type PaymentMode = 'RTGS' | 'NEFT' | 'IMPS' | 'UPI';
 
@@ -88,5 +101,13 @@ export type Order = {
   dispatchReadiness: string | null;
   transitWindow: string | null;
   trackingTimeline?: TrackingTimelineState | null;
+  dispatchTrackingTimeline?: DispatchTrackingTimelineState | null;
+  trackingAvailable?: boolean;
+  dispatchProgress?: number;
+  dispatchStartedAt?: string | null;
+  shipmentDetails?: DispatchShipmentDetails | null;
+  loadingStatus?: LoadingStatus;
+  loadingSchedule?: LoadingScheduleDetails | null;
+  loadingProof?: LoadingProofState | null;
   createdAt: string;
 };

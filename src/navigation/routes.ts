@@ -27,10 +27,16 @@ export const ROUTES = {
     PAYMENT_COMPARE: '/(customer)/payment/compare',
     PAYMENT_UPLOAD_PROOF: '/(customer)/payment/upload-proof',
     PAYMENT_VERIFICATION_INITIATED: '/(customer)/payment/verification-initiated',
+    ORDER_SUBMITTED: '/(customer)/order-submitted',
+    CREDIT_APPROVAL: '/(customer)/credit-approval',
+    LOADING_COMPLETED: '/(customer)/loading-completed',
+    PAYMENT_REMINDER: '/(customer)/payment-reminder',
+    PAYMENT_SUCCESS: '/(customer)/payment-success',
     PROCUREMENT_CONFIRMATION: '/(customer)/procurement/confirmation',
     ORDER_AWAITING_CONFIRMATION: '/(customer)/order-awaiting-confirmation',
     PURCHASE_ORDER_GENERATED: '/(customer)/purchase-order-generated',
     DISPATCH_PLANNING: '/(customer)/dispatch-planning',
+    DISPATCH_STARTED: '/(customer)/dispatch-started',
     SHIPMENT_TRACKING: '/(customer)/shipment-tracking',
     ORDER_DETAIL: '/(customer)/order-detail',
     ORDER_CONFIRMATION: '/(customer)/order-confirmation',
@@ -77,10 +83,16 @@ export type CustomerRoute =
   | typeof ROUTES.CUSTOMER.PAYMENT_COMPARE
   | typeof ROUTES.CUSTOMER.PAYMENT_UPLOAD_PROOF
   | typeof ROUTES.CUSTOMER.PAYMENT_VERIFICATION_INITIATED
+  | typeof ROUTES.CUSTOMER.ORDER_SUBMITTED
+  | typeof ROUTES.CUSTOMER.CREDIT_APPROVAL
+  | typeof ROUTES.CUSTOMER.LOADING_COMPLETED
+  | typeof ROUTES.CUSTOMER.PAYMENT_REMINDER
+  | typeof ROUTES.CUSTOMER.PAYMENT_SUCCESS
   | typeof ROUTES.CUSTOMER.PROCUREMENT_CONFIRMATION
   | typeof ROUTES.CUSTOMER.ORDER_AWAITING_CONFIRMATION
   | typeof ROUTES.CUSTOMER.PURCHASE_ORDER_GENERATED
   | typeof ROUTES.CUSTOMER.DISPATCH_PLANNING
+  | typeof ROUTES.CUSTOMER.DISPATCH_STARTED
   | typeof ROUTES.CUSTOMER.SHIPMENT_TRACKING
   | typeof ROUTES.CUSTOMER.ORDER_DETAIL
   | typeof ROUTES.CUSTOMER.ORDER_CONFIRMATION

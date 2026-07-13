@@ -84,6 +84,11 @@ const normalizeOrder = (order: Order): Order => {
     dispatchReadiness: order.dispatchReadiness ?? null,
     transitWindow: order.transitWindow ?? null,
     trackingTimeline: order.trackingTimeline ?? null,
+    dispatchTrackingTimeline: order.dispatchTrackingTimeline ?? null,
+    trackingAvailable: order.trackingAvailable ?? false,
+    dispatchProgress: order.dispatchProgress ?? 0,
+    dispatchStartedAt: order.dispatchStartedAt ?? null,
+    shipmentDetails: order.shipmentDetails ?? null,
     documents: order.documents ?? [],
   };
 

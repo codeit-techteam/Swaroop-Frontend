@@ -15,6 +15,7 @@ import {
   ProcurementProgressCard,
 } from '@/components/procurement';
 import { PrimaryButton, Typography } from '@/components/ui';
+import { requiresAdvancePaymentVerified } from '@/constants/paymentNavigation';
 import { PROCUREMENT_SCREEN_COPY } from '@/constants/procurementSteps';
 import { useProcurement } from '@/hooks/use-procurement';
 import { BackArrowIcon, BellIcon } from '@/icons';
@@ -40,7 +41,46 @@ export const CustomerProcurementConfirmationScreen = memo(
       router.replace(ROUTES.CUSTOMER.PAYMENT_UPLOAD_PROOF as Href);
     }, [router]);
 
-    if (!order || !paymentProof || order.verificationStatus !== 'verified') {
+    if (!order) {
+      return (
+        <View className="flex-1 bg-brand-background">
+          <View
+            className="border-b border-brand-border bg-brand-white px-lg"
+            style={{ paddingTop: insets.top }}
+          >
+            <View className="h-14 flex-row items-center">
+              <Pressable
+                onPress={handleBack}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="Go back"
+                className="h-10 w-10 items-center justify-center"
+              >
+                <BackArrowIcon color={brandColors.heading} />
+              </Pressable>
+              <Typography variant="roleTitle" className="ml-sm text-[17px] text-brand-heading">
+                {PROCUREMENT_SCREEN_COPY.headerTitle}
+              </Typography>
+            </View>
+          </View>
+          <View className="flex-1 items-center justify-center px-lg">
+            <Typography variant="subheadingLeft" className="text-center text-brand-body">
+              No active order found. Please return to checkout.
+            </Typography>
+            <PrimaryButton
+              label="Back to Payment"
+              onPress={() => router.replace(ROUTES.CUSTOMER.PAYMENT as Href)}
+              className="mt-lg"
+            />
+          </View>
+        </View>
+      );
+    }
+
+    if (
+      requiresAdvancePaymentVerified(order) &&
+      (!paymentProof || order.verificationStatus !== 'verified')
+    ) {
       return (
         <View className="flex-1 bg-brand-background">
           <View

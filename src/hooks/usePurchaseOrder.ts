@@ -11,6 +11,7 @@ import {
   isWorkflowDemoComplete,
   mapWorkflowStepToDispatchStatus,
 } from '@/constants/purchaseOrderTimeline';
+import { createDispatchStartedPatch, isDispatchStarted } from '@/constants/dispatchStarted';
 import { ROUTES } from '@/navigation/routes';
 import { selectCheckoutAddress, useCheckoutStore } from '@/store/checkout-store';
 import {
@@ -75,14 +76,19 @@ export const usePurchaseOrder = (): UsePurchaseOrderResult => {
     updateOrder(createPurchaseOrderPatch(order));
   }, [order, updateOrder]);
 
-  const navigateToTrackOrder = useCallback(() => {
+  const navigateToDispatchStarted = useCallback(() => {
     if (hasNavigatedRef.current) {
       return;
     }
 
+    const currentOrder = useOrderStore.getState().currentOrder;
+    if (currentOrder && !isDispatchStarted(currentOrder)) {
+      updateOrder(createDispatchStartedPatch(currentOrder));
+    }
+
     hasNavigatedRef.current = true;
-    router.replace(ROUTES.CUSTOMER.SHIPMENT_TRACKING as Href);
-  }, [router]);
+    router.replace(ROUTES.CUSTOMER.DISPATCH_STARTED as Href);
+  }, [router, updateOrder]);
 
   const advanceWorkflowStep = useCallback(() => {
     const currentOrder = useOrderStore.getState().currentOrder;
@@ -104,7 +110,7 @@ export const usePurchaseOrder = (): UsePurchaseOrderResult => {
         },
         dispatchStatus: mapWorkflowStepToDispatchStatus(currentStep),
       });
-      navigateToTrackOrder();
+      navigateToDispatchStarted();
       return;
     }
 
@@ -115,7 +121,7 @@ export const usePurchaseOrder = (): UsePurchaseOrderResult => {
       },
       dispatchStatus: mapWorkflowStepToDispatchStatus(nextStep),
     });
-  }, [navigateToTrackOrder, updateOrder]);
+  }, [navigateToDispatchStarted, updateOrder]);
 
   useEffect(() => {
     if (
@@ -135,7 +141,7 @@ export const usePurchaseOrder = (): UsePurchaseOrderResult => {
       const latestOrder = useOrderStore.getState().currentOrder;
       if (!latestOrder?.workflowTimeline || isWorkflowDemoComplete(latestOrder.workflowTimeline)) {
         activePurchaseOrderSimulationId = null;
-        navigateToTrackOrder();
+        navigateToDispatchStarted();
         return;
       }
 
@@ -152,7 +158,7 @@ export const usePurchaseOrder = (): UsePurchaseOrderResult => {
 
           if (isWorkflowDemoComplete(updatedOrder.workflowTimeline)) {
             activePurchaseOrderSimulationId = null;
-            navigateToTrackOrder();
+            navigateToDispatchStarted();
             return;
           }
 
@@ -171,7 +177,7 @@ export const usePurchaseOrder = (): UsePurchaseOrderResult => {
     };
   }, [
     advanceWorkflowStep,
-    navigateToTrackOrder,
+    navigateToDispatchStarted,
     order?.id,
     order?.poGenerated,
     order?.workflowTimeline,

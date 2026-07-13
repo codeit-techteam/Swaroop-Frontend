@@ -3,6 +3,10 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { type Href, useRouter } from 'expo-router';
 
 import {
+  getRouteAfterProcurementComplete,
+  requiresAdvancePaymentVerified,
+} from '@/constants/paymentNavigation';
+import {
   ORDER_PROGRESS_STEP_IDS,
   PROCUREMENT_DEMO_MODE,
   PROCUREMENT_SCREEN_COPY,
@@ -36,19 +40,31 @@ type UseProcurementResult = {
 
 const buildOrderProgressTimeline = (
   procurement: ProcurementState | null,
-  paymentVerifiedAt: string | null,
+  order: Order | null,
 ): OrderProgressStep[] => {
   const isCompleted = procurement?.status === 'completed';
-  const paymentTime = procurement?.timeline.paymentVerifiedAt ?? paymentVerifiedAt;
+  const isDeferredFlow = order ? !requiresAdvancePaymentVerified(order) : false;
+  const paymentTime = procurement?.timeline.paymentVerifiedAt ?? order?.paymentVerifiedAt;
   const forwardedTime = procurement?.timeline.orderForwardedAt;
 
+  const firstStep: OrderProgressStep = isDeferredFlow
+    ? {
+        id: ORDER_PROGRESS_STEP_IDS.PAYMENT_VERIFIED,
+        title: 'Order Submitted',
+        subtitle: order?.createdAt
+          ? `Submitted at ${formatDateTime(order.createdAt, 'hh:mm A')}`
+          : undefined,
+        status: 'completed',
+      }
+    : {
+        id: ORDER_PROGRESS_STEP_IDS.PAYMENT_VERIFIED,
+        title: 'Payment Verified',
+        subtitle: paymentTime ? `Verified at ${formatDateTime(paymentTime, 'hh:mm A')}` : undefined,
+        status: 'completed',
+      };
+
   return [
-    {
-      id: ORDER_PROGRESS_STEP_IDS.PAYMENT_VERIFIED,
-      title: 'Payment Verified',
-      subtitle: paymentTime ? `Verified at ${formatDateTime(paymentTime, 'hh:mm A')}` : undefined,
-      status: 'completed',
-    },
+    firstStep,
     {
       id: ORDER_PROGRESS_STEP_IDS.ORDER_FORWARDED,
       title: 'Order Forwarded',
@@ -102,25 +118,32 @@ export const useProcurement = (): UseProcurementResult => {
   }, [hydrateOrder, isOrderHydrated]);
 
   useEffect(() => {
-    if (!order || order.verificationStatus !== 'verified' || order.procurement) {
+    if (!order || order.procurement) {
       return;
     }
 
-    const verifiedAt = order.paymentVerifiedAt ?? new Date().toISOString();
-    startProcurement(verifiedAt);
+    if (requiresAdvancePaymentVerified(order)) {
+      if (order.verificationStatus !== 'verified') {
+        return;
+      }
+      startProcurement(order.paymentVerifiedAt ?? new Date().toISOString());
+      return;
+    }
+
+    startProcurement(new Date().toISOString());
   }, [order, startProcurement]);
 
   const procurement = order?.procurement ?? null;
   const isComplete = procurement?.status === 'completed';
 
-  const navigateToAwaitingConfirmation = useCallback(() => {
-    if (hasNavigatedRef.current) {
+  const navigateAfterProcurement = useCallback(() => {
+    if (hasNavigatedRef.current || !order) {
       return;
     }
 
     hasNavigatedRef.current = true;
-    router.replace(ROUTES.CUSTOMER.ORDER_AWAITING_CONFIRMATION as Href);
-  }, [router]);
+    router.replace(getRouteAfterProcurementComplete(order));
+  }, [order, router]);
 
   const handleProcurementUpdate = useCallback(
     (patch: Partial<ProcurementState>) => {
@@ -134,12 +157,12 @@ export const useProcurement = (): UseProcurementResult => {
     isDemoMode: PROCUREMENT_DEMO_MODE,
     isComplete,
     onUpdate: handleProcurementUpdate,
-    onComplete: navigateToAwaitingConfirmation,
+    onComplete: navigateAfterProcurement,
   });
 
   const timeline = useMemo(
-    () => buildOrderProgressTimeline(procurement, order?.paymentVerifiedAt ?? null),
-    [order?.paymentVerifiedAt, procurement],
+    () => buildOrderProgressTimeline(procurement, order),
+    [order, procurement],
   );
 
   const statusLabel = procurement
@@ -153,8 +176,8 @@ export const useProcurement = (): UseProcurementResult => {
       return;
     }
 
-    navigateToAwaitingConfirmation();
-  }, [canContinue, navigateToAwaitingConfirmation]);
+    navigateAfterProcurement();
+  }, [canContinue, navigateAfterProcurement]);
 
   const handleBack = useCallback(() => {
     if (router.canGoBack()) {

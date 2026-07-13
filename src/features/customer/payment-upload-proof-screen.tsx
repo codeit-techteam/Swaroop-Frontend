@@ -24,83 +24,12 @@ import { ROUTES } from '@/navigation/routes';
 import { selectCartItems, useCartStore } from '@/store/cart-store';
 import { selectCheckoutAddress, useCheckoutStore } from '@/store/checkout-store';
 import {
-  createOrderId,
   selectCurrentOrder,
   selectOrderHydrated,
   useOrderStore,
 } from '@/store/order-store';
 import { selectPaymentCalculation, usePaymentStore } from '@/store/payment-store';
-import type { Order } from '@/types/order';
-
-const toTitleCase = (value: string): string =>
-  value
-    .toLowerCase()
-    .split(' ')
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
-
-const buildBlindProductName = (productType: string, name: string): string => {
-  const typeLabel = toTitleCase(productType.replace(/_/g, ' '));
-  const suffix = name.replace(/^PP\s+[A-Z0-9]+\s*/i, '').trim();
-  if (suffix) {
-    return `${typeLabel} (PP) ${suffix}`;
-  }
-  return `${typeLabel} (PP)`;
-};
-
-const buildOrderFromStores = (
-  cartItems: ReturnType<typeof selectCartItems>,
-  shippingAddress: ReturnType<typeof selectCheckoutAddress>,
-  payment: ReturnType<typeof selectPaymentCalculation>,
-): Order | null => {
-  const primary = cartItems[0];
-  if (!primary) {
-    return null;
-  }
-
-  const totalQty = cartItems.reduce((sum, item) => sum + item.quantityMt, 0);
-
-  return {
-    id: createOrderId(),
-    productName: buildBlindProductName(primary.productType, primary.name),
-    grade: primary.grade ?? '',
-    productCategory: 'PP',
-    quantityMt: totalQty,
-    warehouse: shippingAddress.warehouseName,
-    destination: `${shippingAddress.line2}, ${shippingAddress.state}`,
-    eta: null,
-    progress: 0,
-    shipmentStatus: 'processing',
-    insuranceCovered: false,
-    isMasterShipment: false,
-    documents: [],
-    amount: payment.payableAmount,
-    paymentMethod: payment.methodTitle,
-    paymentMethodId: payment.methodId,
-    paymentStatus: 'pending',
-    verificationStatus: 'none',
-    procurement: null,
-    paymentVerifiedAt: null,
-    orderStatus: 'draft',
-    priceLockStatus: 'active',
-    priceLockStartedAt: null,
-    priceLockDurationSeconds: 0,
-    validationTimeline: null,
-    confirmationStatus: 'pending_petrotrade',
-    supplierConfirmation: 'pending',
-    inventoryReserved: false,
-    poNumber: null,
-    poGenerated: false,
-    procurementCompleted: false,
-    dispatchStatus: null,
-    documentsReady: false,
-    workflowTimeline: null,
-    dispatchReadiness: null,
-    transitWindow: null,
-    createdAt: new Date().toISOString(),
-  };
-};
+import { buildOrderFromCheckout } from '@/utils/build-order-from-checkout';
 
 export const CustomerPaymentUploadProofScreen = memo(function CustomerPaymentUploadProofScreen() {
   const router = useRouter();
@@ -131,7 +60,7 @@ export const CustomerPaymentUploadProofScreen = memo(function CustomerPaymentUpl
       return currentOrder;
     }
 
-    return buildOrderFromStores(cartItems, shippingAddress, payment);
+    return buildOrderFromCheckout(cartItems, shippingAddress, payment);
   }, [cartItems, currentOrder, payment, shippingAddress]);
 
   useEffect(() => {

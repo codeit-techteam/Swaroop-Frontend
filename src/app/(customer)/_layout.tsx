@@ -21,10 +21,16 @@ export default function CustomerLayout() {
       <Stack.Screen name="payment/compare" />
       <Stack.Screen name="payment/upload-proof" />
       <Stack.Screen name="payment/verification-initiated" />
+      <Stack.Screen name="order-submitted/index" />
+      <Stack.Screen name="credit-approval/index" />
+      <Stack.Screen name="loading-completed/index" />
+      <Stack.Screen name="payment-reminder/index" />
+      <Stack.Screen name="payment-success/index" />
       <Stack.Screen name="procurement/confirmation" />
       <Stack.Screen name="order-awaiting-confirmation/index" />
       <Stack.Screen name="purchase-order-generated/index" />
       <Stack.Screen name="dispatch-planning/index" />
+      <Stack.Screen name="dispatch-started/index" />
       <Stack.Screen name="shipment-tracking/index" />
       <Stack.Screen name="order-detail/index" />
       <Stack.Screen name="order-confirmation/index" />

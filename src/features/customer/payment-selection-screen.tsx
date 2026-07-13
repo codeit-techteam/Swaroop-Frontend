@@ -15,10 +15,15 @@ import {
 } from '@/components/payment';
 import { Typography } from '@/components/ui/typography';
 import { getPaymentMethodById, PAYMENT_METHODS } from '@/constants/payment';
+import { getRouteAfterPaymentSelection } from '@/constants/paymentNavigation';
 import { PhoneIcon } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
 import { selectCartItems, useCartStore } from '@/store/cart-store';
 import { selectCheckoutAddress, useCheckoutStore } from '@/store/checkout-store';
+import {
+  selectOrderHydrated,
+  useOrderStore,
+} from '@/store/order-store';
 import {
   selectPaymentCalculation,
   selectPaymentMethodId,
@@ -27,23 +32,7 @@ import {
 import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
 import type { PaymentMethodId } from '@/types/payment';
-
-const toTitleCase = (value: string): string =>
-  value
-    .toLowerCase()
-    .split(' ')
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
-
-const buildBlindProductName = (productType: string, name: string): string => {
-  const typeLabel = toTitleCase(productType.replace(/_/g, ' '));
-  const suffix = name.replace(/^PP\s+[A-Z0-9]+\s*/i, '').trim();
-  if (suffix) {
-    return `${typeLabel} (PP) ${suffix}`;
-  }
-  return `${typeLabel} (PP)`;
-};
+import { buildBlindProductName, buildOrderFromCheckout } from '@/utils/build-order-from-checkout';
 
 export const CustomerPaymentSelectionScreen = memo(function CustomerPaymentSelectionScreen() {
   const router = useRouter();
@@ -63,6 +52,15 @@ export const CustomerPaymentSelectionScreen = memo(function CustomerPaymentSelec
   const selectPayment = usePaymentStore((state) => state.selectPayment);
   const hydratePayment = usePaymentStore((state) => state.hydratePayment);
   const isHydrated = usePaymentStore((state) => state.isHydrated);
+  const isOrderHydrated = useOrderStore(selectOrderHydrated);
+  const hydrateOrder = useOrderStore((state) => state.hydrateOrder);
+  const setCurrentOrder = useOrderStore((state) => state.setCurrentOrder);
+
+  useEffect(() => {
+    if (!isOrderHydrated) {
+      hydrateOrder();
+    }
+  }, [hydrateOrder, isOrderHydrated]);
 
   useEffect(() => {
     if (!isHydrated) {
@@ -138,12 +136,20 @@ export const CustomerPaymentSelectionScreen = memo(function CustomerPaymentSelec
   }, [router]);
 
   const handleContinue = useCallback(() => {
-    if (selectedMethodId === 'advance') {
-      router.push(ROUTES.CUSTOMER.PAYMENT_UPLOAD_PROOF as Href);
+    const order = buildOrderFromCheckout(cartItems, shippingAddress, payment);
+    if (!order) {
+      Toast.show({
+        type: 'error',
+        text1: 'Cart empty',
+        text2: 'Add items to your cart before continuing.',
+        visibilityTime: 2400,
+      });
       return;
     }
-    router.push(ROUTES.CUSTOMER.ORDER_CONFIRMATION as Href);
-  }, [router, selectedMethodId]);
+
+    setCurrentOrder(order);
+    router.push(getRouteAfterPaymentSelection(selectedMethodId));
+  }, [cartItems, payment, router, selectedMethodId, setCurrentOrder, shippingAddress]);
 
   return (
     <View className="flex-1 bg-brand-background">

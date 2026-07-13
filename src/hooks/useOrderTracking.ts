@@ -13,9 +13,11 @@ import {
 import type { TrackingMenuAction } from '@/components/tracking';
 import {
   buildTrackingTimelineItems,
+  createDispatchTrackingAdvancePatch,
   createTrackingAdvancePatch,
   deriveTrackingOrderStatus,
   deriveTrackingTimelineState,
+  getNextDispatchTrackingDemoStep,
   getNextTrackingDemoStep,
   isTrackingDemoComplete,
   TRACKING_COPY,
@@ -112,6 +114,24 @@ export const useOrderTracking = (): UseOrderTrackingResult => {
       if (isTrackingDemoComplete(latestOrder)) {
         activeTrackingSimulationId = null;
         clearInterval(timer);
+        return;
+      }
+
+      if (latestOrder.trackingAvailable && latestOrder.dispatchTrackingTimeline) {
+        const nextDispatchStep = getNextDispatchTrackingDemoStep(
+          latestOrder.dispatchTrackingTimeline.currentStep,
+        );
+
+        if (!nextDispatchStep) {
+          activeTrackingSimulationId = null;
+          clearInterval(timer);
+          return;
+        }
+
+        updateOrderById(
+          latestOrder.id,
+          createDispatchTrackingAdvancePatch(latestOrder, nextDispatchStep),
+        );
         return;
       }
 

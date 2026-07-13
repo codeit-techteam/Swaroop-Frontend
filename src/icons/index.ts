@@ -56,6 +56,7 @@ export { AlertCircleIcon } from '@/icons/alert-circle';
 export { PhoneIcon } from '@/icons/phone';
 export { PaymentVerificationIllustration } from '@/icons/payment-verification-illustration';
 export { DownloadIcon } from '@/icons/download-icon';
+export { DispatchTruckIllustration } from '@/icons/dispatch-truck-illustration';
 export { PurchaseOrderIllustration } from '@/icons/purchase-order-illustration';
 export { ProcurementIllustration } from '@/icons/procurement-illustration';
 export { EditIcon } from '@/icons/edit';

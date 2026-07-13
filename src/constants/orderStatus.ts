@@ -8,12 +8,47 @@ import type {
 import type { DispatchStatus } from '@/types/purchaseOrder';
 import { brandColors } from '@/theme/colors';
 
+export type OrderLifecycleStage =
+  | 'placed'
+  | 'procurement'
+  | 'loading'
+  | 'payment'
+  | 'dispatch'
+  | 'delivery';
+
 export const ORDER_SHIPMENT_STAGES: OrderShipmentStage[] = [
   'placed',
   'dispatched',
   'transit',
   'delivered',
 ];
+
+export const ORDER_LIFECYCLE_STAGES: OrderLifecycleStage[] = [
+  'placed',
+  'procurement',
+  'loading',
+  'payment',
+  'dispatch',
+  'delivery',
+];
+
+export const ORDER_LIFECYCLE_STAGE_LABELS: Record<OrderLifecycleStage, string> = {
+  placed: 'Placed',
+  procurement: 'Procurement',
+  loading: 'Loading',
+  payment: 'Payment',
+  dispatch: 'Dispatch',
+  delivery: 'Delivery',
+};
+
+export const ORDER_LIFECYCLE_PROGRESS_MAP: Record<OrderLifecycleStage, number> = {
+  placed: 17,
+  procurement: 33,
+  loading: 50,
+  payment: 67,
+  dispatch: 83,
+  delivery: 100,
+};
 
 export const ORDER_SHIPMENT_STAGE_LABELS: Record<OrderShipmentStage, string> = {
   placed: 'PLACED',
@@ -92,6 +127,10 @@ export const deriveOrderDisplayStatus = (order: Order): OrderDisplayStatus => {
 };
 
 export const deriveOrderProgress = (order: Order): number => {
+  if (order.trackingAvailable && order.dispatchProgress) {
+    return Math.max(deriveOrderLifecycleProgress(order), order.dispatchProgress);
+  }
+
   if (order.progress > 0) {
     return order.progress;
   }
@@ -101,10 +140,46 @@ export const deriveOrderProgress = (order: Order): number => {
   }
 
   if (order.paymentStatus === 'verified') {
-    return 10;
+    return ORDER_LIFECYCLE_PROGRESS_MAP.payment;
   }
 
-  return 5;
+  return ORDER_LIFECYCLE_PROGRESS_MAP.placed;
+};
+
+export const deriveOrderLifecycleStage = (order: Order): OrderLifecycleStage => {
+  if (order.dispatchStatus === 'delivered' || order.shipmentStatus === 'delivered') {
+    return 'delivery';
+  }
+
+  if (
+    order.orderStatus === 'dispatch_started' ||
+    order.dispatchStatus === 'shipment_started' ||
+    order.trackingAvailable
+  ) {
+    return 'dispatch';
+  }
+
+  if (order.paymentStatus === 'verified') {
+    return 'payment';
+  }
+
+  if (
+    order.dispatchStatus === 'shipment_ready' ||
+    order.workflowTimeline?.completedSteps.includes('shipment_ready')
+  ) {
+    return 'loading';
+  }
+
+  if (order.procurementCompleted || order.poGenerated) {
+    return 'procurement';
+  }
+
+  return 'placed';
+};
+
+export const deriveOrderLifecycleProgress = (order: Order): number => {
+  const stage = deriveOrderLifecycleStage(order);
+  return ORDER_LIFECYCLE_PROGRESS_MAP[stage];
 };
 
 export const deriveOrderShipmentStage = (order: Order): OrderShipmentStage => {
@@ -150,8 +225,8 @@ export const getOrderStatusBadgeConfig = (status: OrderDisplayStatus): OrderStat
     case 'in_transit':
       return {
         label: 'IN TRANSIT',
-        backgroundColor: '#DBEAFE',
-        textColor: '#1D4ED8',
+        backgroundColor: brandColors.successLight,
+        textColor: brandColors.success,
       };
     case 'delivered':
       return {

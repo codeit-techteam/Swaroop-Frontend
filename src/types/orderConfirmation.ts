@@ -1,8 +1,10 @@
 export type OrderLifecycleStatus =
   | 'draft'
+  | 'order_created'
   | 'awaiting_confirmation'
   | 'confirmed'
-  | 'purchase_order_generated';
+  | 'purchase_order_generated'
+  | 'dispatch_started';
 
 export type PriceLockStatus = 'active' | 'expired';
 

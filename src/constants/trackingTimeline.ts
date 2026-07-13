@@ -1,12 +1,17 @@
 import type { Order } from '@/types/order';
 import type { WorkflowStepId } from '@/types/purchaseOrder';
 import type {
+  DispatchTrackingStepId,
   TrackingOrderStatus,
   TrackingOrderStatusBadgeConfig,
   TrackingStepId,
   TrackingTimelineItem,
   TrackingTimelineState,
 } from '@/types/tracking';
+import {
+  DISPATCH_TRACKING_STEP_SEQUENCE,
+  createInitialDispatchTrackingTimeline,
+} from '@/constants/dispatchStarted';
 import { brandColors } from '@/theme/colors';
 
 /** When enabled, auto-advances the live tracking timeline every 5 seconds. */
@@ -37,6 +42,21 @@ export const TRACKING_DEMO_SEQUENCE: TrackingStepId[] = [
   'out_for_delivery',
   'delivered',
 ];
+
+export const DISPATCH_TRACKING_DEMO_SEQUENCE: DispatchTrackingStepId[] = [
+  'in_transit',
+  'delivered',
+];
+
+const DISPATCH_TRACKING_STEP_TITLES: Record<DispatchTrackingStepId, string> = {
+  order_submitted: 'Order Submitted',
+  procurement: 'Procurement',
+  loading: 'Loading',
+  payment_verified: 'Payment Verified',
+  dispatch_started: 'Dispatch Started',
+  in_transit: 'In Transit',
+  delivered: 'Delivered',
+};
 
 export const TRACKING_COPY = {
   liveTrackingHeading: 'LIVE TRACKING STATUS',
@@ -283,6 +303,10 @@ export const deriveTrackingTimelineState = (order: Order): TrackingTimelineState
 };
 
 export const buildTrackingTimelineItems = (order: Order): TrackingTimelineItem[] => {
+  if (order.trackingAvailable) {
+    return buildDispatchTrackingTimelineItems(order);
+  }
+
   const timeline = deriveTrackingTimelineState(order);
 
   return TRACKING_STEP_SEQUENCE.map((stepId) => {
@@ -327,7 +351,58 @@ export const buildTrackingTimelineItems = (order: Order): TrackingTimelineItem[]
   });
 };
 
+export const buildDispatchTrackingTimelineItems = (order: Order): TrackingTimelineItem[] => {
+  const timeline = order.dispatchTrackingTimeline ?? createInitialDispatchTrackingTimeline();
+
+  return DISPATCH_TRACKING_STEP_SEQUENCE.map((stepId) => {
+    const title = DISPATCH_TRACKING_STEP_TITLES[stepId];
+    let status: TrackingTimelineItem['status'] = 'pending';
+
+    if (timeline.completedSteps.includes(stepId) && stepId !== timeline.currentStep) {
+      status = 'completed';
+    } else if (stepId === timeline.currentStep) {
+      status = 'current';
+    } else if (
+      order.dispatchStatus === 'delivered' &&
+      stepId === 'delivered'
+    ) {
+      status = 'completed';
+    }
+
+    let statusLabel = 'Pending';
+    if (status === 'completed') {
+      statusLabel = 'Completed';
+    } else if (status === 'current') {
+      statusLabel = stepId === 'dispatch_started' ? 'In Progress' : 'In Progress';
+    }
+
+    return {
+      id: stepId as unknown as TrackingStepId,
+      title,
+      date: status === 'pending' ? statusLabel : status === 'current' ? 'Today' : 'Completed',
+      time: '',
+      statusLabel,
+      status,
+    };
+  });
+};
+
 export const deriveTrackingOrderStatus = (order: Order): TrackingOrderStatus => {
+  if (order.trackingAvailable && order.dispatchTrackingTimeline) {
+    const { currentStep } = order.dispatchTrackingTimeline;
+
+    switch (currentStep) {
+      case 'delivered':
+        return 'delivered';
+      case 'in_transit':
+        return 'transit';
+      case 'dispatch_started':
+        return 'transit';
+      default:
+        return 'dispatched';
+    }
+  }
+
   const { currentStep } = deriveTrackingTimelineState(order);
 
   switch (currentStep) {
@@ -402,6 +477,38 @@ export const getNextTrackingDemoStep = (
   return TRACKING_DEMO_SEQUENCE[currentIndex + 1] ?? null;
 };
 
+export const getNextDispatchTrackingDemoStep = (
+  currentStep: DispatchTrackingStepId,
+): DispatchTrackingStepId | null => {
+  const currentIndex = DISPATCH_TRACKING_DEMO_SEQUENCE.indexOf(currentStep);
+  if (currentIndex < 0 || currentIndex >= DISPATCH_TRACKING_DEMO_SEQUENCE.length - 1) {
+    return null;
+  }
+
+  return DISPATCH_TRACKING_DEMO_SEQUENCE[currentIndex + 1] ?? null;
+};
+
+export const createDispatchTrackingAdvancePatch = (
+  order: Order,
+  nextStep: DispatchTrackingStepId,
+): Partial<Order> => {
+  const timeline = order.dispatchTrackingTimeline ?? createInitialDispatchTrackingTimeline();
+  const completedSteps = timeline.completedSteps.includes(timeline.currentStep)
+    ? timeline.completedSteps
+    : [...timeline.completedSteps, timeline.currentStep];
+
+  return {
+    dispatchTrackingTimeline: {
+      currentStep: nextStep,
+      completedSteps: Array.from(new Set([...completedSteps, nextStep])),
+    },
+    dispatchStatus: nextStep === 'delivered' ? 'delivered' : 'shipment_started',
+    shipmentStatus: nextStep === 'delivered' ? 'delivered' : 'in_transit',
+    orderStatus: nextStep === 'delivered' ? order.orderStatus : 'dispatch_started',
+    eta: nextStep === 'delivered' ? 'Delivered' : order.eta,
+  };
+};
+
 export const createTrackingAdvancePatch = (
   order: Order,
   nextStep: TrackingStepId,
@@ -451,5 +558,10 @@ export const createTrackingAdvancePatch = (
   };
 };
 
-export const isTrackingDemoComplete = (order: Order): boolean =>
-  deriveTrackingTimelineState(order).currentStep === 'delivered';
+export const isTrackingDemoComplete = (order: Order): boolean => {
+  if (order.trackingAvailable && order.dispatchTrackingTimeline) {
+    return order.dispatchTrackingTimeline.currentStep === 'delivered';
+  }
+
+  return deriveTrackingTimelineState(order).currentStep === 'delivered';
+};

@@ -11,11 +11,32 @@ export type TrackingStepId =
   | 'out_for_delivery'
   | 'delivered';
 
+export type DispatchTrackingStepId =
+  | 'order_submitted'
+  | 'procurement'
+  | 'loading_scheduled'
+  | 'loading_completed'
+  | 'payment_verified'
+  | 'dispatch_started'
+  | 'in_transit'
+  | 'delivered';
+
 export type TrackingStepStatus = 'completed' | 'current' | 'pending';
 
 export type TrackingTimelineState = {
   currentStep: TrackingStepId;
   completedSteps: TrackingStepId[];
+};
+
+export type DispatchTrackingTimelineState = {
+  currentStep: DispatchTrackingStepId;
+  completedSteps: DispatchTrackingStepId[];
+};
+
+export type DispatchTrackingTimelineItem = {
+  id: DispatchTrackingStepId;
+  title: string;
+  status: TrackingStepStatus;
 };
 
 export type TrackingTimelineItem = {
