@@ -18,6 +18,7 @@ import type {
   LoadingStatus,
 } from '@/types/loading';
 import type { DispatchTrackingTimelineState, TrackingTimelineState } from '@/types/tracking';
+import type { OrderStatus, OrderTimelineStep } from '@/types/orderStatus';
 
 export type ProductCategory = 'PP' | 'PVC' | 'HDPE' | 'LLDPE' | 'PET';
 
@@ -111,4 +112,10 @@ export type Order = {
   loadingSchedule?: LoadingScheduleDetails | null;
   loadingProof?: LoadingProofState | null;
   createdAt: string;
+  /** Canonical lifecycle status — single source of truth for all screens. */
+  status?: OrderStatus;
+  /** Mirrors status for quick access in UI components. */
+  currentStep?: OrderStatus;
+  expectedDelivery?: string | null;
+  timeline?: OrderTimelineStep[] | null;
 };

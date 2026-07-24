@@ -5,7 +5,13 @@ import type {
   OrderTabCategory,
   ProductCategory,
 } from '@/types/order';
+import type { OrderStatus } from '@/types/orderStatus';
 import type { DispatchStatus } from '@/types/purchaseOrder';
+import {
+  inferOrderStatus,
+  ORDER_STATUS_BADGE_LABELS,
+  ORDER_STATUS_PROGRESS,
+} from '@/constants/orderWorkflow';
 import { brandColors } from '@/theme/colors';
 
 export type OrderLifecycleStage =
@@ -92,15 +98,6 @@ export type OrderStatusBadgeConfig = {
   textColor: string;
 };
 
-const DISPATCH_PROGRESS_MAP: Record<DispatchStatus, number> = {
-  planning: 15,
-  vehicle_allocation: 25,
-  driver_assigned: 35,
-  shipment_ready: 50,
-  shipment_started: 75,
-  delivered: 100,
-};
-
 const DISPATCH_STAGE_MAP: Record<DispatchStatus, OrderShipmentStage> = {
   planning: 'placed',
   vehicle_allocation: 'dispatched',
@@ -127,65 +124,42 @@ export const deriveOrderDisplayStatus = (order: Order): OrderDisplayStatus => {
 };
 
 export const deriveOrderProgress = (order: Order): number => {
+  const status = inferOrderStatus(order);
+  const statusProgress = ORDER_STATUS_PROGRESS[status];
+
   if (order.trackingAvailable && order.dispatchProgress) {
-    return Math.max(deriveOrderLifecycleProgress(order), order.dispatchProgress);
+    return Math.max(statusProgress, order.dispatchProgress);
   }
 
-  if (order.progress > 0) {
+  if (order.progress > 0 && order.progress >= statusProgress) {
     return order.progress;
   }
 
-  if (order.dispatchStatus) {
-    return DISPATCH_PROGRESS_MAP[order.dispatchStatus];
-  }
-
-  if (order.paymentStatus === 'verified') {
-    return ORDER_LIFECYCLE_PROGRESS_MAP.payment;
-  }
-
-  return ORDER_LIFECYCLE_PROGRESS_MAP.placed;
+  return statusProgress;
 };
 
 export const deriveOrderLifecycleStage = (order: Order): OrderLifecycleStage => {
-  if (order.dispatchStatus === 'delivered' || order.shipmentStatus === 'delivered') {
-    return 'delivery';
-  }
+  const status = inferOrderStatus(order);
 
-  if (
-    order.orderStatus === 'dispatch_started' ||
-    order.dispatchStatus === 'shipment_started' ||
-    order.trackingAvailable
-  ) {
-    return 'dispatch';
+  switch (status) {
+    case 'DELIVERED':
+      return 'delivery';
+    case 'DISPATCH_STARTED':
+    case 'IN_TRANSIT':
+    case 'OUT_FOR_DELIVERY':
+      return 'dispatch';
+    case 'PAYMENT_VERIFIED':
+    case 'PAYMENT_PENDING':
+      return 'payment';
+    case 'LOADING_SCHEDULED':
+    case 'LOADING_COMPLETED':
+      return 'loading';
+    case 'PROCUREMENT_STARTED':
+    case 'SUPPLIER_MATCHING':
+      return 'procurement';
+    default:
+      return 'placed';
   }
-
-  if (order.paymentStatus === 'verified') {
-    return 'payment';
-  }
-
-  if (
-    order.paymentMethodId === 'on_loading' &&
-    order.loadingStatus === 'completed'
-  ) {
-    return 'payment';
-  }
-
-  if (order.loadingStatus === 'scheduled' || order.loadingStatus === 'completed') {
-    return 'loading';
-  }
-
-  if (
-    order.dispatchStatus === 'shipment_ready' ||
-    order.workflowTimeline?.completedSteps.includes('shipment_ready')
-  ) {
-    return 'loading';
-  }
-
-  if (order.procurementCompleted || order.poGenerated) {
-    return 'procurement';
-  }
-
-  return 'placed';
 };
 
 export const deriveOrderLifecycleProgress = (order: Order): number => {
@@ -279,34 +253,70 @@ export const getOrderProgressColor = (order: Order): string => {
 };
 
 export const getOrderProgressLabel = (order: Order): string => {
-  const status = deriveOrderDisplayStatus(order);
+  const status = inferOrderStatus(order);
+  const badgeLabel = ORDER_STATUS_BADGE_LABELS[status];
 
-  if (status === 'in_transit') {
-    return order.eta ? `In Transit — Arriving ${order.eta}` : 'In Transit';
+  if (status === 'IN_TRANSIT' || status === 'OUT_FOR_DELIVERY') {
+    return order.eta ? `In Transit — Arriving ${order.eta}` : badgeLabel;
   }
 
-  if (status === 'delivered') {
+  if (status === 'DELIVERED') {
     return 'Delivered Successfully';
-  }
-
-  if (order.dispatchStatus === 'shipment_ready') {
-    return 'Ready for Dispatch';
-  }
-
-  if (order.loadingStatus === 'scheduled') {
-    return order.dispatchReadiness ?? 'Loading Scheduled';
-  }
-
-  if (order.loadingStatus === 'completed' && order.paymentStatus !== 'verified') {
-    return 'Loading Completed — Payment Pending';
   }
 
   if (order.dispatchReadiness) {
     return order.dispatchReadiness;
   }
 
-  return 'Preparing for Dispatch';
+  return badgeLabel;
 };
+
+export const getOrderStatusBadgeConfigFromOrder = (order: Order): OrderStatusBadgeConfig => {
+  const status = inferOrderStatus(order);
+  const label = ORDER_STATUS_BADGE_LABELS[status].toUpperCase();
+
+  switch (status) {
+    case 'DELIVERED':
+      return {
+        label,
+        backgroundColor: brandColors.successLight,
+        textColor: brandColors.success,
+      };
+    case 'IN_TRANSIT':
+    case 'OUT_FOR_DELIVERY':
+      return {
+        label,
+        backgroundColor: brandColors.successLight,
+        textColor: brandColors.success,
+      };
+    case 'DISPATCH_STARTED':
+      return {
+        label,
+        backgroundColor: '#DBEAFE',
+        textColor: '#1D4ED8',
+      };
+    case 'PAYMENT_VERIFIED':
+      return {
+        label,
+        backgroundColor: brandColors.successLight,
+        textColor: brandColors.success,
+      };
+    case 'PAYMENT_PENDING':
+      return {
+        label,
+        backgroundColor: '#FEF3C7',
+        textColor: '#B45309',
+      };
+    default:
+      return {
+        label,
+        backgroundColor: '#FFEDD5',
+        textColor: '#C2410C',
+      };
+  }
+};
+
+export const getCanonicalOrderStatus = (order: Order): OrderStatus => inferOrderStatus(order);
 
 export const formatOrderNumber = (orderId: string): string => {
   const normalized = orderId.replace(/^PT-ORD-/, '');
@@ -327,11 +337,14 @@ export const formatOrderDate = (isoDate: string): string => {
 };
 
 export const syncOrderDerivedFields = (order: Order): Order => {
+  const canonicalStatus = inferOrderStatus(order);
   const shipmentStatus = deriveOrderDisplayStatus(order);
   const progress = deriveOrderProgress(order);
 
   return {
     ...order,
+    status: canonicalStatus,
+    currentStep: canonicalStatus,
     shipmentStatus,
     progress,
   };

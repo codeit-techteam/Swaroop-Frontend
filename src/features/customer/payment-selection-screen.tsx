@@ -54,7 +54,7 @@ export const CustomerPaymentSelectionScreen = memo(function CustomerPaymentSelec
   const isHydrated = usePaymentStore((state) => state.isHydrated);
   const isOrderHydrated = useOrderStore(selectOrderHydrated);
   const hydrateOrder = useOrderStore((state) => state.hydrateOrder);
-  const setCurrentOrder = useOrderStore((state) => state.setCurrentOrder);
+  const createOrder = useOrderStore((state) => state.createOrder);
 
   useEffect(() => {
     if (!isOrderHydrated) {
@@ -147,9 +147,9 @@ export const CustomerPaymentSelectionScreen = memo(function CustomerPaymentSelec
       return;
     }
 
-    setCurrentOrder(order);
+    createOrder(order);
     router.push(getRouteAfterPaymentSelection(selectedMethodId));
-  }, [cartItems, payment, router, selectedMethodId, setCurrentOrder, shippingAddress]);
+  }, [cartItems, createOrder, payment, router, selectedMethodId, shippingAddress]);
 
   return (
     <View className="flex-1 bg-brand-background">

@@ -2,9 +2,17 @@ import { create } from 'zustand';
 
 import { STORAGE_KEYS } from '@/constants';
 import { createDemoOrders } from '@/constants/demoOrders';
+import {
+  buildOrderTimeline,
+  createInitialOrderFields,
+  createStatusPatch,
+  inferOrderStatus,
+  ORDER_STATUS_PROGRESS,
+} from '@/constants/orderWorkflow';
 import { syncOrderDerivedFields } from '@/constants/orderStatus';
 import { createInitialProcurementState } from '@/constants/procurementSteps';
 import type { Order, PaymentProof } from '@/types/order';
+import type { OrderStatus } from '@/types/orderStatus';
 import type { ProcurementState } from '@/types/procurement';
 import { generateOrderId } from '@/utils/payment-proof';
 import { getStorageItem, setStorageItem } from '@/utils/storage';
@@ -24,10 +32,21 @@ type OrderState = {
 
 type OrderActions = {
   hydrateOrder: () => void;
+  createOrder: (order: Order) => void;
   setCurrentOrder: (order: Order) => void;
   updateOrder: (patch: Partial<Order>) => void;
   updateProcurement: (patch: Partial<ProcurementState>) => void;
-  startProcurement: (paymentVerifiedAt: string) => void;
+  setOrderStatus: (status: OrderStatus, orderId?: string) => void;
+  startProcurement: (paymentVerifiedAt?: string) => void;
+  startSupplierMatching: () => void;
+  scheduleLoading: () => void;
+  completeLoading: () => void;
+  markPaymentPending: () => void;
+  verifyPayment: (verifiedAt?: string) => void;
+  startDispatch: () => void;
+  markInTransit: () => void;
+  markOutForDelivery: () => void;
+  markDelivered: () => void;
   submitPaymentProof: (proof: PaymentProof) => void;
   resetOrder: () => void;
   setSelectedOrderId: (orderId: string | null) => void;
@@ -61,8 +80,9 @@ const DEFAULT_ORDER_FIELDS: Pick<
 };
 
 const normalizeOrder = (order: Order): Order => {
-  const normalized: Order = {
+  const withDefaults: Order = {
     ...DEFAULT_ORDER_FIELDS,
+    ...createInitialOrderFields(),
     ...order,
     destination: order.destination ?? '',
     procurement: order.procurement ?? null,
@@ -93,6 +113,15 @@ const normalizeOrder = (order: Order): Order => {
     loadingSchedule: order.loadingSchedule ?? null,
     loadingProof: order.loadingProof ?? null,
     documents: order.documents ?? [],
+  };
+
+  const status = inferOrderStatus(withDefaults);
+  const normalized: Order = {
+    ...withDefaults,
+    status,
+    currentStep: status,
+    progress: ORDER_STATUS_PROGRESS[status],
+    timeline: buildOrderTimeline({ ...withDefaults, status }),
   };
 
   return syncOrderDerivedFields(normalized);
@@ -141,134 +170,226 @@ const readPersistedOrderState = (): PersistedOrderState => {
   }
 };
 
-export const useOrderStore = create<OrderStore>((set, get) => ({
-  currentOrder: null,
-  paymentProof: null,
-  orders: [],
-  selectedOrderId: null,
-  isHydrated: false,
+const applyStatusToOrder = (order: Order, status: OrderStatus): Order => {
+  const patch = createStatusPatch(status, order);
+  return normalizeOrder({ ...order, ...patch });
+};
 
-  hydrateOrder: () => {
-    const persisted = readPersistedOrderState();
-    set({
-      currentOrder: persisted.currentOrder,
-      paymentProof: persisted.paymentProof,
-      orders: persisted.orders,
-      isHydrated: true,
-    });
-  },
-
-  setCurrentOrder: (order) => {
+export const useOrderStore = create<OrderStore>((set, get) => {
+  const commitOrder = (nextOrder: Order): void => {
     const { paymentProof, orders } = get();
-    const normalized = normalizeOrder(order);
+    const normalized = normalizeOrder(nextOrder);
     const nextOrders = upsertOrderInList(orders, normalized);
     persistOrderState({ currentOrder: normalized, paymentProof, orders: nextOrders });
     set({ currentOrder: normalized, orders: nextOrders });
-  },
+  };
 
-  updateOrder: (patch) => {
-    const { currentOrder, paymentProof, orders } = get();
+  const transitionCurrentOrder = (status: OrderStatus): void => {
+    const { currentOrder } = get();
     if (!currentOrder) {
       return;
     }
+    commitOrder(applyStatusToOrder(currentOrder, status));
+  };
 
-    const nextOrder = normalizeOrder({ ...currentOrder, ...patch });
-    const nextOrders = upsertOrderInList(orders, nextOrder);
-    persistOrderState({ currentOrder: nextOrder, paymentProof, orders: nextOrders });
-    set({ currentOrder: nextOrder, orders: nextOrders });
-  },
+  return {
+    currentOrder: null,
+    paymentProof: null,
+    orders: [],
+    selectedOrderId: null,
+    isHydrated: false,
 
-  updateProcurement: (patch) => {
-    const { currentOrder, paymentProof, orders } = get();
-    if (!currentOrder?.procurement) {
-      return;
-    }
+    hydrateOrder: () => {
+      const persisted = readPersistedOrderState();
+      set({
+        currentOrder: persisted.currentOrder,
+        paymentProof: persisted.paymentProof,
+        orders: persisted.orders,
+        isHydrated: true,
+      });
+    },
 
-    const nextProcurement: ProcurementState = {
-      ...currentOrder.procurement,
-      ...patch,
-      updatedAt: new Date().toISOString(),
-    };
+    createOrder: (order) => {
+      const normalized = applyStatusToOrder(order, 'ORDER_CREATED');
+      commitOrder(normalized);
+    },
 
-    const nextOrder = normalizeOrder({
-      ...currentOrder,
-      procurement: nextProcurement,
-    });
-    const nextOrders = upsertOrderInList(orders, nextOrder);
+    setCurrentOrder: (order) => {
+      commitOrder(order);
+    },
 
-    persistOrderState({ currentOrder: nextOrder, paymentProof, orders: nextOrders });
-    set({ currentOrder: nextOrder, orders: nextOrders });
-  },
+    updateOrder: (patch) => {
+      const { currentOrder } = get();
+      if (!currentOrder) {
+        return;
+      }
+      commitOrder({ ...currentOrder, ...patch });
+    },
 
-  startProcurement: (paymentVerifiedAt) => {
-    const { currentOrder, paymentProof, orders } = get();
-    if (!currentOrder || currentOrder.procurement) {
-      return;
-    }
+    setOrderStatus: (status, orderId) => {
+      const { currentOrder, paymentProof, orders } = get();
+      const targetId = orderId ?? currentOrder?.id;
 
-    const nextOrder = normalizeOrder({
-      ...currentOrder,
-      paymentVerifiedAt,
-      procurement: createInitialProcurementState(paymentVerifiedAt),
-    });
-    const nextOrders = upsertOrderInList(orders, nextOrder);
+      if (!targetId) {
+        return;
+      }
 
-    persistOrderState({ currentOrder: nextOrder, paymentProof, orders: nextOrders });
-    set({ currentOrder: nextOrder, orders: nextOrders });
-  },
+      const existingOrder =
+        targetId === currentOrder?.id
+          ? currentOrder
+          : orders.find((item) => item.id === targetId);
 
-  submitPaymentProof: (proof) => {
-    const { currentOrder, orders } = get();
-    if (!currentOrder) {
-      return;
-    }
+      if (!existingOrder) {
+        return;
+      }
 
-    const nextOrder = normalizeOrder({
-      ...currentOrder,
-      paymentStatus: 'submitted',
-      verificationStatus: 'pending',
-    });
-    const nextOrders = upsertOrderInList(orders, nextOrder);
+      const nextOrder = applyStatusToOrder(existingOrder, status);
+      const nextOrders = upsertOrderInList(orders, nextOrder);
+      const nextCurrentOrder = currentOrder?.id === targetId ? nextOrder : currentOrder;
 
-    persistOrderState({ currentOrder: nextOrder, paymentProof: proof, orders: nextOrders });
-    set({ currentOrder: nextOrder, paymentProof: proof, orders: nextOrders });
-  },
+      persistOrderState({
+        currentOrder: nextCurrentOrder,
+        paymentProof,
+        orders: nextOrders,
+      });
+      set({ currentOrder: nextCurrentOrder, orders: nextOrders });
+    },
 
-  resetOrder: () => {
-    const demoOrders = createDemoOrders();
-    persistOrderState({ currentOrder: null, paymentProof: null, orders: demoOrders });
-    set({ currentOrder: null, paymentProof: null, orders: demoOrders, selectedOrderId: null });
-  },
+    updateProcurement: (patch) => {
+      const { currentOrder } = get();
+      if (!currentOrder?.procurement) {
+        return;
+      }
 
-  setSelectedOrderId: (orderId) => {
-    set({ selectedOrderId: orderId });
-  },
+      const nextProcurement: ProcurementState = {
+        ...currentOrder.procurement,
+        ...patch,
+        updatedAt: new Date().toISOString(),
+      };
 
-  updateOrderById: (orderId, patch) => {
-    const { currentOrder, paymentProof, orders } = get();
-    const existingOrder = orders.find((item) => item.id === orderId);
+      commitOrder({ ...currentOrder, procurement: nextProcurement });
+    },
 
-    if (!existingOrder) {
-      return;
-    }
+    startProcurement: (paymentVerifiedAt) => {
+      const { currentOrder } = get();
+      if (!currentOrder) {
+        return;
+      }
 
-    const nextOrder = normalizeOrder({ ...existingOrder, ...patch });
-    const nextOrders = upsertOrderInList(orders, nextOrder);
-    const nextCurrentOrder = currentOrder?.id === orderId ? nextOrder : currentOrder;
+      const verifiedAt = paymentVerifiedAt ?? new Date().toISOString();
+      const withProcurement = applyStatusToOrder(
+        {
+          ...currentOrder,
+          paymentVerifiedAt: currentOrder.paymentVerifiedAt ?? verifiedAt,
+          procurement: currentOrder.procurement ?? createInitialProcurementState(verifiedAt),
+        },
+        'PROCUREMENT_STARTED',
+      );
+      commitOrder(withProcurement);
+    },
 
-    persistOrderState({
-      currentOrder: nextCurrentOrder,
-      paymentProof,
-      orders: nextOrders,
-    });
-    set({ currentOrder: nextCurrentOrder, orders: nextOrders });
-  },
-}));
+    startSupplierMatching: () => {
+      transitionCurrentOrder('SUPPLIER_MATCHING');
+    },
+
+    scheduleLoading: () => {
+      transitionCurrentOrder('LOADING_SCHEDULED');
+    },
+
+    completeLoading: () => {
+      transitionCurrentOrder('LOADING_COMPLETED');
+    },
+
+    markPaymentPending: () => {
+      transitionCurrentOrder('PAYMENT_PENDING');
+    },
+
+    verifyPayment: (verifiedAt) => {
+      const { currentOrder } = get();
+      if (!currentOrder) {
+        return;
+      }
+
+      const withVerifiedAt = {
+        ...currentOrder,
+        paymentVerifiedAt: verifiedAt ?? currentOrder.paymentVerifiedAt ?? new Date().toISOString(),
+      };
+      commitOrder(applyStatusToOrder(withVerifiedAt, 'PAYMENT_VERIFIED'));
+    },
+
+    startDispatch: () => {
+      transitionCurrentOrder('DISPATCH_STARTED');
+    },
+
+    markInTransit: () => {
+      transitionCurrentOrder('IN_TRANSIT');
+    },
+
+    markOutForDelivery: () => {
+      transitionCurrentOrder('OUT_FOR_DELIVERY');
+    },
+
+    markDelivered: () => {
+      transitionCurrentOrder('DELIVERED');
+    },
+
+    submitPaymentProof: (proof) => {
+      const { currentOrder, orders } = get();
+      if (!currentOrder) {
+        return;
+      }
+      const nextOrder = applyStatusToOrder(currentOrder, 'PAYMENT_PENDING');
+      const nextOrders = upsertOrderInList(orders, nextOrder);
+
+      persistOrderState({ currentOrder: nextOrder, paymentProof: proof, orders: nextOrders });
+      set({ currentOrder: nextOrder, paymentProof: proof, orders: nextOrders });
+    },
+
+    resetOrder: () => {
+      const demoOrders = createDemoOrders();
+      persistOrderState({ currentOrder: null, paymentProof: null, orders: demoOrders });
+      set({ currentOrder: null, paymentProof: null, orders: demoOrders, selectedOrderId: null });
+    },
+
+    setSelectedOrderId: (orderId) => {
+      set({ selectedOrderId: orderId });
+    },
+
+    updateOrderById: (orderId, patch) => {
+      const { currentOrder, paymentProof, orders } = get();
+      const existingOrder = orders.find((item) => item.id === orderId);
+
+      if (!existingOrder) {
+        return;
+      }
+
+      const nextOrder = normalizeOrder({ ...existingOrder, ...patch });
+      const nextOrders = upsertOrderInList(orders, nextOrder);
+      const nextCurrentOrder = currentOrder?.id === orderId ? nextOrder : currentOrder;
+
+      persistOrderState({
+        currentOrder: nextCurrentOrder,
+        paymentProof,
+        orders: nextOrders,
+      });
+      set({ currentOrder: nextCurrentOrder, orders: nextOrders });
+    },
+  };
+});
 
 export const selectCurrentOrder = (state: OrderStore) => state.currentOrder;
 export const selectPaymentProof = (state: OrderStore) => state.paymentProof;
 export const selectOrderHydrated = (state: OrderStore) => state.isHydrated;
 export const selectOrders = (state: OrderStore) => state.orders;
 export const selectSelectedOrderId = (state: OrderStore) => state.selectedOrderId;
+export const selectActiveOrder = (state: OrderStore) => {
+  const active = state.orders.filter(
+    (order) =>
+      inferOrderStatus(order) !== 'DELIVERED' && order.shipmentStatus !== 'cancelled',
+  );
+  return state.currentOrder && active.some((o) => o.id === state.currentOrder?.id)
+    ? state.currentOrder
+    : active[0] ?? state.currentOrder;
+};
 
 export const createOrderId = generateOrderId;

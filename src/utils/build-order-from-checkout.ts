@@ -1,4 +1,5 @@
 import { getPaymentMethodById } from '@/constants/payment';
+import { createInitialOrderFields } from '@/constants/orderWorkflow';
 import { createOrderId } from '@/store/order-store';
 import type { CheckoutShippingAddress } from '@/types/checkout';
 import type { CartItem } from '@/types/product';
@@ -45,6 +46,7 @@ export const buildOrderFromCheckout = (
   const method = getPaymentMethodById(payment.methodId);
 
   return {
+    ...createInitialOrderFields(),
     id: createOrderId(),
     productName: buildBlindProductName(primary.productType, primary.name),
     grade: primary.grade ?? '',

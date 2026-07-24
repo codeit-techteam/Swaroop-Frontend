@@ -3,23 +3,29 @@ import { memo } from 'react';
 import { View } from 'react-native';
 
 import { Typography } from '@/components/ui/typography';
-import type { OrderDisplayStatus } from '@/types/order';
-import { getOrderStatusBadgeConfig } from '@/constants/orderStatus';
+import type { OrderDisplayStatus, Order } from '@/types/order';
+import { getOrderStatusBadgeConfig, getOrderStatusBadgeConfigFromOrder } from '@/constants/orderStatus';
 
-type OrderStatusBadgeProps = {
-  status: OrderDisplayStatus;
-  className?: string;
-};
+type OrderStatusBadgeProps =
+  | {
+      status: OrderDisplayStatus;
+      order?: never;
+      className?: string;
+    }
+  | {
+      order: Order;
+      status?: never;
+      className?: string;
+    };
 
-export const OrderStatusBadge = memo(function OrderStatusBadge({
-  status,
-  className,
-}: OrderStatusBadgeProps) {
-  const config = getOrderStatusBadgeConfig(status);
+export const OrderStatusBadge = memo(function OrderStatusBadge(props: OrderStatusBadgeProps) {
+  const config = props.order
+    ? getOrderStatusBadgeConfigFromOrder(props.order)
+    : getOrderStatusBadgeConfig(props.status);
 
   return (
     <View
-      className={className}
+      className={props.className}
       style={{ backgroundColor: config.backgroundColor }}
       accessibilityRole="text"
       accessibilityLabel={`Status ${config.label}`}

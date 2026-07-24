@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { ScrollView, View } from 'react-native';
 
@@ -21,16 +21,24 @@ import {
   WatchlistCard,
   TrendingMaterialCard,
 } from '@/components/home';
+import { CurrentShipmentCard } from '@/components/home/current-shipment-card';
 import {
   DEFAULT_DELIVERY_LOCATION,
   QUICK_SUMMARY_ITEMS,
   TAB_BAR_HEIGHT,
 } from '@/constants/dashboard';
+import { getTrackRouteForOrder, inferOrderStatus } from '@/constants/orderWorkflow';
 import { MARKET_INSIGHTS } from '@/constants/news';
 import { TRENDING_PRODUCTS } from '@/constants/trendingProducts';
 import { PRICE_WATCHLIST } from '@/constants/watchlist';
 import { ROUTES } from '@/navigation/routes';
 import { selectLocation, useAuthStore } from '@/store/auth-store';
+import {
+  selectActiveOrder,
+  selectOrderHydrated,
+  selectOrders,
+  useOrderStore,
+} from '@/store/order-store';
 import type {
   DeliveryLocation,
   HomeBanner,
@@ -46,6 +54,25 @@ export const CustomerHomeScreen = () => {
   const setLocation = useAuthStore((state) => state.setLocation);
   const [selectedLocation, setSelectedLocation] = useState<DeliveryLocation>(
     persistedLocation ?? DEFAULT_DELIVERY_LOCATION,
+  );
+
+  const orders = useOrderStore(selectOrders);
+  const activeOrder = useOrderStore(selectActiveOrder);
+  const isOrderHydrated = useOrderStore(selectOrderHydrated);
+  const hydrateOrder = useOrderStore((state) => state.hydrateOrder);
+
+  useEffect(() => {
+    if (!isOrderHydrated) {
+      hydrateOrder();
+    }
+  }, [hydrateOrder, isOrderHydrated]);
+
+  const activeOrderCount = orders.filter(
+    (order) => inferOrderStatus(order) !== 'DELIVERED' && order.shipmentStatus !== 'cancelled',
+  ).length;
+
+  const quickSummaryItems = QUICK_SUMMARY_ITEMS.map((item) =>
+    item.id === 'summary-active-orders' ? { ...item, value: String(activeOrderCount) } : item,
   );
 
   const openLocationSheet = useCallback(() => {
@@ -72,6 +99,14 @@ export const CustomerHomeScreen = () => {
   const navigateToOrders = useCallback(() => {
     router.push(ROUTES.CUSTOMER.ORDERS as Href);
   }, [router]);
+
+  const handleTrackShipment = useCallback(() => {
+    if (!activeOrder) {
+      navigateToOrders();
+      return;
+    }
+    router.push(getTrackRouteForOrder(activeOrder));
+  }, [activeOrder, navigateToOrders, router]);
 
   const showInfoToast = useCallback((title: string, message: string) => {
     Toast.show({
@@ -140,8 +175,14 @@ export const CustomerHomeScreen = () => {
 
         <HeroCarousel onActionPress={handleBannerAction} />
 
+        {activeOrder ? (
+          <View className="mt-lg">
+            <CurrentShipmentCard order={activeOrder} onTrackPress={handleTrackShipment} />
+          </View>
+        ) : null}
+
         <View className="mt-lg flex-row gap-md px-lg">
-          {QUICK_SUMMARY_ITEMS.map((item) => (
+          {quickSummaryItems.map((item) => (
             <QuickSummaryCard key={item.id} item={item} onPress={navigateToOrders} />
           ))}
         </View>

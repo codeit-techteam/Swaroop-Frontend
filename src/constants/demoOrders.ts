@@ -65,6 +65,9 @@ export const createDemoOrders = (): Order[] => {
           'dispatch_started',
         ],
       },
+      status: 'IN_TRANSIT' as const,
+      currentStep: 'IN_TRANSIT' as const,
+      expectedDelivery: 'Tomorrow',
       workflowTimeline: {
         currentStep: 'shipment_started',
         completedSteps: [
@@ -115,6 +118,9 @@ export const createDemoOrders = (): Order[] => {
           'purchase_order_generated',
         ],
       },
+      status: 'DISPATCH_STARTED' as const,
+      currentStep: 'DISPATCH_STARTED' as const,
+      expectedDelivery: '3–5 Days ETA',
       createdAt: '2023-10-22T11:00:00.000Z',
     }),
     syncOrderDerivedFields({
@@ -162,6 +168,9 @@ export const createDemoOrders = (): Order[] => {
         ],
       },
       isMasterShipment: true,
+      status: 'DELIVERED' as const,
+      currentStep: 'DELIVERED' as const,
+      expectedDelivery: 'Nov 12, 2023',
       createdAt: '2023-09-15T08:00:00.000Z',
     }),
   ];

@@ -63,7 +63,7 @@ export const OrderCard = memo(function OrderCard({
           <Typography variant="roleTitle" className="text-[14px] text-brand-primary">
             {formatOrderNumber(order.id)}
           </Typography>
-          <OrderStatusBadge status={displayStatus} className="rounded-full" />
+          <OrderStatusBadge order={order} className="rounded-full" />
         </View>
 
         <Pressable

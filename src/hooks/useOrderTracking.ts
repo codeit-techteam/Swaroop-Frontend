@@ -12,9 +12,12 @@ import {
 } from '@/api/order-tracking';
 import type { TrackingMenuAction } from '@/components/tracking';
 import {
+  buildCanonicalTrackingTimelineItems,
+  getNextStatusInFlow,
+  inferOrderStatus,
+} from '@/constants/orderWorkflow';
+import {
   buildTrackingTimelineItems,
-  createDispatchTrackingAdvancePatch,
-  createTrackingAdvancePatch,
   deriveTrackingOrderStatus,
   deriveTrackingTimelineState,
   getNextDispatchTrackingDemoStep,
@@ -23,6 +26,8 @@ import {
   TRACKING_COPY,
   TRACKING_DEMO_INTERVAL_MS,
   TRACKING_DEMO_MODE,
+  createDispatchTrackingAdvancePatch,
+  createTrackingAdvancePatch,
 } from '@/constants/trackingTimeline';
 import { ROUTES } from '@/navigation/routes';
 import {
@@ -60,6 +65,7 @@ export const useOrderTracking = (): UseOrderTrackingResult => {
   const isHydrated = useOrderStore(selectOrderHydrated);
   const hydrateOrder = useOrderStore((state) => state.hydrateOrder);
   const updateOrderById = useOrderStore((state) => state.updateOrderById);
+  const setOrderStatus = useOrderStore((state) => state.setOrderStatus);
   const setSelectedOrderId = useOrderStore((state) => state.setSelectedOrderId);
 
   useEffect(() => {
@@ -82,10 +88,17 @@ export const useOrderTracking = (): UseOrderTrackingResult => {
     return currentOrder;
   }, [currentOrder, orderId, orders]);
 
-  const timelineItems = useMemo(
-    () => (order ? buildTrackingTimelineItems(order) : []),
-    [order],
-  );
+  const timelineItems = useMemo(() => {
+    if (!order) {
+      return [];
+    }
+
+    if (order.status || inferOrderStatus(order) !== 'ORDER_CREATED') {
+      return buildCanonicalTrackingTimelineItems(order);
+    }
+
+    return buildTrackingTimelineItems(order);
+  }, [order]);
 
   const trackingStatus = order ? deriveTrackingOrderStatus(order) : 'preparing';
 
@@ -114,6 +127,12 @@ export const useOrderTracking = (): UseOrderTrackingResult => {
       if (isTrackingDemoComplete(latestOrder)) {
         activeTrackingSimulationId = null;
         clearInterval(timer);
+        return;
+      }
+
+      const nextCanonicalStatus = getNextStatusInFlow(latestOrder);
+      if (nextCanonicalStatus && inferOrderStatus(latestOrder) !== 'DELIVERED') {
+        setOrderStatus(nextCanonicalStatus, latestOrder.id);
         return;
       }
 
@@ -153,7 +172,7 @@ export const useOrderTracking = (): UseOrderTrackingResult => {
         activeTrackingSimulationId = null;
       }
     };
-  }, [order, updateOrderById]);
+  }, [order, setOrderStatus, updateOrderById]);
 
   const handleBack = useCallback(() => {
     if (router.canGoBack()) {

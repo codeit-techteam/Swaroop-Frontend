@@ -51,6 +51,7 @@ export {
 export {
   useOrderStore,
   selectCurrentOrder,
+  selectActiveOrder,
   selectPaymentProof,
   selectOrderHydrated,
   selectOrders,

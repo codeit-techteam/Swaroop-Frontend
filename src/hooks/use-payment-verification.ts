@@ -2,8 +2,6 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { type Href, useRouter } from 'expo-router';
 
-import type { DispatchTrackingStepId } from '@/types/tracking';
-import { isDeferredLoadingPaymentFlow } from '@/constants/dispatchStarted';
 import {
   DEMO_MODE,
   DEMO_VERIFICATION_DELAY_MS,
@@ -107,7 +105,7 @@ export const usePaymentVerification = (): UsePaymentVerificationResult => {
   const user = useAuthStore((state) => state.userProfile);
   const isOrderHydrated = useOrderStore(selectOrderHydrated);
   const hydrateOrder = useOrderStore((state) => state.hydrateOrder);
-  const updateOrder = useOrderStore((state) => state.updateOrder);
+  const verifyPayment = useOrderStore((state) => state.verifyPayment);
 
   useEffect(() => {
     if (!isOrderHydrated) {
@@ -146,31 +144,11 @@ export const usePaymentVerification = (): UsePaymentVerificationResult => {
 
     demoTimerRef.current = setTimeout(() => {
       const verifiedAt = new Date().toISOString();
-      const nextOrder = {
-        ...order,
-        verificationStatus: 'verified' as const,
-        paymentStatus: 'verified' as const,
-        paymentVerifiedAt: verifiedAt,
-      };
-      updateOrder({
-        verificationStatus: 'verified',
-        paymentStatus: 'verified',
-        paymentVerifiedAt: verifiedAt,
-        ...(isDeferredLoadingPaymentFlow(order) && order.loadingStatus === 'completed'
-          ? {
-              dispatchTrackingTimeline: {
-                currentStep: 'payment_verified' as DispatchTrackingStepId,
-                completedSteps: [
-                  'order_submitted',
-                  'procurement',
-                  'loading_scheduled',
-                  'loading_completed',
-                ] satisfies DispatchTrackingStepId[],
-              },
-            }
-          : {}),
-      });
-      router.replace(getRouteAfterPaymentVerification(nextOrder));
+      verifyPayment(verifiedAt);
+      const nextOrder = useOrderStore.getState().currentOrder;
+      if (nextOrder) {
+        router.replace(getRouteAfterPaymentVerification(nextOrder));
+      }
     }, DEMO_VERIFICATION_DELAY_MS);
 
     return () => {
@@ -178,7 +156,7 @@ export const usePaymentVerification = (): UsePaymentVerificationResult => {
         clearTimeout(demoTimerRef.current);
       }
     };
-  }, [isVerified, order, paymentProof, router, updateOrder]);
+  }, [isVerified, order, paymentProof, router, verifyPayment]);
 
   const handleGoToOrders = useCallback(() => {
     if (!order) {

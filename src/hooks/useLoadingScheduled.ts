@@ -2,11 +2,8 @@ import { useCallback, useEffect, useRef } from 'react';
 
 import { type Href, useRouter } from 'expo-router';
 
-import {
-  buildLoadingScheduledTimeline,
-  createLoadingCompletedPatch,
-  createLoadingScheduledPatch,
-} from '@/constants/loadingWorkflow';
+import { buildLoadingScheduledTimeline } from '@/constants/loadingWorkflow';
+import { inferOrderStatus } from '@/constants/orderWorkflow';
 import { ROUTES } from '@/navigation/routes';
 import {
   selectCurrentOrder,
@@ -28,7 +25,8 @@ export const useLoadingScheduled = (): UseLoadingScheduledResult => {
   const order = useOrderStore(selectCurrentOrder);
   const isHydrated = useOrderStore(selectOrderHydrated);
   const hydrateOrder = useOrderStore((state) => state.hydrateOrder);
-  const updateOrder = useOrderStore((state) => state.updateOrder);
+  const scheduleLoading = useOrderStore((state) => state.scheduleLoading);
+  const completeLoading = useOrderStore((state) => state.completeLoading);
 
   useEffect(() => {
     if (!isHydrated) {
@@ -37,18 +35,19 @@ export const useLoadingScheduled = (): UseLoadingScheduledResult => {
   }, [hydrateOrder, isHydrated]);
 
   useEffect(() => {
-    if (!order || hasAppliedStateRef.current || order.loadingStatus === 'scheduled') {
+    if (!order || hasAppliedStateRef.current) {
       return;
     }
 
-    if (order.loadingStatus === 'completed') {
+    const status = inferOrderStatus(order);
+    if (status === 'LOADING_SCHEDULED' || status === 'LOADING_COMPLETED') {
       hasAppliedStateRef.current = true;
       return;
     }
 
     hasAppliedStateRef.current = true;
-    updateOrder(createLoadingScheduledPatch(order));
-  }, [order, updateOrder]);
+    scheduleLoading();
+  }, [order, scheduleLoading]);
 
   const handleContinue = useCallback(() => {
     if (!order) {
@@ -56,9 +55,9 @@ export const useLoadingScheduled = (): UseLoadingScheduledResult => {
       return;
     }
 
-    updateOrder(createLoadingCompletedPatch(order));
+    completeLoading();
     router.replace(ROUTES.CUSTOMER.LOADING_COMPLETED as Href);
-  }, [order, router, updateOrder]);
+  }, [completeLoading, order, router]);
 
   const handleBack = useCallback(() => {
     if (router.canGoBack()) {

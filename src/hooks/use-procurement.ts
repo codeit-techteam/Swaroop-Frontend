@@ -4,6 +4,7 @@ import { type Href, useRouter } from 'expo-router';
 
 import {
   getRouteAfterProcurementComplete,
+  isDeferredPaymentFlow,
   requiresAdvancePaymentVerified,
 } from '@/constants/paymentNavigation';
 import {
@@ -12,6 +13,7 @@ import {
   PROCUREMENT_SCREEN_COPY,
   PROCUREMENT_STATUS_BADGE_LABELS,
 } from '@/constants/procurementSteps';
+import { inferOrderStatus } from '@/constants/orderWorkflow';
 import { useProcurementSimulation } from '@/hooks/useProcurementSimulation';
 import { ROUTES } from '@/navigation/routes';
 import {
@@ -109,6 +111,8 @@ export const useProcurement = (): UseProcurementResult => {
   const isOrderHydrated = useOrderStore(selectOrderHydrated);
   const hydrateOrder = useOrderStore((state) => state.hydrateOrder);
   const startProcurement = useOrderStore((state) => state.startProcurement);
+  const startSupplierMatching = useOrderStore((state) => state.startSupplierMatching);
+  const scheduleLoading = useOrderStore((state) => state.scheduleLoading);
   const updateProcurement = useOrderStore((state) => state.updateProcurement);
 
   useEffect(() => {
@@ -142,8 +146,13 @@ export const useProcurement = (): UseProcurementResult => {
     }
 
     hasNavigatedRef.current = true;
+
+    if (isDeferredPaymentFlow(order.paymentMethodId)) {
+      scheduleLoading();
+    }
+
     router.replace(getRouteAfterProcurementComplete(order));
-  }, [order, router]);
+  }, [order, router, scheduleLoading]);
 
   const handleProcurementUpdate = useCallback(
     (patch: Partial<ProcurementState>) => {
@@ -151,6 +160,19 @@ export const useProcurement = (): UseProcurementResult => {
     },
     [updateProcurement],
   );
+
+  useEffect(() => {
+    if (!order?.procurement) {
+      return;
+    }
+
+    if (
+      order.procurement.status === 'matching' &&
+      inferOrderStatus(order) === 'PROCUREMENT_STARTED'
+    ) {
+      startSupplierMatching();
+    }
+  }, [order, startSupplierMatching]);
 
   useProcurementSimulation({
     procurement,

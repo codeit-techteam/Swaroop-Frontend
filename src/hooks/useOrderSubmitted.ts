@@ -23,6 +23,7 @@ export const useOrderSubmitted = (): UseOrderSubmittedResult => {
   const order = useOrderStore(selectCurrentOrder);
   const isHydrated = useOrderStore(selectOrderHydrated);
   const hydrateOrder = useOrderStore((state) => state.hydrateOrder);
+  const startProcurement = useOrderStore((state) => state.startProcurement);
   const checkoutAddress = useCheckoutStore(selectCheckoutAddress);
 
   useEffect(() => {
@@ -35,8 +36,11 @@ export const useOrderSubmitted = (): UseOrderSubmittedResult => {
     order?.destination || `${checkoutAddress.line2}, ${checkoutAddress.state}`;
 
   const handleContinue = useCallback(() => {
+    if (order) {
+      startProcurement();
+    }
     router.replace(ROUTES.CUSTOMER.PROCUREMENT_CONFIRMATION as Href);
-  }, [router]);
+  }, [order, router, startProcurement]);
 
   const handleBack = useCallback(() => {
     if (router.canGoBack()) {

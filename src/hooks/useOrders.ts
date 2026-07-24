@@ -14,6 +14,7 @@ import {
   getOrderTabCategory,
   isWithinDateFilter,
 } from '@/constants/orderStatus';
+import { getScreenRouteForOrder, getTrackRouteForOrder } from '@/constants/orderWorkflow';
 import { ROUTES } from '@/navigation/routes';
 import {
   selectOrderHydrated,
@@ -129,10 +130,7 @@ export const useOrders = (): UseOrdersResult => {
   const handleTrackOrder = useCallback(
     (order: Order) => {
       setSelectedOrderId(order.id);
-      router.push({
-        pathname: ROUTES.CUSTOMER.SHIPMENT_TRACKING,
-        params: { orderId: order.id },
-      } as unknown as Href);
+      router.push(getTrackRouteForOrder(order));
     },
     [router, setSelectedOrderId],
   );
@@ -140,10 +138,7 @@ export const useOrders = (): UseOrdersResult => {
   const handleViewDetails = useCallback(
     (order: Order) => {
       setSelectedOrderId(order.id);
-      router.push({
-        pathname: ROUTES.CUSTOMER.ORDER_DETAIL,
-        params: { orderId: order.id },
-      } as unknown as Href);
+      router.push(getScreenRouteForOrder(order));
     },
     [router, setSelectedOrderId],
   );

@@ -4,9 +4,9 @@ import { type Href, useRouter } from 'expo-router';
 
 import {
   buildDispatchTimelineSteps,
-  createDispatchStartedPatch,
   isDispatchStarted,
 } from '@/constants/dispatchStarted';
+import { inferOrderStatus } from '@/constants/orderWorkflow';
 import { ROUTES } from '@/navigation/routes';
 import {
   selectCurrentOrder,
@@ -31,7 +31,7 @@ export const useDispatchStarted = (): UseDispatchStartedResult => {
   const order = useOrderStore(selectCurrentOrder);
   const isOrderHydrated = useOrderStore(selectOrderHydrated);
   const hydrateOrder = useOrderStore((state) => state.hydrateOrder);
-  const updateOrder = useOrderStore((state) => state.updateOrder);
+  const startDispatch = useOrderStore((state) => state.startDispatch);
 
   useEffect(() => {
     if (!isOrderHydrated) {
@@ -40,13 +40,19 @@ export const useDispatchStarted = (): UseDispatchStartedResult => {
   }, [hydrateOrder, isOrderHydrated]);
 
   useEffect(() => {
-    if (!order || hasAppliedStateRef.current || isDispatchStarted(order)) {
+    if (!order || hasAppliedStateRef.current) {
+      return;
+    }
+
+    const status = inferOrderStatus(order);
+    if (isDispatchStarted(order) || status === 'DISPATCH_STARTED' || status === 'IN_TRANSIT') {
+      hasAppliedStateRef.current = true;
       return;
     }
 
     hasAppliedStateRef.current = true;
-    updateOrder(createDispatchStartedPatch(order));
-  }, [order, updateOrder]);
+    startDispatch();
+  }, [order, startDispatch]);
 
   const timelineSteps = useMemo(
     () => (order ? buildDispatchTimelineSteps(order) : []),
