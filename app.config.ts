@@ -2,6 +2,8 @@ import { ExpoConfig, ConfigContext } from 'expo/config';
 
 const APP_ENV = process.env.EXPO_PUBLIC_APP_ENV ?? 'development';
 const APP_VERSION = process.env.EXPO_PUBLIC_APP_VERSION ?? '1.0.0';
+const EAS_PROJECT_ID =
+  process.env.EAS_PROJECT_ID ?? '8fa5420d-cb2b-4656-bc7a-411b977c9d7b';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -106,12 +108,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     firebaseProjectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
     oneSignalAppId: process.env.EXPO_PUBLIC_ONESIGNAL_APP_ID,
     eas: {
-      projectId: process.env.EAS_PROJECT_ID,
+      projectId: EAS_PROJECT_ID,
     },
     router: {},
   },
   updates: {
-    url: process.env.EXPO_PUBLIC_UPDATES_URL,
+    url: process.env.EXPO_PUBLIC_UPDATES_URL ?? `https://u.expo.dev/${EAS_PROJECT_ID}`,
     fallbackToCacheTimeout: 0,
     checkAutomatically: 'ON_LOAD',
   },

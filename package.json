@@ -12,7 +12,8 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build:android:preview": "eas build -p android --profile preview"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
