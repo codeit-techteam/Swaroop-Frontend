@@ -1,5 +1,7 @@
 import { type ReactNode, useEffect, useState } from 'react';
 
+import { ActivityIndicator, View } from 'react-native';
+
 import {
   Inter_400Regular,
   Inter_500Medium,
@@ -9,6 +11,7 @@ import {
 } from '@expo-google-fonts/inter';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { QueryClientProvider } from '@tanstack/react-query';
+import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -25,6 +28,7 @@ import { useCartStore } from '@/store/cart-store';
 import { useKycStore } from '@/store/kyc-store';
 import { useOrderStore } from '@/store/order-store';
 import { usePaymentStore } from '@/store/payment-store';
+import { brandColors } from '@/theme/colors';
 import { hydrateSecureStorage } from '@/utils/storage';
 
 type AppProvidersProps = {
@@ -37,12 +41,28 @@ const NetworkListener = (): null => {
 };
 
 const NotificationConfigurator = (): null => {
-  configureNotifications();
+  useEffect(() => {
+    configureNotifications();
+  }, []);
+
   return null;
 };
 
+const BootLoadingScreen = (): ReactNode => (
+  <View
+    style={{
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: brandColors.white,
+    }}
+  >
+    <ActivityIndicator size="large" color={brandColors.primary} />
+  </View>
+);
+
 export const AppProviders = ({ children }: AppProvidersProps) => {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     'Inter-Regular': Inter_400Regular,
     'Inter-Medium': Inter_500Medium,
     'Inter-SemiBold': Inter_600SemiBold,
@@ -55,24 +75,32 @@ export const AppProviders = ({ children }: AppProvidersProps) => {
   const hydratePayment = usePaymentStore((state) => state.hydratePayment);
   const hydrateOrder = useOrderStore((state) => state.hydrateOrder);
 
+  const fontsReady = fontsLoaded || Boolean(fontError);
+  const appReady = fontsReady && sessionReady;
+
   useEffect(() => {
     let active = true;
 
     const bootstrap = async () => {
-      await hydrateSecureStorage();
-      if (!active) {
-        return;
+      try {
+        await hydrateSecureStorage();
+        if (!active) {
+          return;
+        }
+        await applyDevResetIfNeeded();
+        if (!active) {
+          return;
+        }
+        hydrateSession();
+        hydrateKyc();
+        hydrateCart();
+        hydratePayment();
+        hydrateOrder();
+      } finally {
+        if (active) {
+          setSessionReady(true);
+        }
       }
-      await applyDevResetIfNeeded();
-      if (!active) {
-        return;
-      }
-      hydrateSession();
-      hydrateKyc();
-      hydrateCart();
-      hydratePayment();
-      hydrateOrder();
-      setSessionReady(true);
     };
 
     void bootstrap();
@@ -82,13 +110,19 @@ export const AppProviders = ({ children }: AppProvidersProps) => {
     };
   }, [hydrateCart, hydrateKyc, hydrateOrder, hydratePayment, hydrateSession]);
 
-  if (!fontsLoaded || !sessionReady) {
-    return null;
+  useEffect(() => {
+    if (appReady) {
+      void SplashScreen.hideAsync();
+    }
+  }, [appReady]);
+
+  if (!appReady) {
+    return <BootLoadingScreen />;
   }
 
   return (
     <ErrorBoundary>
-      <GestureHandlerRootView className="flex-1">
+      <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>
           <KeyboardProvider>
             <QueryClientProvider client={queryClient}>

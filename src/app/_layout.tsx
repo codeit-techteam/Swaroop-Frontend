@@ -1,7 +1,5 @@
 import '../../global.css';
 
-import { useEffect } from 'react';
-
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -12,10 +10,6 @@ import { brandColors } from '@/theme/colors';
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 const RootLayoutNav = () => {
-  useEffect(() => {
-    void SplashScreen.hideAsync();
-  }, []);
-
   return (
     <>
       <StatusBar style="dark" />

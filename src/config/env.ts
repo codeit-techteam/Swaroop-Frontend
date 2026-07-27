@@ -16,28 +16,44 @@ const envSchema = z.object({
 
 type EnvSchema = z.infer<typeof envSchema>;
 
-const rawEnv = {
-  EXPO_PUBLIC_APP_ENV: process.env.EXPO_PUBLIC_APP_ENV,
-  EXPO_PUBLIC_APP_VERSION: process.env.EXPO_PUBLIC_APP_VERSION,
-  EXPO_PUBLIC_API_BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL,
-  EXPO_PUBLIC_IMAGE_BASE_URL: process.env.EXPO_PUBLIC_IMAGE_BASE_URL,
-  EXPO_PUBLIC_GOOGLE_MAPS_API_KEY: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
-  EXPO_PUBLIC_FIREBASE_API_KEY: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
-  EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  EXPO_PUBLIC_FIREBASE_PROJECT_ID: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
-  EXPO_PUBLIC_ONESIGNAL_APP_ID: process.env.EXPO_PUBLIC_ONESIGNAL_APP_ID,
+/** Safe defaults so preview/production APK builds boot without a local .env file. */
+const ENV_DEFAULTS: EnvSchema = {
+  EXPO_PUBLIC_APP_ENV: 'development',
+  EXPO_PUBLIC_APP_VERSION: '1.0.0',
+  EXPO_PUBLIC_API_BASE_URL: 'https://api.example.com',
+  EXPO_PUBLIC_IMAGE_BASE_URL: 'https://cdn.example.com',
+  EXPO_PUBLIC_GOOGLE_MAPS_API_KEY: 'preview-placeholder',
+  EXPO_PUBLIC_FIREBASE_API_KEY: 'preview-placeholder',
+  EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: 'preview.firebaseapp.com',
+  EXPO_PUBLIC_FIREBASE_PROJECT_ID: 'preview',
+  EXPO_PUBLIC_ONESIGNAL_APP_ID: 'preview-placeholder',
+};
+
+const rawEnv: EnvSchema = {
+  EXPO_PUBLIC_APP_ENV:
+    (process.env.EXPO_PUBLIC_APP_ENV as EnvSchema['EXPO_PUBLIC_APP_ENV']) ??
+    ENV_DEFAULTS.EXPO_PUBLIC_APP_ENV,
+  EXPO_PUBLIC_APP_VERSION:
+    process.env.EXPO_PUBLIC_APP_VERSION ?? ENV_DEFAULTS.EXPO_PUBLIC_APP_VERSION,
+  EXPO_PUBLIC_API_BASE_URL:
+    process.env.EXPO_PUBLIC_API_BASE_URL ?? ENV_DEFAULTS.EXPO_PUBLIC_API_BASE_URL,
+  EXPO_PUBLIC_IMAGE_BASE_URL:
+    process.env.EXPO_PUBLIC_IMAGE_BASE_URL ?? ENV_DEFAULTS.EXPO_PUBLIC_IMAGE_BASE_URL,
+  EXPO_PUBLIC_GOOGLE_MAPS_API_KEY:
+    process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ?? ENV_DEFAULTS.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
+  EXPO_PUBLIC_FIREBASE_API_KEY:
+    process.env.EXPO_PUBLIC_FIREBASE_API_KEY ?? ENV_DEFAULTS.EXPO_PUBLIC_FIREBASE_API_KEY,
+  EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN:
+    process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN ?? ENV_DEFAULTS.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  EXPO_PUBLIC_FIREBASE_PROJECT_ID:
+    process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID ?? ENV_DEFAULTS.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+  EXPO_PUBLIC_ONESIGNAL_APP_ID:
+    process.env.EXPO_PUBLIC_ONESIGNAL_APP_ID ?? ENV_DEFAULTS.EXPO_PUBLIC_ONESIGNAL_APP_ID,
 };
 
 const parsedEnv = envSchema.safeParse(rawEnv);
 
-if (!parsedEnv.success) {
-  const formatted = parsedEnv.error.issues
-    .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
-    .join('\n');
-  throw new Error(`Invalid environment configuration:\n${formatted}`);
-}
-
-const env: EnvSchema = parsedEnv.data;
+const env: EnvSchema = parsedEnv.success ? parsedEnv.data : ENV_DEFAULTS;
 
 export const appConfig = {
   env: env.EXPO_PUBLIC_APP_ENV,

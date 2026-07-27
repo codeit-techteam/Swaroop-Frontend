@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 import { View } from 'react-native';
 
@@ -6,7 +6,6 @@ import { type Href, useRouter } from 'expo-router';
 
 import Animated, {
   Easing,
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
@@ -24,17 +23,21 @@ import { spacing } from '@/theme/spacing';
 
 const SPLASH_VISIBLE_MS = 2000;
 const FADE_IN_MS = 500;
-const FADE_OUT_MS = 400;
 const SCALE_FROM = 0.88;
 
 export const SplashScreen = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const opacity = useSharedValue(0);
+  const hasRoutedRef = useRef(false);
   const scale = useSharedValue(SCALE_FROM);
-  const contentOpacity = useSharedValue(0);
+  const contentOpacity = useSharedValue(1);
 
   const routeAfterSplash = useCallback(() => {
+    if (hasRoutedRef.current) {
+      return;
+    }
+    hasRoutedRef.current = true;
+
     const authStore = useAuthStore.getState();
     authStore.resolvePendingKycApproval();
 
@@ -42,9 +45,7 @@ export const SplashScreen = () => {
       useAuthStore.getState();
 
     if (isLoggedIn) {
-      router.replace(
-        getLoggedInRoute({ kycApproved, reviewSubmitted }),
-      );
+      router.replace(getLoggedInRoute({ kycApproved, reviewSubmitted }));
       return;
     }
 
@@ -57,37 +58,15 @@ export const SplashScreen = () => {
   }, [router]);
 
   useEffect(() => {
-    contentOpacity.value = withTiming(1, {
-      duration: FADE_IN_MS,
-      easing: Easing.out(Easing.cubic),
-    });
-    opacity.value = withTiming(1, {
-      duration: FADE_IN_MS,
-      easing: Easing.out(Easing.cubic),
-    });
     scale.value = withTiming(1, {
       duration: FADE_IN_MS,
       easing: Easing.out(Easing.cubic),
     });
 
-    const timer = setTimeout(() => {
-      opacity.value = withTiming(
-        0,
-        { duration: FADE_OUT_MS, easing: Easing.in(Easing.cubic) },
-        (finished) => {
-          if (finished) {
-            runOnJS(routeAfterSplash)();
-          }
-        },
-      );
-    }, SPLASH_VISIBLE_MS);
+    const timer = setTimeout(routeAfterSplash, SPLASH_VISIBLE_MS);
 
     return () => clearTimeout(timer);
-  }, [contentOpacity, routeAfterSplash, opacity, scale]);
-
-  const screenStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-  }));
+  }, [routeAfterSplash, scale]);
 
   const brandStyle = useAnimatedStyle(() => ({
     opacity: contentOpacity.value,
@@ -95,7 +74,7 @@ export const SplashScreen = () => {
   }));
 
   return (
-    <Animated.View className="flex-1" style={[{ backgroundColor: brandColors.white }, screenStyle]}>
+    <View className="flex-1" style={{ backgroundColor: brandColors.white }}>
       <View className="flex-1 items-center justify-center px-xl">
         <Animated.View className="items-center" style={brandStyle}>
           <PetroTradeLogo size={iconSizes.logo} color={brandColors.navy} />
@@ -123,6 +102,6 @@ export const SplashScreen = () => {
           INITIALIZING SECURE TERMINAL
         </Typography>
       </Animated.View>
-    </Animated.View>
+    </View>
   );
 };
