@@ -1,0 +1,178 @@
+import type { ActiveShipment, ShipmentAnalytics } from '@/seller/types/shipments';
+
+export const SELLER_SHIPMENT_ANALYTICS_SEED: ShipmentAnalytics = {
+  totalActive: '24 Units',
+  onSchedule: '92%',
+  criticalEta: '03',
+  averageSpeed: '54 km/h',
+};
+
+const baseTimeline = (
+  currentStep: ActiveShipment['timeline'][number]['id'],
+): ActiveShipment['timeline'] => {
+  const steps = [
+    { id: 'vehicle-assigned', label: 'Vehicle Assigned' },
+    { id: 'loading-complete', label: 'Loading Complete' },
+    { id: 'dispatch-started', label: 'Dispatch Started' },
+    { id: 'in-transit', label: 'In Transit' },
+    { id: 'reached-destination', label: 'Reached Destination' },
+    { id: 'delivered', label: 'Delivered' },
+  ];
+
+  const currentIndex = steps.findIndex((step) => step.id === currentStep);
+
+  return steps.map((step, index) => ({
+    ...step,
+    status:
+      index < currentIndex ? 'completed' : index === currentIndex ? 'current' : 'pending',
+    timestamp:
+      index <= currentIndex
+        ? ['Oct 24, 08:00 AM', 'Oct 24, 10:30 AM', 'Oct 24, 11:15 AM', 'Oct 24, 02:00 PM', 'Oct 25, 09:45 AM', 'Oct 25, 10:00 AM'][index]
+        : undefined,
+  }));
+};
+
+export const SELLER_SHIPMENTS_SEED: ActiveShipment[] = [
+  {
+    id: 'shipment-ord-8829',
+    orderId: '#ORD-8829',
+    vehicle: 'GJ-06-BX-4582',
+    driver: 'Ramesh Patel',
+    destination: 'Pune Industrial Zone',
+    warehouse: 'JNPT, Navi Mumbai',
+    status: 'LIVE',
+    filterStatus: 'in_transit',
+    eta: 'Oct 25, 10:00 AM',
+    etaLabel: 'Oct 25, 10:00 AM',
+    speed: 58,
+    progress: 72,
+    dispatchDate: 'Oct 24, 2025',
+    route: 'Mumbai → Pune',
+    driverPhone: '+91 98234 56710',
+    timeline: baseTimeline('in-transit'),
+    documents: [
+      { id: 'invoice', title: 'Invoice', fileName: 'INV-8829.pdf' },
+      { id: 'eway', title: 'E-way Bill', fileName: 'EWB-8829.pdf' },
+      { id: 'lr', title: 'LR Copy', fileName: 'LR-8829.pdf' },
+    ],
+  },
+  {
+    id: 'shipment-ord-9012',
+    orderId: '#ORD-9012',
+    vehicle: 'MH-43-AK-2910',
+    driver: 'Suresh Kulkarni',
+    destination: 'Nashik Chemical Hub',
+    warehouse: 'Taloja, Navi Mumbai',
+    status: 'STABLE',
+    filterStatus: 'in_transit',
+    eta: 'Oct 26, 04:30 PM',
+    etaLabel: 'Oct 26, 04:30 PM',
+    speed: 52,
+    progress: 48,
+    dispatchDate: 'Oct 24, 2025',
+    route: 'Mumbai → Nashik',
+    driverPhone: '+91 98123 45678',
+    timeline: baseTimeline('dispatch-started'),
+    documents: [
+      { id: 'invoice', title: 'Invoice', fileName: 'INV-9012.pdf' },
+      { id: 'eway', title: 'E-way Bill', fileName: 'EWB-9012.pdf' },
+      { id: 'lr', title: 'LR Copy', fileName: 'LR-9012.pdf' },
+    ],
+  },
+  {
+    id: 'shipment-ord-8854',
+    orderId: '#ORD-8854',
+    buyer: 'Adani Petrochem',
+    vehicle: 'UP-16-ZT-7741',
+    driver: 'Vikram Singh',
+    destination: 'Mundra Port',
+    warehouse: 'Dahej, Gujarat',
+    status: 'LIVE',
+    filterStatus: 'in_transit',
+    eta: 'Oct 25, 11:15 AM',
+    etaLabel: 'Oct 25, 11:15 AM',
+    speed: 61,
+    progress: 81,
+    dispatchDate: 'Oct 24, 2025',
+    route: 'Dahej → Mundra',
+    driverPhone: '+91 98765 43210',
+    timeline: baseTimeline('in-transit'),
+    documents: [
+      { id: 'invoice', title: 'Invoice', fileName: 'INV-8854.pdf' },
+      { id: 'eway', title: 'E-way Bill', fileName: 'EWB-8854.pdf' },
+      { id: 'lr', title: 'LR Copy', fileName: 'LR-8854.pdf' },
+    ],
+  },
+  {
+    id: 'shipment-ord-7731',
+    orderId: '#ORD-7731',
+    buyer: 'Nayara Energy',
+    vehicle: 'GJ-03-AA-1102',
+    driver: 'Amit Desai',
+    destination: 'Vadodara Refinery',
+    warehouse: 'Jamnagar, Gujarat',
+    status: 'STABLE',
+    filterStatus: 'in_transit',
+    eta: 'Arriving in 15m',
+    etaLabel: 'Arriving in 15m',
+    speed: 49,
+    progress: 94,
+    dispatchDate: 'Oct 24, 2025',
+    route: 'Jamnagar → Vadodara',
+    driverPhone: '+91 98989 12345',
+    timeline: baseTimeline('reached-destination'),
+    documents: [
+      { id: 'invoice', title: 'Invoice', fileName: 'INV-7731.pdf' },
+      { id: 'eway', title: 'E-way Bill', fileName: 'EWB-7731.pdf' },
+      { id: 'lr', title: 'LR Copy', fileName: 'LR-7731.pdf' },
+    ],
+  },
+  {
+    id: 'shipment-ord-7601',
+    orderId: '#ORD-7601',
+    buyer: 'Reliance Industries',
+    vehicle: 'RJ-14-CD-8821',
+    driver: 'Prakash Meena',
+    destination: 'Hazira Plant',
+    warehouse: 'Dahej, Gujarat',
+    status: 'DELAYED',
+    filterStatus: 'delayed',
+    eta: 'Delayed by 4h',
+    etaLabel: 'Delayed by 4h',
+    speed: 38,
+    progress: 55,
+    dispatchDate: 'Oct 23, 2025',
+    route: 'Dahej → Hazira',
+    driverPhone: '+91 97654 32109',
+    timeline: baseTimeline('in-transit'),
+    documents: [
+      { id: 'invoice', title: 'Invoice', fileName: 'INV-7601.pdf' },
+      { id: 'eway', title: 'E-way Bill', fileName: 'EWB-7601.pdf' },
+      { id: 'lr', title: 'LR Copy', fileName: 'LR-7731.pdf' },
+    ],
+  },
+  {
+    id: 'shipment-ord-7120',
+    orderId: '#ORD-7120',
+    buyer: 'IOCL',
+    vehicle: 'DL-1R-3921',
+    driver: 'Sanjay Verma',
+    destination: 'Panipat Refinery',
+    warehouse: 'Panipat, Haryana',
+    status: 'STABLE',
+    filterStatus: 'delivered',
+    eta: 'Delivered Oct 22',
+    etaLabel: 'Delivered Oct 22',
+    speed: 0,
+    progress: 100,
+    dispatchDate: 'Oct 21, 2025',
+    route: 'Panipat → IOCL Terminal',
+    driverPhone: '+91 98111 22334',
+    timeline: baseTimeline('delivered'),
+    documents: [
+      { id: 'invoice', title: 'Invoice', fileName: 'INV-7120.pdf' },
+      { id: 'eway', title: 'E-way Bill', fileName: 'EWB-7120.pdf' },
+      { id: 'lr', title: 'LR Copy', fileName: 'LR-7120.pdf' },
+    ],
+  },
+];

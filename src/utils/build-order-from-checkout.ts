@@ -1,4 +1,5 @@
 import { getPaymentMethodById } from '@/constants/payment';
+import { createInitialCreditState } from '@/constants/creditWorkflow';
 import { createInitialOrderFields } from '@/constants/orderWorkflow';
 import { createOrderId } from '@/store/order-store';
 import type { CheckoutShippingAddress } from '@/types/checkout';
@@ -93,5 +94,9 @@ export const buildOrderFromCheckout = (
     loadingSchedule: null,
     loadingProof: null,
     createdAt: new Date().toISOString(),
+    credit:
+      payment.methodId === 'credit_15' || payment.methodId === 'credit_30'
+        ? createInitialCreditState(payment.methodId, payment.payableAmount)
+        : null,
   };
 };

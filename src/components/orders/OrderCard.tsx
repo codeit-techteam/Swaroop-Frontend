@@ -12,6 +12,8 @@ import {
   getOrderProgressColor,
   getOrderProgressLabel,
 } from '@/constants/orderStatus';
+import { isPostDeliveryPaymentPending } from '@/constants/deliveryCompleted';
+import { isCreditPaymentPending } from '@/constants/creditWorkflow';
 import { CheckCircleIcon, ClipboardCheckIcon, MoreVerticalIcon, TruckIcon } from '@/icons';
 import type { Order } from '@/types/order';
 import { brandColors } from '@/theme/colors';
@@ -23,6 +25,7 @@ type OrderCardProps = {
   order: Order;
   onTrackOrder: (order: Order) => void;
   onViewDetails: (order: Order) => void;
+  onPayNow?: (order: Order) => void;
   onMenuPress?: (order: Order) => void;
   className?: string;
 };
@@ -43,6 +46,7 @@ export const OrderCard = memo(function OrderCard({
   order,
   onTrackOrder,
   onViewDetails,
+  onPayNow,
   onMenuPress,
   className,
 }: OrderCardProps) {
@@ -52,6 +56,9 @@ export const OrderCard = memo(function OrderCard({
   const isInTransit = displayStatus === 'in_transit';
   const isProcessing = displayStatus === 'processing';
   const isPaymentVerified = order.paymentStatus === 'verified';
+  const isDeliveryCompletedPendingPayment = isPostDeliveryPaymentPending(order);
+  const isCreditPendingPayment = isCreditPaymentPending(order);
+  const showPayNow = isDeliveryCompletedPendingPayment || isCreditPendingPayment;
 
   return (
     <View
@@ -64,6 +71,13 @@ export const OrderCard = memo(function OrderCard({
             {formatOrderNumber(order.id)}
           </Typography>
           <OrderStatusBadge order={order} className="rounded-full" />
+          {showPayNow ? (
+            <View className="rounded-full bg-brand-primary-tint px-sm py-xs">
+              <Typography variant="fieldLabel" className="text-[10px] text-brand-primary">
+                PAYMENT PENDING
+              </Typography>
+            </View>
+          ) : null}
         </View>
 
         <Pressable
@@ -94,6 +108,9 @@ export const OrderCard = memo(function OrderCard({
             </Typography>
             <Typography variant="subheadingLeft" className="mt-xs text-[13px] text-brand-body">
               {getProductCategoryLabel(order)} • {order.quantityMt} MT
+            </Typography>
+            <Typography variant="fieldLabel" className="mt-xs text-[11px] text-brand-muted">
+              {order.paymentMethod}
             </Typography>
           </View>
         </View>
@@ -129,7 +146,7 @@ export const OrderCard = memo(function OrderCard({
         />
       </View>
 
-      {isPaymentVerified ? (
+      {isPaymentVerified && !isCreditPendingPayment ? (
         <View className="mt-md flex-row items-center gap-sm rounded-lg bg-brand-success-light px-md py-sm">
           <CheckCircleIcon size={iconSizes.sm} color={brandColors.success} />
           <Typography variant="subheadingLeft" className="text-[12px] text-brand-success">
@@ -139,21 +156,43 @@ export const OrderCard = memo(function OrderCard({
       ) : null}
 
       <View className="mt-md flex-row gap-sm">
-        <View className="flex-1">
-          <PrimaryButton
-            label="Track Order"
-            onPress={() => onTrackOrder(order)}
-            className="py-md"
-          />
-        </View>
-        <View className="flex-1">
-          <SecondaryButton
-            label="View Details"
-            variant="outline"
-            onPress={() => onViewDetails(order)}
-            className="py-md"
-          />
-        </View>
+        {showPayNow ? (
+          <>
+            <View className="flex-1">
+              <PrimaryButton
+                label="Pay Now"
+                onPress={() => onPayNow?.(order)}
+                className="py-md"
+              />
+            </View>
+            <View className="flex-1">
+              <SecondaryButton
+                label="View Details"
+                variant="outline"
+                onPress={() => onViewDetails(order)}
+                className="py-md"
+              />
+            </View>
+          </>
+        ) : (
+          <>
+            <View className="flex-1">
+              <PrimaryButton
+                label="Track Order"
+                onPress={() => onTrackOrder(order)}
+                className="py-md"
+              />
+            </View>
+            <View className="flex-1">
+              <SecondaryButton
+                label="View Details"
+                variant="outline"
+                onPress={() => onViewDetails(order)}
+                className="py-md"
+              />
+            </View>
+          </>
+        )}
       </View>
     </View>
   );

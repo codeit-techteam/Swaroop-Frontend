@@ -19,11 +19,10 @@ export const RoleSelectionScreen = () => {
   const [selectedRole, setSelectedRole] = useState<UserRole>(storedRole ?? 'buyer');
 
   const handleContinue = useCallback(() => {
-    if (selectedRole !== 'buyer') {
-      return;
-    }
     persistRole(selectedRole);
-    router.push(ROUTES.AUTH.CUSTOMER_LOGIN as Href);
+    router.push(
+      (selectedRole === 'seller' ? ROUTES.SELLER.LOGIN : ROUTES.AUTH.CUSTOMER_LOGIN) as Href,
+    );
   }, [persistRole, router, selectedRole]);
 
   return (
@@ -68,12 +67,7 @@ export const RoleSelectionScreen = () => {
         </View>
 
         <View className="pb-xl pt-lg">
-          <PrimaryButton
-            label="CONTINUE"
-            showArrow
-            onPress={handleContinue}
-            disabled={selectedRole !== 'buyer'}
-          />
+          <PrimaryButton label="CONTINUE" showArrow onPress={handleContinue} />
         </View>
       </View>
     </ScreenWrapper>

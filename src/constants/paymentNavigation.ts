@@ -1,5 +1,9 @@
 import type { Href } from 'expo-router';
 
+import {
+  CREDIT_REMINDER_THRESHOLD_DAYS,
+  getCreditCountdownParts,
+} from '@/constants/creditWorkflow';
 import { ROUTES } from '@/navigation/routes';
 import type { Order } from '@/types/order';
 import type { PaymentMethodId } from '@/types/payment';
@@ -28,6 +32,9 @@ export const getRouteAfterPaymentVerification = (order: Order): Href => {
       return ROUTES.CUSTOMER.DISPATCH_STARTED as Href;
     case 'on_delivery':
       return ROUTES.CUSTOMER.PAYMENT_SUCCESS as Href;
+    case 'credit_15':
+    case 'credit_30':
+      return ROUTES.CUSTOMER.CREDIT_RESTORED as Href;
     default:
       return ROUTES.CUSTOMER.PROCUREMENT_CONFIRMATION as Href;
   }
@@ -40,7 +47,7 @@ export const getRouteAfterProcurementComplete = (order: Order): Href => {
       return ROUTES.CUSTOMER.LOADING_SCHEDULED as Href;
     case 'credit_15':
     case 'credit_30':
-      return ROUTES.CUSTOMER.PURCHASE_ORDER_GENERATED as Href;
+      return ROUTES.CUSTOMER.ORDER_AWAITING_CONFIRMATION as Href;
     default:
       return ROUTES.CUSTOMER.ORDER_AWAITING_CONFIRMATION as Href;
   }
@@ -52,10 +59,37 @@ export const getRouteAfterLoadingCompleted = (order: Order): Href => {
       return ROUTES.CUSTOMER.PAYMENT_REMINDER as Href;
     case 'on_delivery':
       return ROUTES.CUSTOMER.DISPATCH_STARTED as Href;
+    case 'credit_15':
+    case 'credit_30':
+      return ROUTES.CUSTOMER.DISPATCH_STARTED as Href;
     default:
       return ROUTES.CUSTOMER.PAYMENT_REMINDER as Href;
   }
 };
+
+export const getRouteAfterCreditDelivery = (): Href =>
+  ROUTES.CUSTOMER.CREDIT_INVOICE_DELIVERY as Href;
+
+export const getRouteAfterCreditInvoice = (): Href => ROUTES.CUSTOMER.CREDIT_COUNTDOWN as Href;
+
+export const getRouteAfterCreditCountdown = (order: Order): Href => {
+  if (!order.credit?.dueDate) {
+    return ROUTES.CUSTOMER.CREDIT_PAYMENT_REMINDER as Href;
+  }
+  const { daysRemaining } = getCreditCountdownParts(order.credit.dueDate);
+  return daysRemaining <= CREDIT_REMINDER_THRESHOLD_DAYS
+    ? (ROUTES.CUSTOMER.CREDIT_PAYMENT_REMINDER as Href)
+    : (ROUTES.CUSTOMER.CREDIT_COUNTDOWN as Href);
+};
+
+export const getRouteAfterCreditPaymentReminder = (): Href =>
+  ROUTES.CUSTOMER.CREDIT_UPLOAD_PROOF as Href;
+
+export const getRouteAfterCreditPaymentUpload = (): Href =>
+  ROUTES.CUSTOMER.CREDIT_VERIFICATION as Href;
+
+export const isCreditPaymentMethod = (methodId: PaymentMethodId): boolean =>
+  methodId === 'credit_15' || methodId === 'credit_30';
 
 export const requiresAdvancePaymentVerified = (order: Order | null): boolean =>
   order?.paymentMethodId === 'advance';

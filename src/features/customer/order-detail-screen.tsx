@@ -13,8 +13,13 @@ import {
   TransactionScopeCard,
   WorkflowVerificationTimeline,
 } from '@/components/order';
+import { DeliveryTimelineCard } from '@/components/delivery';
 import { OrderStatusBadge } from '@/components/orders/OrderStatusBadge';
 import { Typography } from '@/components/ui';
+import {
+  buildCreditOrderDetailTimeline,
+  isCreditPaymentFlow,
+} from '@/constants/creditWorkflow';
 import { buildWorkflowTimelineSteps } from '@/constants/purchaseOrderTimeline';
 import { deriveOrderDisplayStatus, formatOrderNumber } from '@/constants/orderStatus';
 import { BackArrowIcon } from '@/icons';
@@ -53,6 +58,11 @@ export const CustomerOrderDetailScreen = memo(function CustomerOrderDetailScreen
   const timelineSteps = useMemo(
     () => buildWorkflowTimelineSteps(order?.workflowTimeline ?? null),
     [order?.workflowTimeline],
+  );
+
+  const creditTimelineSteps = useMemo(
+    () => (order && isCreditPaymentFlow(order) ? buildCreditOrderDetailTimeline(order) : []),
+    [order],
   );
 
   const displayStatus = order ? deriveOrderDisplayStatus(order) : 'processing';
@@ -108,6 +118,9 @@ export const CustomerOrderDetailScreen = memo(function CustomerOrderDetailScreen
             <Typography variant="subheadingLeft" className="mt-xs text-[14px] text-brand-body">
               {order.productName} • {order.quantityMt} MT • {order.destination}
             </Typography>
+            <Typography variant="fieldLabel" className="mt-xs text-[11px] text-brand-muted">
+              Payment: {order.paymentMethod}
+            </Typography>
 
             {order.poNumber ? (
               <PurchaseOrderInfoCard
@@ -126,7 +139,17 @@ export const CustomerOrderDetailScreen = memo(function CustomerOrderDetailScreen
               className="mt-lg"
             />
 
-            <WorkflowVerificationTimeline steps={timelineSteps} className="mt-lg" />
+            {isCreditPaymentFlow(order) && creditTimelineSteps.length > 0 ? (
+              <DeliveryTimelineCard
+                steps={creditTimelineSteps.map((step) => ({
+                  ...step,
+                  id: step.id as 'order_submitted',
+                }))}
+                className="mt-lg"
+              />
+            ) : (
+              <WorkflowVerificationTimeline steps={timelineSteps} className="mt-lg" />
+            )}
 
             <OrderDocumentsCard className="mt-lg" />
 

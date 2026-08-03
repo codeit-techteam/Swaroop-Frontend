@@ -1,71 +1,128 @@
 import { memo } from 'react';
 
-import { ActivityIndicator, Pressable, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PrimaryButton, Typography } from '@/components/ui';
-import { PAYMENT_WORKFLOW_COPY } from '@/constants/paymentWorkflow';
+import { CREDIT_WORKFLOW_COPY } from '@/constants/creditWorkflow';
+import { formatPaymentCurrency } from '@/constants/payment';
 import { useCreditApproval } from '@/hooks/useCreditApproval';
-import { BackArrowIcon, CheckCircleIcon, ShieldCheckIcon } from '@/icons';
+import {
+  BackArrowIcon,
+  CheckCircleIcon,
+  ShieldCheckIcon,
+  SuccessShield,
+  WalletIcon,
+} from '@/icons';
 import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
+import { elevation } from '@/theme/shadows';
+
+type DetailRowProps = {
+  label: string;
+  value: string;
+  highlight?: boolean;
+};
+
+const DetailRow = memo(function DetailRow({ label, value, highlight }: DetailRowProps) {
+  return (
+    <View className="flex-row items-center justify-between py-sm">
+      <Typography variant="roleDescription" className="text-[13px] text-brand-body">
+        {label}
+      </Typography>
+      <Typography
+        variant="roleTitle"
+        className={highlight ? 'text-[14px] text-brand-primary' : 'text-[14px] text-brand-heading'}
+      >
+        {value}
+      </Typography>
+    </View>
+  );
+});
 
 export const CustomerCreditApprovalScreen = memo(function CustomerCreditApprovalScreen() {
   const insets = useSafeAreaInsets();
-  const { order, isApproved, isChecking, handleContinue, handleBack } = useCreditApproval();
-  const copy = PAYMENT_WORKFLOW_COPY.creditApproval;
+  const { order, details, isApproved, handleContinue, handleBack } = useCreditApproval();
+  const copy = CREDIT_WORKFLOW_COPY.approval;
 
   return (
-    <View className="flex-1 bg-brand-background px-lg" style={{ paddingTop: insets.top + 16 }}>
-      <Pressable
-        onPress={handleBack}
-        accessibilityRole="button"
-        accessibilityLabel="Go back"
-        className="h-10 w-10 items-center justify-center"
+    <View className="flex-1 bg-brand-background">
+      <View
+        className="border-b border-brand-border bg-brand-white px-lg"
+        style={{ paddingTop: insets.top }}
       >
-        <BackArrowIcon color={brandColors.heading} />
-      </Pressable>
-
-      <View className="mt-xl items-center">
-        {isChecking ? (
-          <ActivityIndicator size="large" color={brandColors.primary} />
-        ) : (
-          <View className="mb-lg h-16 w-16 items-center justify-center rounded-full bg-brand-success-light">
-            <CheckCircleIcon size={iconSizes.xl} color={brandColors.success} />
-          </View>
-        )}
-
-        <Typography variant="headingLeft" className="text-center text-[22px] text-brand-heading">
-          {isChecking ? copy.title : copy.approvedTitle}
-        </Typography>
-        <Typography
-          variant="subheadingLeft"
-          className="mt-sm text-center text-[14px] leading-[22px] text-brand-body"
-        >
-          {isChecking ? copy.subtitle : copy.approvedSubtitle}
-        </Typography>
-      </View>
-
-      {order ? (
-        <View className="mt-xl rounded-2xl border border-brand-border bg-brand-white p-lg">
-          <View className="flex-row items-center gap-sm">
-            <ShieldCheckIcon size={iconSizes.md} color={brandColors.primary} />
-            <Typography variant="roleTitle" className="text-[14px] text-brand-heading">
-              Order Reference: {order.id}
-            </Typography>
-          </View>
-          <Typography variant="roleDescription" className="mt-sm text-brand-body">
-            {order.productName} · {order.quantityMt} MT · {order.paymentMethod}
+        <View className="h-14 flex-row items-center">
+          <Pressable
+            onPress={handleBack}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+            className="h-10 w-10 items-center justify-center"
+          >
+            <BackArrowIcon color={brandColors.heading} />
+          </Pressable>
+          <Typography variant="roleTitle" className="ml-sm text-[17px] text-brand-heading">
+            {copy.headerTitle}
           </Typography>
         </View>
-      ) : null}
+      </View>
 
-      {isApproved && !isChecking ? (
-        <View className="mt-xl">
-          <PrimaryButton label={copy.continueLabel} onPress={handleContinue} disabled={!order} />
+      <ScrollView
+        contentContainerStyle={{
+          paddingHorizontal: 16,
+          paddingTop: 24,
+          paddingBottom: insets.bottom + 120,
+        }}
+        showsVerticalScrollIndicator={false}
+      >
+        <View className="items-center">
+          <SuccessShield width={200} height={170} />
+          <View className="mt-md flex-row items-center gap-sm">
+            <ShieldCheckIcon size={iconSizes.md} color={brandColors.primary} />
+            <WalletIcon size={iconSizes.md} color={brandColors.success} />
+            <CheckCircleIcon size={iconSizes.md} color={brandColors.success} />
+          </View>
         </View>
-      ) : null}
+
+        <Typography variant="headingLeft" className="mt-lg text-center text-[22px] text-brand-heading">
+          {copy.title}
+        </Typography>
+
+        {details ? (
+          <View
+            className="mt-xl rounded-2xl border border-brand-border bg-brand-white p-lg"
+            style={elevation.sm}
+          >
+            <DetailRow label={copy.creditTypeLabel} value={details.creditType} highlight />
+            <View className="my-xs border-t border-brand-border" />
+            <DetailRow label={copy.approvedLimitLabel} value={details.approvedLimit} />
+            <DetailRow label={copy.availableLimitLabel} value={details.availableLimit} highlight />
+            <DetailRow label={copy.interestLabel} value={details.interest} />
+            <View className="my-xs border-t border-brand-border" />
+            <DetailRow label={copy.dueAfterLabel} value={details.dueAfterDelivery} highlight />
+          </View>
+        ) : null}
+
+        {order ? (
+          <Typography
+            variant="subheadingLeft"
+            className="mt-md text-center text-[13px] text-brand-muted"
+          >
+            {order.productName} · {order.quantityMt} MT · {formatPaymentCurrency(order.amount)}
+          </Typography>
+        ) : null}
+      </ScrollView>
+
+      <View
+        className="absolute bottom-0 left-0 right-0 border-t border-brand-border bg-brand-white px-lg pt-md"
+        style={{ paddingBottom: insets.bottom + 12 }}
+      >
+        <PrimaryButton
+          label={copy.continueLabel}
+          onPress={handleContinue}
+          disabled={!order || !isApproved}
+        />
+      </View>
     </View>
   );
 });

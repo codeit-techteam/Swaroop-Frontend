@@ -15,20 +15,21 @@ import {
   SearchBar,
 } from '@/components/market';
 import { TAB_BAR_HEIGHT } from '@/constants/dashboard';
-import { MARKET_PRODUCTS } from '@/constants/marketProducts';
+import { useMarketplaceCatalog } from '@/hooks/use-marketplace-catalog';
 import { ROUTES } from '@/navigation/routes';
 import type { MarketCategory, MarketProduct } from '@/types/market';
 
 export const CustomerMarketScreen = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const marketProducts = useMarketplaceCatalog();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<MarketCategory | null>('Polypropylene');
 
   const filteredProducts = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
 
-    return MARKET_PRODUCTS.filter((product) => {
+    return marketProducts.filter((product) => {
       const matchesCategory = selectedCategory ? product.category === selectedCategory : true;
 
       if (!matchesCategory) {
@@ -47,7 +48,7 @@ export const CustomerMarketScreen = () => {
         product.badge.toLowerCase().includes(query)
       );
     });
-  }, [searchQuery, selectedCategory]);
+  }, [marketProducts, searchQuery, selectedCategory]);
 
   const handleLocationPress = useCallback(() => {
     Toast.show({

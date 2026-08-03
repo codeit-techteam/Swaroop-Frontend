@@ -17,6 +17,12 @@ import {
   inferOrderStatus,
 } from '@/constants/orderWorkflow';
 import {
+  buildOnDeliveryTrackingTimelineItems,
+  shouldUseOnDeliveryPostDeliveryTimeline,
+} from '@/constants/deliveryCompleted';
+import { isCreditPaymentFlow } from '@/constants/creditWorkflow';
+import { getRouteAfterCreditDelivery } from '@/constants/paymentNavigation';
+import {
   buildTrackingTimelineItems,
   deriveTrackingOrderStatus,
   deriveTrackingTimelineState,
@@ -45,12 +51,14 @@ type UseOrderTrackingResult = {
   trackingStatus: TrackingOrderStatus;
   canCancelOrder: boolean;
   isDemoMode: boolean;
+  showCreditDeliveryContinue: boolean;
   moreMenuRef: React.RefObject<BottomSheetModal | null>;
   handleBack: () => void;
   handleNotifications: () => void;
   handleOpenMoreMenu: () => void;
   handleMoreMenuAction: (action: TrackingMenuAction) => void;
   handleDownloadSummary: () => void;
+  handleContinueToCreditInvoice: () => void;
 };
 
 let activeTrackingSimulationId: string | null = null;
@@ -67,6 +75,7 @@ export const useOrderTracking = (): UseOrderTrackingResult => {
   const updateOrderById = useOrderStore((state) => state.updateOrderById);
   const setOrderStatus = useOrderStore((state) => state.setOrderStatus);
   const setSelectedOrderId = useOrderStore((state) => state.setSelectedOrderId);
+  const setCurrentOrder = useOrderStore((state) => state.setCurrentOrder);
 
   useEffect(() => {
     if (!isHydrated) {
@@ -91,6 +100,10 @@ export const useOrderTracking = (): UseOrderTrackingResult => {
   const timelineItems = useMemo(() => {
     if (!order) {
       return [];
+    }
+
+    if (shouldUseOnDeliveryPostDeliveryTimeline(order)) {
+      return buildOnDeliveryTrackingTimelineItems(order);
     }
 
     if (order.status || inferOrderStatus(order) !== 'ORDER_CREATED') {
@@ -131,8 +144,17 @@ export const useOrderTracking = (): UseOrderTrackingResult => {
       }
 
       const nextCanonicalStatus = getNextStatusInFlow(latestOrder);
-      if (nextCanonicalStatus && inferOrderStatus(latestOrder) !== 'DELIVERED') {
+      if (
+        nextCanonicalStatus &&
+        inferOrderStatus(latestOrder) !== 'DELIVERED' &&
+        inferOrderStatus(latestOrder) !== 'PAYMENT_VERIFIED'
+      ) {
         setOrderStatus(nextCanonicalStatus, latestOrder.id);
+
+        if (nextCanonicalStatus === 'DELIVERY_COMPLETED') {
+          activeTrackingSimulationId = null;
+          clearInterval(timer);
+        }
         return;
       }
 
@@ -204,6 +226,21 @@ export const useOrderTracking = (): UseOrderTrackingResult => {
     });
   }, [order]);
 
+  const showCreditDeliveryContinue = Boolean(
+    order &&
+      isCreditPaymentFlow(order) &&
+      inferOrderStatus(order) === 'DELIVERED' &&
+      order.paymentStatus !== 'verified',
+  );
+
+  const handleContinueToCreditInvoice = useCallback(() => {
+    if (!order) {
+      return;
+    }
+    setCurrentOrder(order);
+    router.push(getRouteAfterCreditDelivery());
+  }, [order, router, setCurrentOrder]);
+
   const handleMoreMenuAction = useCallback(
     async (action: TrackingMenuAction) => {
       moreMenuRef.current?.dismiss();
@@ -265,11 +302,13 @@ export const useOrderTracking = (): UseOrderTrackingResult => {
     trackingStatus,
     canCancelOrder,
     isDemoMode: TRACKING_DEMO_MODE,
+    showCreditDeliveryContinue,
     moreMenuRef,
     handleBack,
     handleNotifications,
     handleOpenMoreMenu,
     handleMoreMenuAction,
     handleDownloadSummary,
+    handleContinueToCreditInvoice,
   };
 };

@@ -14,8 +14,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LoadingSpinner, Typography } from '@/components';
 import { PetroTradeLogo } from '@/icons';
-import { ROUTES } from '@/navigation/routes';
 import { getLoggedInRoute } from '@/navigation/post-auth-route';
+import { ROUTES } from '@/navigation/routes';
+import { getSellerInitialRoute } from '@/seller/navigation/getSellerInitialRoute';
+import { useSellerStore } from '@/seller/store/sellerStore';
 import { useAuthStore } from '@/store/auth-store';
 import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
@@ -43,6 +45,12 @@ export const SplashScreen = () => {
 
     const { isLoggedIn, kycApproved, reviewSubmitted, onboardingCompleted } =
       useAuthStore.getState();
+    const sellerSnapshot = useSellerStore.getState();
+
+    if (sellerSnapshot.sellerLoggedIn && authStore.selectedRole === 'seller') {
+      router.replace(getSellerInitialRoute(sellerSnapshot));
+      return;
+    }
 
     if (isLoggedIn) {
       router.replace(getLoggedInRoute({ kycApproved, reviewSubmitted }));

@@ -4,7 +4,6 @@ import { type Href, useRouter } from 'expo-router';
 
 import {
   getRouteAfterProcurementComplete,
-  isDeferredPaymentFlow,
   requiresAdvancePaymentVerified,
 } from '@/constants/paymentNavigation';
 import {
@@ -147,7 +146,7 @@ export const useProcurement = (): UseProcurementResult => {
 
     hasNavigatedRef.current = true;
 
-    if (isDeferredPaymentFlow(order.paymentMethodId)) {
+    if (order.paymentMethodId === 'on_loading' || order.paymentMethodId === 'on_delivery') {
       scheduleLoading();
     }
 

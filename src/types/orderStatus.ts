@@ -10,6 +10,7 @@ export type OrderStatus =
   | 'DISPATCH_STARTED'
   | 'IN_TRANSIT'
   | 'OUT_FOR_DELIVERY'
+  | 'DELIVERY_COMPLETED'
   | 'DELIVERED';
 
 export type OrderTimelineStepStatus = 'completed' | 'current' | 'pending';

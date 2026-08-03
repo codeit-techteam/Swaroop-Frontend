@@ -10,6 +10,16 @@ import {
   createLoadingCompletedPatch,
   createLoadingScheduledPatch,
 } from '@/constants/loadingWorkflow';
+import {
+  createDeliveryCompletedPatch,
+  isOnDeliveryPaymentFlow,
+  ON_DELIVERY_PAYMENT_SEQUENCE,
+} from '@/constants/deliveryCompleted';
+import {
+  CREDIT_STATUS_SEQUENCE,
+  getCreditScreenRoute,
+  isCreditPaymentFlow,
+} from '@/constants/creditWorkflow';
 import { createInitialProcurementState } from '@/constants/procurementSteps';
 import { ROUTES } from '@/navigation/routes';
 import type { Order } from '@/types/order';
@@ -29,6 +39,7 @@ export const ORDER_STATUS_SEQUENCE: OrderStatus[] = [
   'DISPATCH_STARTED',
   'IN_TRANSIT',
   'OUT_FOR_DELIVERY',
+  'DELIVERY_COMPLETED',
   'DELIVERED',
 ];
 
@@ -43,6 +54,7 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   DISPATCH_STARTED: 'Dispatch Started',
   IN_TRANSIT: 'In Transit',
   OUT_FOR_DELIVERY: 'Out For Delivery',
+  DELIVERY_COMPLETED: 'Delivery Completed',
   DELIVERED: 'Delivered',
 };
 
@@ -58,6 +70,7 @@ export const ORDER_STATUS_BADGE_LABELS: Record<OrderStatus, string> = {
   DISPATCH_STARTED: 'Dispatch',
   IN_TRANSIT: 'In Transit',
   OUT_FOR_DELIVERY: 'In Transit',
+  DELIVERY_COMPLETED: 'Delivered',
   DELIVERED: 'Delivered',
 };
 
@@ -72,6 +85,7 @@ export const ORDER_STATUS_PROGRESS: Record<OrderStatus, number> = {
   DISPATCH_STARTED: 72,
   IN_TRANSIT: 81,
   OUT_FOR_DELIVERY: 90,
+  DELIVERY_COMPLETED: 95,
   DELIVERED: 100,
 };
 
@@ -112,10 +126,13 @@ const DEFERRED_STATUS_SEQUENCE: OrderStatus[] = [
 ];
 
 export const getStatusSequenceForOrder = (order: Order): OrderStatus[] => {
-  if (isDeferredPayment(order.paymentMethodId)) {
-    return DEFERRED_STATUS_SEQUENCE;
+  if (isOnDeliveryPaymentFlow(order)) {
+    return ON_DELIVERY_PAYMENT_SEQUENCE;
   }
   if (isCreditPayment(order.paymentMethodId)) {
+    return CREDIT_STATUS_SEQUENCE;
+  }
+  if (isDeferredPayment(order.paymentMethodId)) {
     return DEFERRED_STATUS_SEQUENCE;
   }
   return ADVANCE_STATUS_SEQUENCE;
@@ -137,6 +154,9 @@ export const inferOrderStatus = (order: Order): OrderStatus => {
   }
 
   if (order.dispatchStatus === 'delivered' || order.shipmentStatus === 'delivered') {
+    if (isOnDeliveryPaymentFlow(order) && order.paymentStatus === 'pending') {
+      return 'DELIVERY_COMPLETED';
+    }
     return 'DELIVERED';
   }
 
@@ -233,6 +253,7 @@ const buildDispatchTrackingForStatus = (
     DISPATCH_STARTED: 'dispatch_started',
     IN_TRANSIT: 'in_transit',
     OUT_FOR_DELIVERY: 'in_transit',
+    DELIVERY_COMPLETED: 'delivered',
     DELIVERED: 'delivered',
   };
 
@@ -361,6 +382,13 @@ export const createStatusPatch = (status: OrderStatus, order: Order): Partial<Or
         dispatchTrackingTimeline: buildDispatchTrackingForStatus('OUT_FOR_DELIVERY'),
       };
 
+    case 'DELIVERY_COMPLETED':
+      return {
+        ...base,
+        ...createDeliveryCompletedPatch(order),
+        dispatchTrackingTimeline: buildDispatchTrackingForStatus('DELIVERY_COMPLETED'),
+      };
+
     case 'DELIVERED':
       return {
         ...base,
@@ -390,7 +418,10 @@ export const buildOrderTimeline = (order: Order): OrderTimelineStep[] => {
     if (stepIndex < currentIndex) {
       stepStatus = 'completed';
     } else if (stepIndex === currentIndex) {
-      stepStatus = currentStatus === 'DELIVERED' ? 'completed' : 'current';
+      stepStatus =
+        currentStatus === 'DELIVERED' || currentStatus === 'DELIVERY_COMPLETED'
+          ? 'completed'
+          : 'current';
     }
 
     return {
@@ -441,13 +472,22 @@ export const getNextStatusInFlow = (order: Order): OrderStatus | null => {
 };
 
 export const getScreenRouteForOrder = (order: Order): Href => {
+  const creditRoute = getCreditScreenRoute(order);
+  if (creditRoute) {
+    return creditRoute;
+  }
+
   const status = inferOrderStatus(order);
 
   switch (status) {
     case 'ORDER_CREATED':
-      return order.paymentMethodId === 'advance'
-        ? (ROUTES.CUSTOMER.PAYMENT_UPLOAD_PROOF as Href)
-        : (ROUTES.CUSTOMER.ORDER_SUBMITTED as Href);
+      if (order.paymentMethodId === 'advance') {
+        return ROUTES.CUSTOMER.PAYMENT_UPLOAD_PROOF as Href;
+      }
+      if (isCreditPaymentFlow(order) && order.credit?.workflowPhase === 'approved') {
+        return ROUTES.CUSTOMER.CREDIT_APPROVAL as Href;
+      }
+      return ROUTES.CUSTOMER.ORDER_SUBMITTED as Href;
     case 'PROCUREMENT_STARTED':
     case 'SUPPLIER_MATCHING':
       return ROUTES.CUSTOMER.PROCUREMENT_CONFIRMATION as Href;
@@ -456,14 +496,34 @@ export const getScreenRouteForOrder = (order: Order): Href => {
     case 'LOADING_COMPLETED':
       return ROUTES.CUSTOMER.LOADING_COMPLETED as Href;
     case 'PAYMENT_PENDING':
+      if (isCreditPaymentFlow(order)) {
+        return (
+          getCreditScreenRoute(order) ?? (ROUTES.CUSTOMER.CREDIT_COUNTDOWN as Href)
+        );
+      }
+      if (isOnDeliveryPaymentFlow(order) && order.deliveryStatus === 'delivered') {
+        return ROUTES.CUSTOMER.PAYMENT_REMINDER as Href;
+      }
       return ROUTES.CUSTOMER.PAYMENT_UPLOAD_PROOF as Href;
     case 'PAYMENT_VERIFIED':
       return ROUTES.CUSTOMER.PAYMENT_VERIFICATION_INITIATED as Href;
     case 'DISPATCH_STARTED':
       return ROUTES.CUSTOMER.DISPATCH_STARTED as Href;
+    case 'DELIVERY_COMPLETED':
+      return ROUTES.CUSTOMER.DELIVERY_COMPLETED as Href;
     case 'IN_TRANSIT':
     case 'OUT_FOR_DELIVERY':
+      return {
+        pathname: ROUTES.CUSTOMER.SHIPMENT_TRACKING,
+        params: { orderId: order.id },
+      } as unknown as Href;
     case 'DELIVERED':
+      if (isCreditPaymentFlow(order) && order.paymentStatus !== 'verified') {
+        return ROUTES.CUSTOMER.CREDIT_INVOICE_DELIVERY as Href;
+      }
+      if (isOnDeliveryPaymentFlow(order) && order.paymentStatus === 'pending') {
+        return ROUTES.CUSTOMER.DELIVERY_COMPLETED as Href;
+      }
       return {
         pathname: ROUTES.CUSTOMER.SHIPMENT_TRACKING,
         params: { orderId: order.id },

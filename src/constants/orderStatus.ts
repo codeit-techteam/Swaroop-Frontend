@@ -7,6 +7,12 @@ import type {
 } from '@/types/order';
 import type { OrderStatus } from '@/types/orderStatus';
 import type { DispatchStatus } from '@/types/purchaseOrder';
+import { isPostDeliveryPaymentPending } from '@/constants/deliveryCompleted';
+import {
+  isCreditOrderCompleted,
+  isCreditPaymentFlow,
+  isCreditPaymentPending,
+} from '@/constants/creditWorkflow';
 import {
   inferOrderStatus,
   ORDER_STATUS_BADGE_LABELS,
@@ -144,6 +150,8 @@ export const deriveOrderLifecycleStage = (order: Order): OrderLifecycleStage => 
   switch (status) {
     case 'DELIVERED':
       return 'delivery';
+    case 'DELIVERY_COMPLETED':
+      return 'delivery';
     case 'DISPATCH_STARTED':
     case 'IN_TRANSIT':
     case 'OUT_FOR_DELIVERY':
@@ -190,6 +198,17 @@ export const getOrderTabCategory = (order: Order): OrderTabCategory => {
 
   if (status === 'cancelled') {
     return 'cancelled';
+  }
+
+  if (isCreditPaymentFlow(order)) {
+    if (isCreditOrderCompleted(order)) {
+      return 'completed';
+    }
+    return 'active';
+  }
+
+  if (isPostDeliveryPaymentPending(order) || inferOrderStatus(order) === 'DELIVERY_COMPLETED') {
+    return 'active';
   }
 
   if (status === 'delivered') {
@@ -260,7 +279,7 @@ export const getOrderProgressLabel = (order: Order): string => {
     return order.eta ? `In Transit — Arriving ${order.eta}` : badgeLabel;
   }
 
-  if (status === 'DELIVERED') {
+  if (status === 'DELIVERED' || status === 'DELIVERY_COMPLETED') {
     return 'Delivered Successfully';
   }
 
@@ -273,6 +292,41 @@ export const getOrderProgressLabel = (order: Order): string => {
 
 export const getOrderStatusBadgeConfigFromOrder = (order: Order): OrderStatusBadgeConfig => {
   const status = inferOrderStatus(order);
+
+  if (isCreditPaymentPending(order)) {
+    return {
+      label: 'PAYMENT PENDING',
+      backgroundColor: '#FEF3C7',
+      textColor: '#B45309',
+    };
+  }
+
+  if (isCreditOrderCompleted(order)) {
+    return {
+      label: 'COMPLETED',
+      backgroundColor: brandColors.successLight,
+      textColor: brandColors.success,
+    };
+  }
+
+  if (order.paymentMethodId === 'credit_15' || order.paymentMethodId === 'credit_30') {
+    if (order.paymentStatus === 'verified' && order.credit?.workflowPhase === 'completed') {
+      return {
+        label: 'PAID',
+        backgroundColor: brandColors.successLight,
+        textColor: brandColors.success,
+      };
+    }
+  }
+
+  if (status === 'DELIVERY_COMPLETED' || isPostDeliveryPaymentPending(order)) {
+    return {
+      label: 'DELIVERED',
+      backgroundColor: '#FFEDD5',
+      textColor: '#C2410C',
+    };
+  }
+
   const label = ORDER_STATUS_BADGE_LABELS[status].toUpperCase();
 
   switch (status) {

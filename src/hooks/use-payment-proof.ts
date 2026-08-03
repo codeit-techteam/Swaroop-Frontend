@@ -55,7 +55,11 @@ const buildReceipt = (
 
 const validateReceiptSize = (size: number): boolean => size <= MAX_RECEIPT_SIZE_BYTES;
 
-export const usePaymentProof = (orderId: string, amount: number): UsePaymentProofResult => {
+export const usePaymentProof = (
+  orderId: string,
+  amount: number,
+  options?: { onSubmit?: (proof: PaymentProof) => void },
+): UsePaymentProofResult => {
   const submitToStore = useOrderStore((state) => state.submitPaymentProof);
 
   const [transactionDate, setTransactionDate] = useState(() => dayjs().startOf('day').toDate());
@@ -242,10 +246,14 @@ export const usePaymentProof = (orderId: string, amount: number): UsePaymentProo
       status: 'submitted',
     };
 
-    submitToStore(proof);
+    if (options?.onSubmit) {
+      options.onSubmit(proof);
+    } else {
+      submitToStore(proof);
+    }
     setIsSubmitting(false);
     return true;
-  }, [amount, bank, orderId, paymentMode, receipt, submitToStore, transactionDate, utr]);
+  }, [amount, bank, orderId, options?.onSubmit, paymentMode, receipt, submitToStore, transactionDate, utr]);
 
   return {
     transactionDate,

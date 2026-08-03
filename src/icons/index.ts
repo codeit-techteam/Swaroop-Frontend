@@ -62,6 +62,8 @@ export { ProcurementIllustration } from '@/icons/procurement-illustration';
 export { EditIcon } from '@/icons/edit';
 export { LogoutIcon } from '@/icons/logout';
 export { BuildingIcon } from '@/icons/building';
+export { DeliverySuccessIllustration } from '@/icons/delivery-success-illustration';
+export { SettlementReleasedIllustration } from '@/icons/settlement-released-illustration';
 
 export { iconSizes } from '@/theme/icons';
 

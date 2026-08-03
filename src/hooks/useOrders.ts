@@ -14,6 +14,7 @@ import {
   getOrderTabCategory,
   isWithinDateFilter,
 } from '@/constants/orderStatus';
+import { isCreditPaymentFlow } from '@/constants/creditWorkflow';
 import { getScreenRouteForOrder, getTrackRouteForOrder } from '@/constants/orderWorkflow';
 import { ROUTES } from '@/navigation/routes';
 import {
@@ -38,6 +39,7 @@ type UseOrdersResult = {
   handleFiltersChange: (filters: OrderFilterState) => void;
   handleTrackOrder: (order: Order) => void;
   handleViewDetails: (order: Order) => void;
+  handlePayNow: (order: Order) => void;
   handleExpandMasterShipment: (order: Order) => void;
   handleSearchPress: () => void;
   handleProfilePress: () => void;
@@ -59,6 +61,7 @@ export const useOrders = (): UseOrdersResult => {
   const isHydrated = useOrderStore(selectOrderHydrated);
   const hydrateOrder = useOrderStore((state) => state.hydrateOrder);
   const setSelectedOrderId = useOrderStore((state) => state.setSelectedOrderId);
+  const setCurrentOrder = useOrderStore((state) => state.setCurrentOrder);
 
   const [selectedTab, setSelectedTab] = useState<OrderTabCategory>('active');
   const [filters, setFilters] = useState<OrderFilterState>(DEFAULT_ORDER_FILTERS);
@@ -143,6 +146,19 @@ export const useOrders = (): UseOrdersResult => {
     [router, setSelectedOrderId],
   );
 
+  const handlePayNow = useCallback(
+    (order: Order) => {
+      setSelectedOrderId(order.id);
+      setCurrentOrder(order);
+      if (isCreditPaymentFlow(order)) {
+        router.push(getScreenRouteForOrder(order));
+        return;
+      }
+      router.push(ROUTES.CUSTOMER.PAYMENT_REMINDER as Href);
+    },
+    [router, setCurrentOrder, setSelectedOrderId],
+  );
+
   const handleExpandMasterShipment = useCallback((order: Order) => {
     Toast.show({
       type: 'info',
@@ -195,6 +211,7 @@ export const useOrders = (): UseOrdersResult => {
     handleFiltersChange,
     handleTrackOrder,
     handleViewDetails,
+    handlePayNow,
     handleExpandMasterShipment,
     handleSearchPress,
     handleProfilePress,

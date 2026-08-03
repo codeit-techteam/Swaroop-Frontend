@@ -1,0 +1,356 @@
+{
+  "defaultBankAccount": "HDFC Bank •••• 4821",
+  "summary": {
+    "pendingSettlement": 1850000,
+    "releasedToday": 720000,
+    "thisMonth": 4280000,
+    "totalEarnings": 28400000,
+    "nextReleaseLabel": "Tomorrow"
+  },
+  "notifications": [
+    {
+      "id": "notif-1",
+      "type": "settlement_initiated",
+      "title": "Settlement Initiated",
+      "message": "Settlement STL-2026-0142 for order PT-88421 has been initiated.",
+      "settlementId": "STL-2026-0142",
+      "createdAt": "2026-07-28T09:15:00.000Z",
+      "read": false
+    },
+    {
+      "id": "notif-2",
+      "type": "settlement_released",
+      "title": "Settlement Released",
+      "message": "₹4,85,200 released for settlement STL-2026-0138.",
+      "settlementId": "STL-2026-0138",
+      "createdAt": "2026-07-28T07:30:00.000Z",
+      "read": false
+    },
+    {
+      "id": "notif-3",
+      "type": "invoice_generated",
+      "title": "Invoice Generated",
+      "message": "Tax invoice INV-PT-88419 is ready for download.",
+      "settlementId": "STL-2026-0136",
+      "createdAt": "2026-07-27T16:45:00.000Z",
+      "read": true
+    },
+    {
+      "id": "notif-4",
+      "type": "settlement_delayed",
+      "title": "Settlement Delayed",
+      "message": "Settlement STL-2026-0135 is delayed due to finance processing.",
+      "settlementId": "STL-2026-0135",
+      "createdAt": "2026-07-27T11:20:00.000Z",
+      "read": false
+    },
+    {
+      "id": "notif-5",
+      "type": "tds_certificate_available",
+      "title": "TDS Certificate Available",
+      "message": "Q1 FY26 TDS certificate is now available in Tax & Documents.",
+      "createdAt": "2026-07-26T10:00:00.000Z",
+      "read": true
+    }
+  ],
+  "documents": [
+    {
+      "id": "doc-inv-1",
+      "type": "invoice",
+      "name": "Tax Invoice - INV-PT-88421.pdf",
+      "size": "1.8 MB"
+    },
+    {
+      "id": "doc-inv-2",
+      "type": "invoice",
+      "name": "Tax Invoice - INV-PT-88419.pdf",
+      "size": "1.6 MB"
+    },
+    {
+      "id": "doc-cn-1",
+      "type": "credit_note",
+      "name": "Credit Note - CN-2026-0042.pdf",
+      "size": "420 KB"
+    },
+    {
+      "id": "doc-adv-1",
+      "type": "settlement_advice",
+      "name": "Settlement Advice - STL-2026-0138.pdf",
+      "size": "680 KB",
+      "settlementId": "STL-2026-0138"
+    },
+    {
+      "id": "doc-adv-2",
+      "type": "settlement_advice",
+      "name": "Settlement Advice - STL-2026-0131.pdf",
+      "size": "640 KB",
+      "settlementId": "STL-2026-0131"
+    },
+    {
+      "id": "doc-gst-1",
+      "type": "gst_report",
+      "name": "GST Report - July 2026.pdf",
+      "size": "2.1 MB"
+    },
+    {
+      "id": "doc-tds-1",
+      "type": "tds_certificate",
+      "name": "TDS Certificate - Q1 FY26.pdf",
+      "size": "890 KB"
+    }
+  ],
+  "settlements": [
+    {
+      "id": "set-1",
+      "settlementId": "STL-2026-0142",
+      "orderId": "PT-88421",
+      "poNo": "PO-PT-88421",
+      "invoiceNo": "INV-PT-88421",
+      "material": "HDPE Granules",
+      "quantity": "42 MT",
+      "warehouse": "Haldia Chemical Hub",
+      "destination": "Kolkata Industrial Zone",
+      "grossAmount": 546000,
+      "gst": 98280,
+      "platformFee": 8190,
+      "tds": 5460,
+      "netAmount": 485070,
+      "status": "pending",
+      "expectedDate": "2026-07-29T00:00:00.000Z",
+      "currentTimelineStep": "payment_secured",
+      "documents": [
+        {
+          "id": "set-1-inv",
+          "type": "invoice",
+          "name": "Tax Invoice - INV-PT-88421.pdf",
+          "size": "1.8 MB"
+        }
+      ]
+    },
+    {
+      "id": "set-2",
+      "settlementId": "STL-2026-0140",
+      "orderId": "PT-88418",
+      "poNo": "PO-PT-88418",
+      "invoiceNo": "INV-PT-88418",
+      "material": "Polypropylene Resin",
+      "quantity": "28 MT",
+      "warehouse": "Mumbai Port Warehouse",
+      "destination": "Pune Manufacturing Hub",
+      "grossAmount": 392000,
+      "gst": 70560,
+      "platformFee": 5880,
+      "tds": 3920,
+      "netAmount": 348320,
+      "status": "processing",
+      "expectedDate": "2026-07-30T00:00:00.000Z",
+      "currentTimelineStep": "finance_processing",
+      "documents": [
+        {
+          "id": "set-2-inv",
+          "type": "invoice",
+          "name": "Tax Invoice - INV-PT-88418.pdf",
+          "size": "1.5 MB"
+        }
+      ]
+    },
+    {
+      "id": "set-3",
+      "settlementId": "STL-2026-0138",
+      "orderId": "PT-88415",
+      "poNo": "PO-PT-88415",
+      "invoiceNo": "INV-PT-88415",
+      "material": "Industrial Lubricant Base",
+      "quantity": "18 MT",
+      "warehouse": "Ahmedabad Storage Unit",
+      "destination": "Surat Textile Cluster",
+      "grossAmount": 485200,
+      "gst": 87336,
+      "platformFee": 7278,
+      "tds": 4852,
+      "netAmount": 430786,
+      "status": "released",
+      "expectedDate": "2026-07-28T00:00:00.000Z",
+      "releasedDate": "2026-07-28T07:30:00.000Z",
+      "transactionReference": "PTR-SET-20260728-0138",
+      "bankAccount": "HDFC Bank •••• 4821",
+      "currentTimelineStep": "settlement_released",
+      "documents": [
+        {
+          "id": "set-3-inv",
+          "type": "invoice",
+          "name": "Tax Invoice - INV-PT-88415.pdf",
+          "size": "1.7 MB"
+        },
+        {
+          "id": "set-3-adv",
+          "type": "settlement_advice",
+          "name": "Settlement Advice - STL-2026-0138.pdf",
+          "size": "680 KB"
+        }
+      ]
+    },
+    {
+      "id": "set-4",
+      "settlementId": "STL-2026-0136",
+      "orderId": "PT-88412",
+      "poNo": "PO-PT-88412",
+      "invoiceNo": "INV-PT-88412",
+      "material": "Caustic Soda Flakes",
+      "quantity": "35 MT",
+      "warehouse": "Haldia Chemical Hub",
+      "destination": "Howrah Industrial Estate",
+      "grossAmount": 315000,
+      "gst": 56700,
+      "platformFee": 4725,
+      "tds": 3150,
+      "netAmount": 279900,
+      "status": "released",
+      "expectedDate": "2026-07-27T00:00:00.000Z",
+      "releasedDate": "2026-07-27T14:20:00.000Z",
+      "transactionReference": "PTR-SET-20260727-0136",
+      "bankAccount": "HDFC Bank •••• 4821",
+      "currentTimelineStep": "settlement_released",
+      "documents": [
+        {
+          "id": "set-4-inv",
+          "type": "invoice",
+          "name": "Tax Invoice - INV-PT-88412.pdf",
+          "size": "1.4 MB"
+        },
+        {
+          "id": "set-4-adv",
+          "type": "settlement_advice",
+          "name": "Settlement Advice - STL-2026-0136.pdf",
+          "size": "620 KB"
+        }
+      ]
+    },
+    {
+      "id": "set-5",
+      "settlementId": "STL-2026-0135",
+      "orderId": "PT-88410",
+      "poNo": "PO-PT-88410",
+      "invoiceNo": "INV-PT-88410",
+      "material": "Methanol Industrial Grade",
+      "quantity": "22 MT",
+      "warehouse": "Navi Mumbai Terminal",
+      "destination": "Nagpur Chemical Park",
+      "grossAmount": 264000,
+      "gst": 47520,
+      "platformFee": 3960,
+      "tds": 2640,
+      "netAmount": 234480,
+      "status": "failed",
+      "expectedDate": "2026-07-26T00:00:00.000Z",
+      "currentTimelineStep": "finance_processing",
+      "documents": [
+        {
+          "id": "set-5-inv",
+          "type": "invoice",
+          "name": "Tax Invoice - INV-PT-88410.pdf",
+          "size": "1.3 MB"
+        }
+      ]
+    },
+    {
+      "id": "set-6",
+      "settlementId": "STL-2026-0131",
+      "orderId": "PT-88405",
+      "poNo": "PO-PT-88405",
+      "invoiceNo": "INV-PT-88405",
+      "material": "PVC Compound",
+      "quantity": "50 MT",
+      "warehouse": "Vadodara Distribution Center",
+      "destination": "Rajkot Plastics Hub",
+      "grossAmount": 620000,
+      "gst": 111600,
+      "platformFee": 9300,
+      "tds": 6200,
+      "netAmount": 550900,
+      "status": "released",
+      "expectedDate": "2026-07-25T00:00:00.000Z",
+      "releasedDate": "2026-07-25T11:45:00.000Z",
+      "transactionReference": "PTR-SET-20260725-0131",
+      "bankAccount": "HDFC Bank •••• 4821",
+      "currentTimelineStep": "settlement_released",
+      "documents": [
+        {
+          "id": "set-6-inv",
+          "type": "invoice",
+          "name": "Tax Invoice - INV-PT-88405.pdf",
+          "size": "1.9 MB"
+        },
+        {
+          "id": "set-6-adv",
+          "type": "settlement_advice",
+          "name": "Settlement Advice - STL-2026-0131.pdf",
+          "size": "640 KB"
+        }
+      ]
+    },
+    {
+      "id": "set-7",
+      "settlementId": "STL-2026-0128",
+      "orderId": "PT-88401",
+      "poNo": "PO-PT-88401",
+      "invoiceNo": "INV-PT-88401",
+      "material": "Styrene Monomer",
+      "quantity": "16 MT",
+      "warehouse": "Chennai Port Warehouse",
+      "destination": "Bengaluru Polymer Zone",
+      "grossAmount": 448000,
+      "gst": 80640,
+      "platformFee": 6720,
+      "tds": 4480,
+      "netAmount": 397760,
+      "status": "released",
+      "expectedDate": "2026-07-24T00:00:00.000Z",
+      "releasedDate": "2026-07-24T09:10:00.000Z",
+      "transactionReference": "PTR-SET-20260724-0128",
+      "bankAccount": "HDFC Bank •••• 4821",
+      "currentTimelineStep": "settlement_released",
+      "documents": [
+        {
+          "id": "set-7-inv",
+          "type": "invoice",
+          "name": "Tax Invoice - INV-PT-88401.pdf",
+          "size": "1.6 MB"
+        },
+        {
+          "id": "set-7-adv",
+          "type": "settlement_advice",
+          "name": "Settlement Advice - STL-2026-0128.pdf",
+          "size": "610 KB"
+        }
+      ]
+    },
+    {
+      "id": "set-8",
+      "settlementId": "STL-2026-0145",
+      "orderId": "PT-88425",
+      "poNo": "PO-PT-88425",
+      "invoiceNo": "INV-PT-88425",
+      "material": "Ethylene Glycol",
+      "quantity": "30 MT",
+      "warehouse": "Dahej Industrial Estate",
+      "destination": "Ahmedabad Chemical Belt",
+      "grossAmount": 378000,
+      "gst": 68040,
+      "platformFee": 5670,
+      "tds": 3780,
+      "netAmount": 335610,
+      "status": "pending",
+      "expectedDate": "2026-07-31T00:00:00.000Z",
+      "currentTimelineStep": "settlement_initiated",
+      "documents": [
+        {
+          "id": "set-8-inv",
+          "type": "invoice",
+          "name": "Tax Invoice - INV-PT-88425.pdf",
+          "size": "1.5 MB"
+        }
+      ]
+    }
+  ]
+}

@@ -17,6 +17,15 @@ import type {
   LoadingScheduleDetails,
   LoadingStatus,
 } from '@/types/loading';
+import type { CreditState } from '@/types/credit';
+import type {
+  DeliveryDetails,
+  DeliveryProofState,
+  DeliveryReceiverDetails,
+  DeliveryStatus,
+  DeliverySummary,
+  DigitalPodState,
+} from '@/types/delivery';
 import type { DispatchTrackingTimelineState, TrackingTimelineState } from '@/types/tracking';
 import type { OrderStatus, OrderTimelineStep } from '@/types/orderStatus';
 
@@ -111,6 +120,13 @@ export type Order = {
   loadingStatus?: LoadingStatus;
   loadingSchedule?: LoadingScheduleDetails | null;
   loadingProof?: LoadingProofState | null;
+  deliveryStatus?: DeliveryStatus;
+  deliveryDetails?: DeliveryDetails | null;
+  deliveryProof?: DeliveryProofState | null;
+  deliveryReceiver?: DeliveryReceiverDetails | null;
+  digitalPod?: DigitalPodState | null;
+  deliverySummary?: DeliverySummary | null;
+  deliveredAt?: string | null;
   createdAt: string;
   /** Canonical lifecycle status — single source of truth for all screens. */
   status?: OrderStatus;
@@ -118,4 +134,6 @@ export type Order = {
   currentStep?: OrderStatus;
   expectedDelivery?: string | null;
   timeline?: OrderTimelineStep[] | null;
+  /** Credit facility state for credit_15 / credit_30 payment flows. */
+  credit?: CreditState | null;
 };

@@ -35,6 +35,7 @@ export const OrdersScreen = memo(function OrdersScreen() {
     handleFiltersChange,
     handleTrackOrder,
     handleViewDetails,
+    handlePayNow,
     handleExpandMasterShipment,
     handleSearchPress,
     handleProfilePress,
@@ -93,6 +94,7 @@ export const OrdersScreen = memo(function OrdersScreen() {
                 order={order}
                 onTrackOrder={handleTrackOrder}
                 onViewDetails={handleViewDetails}
+                onPayNow={handlePayNow}
               />
             ))}
 

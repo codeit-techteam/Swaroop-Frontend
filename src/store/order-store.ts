@@ -10,6 +10,14 @@ import {
   ORDER_STATUS_PROGRESS,
 } from '@/constants/orderWorkflow';
 import { syncOrderDerivedFields } from '@/constants/orderStatus';
+import {
+  createCreditCountdownPatch,
+  createCreditRestoredPatch,
+  createInitialCreditState,
+  createInvoicePatch,
+  isCreditPaymentFlow,
+  mapOrderStatusToCreditPhase,
+} from '@/constants/creditWorkflow';
 import { createInitialProcurementState } from '@/constants/procurementSteps';
 import type { Order, PaymentProof } from '@/types/order';
 import type { OrderStatus } from '@/types/orderStatus';
@@ -47,6 +55,12 @@ type OrderActions = {
   markInTransit: () => void;
   markOutForDelivery: () => void;
   markDelivered: () => void;
+  completeDelivery: () => void;
+  approveCredit: () => void;
+  generateCreditInvoice: () => void;
+  startCreditCountdown: () => void;
+  submitCreditPaymentProof: (proof: PaymentProof) => void;
+  restoreCredit: (verifiedAt?: string) => void;
   submitPaymentProof: (proof: PaymentProof) => void;
   resetOrder: () => void;
   setSelectedOrderId: (orderId: string | null) => void;
@@ -112,7 +126,15 @@ const normalizeOrder = (order: Order): Order => {
     loadingStatus: order.loadingStatus ?? 'pending',
     loadingSchedule: order.loadingSchedule ?? null,
     loadingProof: order.loadingProof ?? null,
+    deliveryStatus: order.deliveryStatus,
+    deliveryDetails: order.deliveryDetails ?? null,
+    deliveryProof: order.deliveryProof ?? null,
+    deliveryReceiver: order.deliveryReceiver ?? null,
+    digitalPod: order.digitalPod ?? null,
+    deliverySummary: order.deliverySummary ?? null,
+    deliveredAt: order.deliveredAt ?? null,
     documents: order.documents ?? [],
+    credit: order.credit ?? null,
   };
 
   const status = inferOrderStatus(withDefaults);
@@ -172,7 +194,14 @@ const readPersistedOrderState = (): PersistedOrderState => {
 
 const applyStatusToOrder = (order: Order, status: OrderStatus): Order => {
   const patch = createStatusPatch(status, order);
-  return normalizeOrder({ ...order, ...patch });
+  const creditPhase = isCreditPaymentFlow(order)
+    ? mapOrderStatusToCreditPhase(status)
+    : null;
+  const withCredit =
+    creditPhase && order.credit
+      ? { ...order, credit: { ...order.credit, workflowPhase: creditPhase } }
+      : order;
+  return normalizeOrder({ ...withCredit, ...patch });
 };
 
 export const useOrderStore = create<OrderStore>((set, get) => {
@@ -210,7 +239,14 @@ export const useOrderStore = create<OrderStore>((set, get) => {
     },
 
     createOrder: (order) => {
-      const normalized = applyStatusToOrder(order, 'ORDER_CREATED');
+      const withCredit = isCreditPaymentFlow(order)
+        ? {
+            ...order,
+            credit:
+              order.credit ?? createInitialCreditState(order.paymentMethodId, order.amount),
+          }
+        : order;
+      const normalized = applyStatusToOrder(withCredit, 'ORDER_CREATED');
       commitOrder(normalized);
     },
 
@@ -331,6 +367,84 @@ export const useOrderStore = create<OrderStore>((set, get) => {
 
     markDelivered: () => {
       transitionCurrentOrder('DELIVERED');
+    },
+
+    completeDelivery: () => {
+      transitionCurrentOrder('DELIVERY_COMPLETED');
+    },
+
+    approveCredit: () => {
+      const { currentOrder } = get();
+      if (!currentOrder || !isCreditPaymentFlow(currentOrder)) {
+        return;
+      }
+
+      const credit =
+        currentOrder.credit ??
+        createInitialCreditState(currentOrder.paymentMethodId, currentOrder.amount);
+
+      commitOrder({
+        ...currentOrder,
+        credit: { ...credit, creditApproved: true, workflowPhase: 'approved' },
+      });
+    },
+
+    generateCreditInvoice: () => {
+      const { currentOrder } = get();
+      if (!currentOrder?.credit) {
+        return;
+      }
+
+      commitOrder({ ...currentOrder, ...createInvoicePatch(currentOrder) });
+    },
+
+    startCreditCountdown: () => {
+      const { currentOrder } = get();
+      if (!currentOrder?.credit) {
+        return;
+      }
+
+      commitOrder({
+        ...currentOrder,
+        ...createCreditCountdownPatch(currentOrder),
+        status: 'PAYMENT_PENDING',
+        paymentStatus: 'pending',
+      });
+    },
+
+    submitCreditPaymentProof: (proof) => {
+      const { currentOrder, orders } = get();
+      if (!currentOrder?.credit) {
+        return;
+      }
+
+      const nextOrder = normalizeOrder({
+        ...currentOrder,
+        paymentStatus: 'submitted',
+        verificationStatus: 'pending',
+        status: 'PAYMENT_PENDING',
+        credit: { ...currentOrder.credit, workflowPhase: 'payment_uploaded' },
+      });
+      const nextOrders = upsertOrderInList(orders, nextOrder);
+
+      persistOrderState({ currentOrder: nextOrder, paymentProof: proof, orders: nextOrders });
+      set({ currentOrder: nextOrder, paymentProof: proof, orders: nextOrders });
+    },
+
+    restoreCredit: (verifiedAt) => {
+      const { currentOrder } = get();
+      if (!currentOrder?.credit) {
+        return;
+      }
+
+      const verified = verifiedAt ?? new Date().toISOString();
+      commitOrder({
+        ...currentOrder,
+        ...createCreditRestoredPatch(currentOrder),
+        paymentVerifiedAt: verified,
+        status: 'PAYMENT_VERIFIED',
+        shipmentStatus: 'delivered',
+      });
     },
 
     submitPaymentProof: (proof) => {

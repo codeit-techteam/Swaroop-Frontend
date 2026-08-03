@@ -26,11 +26,13 @@ export const TrackOrderScreen = memo(function TrackOrderScreen() {
     trackingStatus,
     canCancelOrder,
     moreMenuRef,
+    showCreditDeliveryContinue,
     handleBack,
     handleNotifications,
     handleOpenMoreMenu,
     handleMoreMenuAction,
     handleDownloadSummary,
+    handleContinueToCreditInvoice,
   } = useOrderTracking();
 
   return (
@@ -115,14 +117,21 @@ export const TrackOrderScreen = memo(function TrackOrderScreen() {
       {order ? (
         <View
           className="absolute bottom-0 left-0 right-0 border-t border-brand-border bg-brand-white px-lg pt-md"
-          style={{ paddingBottom: insets.bottom + 12 }}
+          style={{ paddingBottom: insets.bottom + 12, gap: 12 }}
         >
-          <PrimaryButton
-            label="Download Order Summary"
-            onPress={handleDownloadSummary}
-            leftIcon={<DownloadIcon size={iconSizes.md} color={brandColors.white} />}
-            className="bg-brand-heading"
-          />
+          {showCreditDeliveryContinue ? (
+            <PrimaryButton
+              label="Continue to Delivery Confirmation"
+              onPress={handleContinueToCreditInvoice}
+            />
+          ) : (
+            <PrimaryButton
+              label="Download Order Summary"
+              onPress={handleDownloadSummary}
+              leftIcon={<DownloadIcon size={iconSizes.md} color={brandColors.white} />}
+              className="bg-brand-heading"
+            />
+          )}
         </View>
       ) : null}
 
