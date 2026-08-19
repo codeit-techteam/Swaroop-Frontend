@@ -35,7 +35,7 @@ export const FooterLinks = memo(function FooterLinks({
       </View>
       {showCopyright ? (
         <Typography variant="legal" className="mt-sm">
-          © 2024 PetroTrade Industrial Marketplace
+          © PetroTrade Industrial Marketplace
         </Typography>
       ) : null}
     </View>

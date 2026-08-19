@@ -4,7 +4,7 @@ export const PROFILE_APP_VERSION = 'v1.0.0';
 
 export const PROFILE_APP_NAME = 'PetroTrade Enterprise';
 
-export const PROFILE_COPYRIGHT = '© 2024 PetroTrade Industrial Markets';
+export const PROFILE_COPYRIGHT = '© PetroTrade Industrial Markets';
 
 const formatComplianceValidTill = (): string => {
   const now = new Date();
