@@ -1,4 +1,5 @@
 import { STORAGE_KEYS } from '@/constants';
+import { getBlindGradeById } from '@/constants/blind-grades';
 import type {
   InventoryProduct,
   InventorySnapshot,
@@ -9,6 +10,7 @@ import type {
   StockHistoryEntry,
   WarehouseOption,
 } from '@/seller/types';
+import { catalogParentToInventoryCategory } from '@/seller/utils/catalog';
 import { getStorageItem, setStorageItem } from '@/utils/storage';
 
 type InventorySeedProduct = Omit<InventoryProduct, 'remainingStock' | 'status' | 'updatedAt'>;
@@ -134,15 +136,13 @@ const mergeSellerProductsIntoInventory = (
             productName: sellerProduct.form.name,
             grade: sellerProduct.form.grade,
             brand: sellerProduct.form.brand,
-            category:
-              sellerProduct.form.category === 'Lubricants'
-                ? 'Lubricants'
-                : sellerProduct.form.category === 'Chemicals'
-                  ? 'Chemicals'
-                  : sellerProduct.form.category === 'Speciality'
-                    ? 'Speciality'
-                    : 'Polymer',
-            subcategory: sellerProduct.form.description || sellerProduct.form.category,
+            category: catalogParentToInventoryCategory(
+              getBlindGradeById(sellerProduct.form.catalogProductId)?.categoryId ??
+                sellerProduct.form.category,
+            ),
+            subcategory:
+              getBlindGradeById(sellerProduct.form.catalogProductId)?.subCategory ||
+              sellerProduct.form.category,
             warehouse: 'Main Warehouse',
             activeOffer: sellerProduct.status === 'published',
             availableStock: Number.isFinite(productStock) ? productStock : 0,

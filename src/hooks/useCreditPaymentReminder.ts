@@ -1,7 +1,5 @@
 import { useCallback, useEffect } from 'react';
 
-import { Alert } from 'react-native';
-
 import { type Href, useRouter } from 'expo-router';
 
 import {
@@ -13,11 +11,8 @@ import {
 import { formatPaymentCurrency } from '@/constants/payment';
 import { getRouteAfterCreditPaymentReminder } from '@/constants/paymentNavigation';
 import { ROUTES } from '@/navigation/routes';
-import {
-  selectCurrentOrder,
-  selectOrderHydrated,
-  useOrderStore,
-} from '@/store/order-store';
+import { showInfoDialog } from '@/store/dialog-store';
+import { selectCurrentOrder, selectOrderHydrated, useOrderStore } from '@/store/order-store';
 
 type UseCreditPaymentReminderResult = {
   order: ReturnType<typeof selectCurrentOrder>;
@@ -54,9 +49,10 @@ export const useCreditPaymentReminder = (): UseCreditPaymentReminderResult => {
   }, [router]);
 
   const handleContactSupport = useCallback(() => {
-    Alert.alert('Contact Support', 'Our finance team is available Mon–Sat, 9 AM – 6 PM IST.', [
-      { text: 'OK' },
-    ]);
+    showInfoDialog(
+      'Contact Support',
+      'Our finance team is available Monday–Saturday, 9 AM – 6 PM IST.',
+    );
   }, []);
 
   const handleBack = useCallback(() => {

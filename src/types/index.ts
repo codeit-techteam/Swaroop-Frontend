@@ -49,13 +49,7 @@ export type {
   TimelineStepStatus,
   TimelineStep,
 } from '@/types/document';
-export type {
-  CompanyType,
-  BusinessInformation,
-  KycState,
-  KycActions,
-  KycStore,
-} from '@/types/kyc';
+export type { CompanyType, BusinessInformation, KycState, KycActions, KycStore } from '@/types/kyc';
 export type {
   HomeBanner,
   PriceTrend,
@@ -69,13 +63,22 @@ export type {
 export type {
   MarketCategory,
   MarketAvailabilityBadge,
+  MarketParentCategoryId,
   MarketProduct,
+  ProductTechnicalSpecs,
   StockLevel,
 } from '@/types/market';
 export type {
   PriceTrendDirection,
+  ProductAvailabilityLevel,
   ProductSpec,
   PricingTier,
+  ProductPaymentOption,
+  ComplianceDocumentType,
+  ComplianceDocument,
+  LogisticsEstimate,
+  SpotPriceInfo,
+  RelatedProductCard,
   TrustFeature,
   ProductInfoItem,
   ProductDetails,
@@ -108,4 +111,3 @@ export type {
   LoginResult,
   SessionSnapshot,
 } from '@/types/session';
-

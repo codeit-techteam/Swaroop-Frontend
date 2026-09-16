@@ -45,17 +45,23 @@ export const DashboardSkeleton = memo(function DashboardSkeleton() {
   const opacity = useSkeletonPulse();
   return (
     <View className="gap-md">
-      <SkeletonBlock opacity={opacity} className="h-36 w-full rounded-[28px]" />
-      <View className="flex-row gap-md">
+      <SkeletonBlock opacity={opacity} className="h-44 w-full rounded-[28px]" />
+      <View className="flex-row gap-sm">
         <SkeletonBlock opacity={opacity} className="h-24 flex-1" />
         <SkeletonBlock opacity={opacity} className="h-24 flex-1" />
       </View>
-      <View className="flex-row gap-md">
+      <View className="flex-row gap-sm">
         <SkeletonBlock opacity={opacity} className="h-24 flex-1" />
         <SkeletonBlock opacity={opacity} className="h-24 flex-1" />
       </View>
-      <SkeletonBlock opacity={opacity} className="h-40 w-full" />
-      <SkeletonBlock opacity={opacity} className="h-32 w-full" />
+      <View className="flex-row gap-sm">
+        <SkeletonBlock opacity={opacity} className="h-24 flex-1" />
+        <SkeletonBlock opacity={opacity} className="h-24 flex-1" />
+        <SkeletonBlock opacity={opacity} className="h-24 flex-1" />
+        <SkeletonBlock opacity={opacity} className="h-24 flex-1" />
+      </View>
+      <SkeletonBlock opacity={opacity} className="h-40 w-full rounded-[24px]" />
+      <SkeletonBlock opacity={opacity} className="h-32 w-full rounded-[24px]" />
     </View>
   );
 });
@@ -75,9 +81,15 @@ export const OfferSkeleton = memo(function OfferSkeleton() {
   const opacity = useSkeletonPulse();
   return (
     <View className="gap-md">
-      <SkeletonBlock opacity={opacity} className="h-10 w-full" />
-      {[1, 2, 3].map((key) => (
-        <SkeletonBlock key={key} opacity={opacity} className="h-44 w-full" />
+      <SkeletonBlock opacity={opacity} className="h-[72px] w-full rounded-[22px]" />
+      <SkeletonBlock opacity={opacity} className="h-12 w-full" />
+      <View className="flex-row gap-sm">
+        {[1, 2, 3, 4].map((key) => (
+          <SkeletonBlock key={key} opacity={opacity} className="h-9 w-20 rounded-full" />
+        ))}
+      </View>
+      {[1, 2].map((key) => (
+        <SkeletonBlock key={key} opacity={opacity} className="h-64 w-full rounded-[24px]" />
       ))}
     </View>
   );

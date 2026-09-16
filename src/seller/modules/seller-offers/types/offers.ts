@@ -9,7 +9,7 @@ export type OfferStatus =
 
 export type OfferValidity = '12h' | '24h' | '72h' | '7d';
 
-export type OfferTabFilter = 'all' | 'active' | 'paused' | 'expired';
+export type OfferTabFilter = 'all' | 'active' | 'paused' | 'expired' | 'draft';
 
 export type OfferReviewStepStatus = 'completed' | 'in_progress' | 'pending';
 

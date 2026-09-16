@@ -48,8 +48,7 @@ export const SAMPLE_CART_ITEM: Omit<CartItem, 'addedAt'> = {
   quantityMt: 10,
   unitPricePerMt: 94500,
   tierId: 'tier-standard',
-  imageUrl:
-    'https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&w=400&q=80',
+  imageUrl: '',
   moq: 12,
   quantityIncrement: 1,
   packaging: '25 KG Bags',
@@ -60,8 +59,7 @@ export const SAMPLE_CART_ITEM: Omit<CartItem, 'addedAt'> = {
 export const formatCartCurrency = (amount: number): string =>
   `₹${Math.round(amount).toLocaleString('en-IN')}`;
 
-export const formatPricePerMt = (amount: number): string =>
-  `${formatCartCurrency(amount)} / MT`;
+export const formatPricePerMt = (amount: number): string => `${formatCartCurrency(amount)} / MT`;
 
 export const calculateFreightForQuantity = (quantityMt: number): number => {
   if (quantityMt <= 0) {
@@ -81,10 +79,13 @@ export const calculateFreightForQuantity = (quantityMt: number): number => {
 export const buildBlindProductName = (grade: string, nameLine2: string): string => {
   const gradePart = grade.trim();
   const typePart = nameLine2.trim();
-  if (!typePart) {
-    return `PP ${gradePart}`;
+  if (!typePart || typePart.toLowerCase() === gradePart.toLowerCase()) {
+    return gradePart;
   }
-  return `PP ${gradePart} ${typePart}`;
+  if (typePart.toUpperCase().startsWith(gradePart.toUpperCase())) {
+    return typePart;
+  }
+  return `${gradePart} ${typePart}`;
 };
 
 export const buildProductTypeBadge = (categoryOrType: string): string =>

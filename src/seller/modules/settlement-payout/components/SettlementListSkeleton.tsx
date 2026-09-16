@@ -35,13 +35,15 @@ export const SettlementListSkeleton = memo(function SettlementListSkeleton() {
 
   return (
     <View className="gap-md">
-      <View className="flex-row gap-md">
+      <SkeletonBlock opacity={opacity} className="h-8 w-36" />
+      <SkeletonBlock opacity={opacity} className="h-44 w-full rounded-3xl" />
+      <View className="flex-row gap-sm">
         <SkeletonBlock opacity={opacity} className="h-24 flex-1" />
         <SkeletonBlock opacity={opacity} className="h-24 flex-1" />
       </View>
       <SkeletonBlock opacity={opacity} className="h-12 w-full" />
-      <SkeletonBlock opacity={opacity} className="h-48 w-full" />
-      <SkeletonBlock opacity={opacity} className="h-48 w-full" />
+      <SkeletonBlock opacity={opacity} className="h-52 w-full" />
+      <SkeletonBlock opacity={opacity} className="h-52 w-full" />
     </View>
   );
 });

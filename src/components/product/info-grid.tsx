@@ -2,7 +2,6 @@ import { memo } from 'react';
 
 import { View } from 'react-native';
 
-
 import { Typography } from '@/components/ui/typography';
 import type { ProductInfoItem } from '@/types/product';
 import { cn } from '@/utils/cn';
@@ -15,14 +14,13 @@ type InfoGridProps = {
 export const InfoGrid = memo(function InfoGrid({ items, className }: InfoGridProps) {
   return (
     <View
-
       className={cn(
         'mx-lg rounded-xl border border-brand-border bg-brand-white p-lg shadow-sm',
         className,
       )}
     >
       <Typography variant="roleTitle" className="mb-md text-[16px] text-brand-heading">
-        Key Information
+        Product Information
       </Typography>
 
       <View className="flex-row flex-wrap" style={{ gap: 10 }}>

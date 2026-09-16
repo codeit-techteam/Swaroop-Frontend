@@ -48,8 +48,10 @@ const SkeletonBlock = memo(function SkeletonBlock({
 export const ProductSkeleton = memo(function ProductSkeleton({ className }: ProductSkeletonProps) {
   return (
     <View className={cn('flex-1 bg-brand-background px-lg pt-md', className)}>
-      <SkeletonBlock className="w-full rounded-xl" style={{ aspectRatio: 16 / 9 }} />
-      <SkeletonBlock className="mt-lg h-48 w-full rounded-xl" />
+      <SkeletonBlock className="h-24 w-full rounded-xl" />
+      <SkeletonBlock className="mt-lg h-40 w-full rounded-xl" />
+      <SkeletonBlock className="mt-md h-12 w-full rounded-xl" />
+      <SkeletonBlock className="mt-md h-48 w-full rounded-xl" />
       <SkeletonBlock className="mt-md h-36 w-full rounded-xl" />
       <SkeletonBlock className="mt-md h-56 w-full rounded-xl" />
     </View>

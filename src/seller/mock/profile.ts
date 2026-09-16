@@ -6,9 +6,6 @@ export const SELLER_PROFILE_SEED: SellerProfileData = {
   verified: true,
   badge: 'Premium Seller',
   gst: '27AAACR1234A1Z1',
-  tradingSince: 'Oct 2018',
-  sales: '$2.4M',
-  reliability: '98.4%',
   profileImage:
     'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=400&q=80',
   address: 'Mumbai, MH 400001',

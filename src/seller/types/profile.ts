@@ -24,9 +24,6 @@ export type SellerProfileData = {
   verified: boolean;
   badge: string;
   gst: string;
-  tradingSince: string;
-  sales: string;
-  reliability: string;
   profileImage: string;
   address: string;
   bankVerified: boolean;

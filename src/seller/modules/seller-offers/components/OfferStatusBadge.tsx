@@ -12,13 +12,14 @@ const statusConfig: Record<
 > = {
   draft: {
     label: 'DRAFT',
-    chip: 'bg-brand-surface',
-    text: 'text-brand-body',
+    chip: 'bg-brand-primary-light',
+    text: 'text-brand-primary-dark',
   },
   pending_review: {
-    label: 'PENDING REVIEW',
+    label: 'IN REVIEW',
     chip: 'bg-[#FEF3E8]',
     text: 'text-[#B45309]',
+    dot: 'bg-[#F59E0B]',
   },
   approved: {
     label: 'APPROVED',
@@ -34,8 +35,9 @@ const statusConfig: Record<
   },
   paused: {
     label: 'PAUSED',
-    chip: 'bg-brand-surface',
-    text: 'text-brand-body',
+    chip: 'bg-[#FEF3E8]',
+    text: 'text-[#B45309]',
+    dot: 'bg-[#F59E0B]',
   },
   expired: {
     label: 'EXPIRED',
@@ -63,7 +65,7 @@ export const OfferStatusBadge = memo(function OfferStatusBadge({
       {config.dot ? <View className={cn('mr-xs h-1.5 w-1.5 rounded-full', config.dot)} /> : null}
       <Typography
         variant="badge"
-        className={cn(compact ? 'text-[10px]' : 'text-[11px]', config.text)}
+        className={cn(compact ? 'text-[10px] tracking-[0.4px]' : 'text-[11px] tracking-[0.4px]', config.text)}
       >
         {config.label}
       </Typography>

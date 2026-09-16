@@ -1,8 +1,8 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 
-import { FlatList, View } from 'react-native';
+import { FlatList, Keyboard, View, type TextInput } from 'react-native';
 
-import { type Href, useRouter } from 'expo-router';
+import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
@@ -13,42 +13,51 @@ import {
   MarketHeader,
   ProductCard,
   SearchBar,
+  SearchSuggestions,
 } from '@/components/market';
+import { Typography } from '@/components/ui/typography';
 import { TAB_BAR_HEIGHT } from '@/constants/dashboard';
+import { useMarketSearch } from '@/hooks/use-market-search';
 import { useMarketplaceCatalog } from '@/hooks/use-marketplace-catalog';
 import { ROUTES } from '@/navigation/routes';
-import type { MarketCategory, MarketProduct } from '@/types/market';
+import type { MarketProduct } from '@/types/market';
 
 export const CustomerMarketScreen = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const searchInputRef = useRef<TextInput>(null);
+  const params = useLocalSearchParams<{ focusSearch?: string | string[] }>();
   const marketProducts = useMarketplaceCatalog();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<MarketCategory | null>('Polypropylene');
+  const {
+    query,
+    selectedCategory,
+    filteredProducts,
+    expandedAcrossCategories,
+    suggestions,
+    recentSearches,
+    popularMaterials,
+    showSuggestions,
+    handleQueryChange,
+    handleFocus,
+    handleBlur,
+    handleClear,
+    handleSubmit,
+    handleViewAll,
+    handleSelectMaterial,
+    handleSelectRecent,
+    handleSelectProduct,
+    handleClearRecent,
+    handleSelectCategory,
+    handleDismissSuggestions,
+  } = useMarketSearch(marketProducts);
 
-  const filteredProducts = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-
-    return marketProducts.filter((product) => {
-      const matchesCategory = selectedCategory ? product.category === selectedCategory : true;
-
-      if (!matchesCategory) {
-        return false;
-      }
-
-      if (!query) {
-        return true;
-      }
-
-      return (
-        product.name.toLowerCase().includes(query) ||
-        product.grade.toLowerCase().includes(query) ||
-        product.category.toLowerCase().includes(query) ||
-        product.origin.toLowerCase().includes(query) ||
-        product.badge.toLowerCase().includes(query)
-      );
-    });
-  }, [marketProducts, searchQuery, selectedCategory]);
+  const shouldAutoFocus = useMemo(() => {
+    const value = params.focusSearch;
+    if (typeof value === 'string') {
+      return value === '1';
+    }
+    return Array.isArray(value) && value[0] === '1';
+  }, [params.focusSearch]);
 
   const handleLocationPress = useCallback(() => {
     Toast.show({
@@ -72,8 +81,9 @@ export const CustomerMarketScreen = () => {
     });
   }, []);
 
-  const handleBookNow = useCallback(
+  const openProduct = useCallback(
     (product: MarketProduct) => {
+      Keyboard.dismiss();
       router.push({
         pathname: ROUTES.CUSTOMER.PRODUCT_DETAILS,
         params: { id: product.id },
@@ -82,47 +92,135 @@ export const CustomerMarketScreen = () => {
     [router],
   );
 
+  const handleSuggestionProduct = useCallback(
+    (product: MarketProduct) => {
+      handleSelectProduct(product);
+      openProduct(product);
+    },
+    [handleSelectProduct, openProduct],
+  );
+
+  const handleSubmitSearch = useCallback(() => {
+    Keyboard.dismiss();
+    handleSubmit();
+  }, [handleSubmit]);
+
+  const handleViewAllResults = useCallback(() => {
+    Keyboard.dismiss();
+    handleViewAll();
+  }, [handleViewAll]);
+
+  const handleDismissOverlay = useCallback(() => {
+    Keyboard.dismiss();
+    handleDismissSuggestions();
+  }, [handleDismissSuggestions]);
+
   const renderItem = useCallback(
     ({ item, index }: { item: MarketProduct; index: number }) => (
-      <ProductCard product={item} index={index} onBookNow={handleBookNow} />
+      <ProductCard product={item} index={index} onBookNow={openProduct} />
     ),
-    [handleBookNow],
+    [openProduct],
   );
 
   const keyExtractor = useCallback((item: MarketProduct) => item.id, []);
 
-  const listHeader = useMemo(
-    () => (
-      <View className="pb-md pt-md">
-        <SearchBar value={searchQuery} onChangeText={setSearchQuery} />
-        <CategoryFilter
-          selectedCategory={selectedCategory}
-          onSelectCategory={setSelectedCategory}
-          onFilterPress={handleFilterPress}
-          className="mt-md"
-        />
-      </View>
-    ),
-    [handleFilterPress, searchQuery, selectedCategory],
-  );
+  const trimmedQuery = query.trim();
+  const resultLabel = filteredProducts.length === 1 ? 'grade' : 'grades';
 
   return (
     <View className="flex-1 bg-brand-white">
       <MarketHeader onLocationPress={handleLocationPress} onCartPress={handleCartPress} />
 
-      <FlatList
-        data={filteredProducts}
-        keyExtractor={keyExtractor}
-        renderItem={renderItem}
-        ListHeaderComponent={listHeader}
-        ListEmptyComponent={<EmptyState />}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{
-          paddingBottom: TAB_BAR_HEIGHT + insets.bottom + 24,
-          flexGrow: 1,
-        }}
-      />
+      <View className="bg-brand-white pb-sm pt-md">
+        <SearchBar
+          ref={searchInputRef}
+          value={query}
+          onChangeText={handleQueryChange}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          onSubmit={handleSubmitSearch}
+          onClear={handleClear}
+          autoFocus={shouldAutoFocus}
+        />
+      </View>
+
+      {showSuggestions ? (
+        <View className="flex-1 pt-sm" style={{ paddingBottom: TAB_BAR_HEIGHT + insets.bottom }}>
+          <SearchSuggestions
+            query={query}
+            suggestions={suggestions}
+            recentSearches={recentSearches}
+            popularMaterials={popularMaterials}
+            onSelectMaterial={(material) => {
+              Keyboard.dismiss();
+              handleSelectMaterial(material);
+            }}
+            onSelectProduct={handleSuggestionProduct}
+            onSelectRecent={(term) => {
+              Keyboard.dismiss();
+              handleSelectRecent(term);
+            }}
+            onViewAll={handleViewAllResults}
+            onClearRecent={handleClearRecent}
+          />
+        </View>
+      ) : (
+        <>
+          <CategoryFilter
+            selectedCategory={selectedCategory}
+            onSelectCategory={handleSelectCategory}
+            onFilterPress={handleFilterPress}
+          />
+
+          <View className="flex-row items-center justify-between px-lg pb-sm pt-md">
+            <Typography
+              variant="caption"
+              className="flex-1 font-sans text-[12px] normal-case tracking-normal text-brand-muted"
+              numberOfLines={1}
+            >
+              {trimmedQuery
+                ? `${filteredProducts.length} ${resultLabel} for “${trimmedQuery}”`
+                : selectedCategory
+                  ? `${filteredProducts.length} ${resultLabel} in ${selectedCategory}`
+                  : `${filteredProducts.length} ${resultLabel}`}
+            </Typography>
+            {expandedAcrossCategories ? (
+              <Typography
+                variant="caption"
+                className="ml-sm font-sans text-[11px] normal-case tracking-normal text-brand-primary"
+              >
+                All materials
+              </Typography>
+            ) : null}
+          </View>
+
+          <FlatList
+            data={filteredProducts}
+            keyExtractor={keyExtractor}
+            renderItem={renderItem}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            onScrollBeginDrag={handleDismissOverlay}
+            ListEmptyComponent={
+              <EmptyState
+                title={trimmedQuery ? `No grades match “${trimmedQuery}”` : 'No materials found'}
+                description={
+                  trimmedQuery
+                    ? 'Try a material like PP, HDPE, PVC, or a grade code.'
+                    : 'Try a different grade, category, or search term.'
+                }
+                actionLabel={trimmedQuery ? 'Clear search' : undefined}
+                onActionPress={trimmedQuery ? handleClear : undefined}
+              />
+            }
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{
+              paddingBottom: TAB_BAR_HEIGHT + insets.bottom + 24,
+              flexGrow: 1,
+            }}
+          />
+        </>
+      )}
     </View>
   );
 };

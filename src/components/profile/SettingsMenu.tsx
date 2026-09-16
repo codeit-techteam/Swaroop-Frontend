@@ -1,6 +1,6 @@
 import { memo, useCallback } from 'react';
 
-import { Alert, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Toast from 'react-native-toast-message';
@@ -9,6 +9,7 @@ import { ProfileSectionHeader } from '@/components/profile/ProfileSectionHeader'
 import { Typography } from '@/components/ui/typography';
 import { SETTINGS_MENU_ITEMS } from '@/constants/profile';
 import { BellIcon, ChevronRightIcon, HeadsetIcon, LogoutIcon, ShieldCheckIcon } from '@/icons';
+import { showConfirmDialog } from '@/store/dialog-store';
 import { brandColors } from '@/theme/colors';
 import { cn } from '@/utils/cn';
 
@@ -35,14 +36,14 @@ export const SettingsMenu = memo(function SettingsMenu({ onLogout, className }: 
   }, []);
 
   const handleLogoutPress = useCallback(() => {
-    Alert.alert('Logout Account', 'Are you sure you want to logout from PetroTrade?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Logout',
-        style: 'destructive',
-        onPress: onLogout,
-      },
-    ]);
+    showConfirmDialog({
+      variant: 'danger',
+      title: 'Logout Account',
+      message: 'You will need to sign in again to access your PetroTrade account.',
+      confirmLabel: 'Logout',
+      cancelLabel: 'Cancel',
+      onConfirm: onLogout,
+    });
   }, [onLogout]);
 
   const handleItemPress = useCallback(

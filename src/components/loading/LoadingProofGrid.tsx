@@ -69,7 +69,11 @@ export const LoadingProofGrid = memo(function LoadingProofGrid({
 
         <View style={{ gap: 12 }}>
           {rows.map((row) => (
-            <View key={row.map((item) => item.id).join('-')} className="flex-row" style={{ gap: 12 }}>
+            <View
+              key={row.map((item) => item.id).join('-')}
+              className="flex-row"
+              style={{ gap: 12 }}
+            >
               {row.map((item) => (
                 <Pressable
                   key={item.id}
@@ -94,7 +98,8 @@ export const LoadingProofGrid = memo(function LoadingProofGrid({
         onRequestClose={() => setSelectedItem(null)}
       >
         <Pressable
-          className="flex-1 items-center justify-center bg-black/80 px-lg"
+          className="flex-1 items-center justify-center px-lg"
+          style={{ backgroundColor: 'rgba(16, 52, 96, 0.72)' }}
           onPress={() => setSelectedItem(null)}
         >
           {selectedItem ? (

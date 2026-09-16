@@ -8,6 +8,7 @@ import { cn } from '@/utils/cn';
 type QuantitySelectorProps = {
   quantityMt: number;
   minMt: number;
+  maxMt?: number;
   increment: number;
   onIncrement: () => void;
   onDecrement: () => void;
@@ -17,22 +18,21 @@ type QuantitySelectorProps = {
 export const QuantitySelector = memo(function QuantitySelector({
   quantityMt,
   minMt,
+  maxMt,
   increment,
   onIncrement,
   onDecrement,
   className,
 }: QuantitySelectorProps) {
   const canDecrement = quantityMt - increment >= minMt;
+  const canIncrement = maxMt == null || quantityMt + increment <= maxMt;
 
   return (
     <View
-      className={cn(
-        'h-11 flex-row items-center rounded-lg bg-brand-surface px-sm',
-        className,
-      )}
+      className={cn('h-11 flex-row items-center rounded-lg bg-brand-surface px-sm', className)}
       accessibilityRole="adjustable"
       accessibilityLabel={`Quantity ${quantityMt} MT`}
-      accessibilityValue={{ min: minMt, now: quantityMt }}
+      accessibilityValue={{ min: minMt, now: quantityMt, max: maxMt }}
     >
       <Pressable
         onPress={onDecrement}
@@ -59,12 +59,16 @@ export const QuantitySelector = memo(function QuantitySelector({
 
       <Pressable
         onPress={onIncrement}
+        disabled={!canIncrement}
         hitSlop={8}
         accessibilityRole="button"
         accessibilityLabel={`Increase quantity by ${increment} MT`}
         className="h-8 w-8 items-center justify-center"
       >
-        <Typography variant="roleTitle" className="text-[18px] text-brand-heading">
+        <Typography
+          variant="roleTitle"
+          className={cn('text-[18px]', canIncrement ? 'text-brand-heading' : 'text-brand-disabled')}
+        >
           +
         </Typography>
       </Pressable>

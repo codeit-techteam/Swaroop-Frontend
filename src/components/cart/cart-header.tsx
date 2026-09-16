@@ -5,20 +5,17 @@ import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Typography } from '@/components/ui/typography';
-import { BackArrowIcon, HelpIcon } from '@/icons';
+import { BackArrowIcon } from '@/icons';
 import { brandColors } from '@/theme/colors';
-import { iconSizes } from '@/theme/icons';
 import { cn } from '@/utils/cn';
 
 type CartHeaderProps = {
   onBackPress: () => void;
-  onHelpPress?: () => void;
   className?: string;
 };
 
 export const CartHeader = memo(function CartHeader({
   onBackPress,
-  onHelpPress,
   className,
 }: CartHeaderProps) {
   const insets = useSafeAreaInsets();
@@ -43,15 +40,7 @@ export const CartHeader = memo(function CartHeader({
           Cart
         </Typography>
 
-        <Pressable
-          onPress={onHelpPress}
-          hitSlop={10}
-          accessibilityRole="button"
-          accessibilityLabel="Help"
-          className="h-10 w-10 items-center justify-center"
-        >
-          <HelpIcon size={iconSizes.lg} color={brandColors.primary} />
-        </Pressable>
+        <View className="h-10 w-10" />
       </View>
     </View>
   );

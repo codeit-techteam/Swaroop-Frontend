@@ -1,17 +1,17 @@
-import { memo } from 'react';
+import { memo, type ReactNode } from 'react';
 
-import { Modal, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, TextInput, View } from 'react-native';
 
 import { DropdownField, InputField, PrimaryButton, Typography } from '@/components';
 import {
   BellIcon,
   BuildingIcon,
   FilterIcon,
+  LocationPinIcon,
   SearchIcon,
+  StoreIcon,
 } from '@/icons';
-import { brandColors } from '@/theme/colors';
-import { cn } from '@/utils/cn';
-
+import { SellerSheetShell } from '@/seller/components/SellerSheetShell';
 import type {
   InventoryCategory,
   InventoryProduct,
@@ -20,6 +20,9 @@ import type {
   StockHistoryEntry,
   WarehouseOption,
 } from '@/seller/types';
+import { brandColors } from '@/theme/colors';
+import { elevation } from '@/theme/shadows';
+import { cn } from '@/utils/cn';
 
 const formatStock = (value: number): string => `${value.toFixed(value % 1 === 0 ? 1 : 2)} MT`;
 
@@ -32,7 +35,10 @@ const formatDateTime = (value: string): string =>
     minute: '2-digit',
   }).format(new Date(value));
 
-const inventoryStatusStyles: Record<InventoryStatus, { chip: string; text: string; label: string }> = {
+const inventoryStatusStyles: Record<
+  InventoryStatus,
+  { chip: string; text: string; label: string }
+> = {
   normal: {
     chip: 'bg-brand-success-light',
     text: 'text-brand-success',
@@ -50,45 +56,77 @@ const inventoryStatusStyles: Record<InventoryStatus, { chip: string; text: strin
   },
 };
 
+const SUMMARY_ACCENT = {
+  navy: {
+    tint: 'bg-brand-primary-light',
+    icon: brandColors.navy,
+    selected: 'border-brand-navy bg-brand-primary-tint',
+  },
+  blue: {
+    tint: 'bg-[#EEF4FF]',
+    icon: brandColors.primaryDark,
+    selected: 'border-brand-primary bg-[#EEF4FF]',
+  },
+  red: {
+    tint: 'bg-brand-error-light',
+    icon: brandColors.error,
+    selected: 'border-brand-error bg-brand-error-light',
+  },
+  gray: {
+    tint: 'bg-brand-surface',
+    icon: brandColors.body,
+    selected: 'border-brand-heading bg-brand-surface',
+  },
+} as const;
+
 export const InventorySummaryCard = memo(function InventorySummaryCard({
   title,
   value,
   accent,
-  meta,
+  icon,
+  selected = false,
+  onPress,
 }: {
   title: string;
   value: string | number;
   accent: 'navy' | 'blue' | 'red' | 'gray';
-  meta?: string;
+  icon?: ReactNode;
+  selected?: boolean;
+  onPress?: () => void;
 }) {
-  const accentMap = {
-    navy: 'bg-brand-primary-light text-brand-heading',
-    blue: 'bg-[#EEF4FF] text-brand-primary-dark',
-    red: 'bg-brand-error-light text-brand-error',
-    gray: 'bg-brand-surface text-brand-body',
-  } as const;
+  const palette = SUMMARY_ACCENT[accent];
 
   return (
-    <View className="min-h-[112px] flex-1 rounded-[22px] border border-brand-border bg-brand-white p-md">
-      <View className="flex-row items-start justify-between">
-        <View className={cn('rounded-xl px-sm py-sm', accentMap[accent].split(' ')[0])}>
-          <Typography variant="badge" className={accentMap[accent].split(' ')[1]}>
-            {title.slice(0, 1)}
-          </Typography>
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityState={{ selected }}
+      accessibilityLabel={`${title} ${value}`}
+      className={cn(
+        'w-full rounded-2xl border bg-brand-white px-md py-md',
+        selected ? palette.selected : 'border-brand-border',
+      )}
+      style={({ pressed }) => [
+        elevation.sm,
+        {
+          opacity: pressed && onPress ? 0.92 : 1,
+          transform: [{ scale: pressed && onPress ? 0.985 : 1 }],
+        },
+      ]}
+    >
+      <View className="flex-row items-center justify-between">
+        <View className={cn('h-8 w-8 items-center justify-center rounded-xl', palette.tint)}>
+          {icon ?? <StoreIcon size={15} color={palette.icon} />}
         </View>
-        {meta ? (
-          <Typography variant="legal" className="text-left text-brand-body">
-            {meta}
-          </Typography>
-        ) : null}
+        <Typography variant="headingLeft" className="text-[24px] leading-[28px]">
+          {value}
+        </Typography>
       </View>
-      <Typography variant="roleDescription" className="mt-sm">
+      <Typography variant="legal" className="mt-sm text-left text-[11px] text-brand-body">
         {title}
       </Typography>
-      <Typography variant="headingLeft" className="mt-xs text-[30px]">
-        {value}
-      </Typography>
-    </View>
+    </Pressable>
   );
 });
 
@@ -100,42 +138,76 @@ export const InventoryProductCard = memo(function InventoryProductCard({
   onUpdateStock: (product: InventoryProduct) => void;
 }) {
   const badgeStyle = inventoryStatusStyles[product.status];
+  const available = Math.max(product.availableStock, 0);
+  const remainingShare = available > 0 ? Math.max(product.remainingStock, 0) / available : 0;
+  const offeredShare = available > 0 ? Math.max(product.offeredStock, 0) / available : 0;
+  const reservedShare = available > 0 ? Math.max(product.reservedStock, 0) / available : 0;
 
   return (
-    <View className="rounded-[22px] border border-brand-border bg-brand-white p-md">
+    <View
+      className="overflow-hidden rounded-2xl border border-brand-border bg-brand-white p-md"
+      style={elevation.sm}
+    >
       <View className="flex-row items-start justify-between">
         <View className="flex-1 pr-md">
-          <Typography variant="headingLeft" className="text-[24px] text-brand-heading">
+          <Typography
+            variant="headingLeft"
+            className="text-[17px] leading-[22px] text-brand-heading"
+            numberOfLines={2}
+          >
             {product.productName}
           </Typography>
-          <Typography variant="badge" className="mt-xs text-[11px] text-brand-body">
-            {`${product.category.toUpperCase()} / ${product.subcategory.toUpperCase()}`}
+          <Typography variant="legal" className="mt-xs text-left text-[11px] text-brand-body">
+            {product.grade} · {product.category}
+            {product.subcategory ? ` / ${product.subcategory}` : ''}
           </Typography>
+          <View className="mt-xs flex-row items-center">
+            <LocationPinIcon size={13} color={brandColors.primaryDark} />
+            <Typography variant="badge" className="ml-xs text-[11px] text-brand-primary-dark">
+              {product.warehouse}
+            </Typography>
+          </View>
         </View>
-        <View className={cn('rounded-full px-sm py-xs', badgeStyle.chip)}>
-          <Typography variant="badge" className={cn('text-[10px]', badgeStyle.text)}>
-            {badgeStyle.label}
-          </Typography>
+        <View className="items-end gap-xs">
+          <View className={cn('rounded-full px-sm py-xs', badgeStyle.chip)}>
+            <Typography variant="badge" className={cn('text-[10px]', badgeStyle.text)}>
+              {badgeStyle.label}
+            </Typography>
+          </View>
+          {product.activeOffer ? (
+            <View className="rounded-full bg-brand-primary-light px-sm py-xs">
+              <Typography variant="badge" className="text-[10px] text-brand-primary-dark">
+                Offer live
+              </Typography>
+            </View>
+          ) : null}
         </View>
       </View>
 
-      <View className="mt-md flex-row flex-wrap">
+      <View className="mt-md h-1.5 flex-row overflow-hidden rounded-full bg-brand-surface">
+        <View className="h-full bg-brand-success" style={{ flex: remainingShare }} />
+        <View className="h-full bg-brand-primary" style={{ flex: offeredShare }} />
+        <View className="h-full bg-[#C5D0DC]" style={{ flex: reservedShare }} />
+      </View>
+
+      <View className="mt-md flex-row">
         {[
-          { label: 'Available Stock', value: formatStock(product.availableStock) },
-          { label: 'Reserved Stock', value: formatStock(product.reservedStock) },
-          { label: 'Offered Stock', value: formatStock(product.offeredStock) },
-          { label: 'Remaining', value: formatStock(product.remainingStock) },
+          { label: 'Available', value: formatStock(product.availableStock) },
+          {
+            label: 'Free',
+            value: formatStock(product.remainingStock),
+            alert: product.status !== 'normal',
+          },
+          { label: 'Reserved', value: formatStock(product.reservedStock) },
+          { label: 'Offered', value: formatStock(product.offeredStock) },
         ].map((item) => (
-          <View key={item.label} className="mb-md w-1/2 pr-sm">
-            <Typography variant="fieldLabel">{item.label}</Typography>
+          <View key={item.label} className="flex-1 pr-xs">
+            <Typography variant="fieldLabel" className="text-[10px]">
+              {item.label}
+            </Typography>
             <Typography
-              variant="headingLeft"
-              className={cn(
-                'mt-xs text-[20px]',
-                item.label === 'Remaining' &&
-                  product.status === 'low_stock' &&
-                  'text-brand-error',
-              )}
+              variant="roleTitle"
+              className={cn('mt-xs text-[13px]', item.alert && 'text-brand-error')}
             >
               {item.value}
             </Typography>
@@ -143,7 +215,11 @@ export const InventoryProductCard = memo(function InventoryProductCard({
         ))}
       </View>
 
-      <PrimaryButton label="Update Stock" onPress={() => onUpdateStock(product)} />
+      <PrimaryButton
+        label="Update Stock"
+        onPress={() => onUpdateStock(product)}
+        className="mt-md rounded-2xl bg-brand-navy py-md"
+      />
     </View>
   );
 });
@@ -193,86 +269,89 @@ export const UpdateStockBottomSheet = memo(function UpdateStockBottomSheet({
   onReasonChange: (value: string) => void;
   onSubmit: () => void;
 }) {
-  if (!visible) {
-    return null;
-  }
-
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-      <Pressable className="flex-1 justify-end bg-black/35" onPress={onClose}>
+    <SellerSheetShell visible={visible} onClose={onClose}>
+      <View className="flex-row items-center justify-between">
+        <Typography variant="headingLeft" className="text-[22px]">
+          Update Stock
+        </Typography>
         <Pressable
-          className="rounded-t-[30px] bg-brand-white px-lg pb-2xl pt-md"
-          onPress={(event) => event.stopPropagation()}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="Close"
+          className="h-9 w-9 items-center justify-center rounded-full bg-brand-surface"
         >
-          <View className="mb-md h-1 w-12 self-center rounded-full bg-brand-border" />
-          <View className="flex-row items-center justify-between">
-            <Typography variant="headingLeft" className="text-[24px]">
-              Update Stock
-            </Typography>
-            <Pressable onPress={onClose} className="h-9 w-9 items-center justify-center rounded-full bg-brand-surface">
-              <Typography variant="roleTitle">×</Typography>
-            </Pressable>
-          </View>
-
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingTop: 16 }}>
-            <InputField
-              label="Selected Product Grade"
-              value={product ? `${product.productName} • ${product.grade}` : '--'}
-              editable={false}
-            />
-            <InputField
-              label="Current Stock (MT)"
-              value={product ? String(product.availableStock) : '0'}
-              editable={false}
-              containerClassName="mt-md"
-            />
-            <WarehouseSelector
-              label="Warehouse Location"
-              value={warehouse}
-              options={warehouses}
-              onChange={onWarehouseChange}
-            />
-            <View className="mt-md flex-row gap-md">
-              <InputField
-                label="Add Stock (+)"
-                value={addStock}
-                onChangeText={onAddStockChange}
-                keyboardType="numeric"
-                containerClassName="flex-1"
-              />
-              <InputField
-                label="Reduce Stock (-)"
-                value={reduceStock}
-                onChangeText={onReduceStockChange}
-                keyboardType="numeric"
-                containerClassName="flex-1"
-              />
-            </View>
-            <View className="mt-md">
-              <WarehouseSelector
-                label="Adjustment Reason"
-                value={reason}
-                options={reasons}
-                onChange={onReasonChange}
-              />
-            </View>
-            <PrimaryButton label="Update Inventory" onPress={onSubmit} className="mt-lg bg-brand-navy" />
-            <Pressable
-              onPress={onClose}
-              className="mt-md items-center justify-center rounded-md border border-brand-border bg-brand-white px-xl py-lg"
-            >
-              <Typography variant="button" className="text-brand-body">
-                Cancel
-              </Typography>
-            </Pressable>
-          </ScrollView>
+          <Typography variant="roleTitle" className="text-brand-footer">
+            ×
+          </Typography>
         </Pressable>
-      </Pressable>
-    </Modal>
+      </View>
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingTop: 16 }}>
+        <InputField
+          label="Selected Product Grade"
+          value={product ? `${product.productName} • ${product.grade}` : '--'}
+          editable={false}
+        />
+        <InputField
+          label="Current Stock (MT)"
+          value={product ? String(product.availableStock) : '0'}
+          editable={false}
+          containerClassName="mt-md"
+        />
+        <WarehouseSelector
+          label="Warehouse Location"
+          value={warehouse}
+          options={warehouses}
+          onChange={onWarehouseChange}
+        />
+        <View className="mt-md flex-row gap-md">
+          <InputField
+            label="Add Stock (+)"
+            value={addStock}
+            onChangeText={onAddStockChange}
+            keyboardType="numeric"
+            containerClassName="flex-1"
+          />
+          <InputField
+            label="Reduce Stock (-)"
+            value={reduceStock}
+            onChangeText={onReduceStockChange}
+            keyboardType="numeric"
+            containerClassName="flex-1"
+          />
+        </View>
+        <View className="mt-md">
+          <WarehouseSelector
+            label="Adjustment Reason"
+            value={reason}
+            options={reasons}
+            onChange={onReasonChange}
+          />
+        </View>
+        <PrimaryButton
+          label="Update Inventory"
+          onPress={onSubmit}
+          className="mt-lg rounded-2xl bg-brand-navy"
+        />
+        <Pressable
+          onPress={onClose}
+          className="mt-md items-center justify-center rounded-2xl border border-brand-border bg-brand-white px-xl py-md"
+        >
+          <Typography variant="button" className="text-brand-body">
+            Cancel
+          </Typography>
+        </Pressable>
+      </ScrollView>
+    </SellerSheetShell>
   );
 });
 
-export const StockHistoryCard = memo(function StockHistoryCard({ entry }: { entry: StockHistoryEntry }) {
+export const StockHistoryCard = memo(function StockHistoryCard({
+  entry,
+}: {
+  entry: StockHistoryEntry;
+}) {
   return (
     <View className="rounded-[20px] border border-brand-border bg-brand-white p-md">
       <View className="flex-row items-start justify-between">
@@ -317,21 +396,33 @@ export const SellerModuleTopBar = memo(function SellerModuleTopBar({
   onBellPress?: () => void;
 }) {
   return (
-    <View className="rounded-b-[20px] bg-brand-white px-lg pb-md pt-md">
+    <View className="border-b border-brand-border bg-brand-white px-lg pb-md pt-md">
       <View className="flex-row items-center justify-between">
         <View className="flex-row items-center gap-sm">
-          <BuildingIcon size={18} color={brandColors.primaryDark} />
-          <Typography variant="logo" className="text-[20px] text-brand-heading">
+          <View className="h-9 w-9 items-center justify-center rounded-2xl bg-brand-primary-light">
+            <BuildingIcon size={16} color={brandColors.navy} />
+          </View>
+          <Typography variant="logo" className="text-[18px] text-brand-heading">
             {title}
           </Typography>
         </View>
         <View className="flex-row items-center gap-sm">
           {showSearch ? (
-            <Pressable onPress={onSearchPress} className="rounded-full p-sm">
+            <Pressable
+              onPress={onSearchPress}
+              accessibilityRole="button"
+              accessibilityLabel="Search"
+              className="h-10 w-10 items-center justify-center rounded-2xl border border-brand-border bg-brand-white"
+            >
               <SearchIcon size={18} color={brandColors.body} />
             </Pressable>
           ) : null}
-          <Pressable onPress={onBellPress} className="rounded-full p-sm">
+          <Pressable
+            onPress={onBellPress}
+            accessibilityRole="button"
+            accessibilityLabel="Notifications"
+            className="h-10 w-10 items-center justify-center rounded-2xl border border-brand-border bg-brand-white"
+          >
             <BellIcon />
           </Pressable>
         </View>
@@ -350,7 +441,10 @@ export const SearchField = memo(function SearchField({
   placeholder: string;
 }) {
   return (
-    <View className="min-h-[48px] w-full flex-row items-center rounded-md border border-brand-border bg-brand-white px-md">
+    <View
+      className="min-h-[48px] w-full flex-row items-center rounded-2xl border border-brand-border bg-brand-white px-md"
+      style={elevation.sm}
+    >
       <SearchIcon size={16} color={brandColors.body} />
       <TextInput
         value={value}
@@ -373,17 +467,18 @@ export const FilterChipRow = memo(function FilterChipRow({
   onSelect: (value: string) => void;
 }) {
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={{ gap: 10 }}
+    >
       {options.map((option) => {
         const active = selected === option;
         return (
           <Pressable
             key={option}
             onPress={() => onSelect(option)}
-            className={cn(
-              'rounded-full px-md py-sm',
-              active ? 'bg-brand-navy' : 'bg-[#F3F4F6]',
-            )}
+            className={cn('rounded-full px-md py-sm', active ? 'bg-brand-navy' : 'bg-[#F3F4F6]')}
           >
             <Typography
               variant="roleTitle"

@@ -1,10 +1,8 @@
 import { memo, useCallback, useEffect, useState } from 'react';
 
-import { Alert, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
 import { type Href, useRouter } from 'expo-router';
-
-import Toast from 'react-native-toast-message';
 
 import {
   CartHeader,
@@ -25,6 +23,7 @@ import {
   selectOrderSummary,
   useCartStore,
 } from '@/store/cart-store';
+import { showAppDialog } from '@/store/dialog-store';
 
 export const CustomerCartScreen = memo(function CustomerCartScreen() {
   const router = useRouter();
@@ -63,50 +62,52 @@ export const CustomerCartScreen = memo(function CustomerCartScreen() {
     router.replace(ROUTES.CUSTOMER.MARKET as Href);
   }, [router]);
 
-  const handleHelp = useCallback(() => {
-    Toast.show({
-      type: 'info',
-      text1: 'Cart help',
-      text2: 'Adjust quantity to meet MOQ, then proceed to checkout.',
-      visibilityTime: 2400,
-    });
-  }, []);
-
   const handleChangeDelivery = useCallback(() => {
-    Alert.alert('Change delivery location', 'Select a delivery city (frontend only).', [
-      {
-        text: 'Mumbai, Maharashtra',
-        onPress: () =>
-          setDelivery({
-            ...DEFAULT_CART_DELIVERY,
-            city: 'Mumbai',
-            state: 'Maharashtra',
-            label: 'Mumbai, Maharashtra',
-            etaLabel: '2–3 Business Days',
-          }),
-      },
-      {
-        text: 'Pune, Maharashtra',
-        onPress: () =>
-          setDelivery({
-            city: 'Pune',
-            state: 'Maharashtra',
-            label: 'Pune, Maharashtra',
-            etaLabel: '3–4 Business Days',
-          }),
-      },
-      {
-        text: 'Ahmedabad, Gujarat',
-        onPress: () =>
-          setDelivery({
-            city: 'Ahmedabad',
-            state: 'Gujarat',
-            label: 'Ahmedabad, Gujarat',
-            etaLabel: '2–3 Business Days',
-          }),
-      },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
+    showAppDialog({
+      variant: 'info',
+      title: 'Delivery location',
+      message: 'Choose the city where this order should be delivered.',
+      cancelLabel: 'Cancel',
+      choices: [
+        {
+          id: 'mumbai',
+          label: 'Mumbai, Maharashtra',
+          description: 'ETA 2–3 business days',
+          onPress: () =>
+            setDelivery({
+              ...DEFAULT_CART_DELIVERY,
+              city: 'Mumbai',
+              state: 'Maharashtra',
+              label: 'Mumbai, Maharashtra',
+              etaLabel: '2–3 Business Days',
+            }),
+        },
+        {
+          id: 'pune',
+          label: 'Pune, Maharashtra',
+          description: 'ETA 3–4 business days',
+          onPress: () =>
+            setDelivery({
+              city: 'Pune',
+              state: 'Maharashtra',
+              label: 'Pune, Maharashtra',
+              etaLabel: '3–4 Business Days',
+            }),
+        },
+        {
+          id: 'ahmedabad',
+          label: 'Ahmedabad, Gujarat',
+          description: 'ETA 2–3 business days',
+          onPress: () =>
+            setDelivery({
+              city: 'Ahmedabad',
+              state: 'Gujarat',
+              label: 'Ahmedabad, Gujarat',
+              etaLabel: '2–3 Business Days',
+            }),
+        },
+      ],
+    });
   }, [setDelivery]);
 
   const handleBrowseMarketplace = useCallback(() => {
@@ -124,7 +125,7 @@ export const CustomerCartScreen = memo(function CustomerCartScreen() {
 
   return (
     <View className="flex-1 bg-brand-background">
-      <CartHeader onBackPress={handleBack} onHelpPress={handleHelp} />
+      <CartHeader onBackPress={handleBack} />
 
       {isLoading || !isHydrated ? (
         <CartSkeleton />

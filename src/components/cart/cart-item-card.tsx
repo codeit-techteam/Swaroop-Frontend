@@ -1,6 +1,6 @@
 import { memo, useCallback } from 'react';
 
-import { Alert, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { Image } from 'expo-image';
 
@@ -10,6 +10,7 @@ import { CartQuantitySelector } from '@/components/cart/quantity-selector';
 import { Typography } from '@/components/ui/typography';
 import { formatCartCurrency, formatPricePerMt } from '@/constants/cart';
 import { AlertCircleIcon, TrashIcon } from '@/icons';
+import { showConfirmDialog } from '@/store/dialog-store';
 import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
 import { elevation } from '@/theme/shadows';
@@ -35,14 +36,14 @@ export const CartItemCard = memo(function CartItemCard({
   const belowMoq = item.quantityMt < item.moq;
 
   const handleRemove = useCallback(() => {
-    Alert.alert('Remove item', `Remove ${item.name} from your cart?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: () => onRemove(item.id),
-      },
-    ]);
+    showConfirmDialog({
+      variant: 'danger',
+      title: 'Remove item',
+      message: `Remove ${item.name} from your cart? This can be added again from the marketplace.`,
+      confirmLabel: 'Remove',
+      cancelLabel: 'Keep item',
+      onConfirm: () => onRemove(item.id),
+    });
   }, [item.id, item.name, onRemove]);
 
   return (
@@ -57,14 +58,20 @@ export const CartItemCard = memo(function CartItemCard({
     >
       <View className="p-md">
         <View className="flex-row">
-          <View className="h-[72px] w-[72px] overflow-hidden rounded-xl bg-brand-surface">
-            <Image
-              source={{ uri: item.imageUrl }}
-              style={{ width: '100%', height: '100%' }}
-              contentFit="cover"
-              transition={0}
-              accessibilityLabel={`${item.name} product image`}
-            />
+          <View className="h-[72px] w-[72px] items-center justify-center overflow-hidden rounded-xl border border-brand-border bg-brand-surface">
+            {item.imageUrl ? (
+              <Image
+                source={{ uri: item.imageUrl }}
+                style={{ width: '100%', height: '100%' }}
+                contentFit="cover"
+                transition={0}
+                accessibilityLabel={`${item.name} product image`}
+              />
+            ) : (
+              <Typography variant="roleTitle" className="text-[13px] text-brand-primary">
+                {item.grade.slice(0, 4).toUpperCase()}
+              </Typography>
+            )}
           </View>
 
           <View className="ml-md flex-1">

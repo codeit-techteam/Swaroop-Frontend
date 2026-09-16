@@ -227,7 +227,8 @@ const partitionOffers = (offers: SellerOffer[]) => ({
   expiredOffers: offers.filter((offer) => offer.status === 'expired'),
   pendingReviewOffers: offers.filter((offer) => offer.status === 'pending_review'),
   approvedOffers: offers.filter(
-    (offer) => offer.status === 'approved' || offer.status === 'active' || offer.status === 'paused',
+    (offer) =>
+      offer.status === 'approved' || offer.status === 'active' || offer.status === 'paused',
   ),
 });
 
@@ -239,7 +240,8 @@ const buildStats = (offers: SellerOffer[]): OfferStats => ({
   draft: offers.filter((offer) => offer.status === 'draft').length,
   pendingReview: offers.filter((offer) => offer.status === 'pending_review').length,
   approved: offers.filter(
-    (offer) => offer.status === 'approved' || offer.status === 'active' || offer.status === 'paused',
+    (offer) =>
+      offer.status === 'approved' || offer.status === 'active' || offer.status === 'paused',
   ).length,
 });
 
@@ -263,7 +265,7 @@ const buildSnapshot = (
     selectedOfferId:
       selectedOfferId && normalized.some((offer) => offer.id === selectedOfferId)
         ? selectedOfferId
-        : normalized[0]?.id ?? null,
+        : (normalized[0]?.id ?? null),
     editorForm,
     editingOfferId,
     filters,
@@ -305,6 +307,8 @@ export const filterOffersByTab = (offers: SellerOffer[], tab: OfferTabFilter): S
       return offers.filter((offer) => offer.status === 'paused');
     case 'expired':
       return offers.filter((offer) => offer.status === 'expired');
+    case 'draft':
+      return offers.filter((offer) => offer.status === 'draft');
     default:
       return offers.filter(
         (offer) => offer.status !== 'draft' && offer.status !== 'pending_review',
@@ -544,8 +548,10 @@ export const mapOfferToMarketProduct = (offer: SellerOffer): MarketplaceOfferPro
   eta: offer.validity === '12h' ? 'Same Day' : '2–3 Days',
   category: offer.category.includes('POLY') ? 'Polypropylene' : 'HDPE',
   badge: offer.tiers.length > 0 ? 'Lowest Cost' : 'Best Value',
-  image:
-    'https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&w=600&q=80',
+  image: '',
+  materialType: offer.category.includes('POLY') ? 'Polypropylene' : 'HDPE',
+  subCategory: offer.grade,
+  description: `${offer.product} ${offer.grade} listed through verified supply.`,
   sellerOfferId: offer.id,
   bulkTiers: offer.tiers.map((tier) => ({
     range: tier.label,
@@ -556,10 +562,7 @@ export const mapOfferToMarketProduct = (offer: SellerOffer): MarketplaceOfferPro
 export const getActiveMarketplaceListings = (offers: SellerOffer[]): MarketplaceOfferProduct[] =>
   offers.filter((offer) => offer.status === 'active').map(mapOfferToMarketProduct);
 
-export const syncOfferInventory = (
-  offer: SellerOffer,
-  availableStock: number,
-): SellerOffer => ({
+export const syncOfferInventory = (offer: SellerOffer, availableStock: number): SellerOffer => ({
   ...offer,
   remainingStock: Math.max(availableStock - offer.reservedStock, 0),
   allocatedStock: Math.min(offer.allocatedStock, availableStock + offer.reservedStock),

@@ -39,36 +39,46 @@ export const SettlementReleasedScreen = memo(function SettlementReleasedScreen()
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 132 }}
       >
-        <View className="items-center rounded-[28px] border border-brand-border bg-brand-white px-lg py-2xl">
+        <View className="items-center rounded-3xl border border-brand-border bg-brand-white px-lg py-2xl">
           <SettlementReleasedIllustration width={168} height={124} />
-          <Typography variant="headingLeft" className="mt-lg text-center text-[26px]">
-            Settlement Successfully Released
+          <Typography variant="headingLeft" className="mt-lg text-center text-[24px]">
+            Payout released
           </Typography>
           <Typography variant="subheadingLeft" className="mt-sm text-center text-brand-body">
             Funds have been transferred to your registered bank account.
           </Typography>
         </View>
 
-        <View className="mt-lg rounded-[22px] border border-brand-border bg-brand-white p-lg">
+        <View className="mt-lg rounded-2xl bg-brand-navy px-lg py-lg">
+          <Typography variant="legal" className="text-left text-brand-primary-light">
+            Amount released
+          </Typography>
+          <Typography
+            variant="headingLeft"
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            className="mt-xs text-[32px] text-brand-white"
+          >
+            {formatSettlementAmount(settlement.netAmount)}
+          </Typography>
+        </View>
+
+        <View className="mt-lg rounded-2xl border border-brand-border bg-brand-white p-lg">
           <InlineDetailGrid
             items={[
-              {
-                label: 'Amount Released',
-                value: formatSettlementAmount(settlement.netAmount),
-              },
               { label: 'Settlement ID', value: settlement.settlementId },
               {
-                label: 'Transaction Reference',
-                value: settlement.transactionReference ?? '--',
+                label: 'Transaction reference',
+                value: settlement.transactionReference ?? '—',
               },
               {
-                label: 'Settlement Date',
+                label: 'Settlement date',
                 value: settlement.releasedDate
                   ? formatSettlementDate(settlement.releasedDate)
-                  : '--',
+                  : '—',
               },
               {
-                label: 'Bank Account',
+                label: 'Bank account',
                 value: settlement.bankAccount ?? defaultBankAccount,
               },
             ]}
@@ -86,7 +96,7 @@ export const SettlementReleasedScreen = memo(function SettlementReleasedScreen()
             className="rounded-2xl bg-brand-navy px-lg py-md"
           >
             <Typography variant="button" className="text-center text-brand-white">
-              Back to Dashboard
+              Back to payouts
             </Typography>
           </Pressable>
           <Pressable

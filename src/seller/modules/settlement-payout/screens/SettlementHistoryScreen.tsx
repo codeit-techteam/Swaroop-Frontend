@@ -8,9 +8,10 @@ import Toast from 'react-native-toast-message';
 
 import { ScreenWrapper, Typography } from '@/components';
 import { ROUTES } from '@/navigation/routes';
-import { FilterChipRow } from '@/seller/components';
+import { EmptyState, FilterChipRow } from '@/seller/components';
 import { SellerHeader } from '@/seller/components/SellerHeader';
 import { SettlementCard } from '@/seller/modules/settlement-payout/components';
+import { formatSettlementAmount } from '@/seller/modules/settlement-payout/services/settlementService';
 import { useSettlementStore } from '@/seller/modules/settlement-payout/store/settlementStore';
 import type {
   Settlement,
@@ -26,8 +27,8 @@ const HISTORY_FILTERS: SettlementHistoryFilter[] = [
 
 const filterLabels: Record<SettlementHistoryFilter, string> = {
   today: 'Today',
-  this_week: 'This Week',
-  this_month: 'This Month',
+  this_week: 'This week',
+  this_month: 'This month',
   custom: 'Custom',
 };
 
@@ -43,6 +44,11 @@ export const SettlementHistoryScreen = memo(function SettlementHistoryScreen() {
     [activeFilter, filterHistory],
   );
 
+  const releasedTotal = useMemo(
+    () => historyItems.reduce((sum, item) => sum + item.netAmount, 0),
+    [historyItems],
+  );
+
   const handleDownloadAdvice = (settlement: Settlement) => {
     const document = settlement.documents.find((item) => item.type === 'settlement_advice');
     if (!document) {
@@ -55,7 +61,7 @@ export const SettlementHistoryScreen = memo(function SettlementHistoryScreen() {
 
   return (
     <ScreenWrapper padded={false} className="bg-brand-background">
-      <SellerHeader title="Settlement History" showBack onBack={() => router.back()} />
+      <SellerHeader title="Settlement history" showBack onBack={() => router.back()} />
       <FlatList
         data={historyItems}
         keyExtractor={(item) => item.id}
@@ -66,12 +72,27 @@ export const SettlementHistoryScreen = memo(function SettlementHistoryScreen() {
         }}
         ListHeaderComponent={
           <View className="pb-md pt-md">
-            <Typography variant="headingLeft" className="text-[28px]">
-              Released Payouts
+            <Typography variant="headingLeft" className="text-[26px] leading-[32px]">
+              Released payouts
             </Typography>
-            <Typography variant="subheading" className="mt-xs text-brand-body">
+            <Typography variant="legal" className="mt-xs text-left text-brand-body">
               Complete history of settlement releases
             </Typography>
+
+            <View className="mt-lg rounded-2xl bg-brand-navy px-lg py-lg">
+              <Typography variant="legal" className="text-left text-brand-primary-light">
+                {filterLabels[activeFilter]} total
+              </Typography>
+              <Typography
+                variant="headingLeft"
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                className="mt-xs text-[28px] text-brand-white"
+              >
+                {formatSettlementAmount(releasedTotal, true)}
+              </Typography>
+            </View>
+
             <View className="mt-lg">
               <FilterChipRow
                 options={HISTORY_FILTERS.map((filter) => filterLabels[filter])}
@@ -84,8 +105,8 @@ export const SettlementHistoryScreen = memo(function SettlementHistoryScreen() {
                 }}
               />
             </View>
-            <Typography variant="roleTitle" className="mt-lg">
-              {historyItems.length} releases
+            <Typography variant="roleTitle" className="mt-lg text-[15px]">
+              {historyItems.length} {historyItems.length === 1 ? 'release' : 'releases'}
             </Typography>
           </View>
         }
@@ -103,6 +124,13 @@ export const SettlementHistoryScreen = memo(function SettlementHistoryScreen() {
             onDownloadAdvice={handleDownloadAdvice}
           />
         )}
+        ListEmptyComponent={
+          <EmptyState
+            variant="no_search_results"
+            title="No releases in this period"
+            description="Try another date range to see completed payouts."
+          />
+        }
       />
     </ScreenWrapper>
   );

@@ -1,13 +1,12 @@
 import { memo } from 'react';
 
-import { Image, View } from 'react-native';
+import { Image, Pressable, View } from 'react-native';
 
 import { Typography } from '@/components';
-import { CheckCircleIcon } from '@/icons';
+import { BuildingIcon, CheckCircleIcon, EditIcon } from '@/icons';
 import { brandColors } from '@/theme/colors';
-import { cn } from '@/utils/cn';
+import { elevation } from '@/theme/shadows';
 
-import { SellerPrimaryButton } from '@/seller/components/SellerPrimitives';
 import type { SellerProfileData } from '@/seller/types/profile';
 
 type ProfileHeaderProps = {
@@ -23,58 +22,76 @@ export const VerifiedBadge = memo(function VerifiedBadge() {
   );
 });
 
-export const ProfileHeader = memo(function ProfileHeader({ profile, onEditProfile }: ProfileHeaderProps) {
+export const ProfileHeader = memo(function ProfileHeader({
+  profile,
+  onEditProfile,
+}: ProfileHeaderProps) {
   return (
-    <View className="rounded-[24px] border border-brand-border bg-brand-white px-lg py-lg">
-      <View className="items-center">
+    <View
+      className="rounded-[24px] border border-brand-border bg-brand-white p-lg"
+      style={elevation.sm}
+    >
+      <View className="flex-row items-start">
         <View className="relative">
-          <Image
-            source={{ uri: profile.profileImage }}
-            className="h-24 w-24 rounded-2xl bg-brand-overlay"
-          />
+          <View className="h-20 w-20 overflow-hidden rounded-2xl bg-brand-overlay">
+            <Image
+              source={{ uri: profile.profileImage }}
+              className="h-full w-full"
+              accessibilityLabel={`${profile.name} profile photo`}
+            />
+          </View>
           {profile.verified ? <VerifiedBadge /> : null}
         </View>
 
-        <Typography variant="headingLeft" className="mt-md text-[26px]">
-          {profile.name}
-        </Typography>
+        <View className="ml-md min-w-0 flex-1">
+          <View className="flex-row items-start justify-between gap-sm">
+            <View className="min-w-0 flex-1">
+              <Typography
+                variant="headingLeft"
+                className="text-[22px] leading-[28px]"
+                numberOfLines={1}
+              >
+                {profile.name}
+              </Typography>
+              <View className="mt-xs flex-row items-center gap-xs">
+                <BuildingIcon size={13} color={brandColors.body} />
+                <Typography variant="roleDescription" className="flex-1 text-left" numberOfLines={1}>
+                  {profile.company}
+                </Typography>
+              </View>
+            </View>
 
-        <View className="mt-sm rounded-full bg-brand-primary-light px-md py-xs">
-          <Typography variant="badge" className="text-brand-primary-dark">
-            {profile.badge}
-          </Typography>
-        </View>
-
-        <Typography variant="roleDescription" className="mt-sm">
-          {profile.company}
-        </Typography>
-      </View>
-
-      <View className="mt-lg flex-row">
-        {[
-          { label: 'Trading Since', value: profile.tradingSince },
-          { label: 'Total Sales', value: profile.sales },
-          { label: 'Reliability', value: profile.reliability, accent: true },
-        ].map((stat) => (
-          <View key={stat.label} className="flex-1 items-center">
-            <Typography variant="badge" className="text-[10px] uppercase text-brand-body">
-              {stat.label}
-            </Typography>
-            <Typography
-              variant="roleTitle"
-              className={cn('mt-xs text-[15px]', stat.accent && 'text-brand-success')}
+            <Pressable
+              onPress={onEditProfile ?? (() => undefined)}
+              accessibilityRole="button"
+              accessibilityLabel="Edit profile"
+              className="flex-row items-center gap-xs rounded-full border border-brand-border bg-brand-primary-light px-md py-xs"
+              style={({ pressed }) => ({ opacity: pressed ? 0.88 : 1 })}
             >
-              {stat.value}
-            </Typography>
+              <EditIcon size={14} color={brandColors.primaryDark} />
+              <Typography variant="badge" className="text-[11px] text-brand-primary-dark">
+                Edit
+              </Typography>
+            </Pressable>
           </View>
-        ))}
-      </View>
 
-      <SellerPrimaryButton
-        label="Edit Profile"
-        onPress={onEditProfile ?? (() => undefined)}
-        className="mt-lg"
-      />
+          <View className="mt-sm flex-row flex-wrap items-center gap-sm">
+            <View className="rounded-full bg-brand-primary-light px-md py-xs">
+              <Typography variant="badge" className="text-[10px] tracking-[0.6px] text-brand-primary-dark">
+                {profile.badge.toUpperCase()}
+              </Typography>
+            </View>
+            {profile.verified ? (
+              <View className="flex-row items-center gap-xs rounded-full bg-brand-success-light px-md py-xs">
+                <CheckCircleIcon size={12} color={brandColors.success} />
+                <Typography variant="badge" className="text-[10px] tracking-[0.6px] text-brand-success">
+                  VERIFIED
+                </Typography>
+              </View>
+            ) : null}
+          </View>
+        </View>
+      </View>
     </View>
   );
 });

@@ -20,34 +20,45 @@ export const SellerProductPublishedScreen = memo(function SellerProductPublished
     [params.id, publishedProducts],
   );
 
+  const advance = Number(product?.pricing.advance ?? 0);
+
   return (
     <ScreenWrapper className="bg-brand-background">
       <SuccessBanner
-        title="Product Published Successfully"
-        subtitle="Your product is now available in the mock seller catalog and visible in Products."
+        title="Listing is live"
+        subtitle="Buyers can now see this grade in the customer marketplace."
       />
 
-      <View className="mt-lg rounded-[28px] bg-brand-white p-lg">
-        <Typography variant="fieldLabel">Product ID</Typography>
-        <Typography variant="headingLeft" className="mt-xs text-[22px]">
-          {product?.productId ?? 'PT-PROD-000000'}
+      <View className="mt-lg overflow-hidden rounded-3xl bg-brand-navy p-lg">
+        <Typography variant="badge" className="text-[10px] text-brand-primary-light">
+          {product?.form.category || 'GRADE'}
         </Typography>
+        <Typography variant="headingLeft" className="mt-sm text-[24px] text-brand-white">
+          {product?.form.name ?? 'Marketplace grade'}
+        </Typography>
+        <Typography variant="legal" className="mt-xs text-left text-brand-primary-light">
+          {product?.productId ?? 'PT-PROD-000000'} · {product?.form.grade}
+        </Typography>
+      </View>
 
-        <View className="mt-lg gap-md">
-          <DetailRow label="Category" value={product?.form.category ?? 'Polymers'} />
-          <DetailRow label="Price" value={`₹${product?.pricing.advance ?? '145'}/MT`} />
-          <DetailRow label="MOQ" value={`${product?.form.moq ?? '10'} MT`} />
-        </View>
+      <View className="mt-lg gap-sm">
+        <DetailRow label="Brand" value={product?.form.brand || '—'} />
+        <DetailRow
+          label="Advance price"
+          value={Number.isFinite(advance) && advance > 0 ? `₹${advance.toLocaleString('en-IN')}/MT` : '—'}
+        />
+        <DetailRow label="Stock" value={`${product?.form.availableQty || '0'} ${product?.form.unit || 'MT'}`} />
+        <DetailRow label="MOQ" value={`${product?.form.moq || '—'} ${product?.form.unit || 'MT'}`} />
       </View>
 
       <View className="mt-auto gap-md">
         <SellerPrimaryButton
-          label="Go To Products"
+          label="Go to products"
           onPress={() => router.replace(ROUTES.SELLER.PRODUCTS as Href)}
         />
         <SellerPrimaryButton
-          label="Add Another Product"
-          className="bg-brand-primaryDark"
+          label="Add another listing"
+          className="bg-brand-primary-dark"
           onPress={() => {
             clearSelection();
             router.replace(ROUTES.SELLER.ADD_PRODUCT as Href);
@@ -59,8 +70,10 @@ export const SellerProductPublishedScreen = memo(function SellerProductPublished
 });
 
 const DetailRow = ({ label, value }: { label: string; value: string }) => (
-  <View className="flex-row items-center justify-between rounded-2xl bg-brand-surface px-md py-md">
+  <View className="flex-row items-center justify-between rounded-2xl bg-brand-white px-md py-md">
     <Typography variant="roleDescription">{label}</Typography>
-    <Typography variant="roleTitle">{value}</Typography>
+    <Typography variant="roleTitle" className="text-[14px]">
+      {value}
+    </Typography>
   </View>
 );

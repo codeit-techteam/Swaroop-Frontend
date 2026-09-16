@@ -3,25 +3,15 @@ import { memo, useCallback } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { Typography } from '@/components/ui/typography';
-import { InfoIcon } from '@/icons';
-import { iconSizes } from '@/theme/icons';
+import { formatInr } from '@/constants/productDetails';
 import type { PricingTier } from '@/types/product';
 import { cn } from '@/utils/cn';
 
 type PricingTiersCardProps = {
   tiers: PricingTier[];
   selectedTierId: string;
-  procurementTerms: string[];
   onSelectTier: (tierId: string) => void;
   className?: string;
-};
-
-const formatTierPrice = (price: number): string => {
-  const hasDecimals = price % 1 !== 0;
-  return `₹${price.toLocaleString('en-IN', {
-    minimumFractionDigits: hasDecimals ? 2 : 0,
-    maximumFractionDigits: 2,
-  })}`;
 };
 
 type TierRowProps = {
@@ -34,33 +24,35 @@ const TierSelectCard = memo(function TierSelectCard({ tier, selected, onPress }:
   return (
     <Pressable
       onPress={() => onPress(tier.id)}
-      accessibilityRole="button"
+      accessibilityRole="radio"
       accessibilityState={{ selected }}
-      accessibilityLabel={`${tier.quantityLabel}, ${tier.rateLabel}, ${formatTierPrice(tier.unitPrice)}`}
+      accessibilityLabel={`${tier.quantityLabel}, ${formatInr(tier.pricePerMt)} per MT`}
       style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
       className={cn(
-        'flex-row items-center justify-between rounded-lg border bg-brand-white px-md py-md',
-        selected ? 'border-brand-heading' : 'border-brand-border',
+        'flex-row items-center rounded-lg px-md py-md',
+        selected ? 'bg-brand-primary-tint' : 'bg-transparent',
       )}
     >
-      <View className="flex-1 pr-sm">
-        <Typography variant="roleTitle" className="text-[14px] text-brand-heading">
+      <View
+        className={cn(
+          'h-3.5 w-3.5 items-center justify-center rounded-full border',
+          selected ? 'border-brand-heading bg-brand-heading' : 'border-brand-border bg-brand-white',
+        )}
+      >
+        {selected ? <View className="h-1.5 w-1.5 rounded-full bg-brand-white" /> : null}
+      </View>
+      <View className="ml-sm min-w-0 flex-1">
+        <Typography variant="roleTitle" className="text-[13px] text-brand-body">
           {tier.quantityLabel}
         </Typography>
-        <Typography
-          variant="caption"
-          className="mt-0.5 font-sans text-[12px] normal-case tracking-normal text-brand-muted"
-        >
-          {tier.rateLabel}
-        </Typography>
         {tier.savingsLabel ? (
-          <Typography variant="success" className="mt-xs text-[11px]">
+          <Typography variant="success" className="mt-0.5 text-[11px]">
             {tier.savingsLabel}
           </Typography>
         ) : null}
       </View>
-      <Typography variant="roleTitle" className="text-[16px] text-brand-heading">
-        {formatTierPrice(tier.unitPrice)}
+      <Typography variant="roleTitle" className="text-[13px] text-brand-primary">
+        {formatInr(tier.pricePerMt)}
       </Typography>
     </Pressable>
   );
@@ -69,7 +61,6 @@ const TierSelectCard = memo(function TierSelectCard({ tier, selected, onPress }:
 export const PricingTiersCard = memo(function PricingTiersCard({
   tiers,
   selectedTierId,
-  procurementTerms,
   onSelectTier,
   className,
 }: PricingTiersCardProps) {
@@ -87,76 +78,19 @@ export const PricingTiersCard = memo(function PricingTiersCard({
         className,
       )}
     >
-      <Typography variant="roleTitle" className="text-[16px] text-brand-heading">
-        Bulk Pricing Tiers
-      </Typography>
-
-      <View className="mt-md overflow-hidden rounded-lg border border-brand-border">
-        <View className="flex-row bg-brand-surface px-md py-sm">
-          <Typography
-            variant="fieldLabel"
-            className="flex-1 text-[10px] tracking-[0.6px] text-brand-muted"
-          >
-            Quantity (MT)
-          </Typography>
-          <Typography
-            variant="fieldLabel"
-            className="flex-1 text-center text-[10px] tracking-[0.6px] text-brand-muted"
-          >
-            Unit Price (₹/KG)
-          </Typography>
-          <Typography
-            variant="fieldLabel"
-            className="flex-1 text-right text-[10px] tracking-[0.6px] text-brand-muted"
-          >
-            Total (Est)
-          </Typography>
-        </View>
-
-        {tiers.map((tier, index) => {
-          const selected = tier.id === selectedTierId;
-          return (
-            <View
-              key={tier.id}
-              className={cn(
-                'flex-row items-center px-md py-md',
-                index % 2 === 0 ? 'bg-brand-white' : 'bg-brand-surface/60',
-                selected && 'bg-brand-primary-tint',
-              )}
-            >
-              <Typography
-                variant="roleTitle"
-                className={cn(
-                  'flex-1 text-[13px]',
-                  selected ? 'text-brand-heading' : 'font-medium text-brand-body',
-                )}
-              >
-                {tier.quantityLabel}
-              </Typography>
-              <Typography
-                variant="roleTitle"
-                className={cn(
-                  'flex-1 text-center text-[13px]',
-                  selected ? 'text-brand-heading' : 'font-medium text-brand-body',
-                )}
-              >
-                {formatTierPrice(tier.unitPrice)}
-              </Typography>
-              <Typography
-                variant="roleTitle"
-                className={cn(
-                  'flex-1 text-right text-[13px]',
-                  selected ? 'text-brand-heading' : 'font-medium text-brand-body',
-                )}
-              >
-                {tier.totalEstimate}
-              </Typography>
-            </View>
-          );
-        })}
+      <View className="flex-row items-start justify-between">
+        <Typography variant="fieldLabel" className="text-[10px] tracking-[0.8px] text-brand-muted">
+          Bulk Pricing
+        </Typography>
+        <Typography
+          variant="caption"
+          className="font-sans text-[11px] normal-case tracking-normal text-brand-muted"
+        >
+          Select a tier
+        </Typography>
       </View>
 
-      <View className="mt-md" style={{ gap: 10 }}>
+      <View className="mt-sm">
         {tiers.map((tier) => (
           <TierSelectCard
             key={tier.id}
@@ -164,24 +98,6 @@ export const PricingTiersCard = memo(function PricingTiersCard({
             selected={tier.id === selectedTierId}
             onPress={handleSelect}
           />
-        ))}
-      </View>
-
-      <View className="mt-md rounded-lg border border-[#F6D5B8] bg-[#FFF7ED] px-md py-md">
-        <View className="mb-sm flex-row items-center">
-          <InfoIcon size={iconSizes.sm} color="#9A3412" />
-          <Typography variant="roleTitle" className="ml-sm text-[14px] text-[#9A3412]">
-            Procurement Terms
-          </Typography>
-        </View>
-        {procurementTerms.map((term) => (
-          <Typography
-            key={term}
-            variant="roleDescription"
-            className="mb-xs text-[13px] leading-[20px] text-[#9A3412]"
-          >
-            • {term}
-          </Typography>
         ))}
       </View>
     </View>

@@ -2,9 +2,6 @@ import { memo } from 'react';
 
 import { View } from 'react-native';
 
-import { Image } from 'expo-image';
-
-
 import { Typography } from '@/components/ui/typography';
 import { formatPaymentCurrency } from '@/constants/payment';
 import { DocumentFileIcon, StoreIcon, TruckIcon } from '@/icons';
@@ -34,7 +31,6 @@ export const PaymentSummaryCard = memo(function PaymentSummaryCard({
 }: PaymentSummaryCardProps) {
   return (
     <View
-
       className={cn('rounded-2xl border border-brand-border bg-brand-white p-lg', className)}
       style={elevation.sm}
     >
@@ -45,18 +41,12 @@ export const PaymentSummaryCard = memo(function PaymentSummaryCard({
         </Typography>
       </View>
 
-      <View className="flex-row">
-        {summary.imageUrl ? (
-          <View className="mr-md h-14 w-14 overflow-hidden rounded-xl bg-brand-surface">
-            <Image
-              source={{ uri: summary.imageUrl }}
-              style={{ width: '100%', height: '100%' }}
-              contentFit="cover"
-              transition={0}
-              accessibilityLabel={`${summary.productName} product image`}
-            />
-          </View>
-        ) : null}
+      <View className="flex-row items-center">
+        <View className="mr-md h-14 w-14 items-center justify-center rounded-xl border border-brand-border bg-brand-surface">
+          <Typography variant="roleTitle" className="text-[13px] text-brand-primary">
+            {summary.grade.slice(0, 4).toUpperCase()}
+          </Typography>
+        </View>
 
         <View className="flex-1">
           <Typography variant="roleTitle" className="text-[14px] text-brand-heading">

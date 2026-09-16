@@ -1,5 +1,6 @@
-export type MarketCategory =
-  'Polypropylene' | 'HDPE' | 'PVC' | 'LLDPE' | 'PET' | 'Polycarbonate' | 'ABS' | 'EVA';
+export type MarketParentCategoryId = 'polymers' | 'chemicals' | 'additives' | 'base-oils';
+
+export type MarketCategory = string;
 
 export type MarketAvailabilityBadge =
   | 'Fastest Delivery'
@@ -8,6 +9,16 @@ export type MarketAvailabilityBadge =
   | 'Best Value'
   | 'High Demand'
   | 'Limited Stock';
+
+export type ProductTechnicalSpecs = {
+  mfi?: string;
+  density?: string;
+  form?: string;
+  iv?: string;
+  viscosity?: string;
+  purity?: string;
+  [key: string]: string | undefined;
+};
 
 export type MarketProduct = {
   id: string;
@@ -20,7 +31,18 @@ export type MarketProduct = {
   eta: string;
   category: MarketCategory;
   badge: MarketAvailabilityBadge;
-  image: string;
+  /** Blind catalog has no product photography. */
+  image?: string;
+  gradeCode?: string;
+  categoryId?: MarketParentCategoryId;
+  materialType?: string;
+  subCategory?: string;
+  description?: string;
+  warehouseLabel?: string;
+  casNumber?: string;
+  applications?: string[];
+  technicalSpecs?: ProductTechnicalSpecs;
+  creditEligible?: boolean;
 };
 
 export type StockLevel = 'high' | 'medium' | 'low';

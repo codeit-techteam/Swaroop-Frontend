@@ -11,7 +11,6 @@ import Toast from 'react-native-toast-message';
 import {
   HeroCarousel,
   HomeHeader,
-  InsightCard,
   LocationBottomSheet,
   LocationSelector,
   LowestCostCard,
@@ -28,7 +27,6 @@ import {
   TAB_BAR_HEIGHT,
 } from '@/constants/dashboard';
 import { getTrackRouteForOrder, inferOrderStatus } from '@/constants/orderWorkflow';
-import { MARKET_INSIGHTS } from '@/constants/news';
 import { TRENDING_PRODUCTS } from '@/constants/trendingProducts';
 import { PRICE_WATCHLIST } from '@/constants/watchlist';
 import { ROUTES } from '@/navigation/routes';
@@ -39,13 +37,7 @@ import {
   selectOrders,
   useOrderStore,
 } from '@/store/order-store';
-import type {
-  DeliveryLocation,
-  HomeBanner,
-  MarketInsight,
-  TrendingProduct,
-  WatchlistItem,
-} from '@/types/home';
+import type { DeliveryLocation, HomeBanner, TrendingProduct, WatchlistItem } from '@/types/home';
 
 export const CustomerHomeScreen = () => {
   const router = useRouter();
@@ -89,7 +81,10 @@ export const CustomerHomeScreen = () => {
   );
 
   const navigateToMarket = useCallback(() => {
-    router.push(ROUTES.CUSTOMER.MARKET as Href);
+    router.push({
+      pathname: ROUTES.CUSTOMER.MARKET,
+      params: { focusSearch: '1' },
+    } as unknown as Href);
   }, [router]);
 
   const navigateToCart = useCallback(() => {
@@ -138,13 +133,6 @@ export const CustomerHomeScreen = () => {
     [showInfoToast],
   );
 
-  const handleInsightPress = useCallback(
-    (insight: MarketInsight) => {
-      showInfoToast(insight.source, insight.title);
-    },
-    [showInfoToast],
-  );
-
   const renderTrendingItem = useCallback(
     ({ item }: { item: TrendingProduct }) => (
       <TrendingMaterialCard product={item} onPress={handleProductPress} />
@@ -155,9 +143,6 @@ export const CustomerHomeScreen = () => {
   return (
     <View className="flex-1 bg-brand-white">
       <HomeHeader
-        onHelpPress={() =>
-          showInfoToast('Help Centre', 'Our support team is available 24×7 for buyers.')
-        }
         onCartPress={navigateToCart}
         onNotificationPress={() => showInfoToast('Notifications', 'You have 2 new market alerts.')}
       />
@@ -221,7 +206,7 @@ export const CustomerHomeScreen = () => {
           </View>
         </View>
 
-        <View className="mt-lg">
+        <View className="mb-lg mt-lg">
           <LowestCostCard
             onPress={() =>
               showInfoToast(
@@ -230,21 +215,6 @@ export const CustomerHomeScreen = () => {
               )
             }
           />
-        </View>
-
-        <View className="mb-lg mt-xl">
-          <SectionHeader
-            title="Market Insights"
-            actionLabel="See All"
-            onActionPress={() =>
-              showInfoToast('Market Insights', 'Full market intelligence feed coming soon.')
-            }
-          />
-          <View className="mt-md">
-            {MARKET_INSIGHTS.map((insight) => (
-              <InsightCard key={insight.id} insight={insight} onPress={handleInsightPress} />
-            ))}
-          </View>
         </View>
       </ScrollView>
 

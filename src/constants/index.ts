@@ -36,6 +36,7 @@ export const STORAGE_KEYS = {
   SELLER_APP_SETTINGS: 'swaroop_seller_app_settings',
   SELLER_FILTER_PREFS: 'swaroop_seller_filter_prefs',
   SELLER_RECENT_SEARCHES: 'swaroop_seller_recent_searches',
+  CUSTOMER_RECENT_SEARCHES: 'swaroop_customer_recent_searches',
   SELLER_SUPPORT_TICKETS: 'swaroop_seller_support_tickets',
   SELLER_SECURITY_STATE: 'swaroop_seller_security_state',
 } as const;

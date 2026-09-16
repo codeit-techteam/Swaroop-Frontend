@@ -41,7 +41,7 @@ export const SettlementStatusBadge = memo(function SettlementStatusBadge({
 }) {
   const style = statusStyles[status];
   return (
-    <View className={cn('self-start rounded-md px-sm py-xs', style.chip, className)}>
+    <View className={cn('self-start rounded-full px-sm py-xs', style.chip, className)}>
       <Typography variant="badge" className={cn('text-[10px]', style.text)}>
         {style.label}
       </Typography>

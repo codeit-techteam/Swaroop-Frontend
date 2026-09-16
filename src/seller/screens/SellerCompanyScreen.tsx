@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 import { View } from 'react-native';
 
@@ -12,6 +12,7 @@ import { useZodForm } from '@/lib/forms';
 import { ROUTES } from '@/navigation/routes';
 import {
   SellerCard,
+  SellerGstValidateCard,
   SellerHeader,
   SellerPrimaryButton,
   SellerStepper,
@@ -24,6 +25,7 @@ import {
   SELLER_STATE_OPTIONS,
 } from '@/seller/constants';
 import { useSellerStore } from '@/seller/store/sellerStore';
+import { type GstParseResult, parseGstin } from '@/seller/utils/gst';
 import {
   emailSchema,
   gstSchema,
@@ -64,15 +66,39 @@ export const SellerCompanyScreen = () => {
     defaultValues: company,
     mode: 'onChange',
   });
+  const [gstResult, setGstResult] = useState<GstParseResult | null>(() =>
+    company.gstVerified ? parseGstin(company.gst) : null,
+  );
 
   const stateValue = watch('state');
+  const gstValue = watch('gst');
+  const gstVerified = Boolean(gstResult?.isValid && gstResult.gstNumber === gstValue);
   const cityOptions = useMemo(
     () => (stateValue ? [...(SELLER_STATES[stateValue as keyof typeof SELLER_STATES] ?? [])] : []),
     [stateValue],
   );
 
+  const handleGstVerified = (result: GstParseResult) => {
+    setGstResult(result);
+    setValue('gst', result.gstNumber, { shouldValidate: true });
+    setValue('pan', result.pan, { shouldValidate: true });
+    if (result.state in SELLER_STATES) {
+      setValue('state', result.state, { shouldValidate: true });
+      setValue('city', '');
+    }
+    clearErrors(['gst', 'pan']);
+  };
+
   const handleContinue = (values: SellerCompanyForm) => {
-    saveCompany(values);
+    if (!gstVerified || !gstResult?.isValid) {
+      return;
+    }
+    saveCompany({
+      ...values,
+      gstVerified: true,
+      gstStateCode: gstResult.stateCode,
+      gstState: gstResult.state,
+    });
     router.push(ROUTES.SELLER.VERIFICATION as Href);
   };
 
@@ -87,6 +113,28 @@ export const SellerCompanyScreen = () => {
       />
 
       <SellerStepper currentStep="company" className="mt-md" />
+
+      <Controller
+        control={control}
+        name="gst"
+        render={({ field: { value, onChange, onBlur } }) => (
+          <SellerGstValidateCard
+            className="mt-lg"
+            value={value}
+            verified={gstVerified}
+            result={gstVerified ? gstResult : null}
+            error={errors.gst?.message}
+            onChange={(text) => {
+              onChange(text);
+              if (gstResult && gstResult.gstNumber !== text) {
+                setGstResult(null);
+              }
+            }}
+            onVerified={handleGstVerified}
+            onBlur={onBlur}
+          />
+        )}
+      />
 
       <SellerCard title="Business Details" className="mt-lg">
         <View className="gap-lg">
@@ -107,27 +155,11 @@ export const SellerCompanyScreen = () => {
 
           <Controller
             control={control}
-            name="gst"
-            render={({ field: { value, onChange, onBlur } }) => (
-              <SellerTextField
-                label="GST Identification Number"
-                placeholder="27AAACP1234A1Z5"
-                autoCapitalize="characters"
-                value={value}
-                onChangeText={(text) => onChange(text.toUpperCase())}
-                onBlur={onBlur}
-                error={errors.gst?.message}
-              />
-            )}
-          />
-
-          <Controller
-            control={control}
             name="pan"
             render={({ field: { value, onChange, onBlur } }) => (
               <SellerTextField
                 label="Permanent Account Number (PAN)"
-                placeholder="AAACP1234A"
+                placeholder="Validate GST to auto-fill PAN"
                 autoCapitalize="characters"
                 value={value}
                 onChangeText={(text) => onChange(text.toUpperCase())}
@@ -284,7 +316,7 @@ export const SellerCompanyScreen = () => {
         <SellerPrimaryButton
           label="Submit for Verification"
           showArrow
-          disabled={!isValid}
+          disabled={!isValid || !gstVerified}
           onPress={handleSubmit(handleContinue)}
         />
       </View>

@@ -16,18 +16,19 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import Toast from 'react-native-toast-message';
 
 import { ErrorBoundary } from '@/components/error-boundary';
+import { AppDialogHost } from '@/components/ui/app-dialog';
+import { AppToastHost } from '@/components/ui/app-toast';
 import { useNetworkListener } from '@/hooks/use-network';
 import { queryClient } from '@/lib/query-client';
 import { ThemeProvider } from '@/providers/theme-provider';
-import { useInventoryStore } from '@/seller/store/inventoryStore';
 import { useDispatchStore } from '@/seller/modules/dispatch/store/dispatchStore';
-import { useSellerOrdersStore } from '@/seller/modules/seller-orders/store/sellerOrdersStore';
 import { useSellerOffersStore } from '@/seller/modules/seller-offers/store/sellerOffersStore';
-import { useSellerProductStore } from '@/seller/store/sellerProductStore';
+import { useSellerOrdersStore } from '@/seller/modules/seller-orders/store/sellerOrdersStore';
 import { useSettlementStore } from '@/seller/modules/settlement-payout/store/settlementStore';
+import { useInventoryStore } from '@/seller/store/inventoryStore';
+import { useSellerProductStore } from '@/seller/store/sellerProductStore';
 import { useSellerStore } from '@/seller/store/sellerStore';
 import { applyDevResetIfNeeded } from '@/services/dev-reset';
 import { configureNotifications } from '@/services/notification-service';
@@ -165,7 +166,8 @@ export const AppProviders = ({ children }: AppProvidersProps) => {
                   <NetworkListener />
                   <NotificationConfigurator />
                   {children}
-                  <Toast />
+                  <AppDialogHost />
+                  <AppToastHost />
                 </BottomSheetModalProvider>
               </ThemeProvider>
             </QueryClientProvider>

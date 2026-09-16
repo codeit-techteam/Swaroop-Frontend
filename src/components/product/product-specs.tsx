@@ -1,11 +1,9 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
-
-import { ApplicationCard } from '@/components/product/application-card';
 import { Typography } from '@/components/ui/typography';
-import { BarChartIcon } from '@/icons';
+import { BarChartIcon, ChevronDownIcon } from '@/icons';
 import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
 import type { ProductDetails } from '@/types/product';
@@ -16,56 +14,66 @@ type ProductSpecsProps = {
   className?: string;
 };
 
-export const ProductSpecs = memo(function ProductSpecs({
-  product,
-  className,
-}: ProductSpecsProps) {
+export const ProductSpecs = memo(function ProductSpecs({ product, className }: ProductSpecsProps) {
+  const [expanded, setExpanded] = useState(true);
+
   return (
     <View
-
       className={cn(
-        'mx-lg rounded-xl border border-brand-border bg-brand-white p-lg shadow-sm',
+        'mx-lg overflow-hidden rounded-xl border border-brand-border bg-brand-white shadow-sm',
         className,
       )}
     >
-      <View className="flex-row items-center">
+      <Pressable
+        onPress={() => setExpanded((value) => !value)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded }}
+        accessibilityLabel="Technical specifications"
+        className="flex-row items-center px-lg py-md"
+      >
         <View className="mr-sm h-7 w-7 items-center justify-center rounded-md bg-brand-primary-light">
           <BarChartIcon size={iconSizes.sm} color={brandColors.heading} />
         </View>
-        <Typography variant="roleTitle" className="text-[16px] text-brand-heading">
-          Technical Grid
+        <Typography variant="roleTitle" className="flex-1 text-[16px] text-brand-heading">
+          Technical Specifications
         </Typography>
-      </View>
+        <View style={{ transform: [{ rotate: expanded ? '180deg' : '0deg' }] }}>
+          <ChevronDownIcon size={16} color={brandColors.muted} />
+        </View>
+      </Pressable>
 
-      <View className="my-md h-px bg-brand-border" />
-
-      <View style={{ gap: 10 }}>
-        {product.specs.map((spec) => (
-          <View key={spec.id} className="rounded-lg bg-brand-surface px-md py-md">
-            <Typography
-              variant="fieldLabel"
-              className="text-[10px] tracking-[0.8px] text-brand-muted"
-            >
-              {spec.label}
-            </Typography>
-            <Typography variant="roleTitle" className="mt-xs text-[16px] text-brand-heading">
-              {spec.value}
-            </Typography>
-            <Typography
-              variant="caption"
-              className="mt-xs font-sans text-[11px] normal-case tracking-normal text-brand-muted"
-            >
-              {spec.standard}
-            </Typography>
+      {expanded ? (
+        <View className="border-t border-brand-border px-lg pb-lg pt-md">
+          <View className="overflow-hidden rounded-lg border border-brand-border">
+            {product.specs.map((spec, index) => (
+              <View
+                key={spec.id}
+                className={cn(
+                  'flex-row items-center justify-between px-md py-md',
+                  index % 2 === 0 ? 'bg-brand-white' : 'bg-brand-surface',
+                )}
+              >
+                <View className="mr-sm flex-1">
+                  <Typography variant="roleTitle" className="text-[13px] text-brand-body">
+                    {spec.label}
+                  </Typography>
+                  {spec.standard ? (
+                    <Typography
+                      variant="caption"
+                      className="mt-0.5 font-sans text-[10px] normal-case tracking-normal text-brand-muted"
+                    >
+                      {spec.standard}
+                    </Typography>
+                  ) : null}
+                </View>
+                <Typography variant="roleTitle" className="text-[13px] text-brand-heading">
+                  {spec.value}
+                </Typography>
+              </View>
+            ))}
           </View>
-        ))}
-      </View>
-
-      <ApplicationCard
-        note={product.applicationNote}
-        applications={product.applications}
-        className="mt-md"
-      />
+        </View>
+      ) : null}
     </View>
   );
 });

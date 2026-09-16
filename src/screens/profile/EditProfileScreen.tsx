@@ -1,6 +1,6 @@
 import { memo, useCallback, useState } from 'react';
 
-import { Alert, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
@@ -12,6 +12,7 @@ import { AppHeader, InputField, PrimaryButton, ScreenWrapper, Typography } from 
 import { NATURE_OF_BUSINESS_OPTIONS } from '@/constants/documents';
 import { useProfile } from '@/hooks/useProfile';
 import { CameraIcon, GalleryIcon } from '@/icons';
+import { showInfoDialog } from '@/store/dialog-store';
 import { brandColors } from '@/theme/colors';
 import { emailSchema, phoneSchema } from '@/utils/validators';
 
@@ -36,7 +37,10 @@ export const EditProfileScreen = memo(function EditProfileScreen() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
-      Alert.alert('Permission required', 'Allow photo library access to upload images.');
+      showInfoDialog(
+        'Permission required',
+        'Allow photo library access in settings so you can upload a profile or company image.',
+      );
       return;
     }
 

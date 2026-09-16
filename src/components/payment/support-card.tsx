@@ -1,9 +1,10 @@
 import { memo } from 'react';
 
-import { Alert, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { Typography } from '@/components/ui/typography';
 import { PhoneIcon } from '@/icons';
+import { showInfoDialog } from '@/store/dialog-store';
 import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
 import { cn } from '@/utils/cn';
@@ -14,10 +15,10 @@ type SupportCardProps = {
 
 export const SupportCard = memo(function SupportCard({ className }: SupportCardProps) {
   const handleContact = () => {
-    Alert.alert(
+    showInfoDialog(
       'Contact Support',
-      'Our enterprise relationship managers are available 24×7. Frontend placeholder only — no call is placed.',
-      [{ text: 'OK' }],
+      'Our enterprise relationship managers are available 24×7 to help with payment and credit options.',
+      'Got it',
     );
   };
 

@@ -43,7 +43,7 @@ export const SettlementNotificationPanel = memo(function SettlementNotificationP
   onMarkRead: (id: string) => void;
 }) {
   return (
-    <View className="rounded-[22px] border border-brand-border bg-brand-white p-md">
+    <View className="rounded-2xl border border-brand-border bg-brand-white p-md">
       <View className="mb-md flex-row items-center justify-between">
         <Typography variant="headingLeft" className="text-[18px]">
           Notifications

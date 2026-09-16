@@ -15,8 +15,8 @@ export const SettlementTimeline = memo(function SettlementTimeline({
   const steps = getTimelineSteps(currentStep);
 
   return (
-    <View className="rounded-[22px] border border-brand-border bg-brand-white p-lg">
-      <Typography variant="headingLeft" className="text-[20px]">
+    <View className="rounded-2xl border border-brand-border bg-brand-white p-lg">
+      <Typography variant="headingLeft" className="text-[18px]">
         Timeline
       </Typography>
       <View className="mt-lg">

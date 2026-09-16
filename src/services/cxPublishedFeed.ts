@@ -1,4 +1,4 @@
-import type { MarketCategory, MarketProduct } from '@/types/market';
+import type { MarketProduct } from '@/types/market';
 
 const CX_API_URL = process.env.EXPO_PUBLIC_CX_API_URL ?? 'http://localhost:3000';
 
@@ -16,15 +16,7 @@ type PublishedProduct = {
   images: string[];
   packaging?: string;
   stockIndicator: 'in_stock' | 'limited' | 'out_of_stock';
-  bulkPrices?: Array<{ minQty: number; maxQty: number | null; price: number }>;
-};
-
-const CATEGORY_MAP: Record<string, MarketCategory> = {
-  Polypropylene: 'Polypropylene',
-  HDPE: 'HDPE',
-  PVC: 'PVC',
-  LLDPE: 'LLDPE',
-  PET: 'PET',
+  bulkPrices?: { minQty: number; maxQty: number | null; price: number }[];
 };
 
 function toMarketProduct(product: PublishedProduct): MarketProduct {
@@ -37,9 +29,12 @@ function toMarketProduct(product: PublishedProduct): MarketProduct {
     stock: product.availableQty,
     moq: product.moq,
     eta: product.etaLabel,
-    category: CATEGORY_MAP[product.material] ?? 'Polypropylene',
+    category: product.material || 'Polypropylene',
     badge: product.stockIndicator === 'limited' ? 'Limited Stock' : 'Best Value',
-    image: product.images[0] ?? '',
+    image: '',
+    materialType: product.material,
+    subCategory: product.grade,
+    description: `${product.name} offered through verified supply.`,
   };
 }
 

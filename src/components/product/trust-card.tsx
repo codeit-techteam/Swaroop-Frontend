@@ -2,7 +2,6 @@ import { memo } from 'react';
 
 import { Text, View } from 'react-native';
 
-
 import { Typography } from '@/components/ui/typography';
 import { CheckCircleIcon, ShieldCheckIcon } from '@/icons';
 import { brandColors } from '@/theme/colors';
@@ -27,7 +26,6 @@ export const TrustCard = memo(function TrustCard({ product, className }: TrustCa
 
   return (
     <View
-
       className={cn(
         'mx-lg rounded-xl border border-brand-border bg-brand-white p-lg shadow-sm',
         className,

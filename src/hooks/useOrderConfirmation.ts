@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
-import { Alert } from 'react-native';
-
 import { type Href, useRouter } from 'expo-router';
 
 import {
@@ -17,11 +15,8 @@ import {
 import { useCountdown } from '@/hooks/useCountdown';
 import { ROUTES } from '@/navigation/routes';
 import { selectCheckoutAddress, useCheckoutStore } from '@/store/checkout-store';
-import {
-  selectCurrentOrder,
-  selectOrderHydrated,
-  useOrderStore,
-} from '@/store/order-store';
+import { showInfoDialog } from '@/store/dialog-store';
+import { selectCurrentOrder, selectOrderHydrated, useOrderStore } from '@/store/order-store';
 import type { Order } from '@/types/order';
 import type { ValidationStepId } from '@/types/orderConfirmation';
 
@@ -138,10 +133,7 @@ export const useOrderConfirmation = (): UseOrderConfirmationResult => {
       updateOrder({
         validationTimeline: {
           currentStep: VALIDATION_STEP_IDS.PURCHASE_ORDER_GENERATION,
-          completedSteps: [
-            ...nextCompletedSteps,
-            VALIDATION_STEP_IDS.PURCHASE_ORDER_GENERATION,
-          ],
+          completedSteps: [...nextCompletedSteps, VALIDATION_STEP_IDS.PURCHASE_ORDER_GENERATION],
         },
         inventoryReserved: true,
         supplierConfirmation: 'confirmed',
@@ -186,7 +178,10 @@ export const useOrderConfirmation = (): UseOrderConfirmationResult => {
 
     const scheduleNextStep = (): void => {
       const latestOrder = useOrderStore.getState().currentOrder;
-      if (!latestOrder?.validationTimeline || isValidationComplete(latestOrder.validationTimeline)) {
+      if (
+        !latestOrder?.validationTimeline ||
+        isValidationComplete(latestOrder.validationTimeline)
+      ) {
         activeSimulationOrderId = null;
         return;
       }
@@ -222,8 +217,7 @@ export const useOrderConfirmation = (): UseOrderConfirmationResult => {
     };
   }, [advanceValidationStep, order?.id, order?.orderStatus, order?.validationTimeline]);
 
-  const destination =
-    order?.destination || `${checkoutAddress.line2}, ${checkoutAddress.state}`;
+  const destination = order?.destination || `${checkoutAddress.line2}, ${checkoutAddress.state}`;
 
   const timelineSteps = useMemo(
     () =>
@@ -279,10 +273,9 @@ export const useOrderConfirmation = (): UseOrderConfirmationResult => {
   }, [router]);
 
   const handleContactSupport = useCallback(() => {
-    Alert.alert(
+    showInfoDialog(
       ORDER_CONFIRMATION_COPY.supportAlertTitle,
       ORDER_CONFIRMATION_COPY.supportAlertMessage,
-      [{ text: 'OK' }],
     );
   }, []);
 

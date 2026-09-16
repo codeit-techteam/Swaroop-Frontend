@@ -159,7 +159,7 @@ export const OfferDetailsScreen = memo(function OfferDetailsScreen() {
             <Typography variant="roleTitle" className="text-brand-heading">
               Bulk Pricing
             </Typography>
-            <OfferTierList tiers={offer.tiers} highlightLast />
+            <OfferTierList tiers={offer.tiers} highlightLast showHeader={false} />
           </View>
         </View>
 

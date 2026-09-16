@@ -1,6 +1,6 @@
 import { memo, useMemo, type ReactNode } from 'react';
 
-import { Image, Pressable, TextInput, View } from 'react-native';
+import { Pressable, TextInput, View } from 'react-native';
 
 import { Typography } from '@/components';
 import {
@@ -23,6 +23,7 @@ import {
 } from '@/icons';
 import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
+import { elevation } from '@/theme/shadows';
 import { cn } from '@/utils/cn';
 import type { SellerBottomNavTarget } from '@/seller/navigation/useSellerBottomNavigation';
 
@@ -351,8 +352,8 @@ export const BuyerPreviewCard = memo(function BuyerPreviewCard({
     const paymentPrices = Object.values(pricing)
       .map((value) => Number(value))
       .filter((value) => Number.isFinite(value) && value > 0);
-    const lowest = [...tierPrices, ...paymentPrices].sort((a, b) => a - b)[0];
-    return lowest ? `₹${lowest}/MT` : '₹--/MT';
+  const lowest = [...tierPrices, ...paymentPrices].sort((a, b) => a - b)[0];
+    return lowest ? `₹${lowest.toLocaleString('en-IN')}/MT` : '₹--/MT';
   }, [pricing, tiers]);
 
   return (
@@ -361,25 +362,30 @@ export const BuyerPreviewCard = memo(function BuyerPreviewCard({
         Buyer Preview
       </Typography>
       <View className="mt-md overflow-hidden rounded-2xl border border-brand-border bg-brand-white">
-        <View className="h-40 bg-brand-overlay">
-          <Image
-            source={{ uri: 'https://images.unsplash.com/photo-1562141961-54a7a5d2ff8c?auto=format&fit=crop&w=1200&q=80' }}
-            className="h-full w-full"
-          />
-          <View className="absolute left-md top-md rounded-full bg-brand-success px-sm py-xs">
-            <Typography variant="badge" className="text-brand-white">
-              Lowest Landed Cost
-            </Typography>
-          </View>
+        <View className="bg-brand-navy px-md py-lg">
+          <Typography variant="badge" className="text-[11px] tracking-[1px] text-brand-primary-light">
+            {(product.category || 'GRADE').toUpperCase()}
+          </Typography>
+          <Typography variant="headingLeft" className="mt-xs text-[22px] text-brand-white">
+            {product.grade || product.name || 'Select a grade'}
+          </Typography>
+          <Typography variant="legal" className="mt-xs text-left text-brand-primary-light">
+            Same SKU buyers see in the customer app
+          </Typography>
         </View>
 
         <View className="flex-row items-start justify-between px-md py-md">
           <View className="flex-1 pr-md">
             <Typography variant="headingLeft" className="text-[22px]">
-              {product.name || 'HDPE PE100'}
+              {product.name || 'Marketplace grade'}
             </Typography>
             <Typography variant="roleDescription" className="mt-xs">
-              {(product.brand || 'Reliance') + ' • ' + (product.origin || 'India') + ' • ' + (product.moq || '10') + ' MT MOQ'}
+              {(product.brand || 'Your brand') +
+                ' • ' +
+                (product.origin || 'India') +
+                ' • ' +
+                (product.moq || '—') +
+                ' MT MOQ'}
             </Typography>
           </View>
           <View className="items-end">
@@ -512,7 +518,6 @@ export const SellerProductCard = memo(function SellerProductCard({
       onPress={onPress}
       className="overflow-hidden rounded-3xl border border-brand-border bg-brand-white"
     >
-      <Image source={{ uri: product.imageUrl }} className="h-36 w-full bg-brand-overlay" />
       <View className="p-lg">
         <View className="flex-row items-start justify-between">
           <View className="flex-1 pr-md">
@@ -520,7 +525,7 @@ export const SellerProductCard = memo(function SellerProductCard({
               {product.form.name}
             </Typography>
             <Typography variant="roleDescription" className="mt-xs">
-              {product.form.grade} • Stock {product.form.availableQty} MT
+              {product.form.grade} • Stock {product.form.availableQty} {product.form.unit || 'MT'}
             </Typography>
           </View>
           <MoreVerticalIcon size={18} color={brandColors.body} />
@@ -530,7 +535,7 @@ export const SellerProductCard = memo(function SellerProductCard({
           <View>
             <Typography variant="fieldLabel">MOQ</Typography>
             <Typography variant="roleTitle" className="mt-xs">
-              {product.form.moq} MT
+              {product.form.moq} {product.form.unit || 'MT'}
             </Typography>
           </View>
           <View>
@@ -598,31 +603,61 @@ export const SellerBottomNavigation = memo(function SellerBottomNavigation({
   const items: {
     id: SellerBottomNavTarget;
     label: string;
-    icon: ReactNode;
+    renderIcon: (color: string) => ReactNode;
   }[] = [
-    { id: 'dashboard', label: 'Dashboard', icon: <HomeTabIcon size={iconSizes.md} color={brandColors.heading} /> },
-    { id: 'orders', label: 'Orders', icon: <OrdersTabIcon size={iconSizes.md} color={brandColors.heading} /> },
-    { id: 'products', label: 'Products', icon: <StoreIcon size={iconSizes.md} color={brandColors.heading} /> },
-    { id: 'payouts', label: 'Payouts', icon: <WalletIcon size={iconSizes.md} color={brandColors.heading} /> },
-    { id: 'profile', label: 'Profile', icon: <ProfileIcon size={iconSizes.md} color={brandColors.heading} /> },
+    {
+      id: 'dashboard',
+      label: 'Dashboard',
+      renderIcon: (color) => <HomeTabIcon size={iconSizes.md} color={color} />,
+    },
+    {
+      id: 'orders',
+      label: 'Orders',
+      renderIcon: (color) => <OrdersTabIcon size={iconSizes.md} color={color} />,
+    },
+    {
+      id: 'products',
+      label: 'Products',
+      renderIcon: (color) => <StoreIcon size={iconSizes.md} color={color} />,
+    },
+    {
+      id: 'payouts',
+      label: 'Payouts',
+      renderIcon: (color) => <WalletIcon size={iconSizes.md} color={color} />,
+    },
+    {
+      id: 'profile',
+      label: 'Profile',
+      renderIcon: (color) => <ProfileIcon size={iconSizes.md} color={color} />,
+    },
   ];
 
   return (
-    <View className="flex-row rounded-t-[28px] border-t border-brand-border bg-brand-white px-md pb-lg pt-md">
+    <View
+      className="flex-row rounded-t-[28px] border-t border-brand-border bg-brand-white px-md pb-lg pt-md"
+      style={elevation.sm}
+    >
       {items.map((item) => {
         const selected = item.id === active;
+        const color = selected ? brandColors.navy : brandColors.footer;
         return (
           <Pressable
             key={item.id}
             onPress={() => onNavigate(item.id)}
+            accessibilityRole="button"
+            accessibilityLabel={item.label}
+            accessibilityState={{ selected }}
             className="flex-1 items-center justify-center"
           >
             <View className={cn('rounded-full px-md py-xs', selected && 'bg-brand-primary-light')}>
-              {item.icon}
+              {item.renderIcon(color)}
             </View>
             <Typography
               variant="legal"
-              className={cn('mt-xs text-center', selected && 'text-brand-primary')}
+              className={cn(
+                'mt-xs text-center',
+                selected ? 'text-brand-navy' : 'text-brand-footer',
+              )}
             >
               {item.label}
             </Typography>

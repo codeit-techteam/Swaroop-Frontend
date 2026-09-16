@@ -4,8 +4,6 @@ import { View } from 'react-native';
 
 import { type Href, useRouter } from 'expo-router';
 
-import Toast from 'react-native-toast-message';
-
 import { ScreenWrapper, Typography } from '@/components';
 import { ROUTES } from '@/navigation/routes';
 import { SellerCard, SellerHeader, SellerPrimaryButton, SellerStepper } from '@/seller/components';
@@ -24,10 +22,6 @@ export const SellerReviewScreen = () => {
 
   const handleSubmit = () => {
     submitVerification();
-    Toast.show({
-      type: 'success',
-      text1: 'Application submitted successfully',
-    });
     router.replace(ROUTES.SELLER.VERIFICATION_SUBMITTED as Href);
   };
 
@@ -54,6 +48,11 @@ export const SellerReviewScreen = () => {
           <Typography variant="legal" className="text-left">
             GST: {company.gst}
           </Typography>
+          {company.gstVerified ? (
+            <Typography variant="legal" className="text-left">
+              GST State: {company.gstState} ({company.gstStateCode})
+            </Typography>
+          ) : null}
           <Typography variant="legal" className="text-left">
             PAN: {company.pan}
           </Typography>

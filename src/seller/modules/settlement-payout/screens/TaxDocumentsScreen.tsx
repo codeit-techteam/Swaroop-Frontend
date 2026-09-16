@@ -12,12 +12,12 @@ import { DocumentCard } from '@/seller/modules/settlement-payout/components';
 import { useSettlementStore } from '@/seller/modules/settlement-payout/store/settlementStore';
 import type { SettlementDocumentType } from '@/seller/modules/settlement-payout/types/settlement';
 
-const SECTIONS: Array<{ type: SettlementDocumentType; title: string }> = [
-  { type: 'invoice', title: 'Invoices' },
-  { type: 'credit_note', title: 'Credit Notes' },
-  { type: 'settlement_advice', title: 'Settlement Advice' },
-  { type: 'gst_report', title: 'GST Reports' },
-  { type: 'tds_certificate', title: 'TDS Certificate' },
+const SECTIONS: Array<{ type: SettlementDocumentType; title: string; blurb: string }> = [
+  { type: 'invoice', title: 'Invoices', blurb: 'Tax invoices for completed orders' },
+  { type: 'credit_note', title: 'Credit notes', blurb: 'Adjustments against invoices' },
+  { type: 'settlement_advice', title: 'Settlement advice', blurb: 'Payout confirmations' },
+  { type: 'gst_report', title: 'GST reports', blurb: 'Period GST summaries' },
+  { type: 'tds_certificate', title: 'TDS certificates', blurb: 'Withholding tax proofs' },
 ];
 
 export const TaxDocumentsScreen = memo(function TaxDocumentsScreen() {
@@ -42,24 +42,27 @@ export const TaxDocumentsScreen = memo(function TaxDocumentsScreen() {
 
   return (
     <ScreenWrapper padded={false} className="bg-brand-background">
-      <SellerHeader title="Tax & Documents" showBack onBack={() => router.back()} />
+      <SellerHeader title="Tax & documents" showBack onBack={() => router.back()} />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 24 }}
       >
-        <Typography variant="headingLeft" className="text-[28px]">
-          Tax & Documents
+        <Typography variant="headingLeft" className="text-[26px] leading-[32px]">
+          Tax & documents
         </Typography>
-        <Typography variant="subheading" className="mt-xs text-brand-body">
-          Invoices, settlement advice, and compliance documents
+        <Typography variant="legal" className="mt-xs text-left text-brand-body">
+          Invoices, settlement advice, and compliance files in one place
         </Typography>
 
         {groupedDocuments.map((section) => (
           <View key={section.type} className="mt-xl">
-            <Typography variant="headingLeft" className="mb-md text-[20px]">
+            <Typography variant="headingLeft" className="text-[18px]">
               {section.title}
             </Typography>
-            <View className="gap-md">
+            <Typography variant="legal" className="mb-md mt-xs text-left text-brand-body">
+              {section.blurb}
+            </Typography>
+            <View className="gap-sm">
               {section.items.length ? (
                 section.items.map((document) => (
                   <DocumentCard
@@ -69,9 +72,9 @@ export const TaxDocumentsScreen = memo(function TaxDocumentsScreen() {
                   />
                 ))
               ) : (
-                <View className="rounded-[20px] border border-dashed border-brand-border bg-brand-white px-lg py-xl">
+                <View className="rounded-2xl border border-dashed border-brand-border bg-brand-white px-lg py-lg">
                   <Typography variant="roleDescription" className="text-center text-brand-body">
-                    No documents available in this section yet.
+                    No files in this section yet
                   </Typography>
                 </View>
               )}

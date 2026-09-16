@@ -4,6 +4,7 @@ export {
   SellerTextField,
   SellerBottomSheet,
 } from '@/seller/components/SellerPrimitives';
+export { SellerGstValidateCard } from '@/seller/components/SellerGstValidateCard';
 export { SellerStepper } from '@/seller/components/SellerStepper';
 export {
   SellerCard,
@@ -12,6 +13,13 @@ export {
   SellerSuccessBanner,
 } from '@/seller/components/SellerCards';
 export { SellerShell } from '@/seller/components/SellerShell';
+export {
+  SellerCatalogGradeRow,
+  SellerCatalogSelectedBanner,
+  SellerListingCard,
+  SellerMaterialTile,
+} from '@/seller/components/SellerCatalogComponents';
+export { SellerSheetShell } from '@/seller/components/SellerSheetShell';
 export {
   BuyerPreviewCard,
   PricingCard,
@@ -27,6 +35,17 @@ export {
   TierCard,
   UploadCard,
 } from '@/seller/components/SellerCommerceComponents';
+export {
+  AnalyticsPreviewCard,
+  AttentionStatsGrid,
+  DashboardQuickActions,
+  DashboardSearchButton,
+  DashboardShipmentCard,
+  OverdueBanner,
+  RevenueHeroCard,
+  SellerHomeHeader,
+  SettlementSummaryCard,
+} from '@/seller/components/SellerDashboardHome';
 export {
   FilterButton,
   FilterChipRow,
@@ -48,7 +67,12 @@ export {
   NotificationFilterTabs,
   NotificationsListSkeleton,
 } from '@/seller/components/notifications';
-export { ProfileHeader, ProfileInfoCard, ProfileMenuItem, VerifiedBadge } from '@/seller/components/profile';
+export {
+  ProfileHeader,
+  ProfileInfoCard,
+  ProfileMenuItem,
+  VerifiedBadge,
+} from '@/seller/components/profile';
 export {
   AnalyticsCard,
   ShipmentCard as ActiveShipmentCard,

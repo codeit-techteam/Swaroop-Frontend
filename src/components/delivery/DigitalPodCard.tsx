@@ -1,15 +1,15 @@
 import { memo, useState } from 'react';
 
-import { Modal, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
-import { SecondaryButton, Typography } from '@/components/ui';
+import { DialogShell, SecondaryButton, Typography } from '@/components/ui';
 import {
   DELIVERY_COMPLETED_COPY,
   formatDeliveryDate,
   formatDeliveryTime,
 } from '@/constants/deliveryCompleted';
-import type { DigitalPodState } from '@/types/delivery';
 import { elevation } from '@/theme/shadows';
+import type { DigitalPodState } from '@/types/delivery';
 import { cn } from '@/utils/cn';
 
 type DigitalPodCardProps = {
@@ -82,34 +82,35 @@ export const DigitalPodCard = memo(function DigitalPodCard({
         />
       </View>
 
-      <Modal
-        visible={modalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setModalVisible(false)}
-      >
+      <DialogShell visible={modalVisible} onClose={() => setModalVisible(false)}>
+        <View className="items-center">
+          <View className="h-16 w-16 items-center justify-center rounded-full bg-brand-success-light">
+            <Typography variant="roleTitle" className="text-[18px] text-brand-success">
+              POD
+            </Typography>
+          </View>
+          <Typography variant="heading" className="mt-lg text-[20px] leading-[26px]">
+            {DELIVERY_COMPLETED_COPY.podModalTitle}
+          </Typography>
+          <Typography variant="subheading" className="mt-sm text-[14px] leading-[21px]">
+            {DELIVERY_COMPLETED_COPY.podModalPlaceholder}
+          </Typography>
+          <Typography variant="roleTitle" className="mt-md text-[13px] text-brand-muted">
+            {pod.podId}
+          </Typography>
+        </View>
         <Pressable
-          className="flex-1 items-center justify-center bg-black/70 px-lg"
           onPress={() => setModalVisible(false)}
+          accessibilityRole="button"
+          accessibilityLabel="Close proof of delivery"
+          className="mt-xl h-12 items-center justify-center rounded-2xl bg-brand-heading"
+          style={({ pressed }) => ({ opacity: pressed ? 0.88 : 1 })}
         >
-          <Pressable onPress={(event) => event.stopPropagation()} className="w-full">
-            <View className="rounded-2xl bg-brand-white p-lg">
-              <Typography variant="headingLeft" className="text-[18px] text-brand-heading">
-                {DELIVERY_COMPLETED_COPY.podModalTitle}
-              </Typography>
-              <Typography
-                variant="subheadingLeft"
-                className="mt-md text-[14px] leading-[22px] text-brand-body"
-              >
-                {DELIVERY_COMPLETED_COPY.podModalPlaceholder}
-              </Typography>
-              <Typography variant="roleTitle" className="mt-md text-[13px] text-brand-muted">
-                {pod.podId}
-              </Typography>
-            </View>
-          </Pressable>
+          <Typography variant="button" className="text-[15px] tracking-normal">
+            Close
+          </Typography>
         </Pressable>
-      </Modal>
+      </DialogShell>
     </>
   );
 });

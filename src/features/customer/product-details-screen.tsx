@@ -9,14 +9,23 @@ import Toast from 'react-native-toast-message';
 
 import {
   BottomActionBar,
+  BuyingSummary,
+  DeliveryCard,
+  DocumentDownloads,
   InfoGrid,
+  PaymentOptionsCard,
   PricingTiersCard,
+  ProductApplications,
   ProductBreadcrumb,
+  ProductFeatures,
   ProductHeader,
   ProductHero,
+  ProductHighlights,
   ProductInfoCard,
   ProductSkeleton,
   ProductSpecs,
+  RelatedProducts,
+  SpotPriceCard,
   TrustCard,
 } from '@/components/product';
 import { Typography } from '@/components/ui/typography';
@@ -24,17 +33,23 @@ import { buildBlindProductName, buildProductTypeBadge } from '@/constants/cart';
 import {
   getProductDetailsById,
   getTierForQuantity,
+  priceForQuantity,
   PRODUCT_DETAILS_SKELETON_MS,
+  PRODUCT_GST_RATE,
 } from '@/constants/productDetails';
+import { useMarketplaceCatalog } from '@/hooks/use-marketplace-catalog';
 import { BackArrowIcon } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
 import { useCartStore } from '@/store/cart-store';
 import { brandColors } from '@/theme/colors';
+import type { PaymentMethodId } from '@/types/payment';
 
 export const CustomerProductDetailsScreen = memo(function CustomerProductDetailsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
+
+  const catalog = useMarketplaceCatalog();
 
   const productId = useMemo(() => {
     if (typeof params.id === 'string') {
@@ -46,11 +61,15 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
     return null;
   }, [params.id]);
 
-  const product = useMemo(() => (productId ? getProductDetailsById(productId) : null), [productId]);
+  const product = useMemo(
+    () => (productId ? getProductDetailsById(productId, catalog) : null),
+    [catalog, productId],
+  );
 
   const [isLoading, setIsLoading] = useState(true);
   const [quantityMt, setQuantityMt] = useState(25);
   const [selectedTierId, setSelectedTierId] = useState<string>('');
+  const [paymentId, setPaymentId] = useState<PaymentMethodId>('advance');
 
   useEffect(() => {
     setIsLoading(true);
@@ -69,6 +88,8 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
     setQuantityMt(product.moq);
     const initialTier = getTierForQuantity(product.pricingTiers, product.moq);
     setSelectedTierId(initialTier.id);
+    const firstEligible = product.paymentOptions.find((option) => option.eligible);
+    setPaymentId(firstEligible?.id ?? 'advance');
   }, [product]);
 
   const selectedTier = useMemo(() => {
@@ -80,6 +101,52 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
       getTierForQuantity(product.pricingTiers, quantityMt)
     );
   }, [product, quantityMt, selectedTierId]);
+
+  const selectedPayment = useMemo(() => {
+    if (!product) {
+      return null;
+    }
+    return (
+      product.paymentOptions.find((option) => option.id === paymentId) ??
+      product.paymentOptions.find((option) => option.eligible) ??
+      null
+    );
+  }, [paymentId, product]);
+
+  const displayPricePerMt = useMemo(() => {
+    if (!product) {
+      return 0;
+    }
+    return priceForQuantity(product.pricingTiers, quantityMt) ?? product.spotPrice.pricePerMt;
+  }, [product, quantityMt]);
+
+  const displaySpotPrice = useMemo(() => {
+    if (!product) {
+      return null;
+    }
+    if (displayPricePerMt === product.spotPrice.pricePerMt) {
+      return product.spotPrice;
+    }
+    return { ...product.spotPrice, pricePerMt: displayPricePerMt };
+  }, [displayPricePerMt, product]);
+
+  const estimatedTotal = useMemo(() => {
+    const materialSubtotal = displayPricePerMt * quantityMt;
+    const discount = Math.round(materialSubtotal * (selectedPayment?.discountRate ?? 0));
+    const taxable = materialSubtotal - discount;
+    const freight = (product?.logistics.freightPerMt ?? 0) * quantityMt;
+    const gst = Math.round(taxable * PRODUCT_GST_RATE);
+    return taxable + freight + gst;
+  }, [
+    displayPricePerMt,
+    product?.logistics.freightPerMt,
+    quantityMt,
+    selectedPayment?.discountRate,
+  ]);
+
+  const canPurchase = Boolean(
+    product && product.stock > 0 && quantityMt >= product.moq && quantityMt <= product.stock,
+  );
 
   const handleBack = useCallback(() => {
     if (router.canGoBack()) {
@@ -94,7 +161,8 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
       return;
     }
     setQuantityMt((current) => {
-      const next = current + product.quantityIncrement;
+      const maxQty = product.stock > 0 ? Math.max(product.stock, product.moq) : product.moq;
+      const next = Math.min(maxQty, current + product.quantityIncrement);
       const tier = getTierForQuantity(product.pricingTiers, next);
       setSelectedTierId(tier.id);
       return next;
@@ -125,32 +193,41 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
       }
 
       setSelectedTierId(tier.id);
-      setQuantityMt((current) => {
-        if (current >= tier.minMt && (tier.maxMt === null || current <= tier.maxMt)) {
-          return current;
-        }
-        return Math.max(product.moq, tier.minMt);
-      });
+      const next = Math.min(product.stock, Math.max(product.moq, tier.minMt));
+      setQuantityMt(next);
     },
     [product],
   );
 
-  const handleAddToCart = useCallback(() => {
+  const addCurrentItemToCart = useCallback(() => {
     if (!product || !selectedTier) {
-      return;
+      return false;
     }
 
-    const productTypeSource = product.name.replace(/\(.*?\)/g, '').trim() || product.nameLine2;
+    if (!canPurchase) {
+      Toast.show({
+        type: 'error',
+        text1: product.stock <= 0 ? 'Out of stock' : 'Unable to add',
+        text2:
+          product.stock <= 0
+            ? 'This grade is currently unavailable.'
+            : `Order between ${product.moq} MT and ${product.stock} MT.`,
+        visibilityTime: 2200,
+      });
+      return false;
+    }
+
+    const cartName = product.name || buildBlindProductName(product.grade, product.nameLine2);
 
     useCartStore.getState().addItem({
       productId: product.id,
-      name: buildBlindProductName(product.grade, product.nameLine2),
-      productType: buildProductTypeBadge(productTypeSource),
+      name: cartName,
+      productType: buildProductTypeBadge(product.materialType || product.breadcrumbCategory),
       grade: product.grade,
       quantityMt,
-      unitPricePerMt: Math.round(selectedTier.unitPrice * 1000),
+      unitPricePerMt: displayPricePerMt,
       tierId: selectedTier.id,
-      imageUrl: product.heroImage,
+      imageUrl: '',
       moq: product.moq,
       quantityIncrement: product.quantityIncrement,
       packaging: product.packaging,
@@ -158,33 +235,54 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
       eta: product.eta,
     });
 
+    return true;
+  }, [canPurchase, displayPricePerMt, product, quantityMt, selectedTier]);
+
+  const handleAddToCart = useCallback(() => {
+    if (!product) {
+      return;
+    }
+
+    const added = addCurrentItemToCart();
+    if (!added) {
+      return;
+    }
+
+    const cartName = product.name || buildBlindProductName(product.grade, product.nameLine2);
     Toast.show({
       type: 'success',
       text1: 'Added to cart',
-      text2: `${quantityMt} MT of ${buildBlindProductName(product.grade, product.nameLine2)} added.`,
+      text2: `${quantityMt} MT of ${cartName} added.`,
       visibilityTime: 2200,
     });
-  }, [product, quantityMt, selectedTier]);
+  }, [addCurrentItemToCart, product, quantityMt]);
 
   const handleOpenCart = useCallback(() => {
     router.push(ROUTES.CUSTOMER.CART as Href);
   }, [router]);
 
   const handleBuyNow = useCallback(() => {
-    if (!product || !selectedTier) {
+    const added = addCurrentItemToCart();
+    if (!added) {
       return;
     }
 
-    router.push({
-      pathname: ROUTES.CUSTOMER.CHECKOUT,
-      params: {
-        productId: product.id,
-        quantityMt: String(quantityMt),
-        tierId: selectedTier.id,
-        unitPrice: String(selectedTier.unitPrice),
-      },
-    } as unknown as Href);
-  }, [product, quantityMt, router, selectedTier]);
+    router.push(ROUTES.CUSTOMER.CHECKOUT as Href);
+  }, [addCurrentItemToCart, router]);
+
+  const handleContinueShopping = useCallback(() => {
+    router.replace(ROUTES.CUSTOMER.MARKET as Href);
+  }, [router]);
+
+  const handleRelatedSelect = useCallback(
+    (relatedId: string) => {
+      router.push({
+        pathname: ROUTES.CUSTOMER.PRODUCT_DETAILS,
+        params: { id: relatedId },
+      } as unknown as Href);
+    },
+    [router],
+  );
 
   if (!product) {
     return (
@@ -226,26 +324,103 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
           >
             <View className="pt-md" style={{ gap: 16 }}>
               <ProductHero
-                imageUrl={product.heroImage}
-                accessibilityLabel={`${product.name} product image`}
+                grade={product.grade}
+                sku={product.sku}
+                accessibilityLabel={`${product.name} grade`}
               />
               <ProductInfoCard product={product} />
+              <ProductHighlights highlights={product.highlights} />
               <InfoGrid items={product.infoItems} />
+              <DeliveryCard
+                origin={product.originRegion}
+                eta={product.eta}
+                logistics={product.logistics}
+              />
+              <ProductFeatures features={product.features} />
+              <ProductApplications
+                applications={product.applications}
+                industry={product.industry}
+              />
               <ProductSpecs product={product} />
+              <DocumentDownloads documents={product.documents} />
+              {displaySpotPrice ? <SpotPriceCard spotPrice={displaySpotPrice} /> : null}
               <PricingTiersCard
                 tiers={product.pricingTiers}
                 selectedTierId={selectedTierId}
-                procurementTerms={product.procurementTerms}
                 onSelectTier={handleSelectTier}
               />
+              <PaymentOptionsCard
+                options={product.paymentOptions}
+                selectedId={paymentId}
+                onSelect={setPaymentId}
+              />
+              <View className="mx-lg flex-row" style={{ gap: 10 }}>
+                <View className="flex-1 rounded-lg border border-brand-border bg-brand-white px-md py-md">
+                  <Typography
+                    variant="fieldLabel"
+                    className="text-[10px] tracking-[0.8px] text-brand-muted"
+                  >
+                    Availability
+                  </Typography>
+                  <Typography
+                    variant="roleTitle"
+                    className="mt-xs text-[13px] text-brand-success"
+                    numberOfLines={1}
+                  >
+                    {product.availabilityLabel}
+                  </Typography>
+                </View>
+                <View className="flex-1 rounded-lg border border-brand-border bg-brand-white px-md py-md">
+                  <Typography
+                    variant="fieldLabel"
+                    className="text-[10px] tracking-[0.8px] text-brand-muted"
+                  >
+                    Delivery ETA
+                  </Typography>
+                  <Typography
+                    variant="roleTitle"
+                    className="mt-xs text-[13px] text-brand-heading"
+                    numberOfLines={1}
+                  >
+                    {product.eta}
+                  </Typography>
+                </View>
+              </View>
+              <BuyingSummary
+                pricePerMt={displayPricePerMt}
+                quantity={quantityMt}
+                freightPerMt={product.logistics.freightPerMt}
+                discountRate={selectedPayment?.discountRate ?? 0}
+              />
+              <Typography
+                variant="caption"
+                className="mx-lg font-sans text-[11px] normal-case leading-[16px] tracking-normal text-brand-muted"
+              >
+                {product.spotPrice.note} Estimated freight{' '}
+                {`₹${product.logistics.freightPerMt.toLocaleString('en-IN')}`} / MT.
+              </Typography>
               <TrustCard product={product} />
+              <Pressable
+                onPress={handleContinueShopping}
+                accessibilityRole="button"
+                accessibilityLabel="Continue shopping"
+                className="mx-lg h-11 items-center justify-center rounded-lg"
+              >
+                <Typography variant="link" className="text-[13px] text-brand-muted">
+                  Continue Shopping
+                </Typography>
+              </Pressable>
+              <RelatedProducts products={product.relatedProducts} onSelect={handleRelatedSelect} />
             </View>
           </ScrollView>
 
           <BottomActionBar
             quantityMt={quantityMt}
             minMt={product.moq}
+            maxMt={Math.max(product.moq, product.stock)}
             increment={product.quantityIncrement}
+            estimatedTotal={estimatedTotal}
+            disabled={!canPurchase}
             onIncrement={handleIncrement}
             onDecrement={handleDecrement}
             onAddToCart={handleAddToCart}

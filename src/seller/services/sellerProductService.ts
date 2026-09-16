@@ -1,4 +1,6 @@
 import { STORAGE_KEYS } from '@/constants';
+import { getBlindGradeById } from '@/constants/blind-grades';
+import { buildEditorFromCatalog, matchCatalogForLegacyForm } from '@/seller/utils/catalog';
 import { getStorageItem, setStorageItem } from '@/utils/storage';
 
 import type {
@@ -9,9 +11,6 @@ import type {
   SellerProductSnapshot,
   SellerTechnicalSpecs,
 } from '@/seller/types';
-
-const DEMO_PRODUCT_IMAGE =
-  'https://images.unsplash.com/photo-1581092580497-e0d23cbdf1dc?auto=format&fit=crop&w=1200&q=80';
 
 const safeParse = <T>(value: string | undefined, fallback: T): T => {
   if (!value) {
@@ -27,22 +26,29 @@ const safeParse = <T>(value: string | undefined, fallback: T): T => {
 
 export const createEmptyProductForm = (): SellerProductForm => ({
   name: '',
-  grade: 'PE100',
-  category: 'Polymers',
-  brand: 'Reliance',
+  grade: '',
+  category: '',
+  brand: '',
   origin: 'India',
   description: '',
-  availableQty: '500',
-  moq: '10',
-  warehouseLocation: 'JNPT, Navi Mumbai',
+  availableQty: '',
+  moq: '',
+  warehouseLocation: '',
+  polymerType: '',
+  packagingType: '25 kg bags',
+  unit: 'MT',
+  currency: 'INR',
+  gstPercent: '18',
+  reservedQty: '0',
+  catalogProductId: '',
 });
 
 export const createEmptyPricing = (): SellerPaymentPricing => ({
-  advance: '145',
-  onLoading: '147',
-  onDelivery: '148',
-  credit15Days: '152',
-  credit30Days: '153',
+  advance: '',
+  onLoading: '',
+  onDelivery: '',
+  credit15Days: '',
+  credit30Days: '',
 });
 
 export const createDefaultTiers = (): SellerPricingTier[] => [
@@ -70,36 +76,46 @@ export const createDefaultTiers = (): SellerPricingTier[] => [
 ];
 
 export const createEmptyTechnicalSpecs = (): SellerTechnicalSpecs => ({
-  mfi: '0.10',
-  density: '0.954',
-  primaryApplication: 'Pipe Extrusion, Blow Molding',
+  mfi: '',
+  density: '',
+  primaryApplication: '',
   technicalDatasheetName: '',
   qualityCertificateName: '',
 });
 
+const DEMO_CATALOG_ID = 'mkt-hdpe-pipe';
+
 const createDemoPublishedProduct = (): SellerProduct => {
   const now = new Date().toISOString();
+  const catalog = getBlindGradeById(DEMO_CATALOG_ID);
+  const patch = catalog ? buildEditorFromCatalog(catalog) : null;
+
   return {
     id: 'seller-product-demo-1',
     productId: 'PT-PROD-1001',
     status: 'published',
     createdAt: now,
     updatedAt: now,
-    imageUrl: DEMO_PRODUCT_IMAGE,
+    imageUrl: '',
     form: {
-      name: 'HDPE PE100',
-      grade: 'PE100',
-      category: 'Polymers',
+      ...createEmptyProductForm(),
+      ...(patch?.form ?? {}),
+      catalogProductId: DEMO_CATALOG_ID,
       brand: 'Reliance',
-      origin: 'India',
-      description: 'Injection and pipe-grade polymer stock for industrial procurement.',
       availableQty: '500',
-      moq: '10',
-      warehouseLocation: 'JNPT, Navi Mumbai',
+      warehouseLocation: 'JNPT',
+      packagingType: '25 kg bags',
+      unit: 'MT',
+      currency: 'INR',
+      gstPercent: '18',
+      reservedQty: '120',
     },
-    pricing: createEmptyPricing(),
-    tiers: createDefaultTiers(),
-    technicalSpecs: createEmptyTechnicalSpecs(),
+    pricing: patch?.pricing ?? createEmptyPricing(),
+    tiers: patch?.tiers ?? createDefaultTiers(),
+    technicalSpecs: {
+      ...createEmptyTechnicalSpecs(),
+      ...(patch?.technicalSpecs ?? {}),
+    },
   };
 };
 
@@ -152,8 +168,46 @@ export const buildDefaultSellerProductSnapshot = (): SellerProductSnapshot => {
   };
 };
 
-export const getSellerProductSnapshot = (): SellerProductSnapshot =>
-  safeParse(getStorageItem(STORAGE_KEYS.SELLER_PRODUCT_STATE), buildDefaultSellerProductSnapshot());
+export const getSellerProductSnapshot = (): SellerProductSnapshot => {
+  const snapshot = safeParse(
+    getStorageItem(STORAGE_KEYS.SELLER_PRODUCT_STATE),
+    buildDefaultSellerProductSnapshot(),
+  );
+  const withFormDefaults = (form: SellerProductForm): SellerProductForm => {
+    const merged = {
+      ...createEmptyProductForm(),
+      ...form,
+    };
+    if (merged.catalogProductId) {
+      return merged;
+    }
+    const matched = matchCatalogForLegacyForm(merged);
+    if (!matched) {
+      return merged;
+    }
+    return {
+      ...merged,
+      catalogProductId: matched.id,
+      name: merged.name || matched.name,
+      grade: matched.gradeCode || merged.grade,
+      category: matched.materialType || merged.category,
+      polymerType: matched.grade || merged.polymerType,
+    };
+  };
+  const products = snapshot.products.map((product) => ({
+    ...product,
+    form: withFormDefaults(product.form),
+  }));
+
+  return {
+    ...snapshot,
+    form: withFormDefaults(snapshot.form),
+    products,
+    draftProducts: products.filter((item) => item.status === 'draft'),
+    publishedProducts: products.filter((item) => item.status === 'published'),
+    inactiveProducts: products.filter((item) => item.status === 'inactive'),
+  };
+};
 
 export const persistSellerProductSnapshot = (snapshot: SellerProductSnapshot): void => {
   setStorageItem(STORAGE_KEYS.SELLER_PRODUCT_STATE, JSON.stringify(snapshot));
@@ -175,7 +229,7 @@ export const createProduct = (
     status,
     createdAt: now,
     updatedAt: now,
-    imageUrl: DEMO_PRODUCT_IMAGE,
+    imageUrl: '',
     form: { ...snapshot.form },
     pricing: { ...snapshot.pricing },
     tiers: snapshot.tiers.map((tier) => ({ ...tier })),
@@ -305,7 +359,7 @@ export const loadProductIntoEditor = (
   return {
     ...snapshot,
     selectedProductId: product.id,
-    form: { ...product.form },
+    form: { ...createEmptyProductForm(), ...product.form },
     pricing: { ...product.pricing },
     tiers: product.tiers.map((tier) => ({ ...tier })),
     technicalSpecs: { ...product.technicalSpecs },

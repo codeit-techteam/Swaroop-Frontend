@@ -18,7 +18,7 @@ export const ProfileInfoCard = memo(function ProfileInfoCard({ title, children }
       <Typography variant="badge" className="mb-sm text-[11px] uppercase tracking-wide text-brand-body">
         {title}
       </Typography>
-      <View className="overflow-hidden rounded-2xl border border-brand-border bg-brand-white">
+      <View className="overflow-hidden rounded-2xl border border-brand-border bg-brand-white shadow-sm">
         {children}
       </View>
     </View>
@@ -54,6 +54,8 @@ export const ProfileMenuItem = memo(function ProfileMenuItem({
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={title}
       className={!isLast ? 'border-b border-brand-border' : undefined}
       style={({ pressed }) => ({ opacity: pressed ? 0.92 : 1 })}
     >

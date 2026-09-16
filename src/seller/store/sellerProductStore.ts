@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 
+import { getBlindGradeById } from '@/constants/blind-grades';
 import type {
   SellerProductForm,
   SellerProductStore,
@@ -18,6 +19,12 @@ import {
   saveDraft,
   updateStock,
 } from '@/seller/services/sellerProductService';
+import { buildEditorFromCatalogId } from '@/seller/utils/catalog';
+
+const catalogHasSpec = (form: SellerProductForm, spec: 'mfi' | 'density'): boolean => {
+  const catalog = form.catalogProductId ? getBlindGradeById(form.catalogProductId) : undefined;
+  return Boolean(catalog?.technicalSpecs?.[spec]);
+};
 
 const buildFormErrors = (
   form: SellerProductForm,
@@ -27,19 +34,31 @@ const buildFormErrors = (
   const errors: SellerProductStore['formErrors'] = {};
 
   if (!form.name.trim()) {
-    errors.name = 'Product name is required.';
+    errors.name = 'Grade name is required.';
   }
   if (!form.grade.trim()) {
-    errors.grade = 'Grade is required.';
+    errors.grade = 'Grade code is required.';
   }
   if (!form.category.trim()) {
     errors.category = 'Category is required.';
   }
+  if (mode === 'publish' && !form.catalogProductId?.trim()) {
+    errors.category = 'Select a marketplace grade from the customer catalog.';
+  }
   if (!form.brand.trim()) {
-    errors.brand = 'Brand is required.';
+    errors.brand = 'Manufacturer / brand is required.';
   }
   if (!form.origin.trim()) {
     errors.origin = 'Origin is required.';
+  }
+  if (!form.polymerType.trim()) {
+    errors.polymerType = 'Polymer type is required.';
+  }
+  if (!form.packagingType.trim()) {
+    errors.packagingType = 'Packaging type is required.';
+  }
+  if (!form.unit.trim()) {
+    errors.unit = 'Unit is required.';
   }
   if (!form.moq.trim()) {
     errors.moq = 'MOQ is required.';
@@ -55,10 +74,10 @@ const buildFormErrors = (
     if (!form.warehouseLocation.trim()) {
       errors.warehouseLocation = 'Warehouse location is required.';
     }
-    if (!technicalSpecs.mfi.trim()) {
+    if (catalogHasSpec(form, 'mfi') && !technicalSpecs.mfi.trim()) {
       errors.mfi = 'MFI is required.';
     }
-    if (!technicalSpecs.density.trim()) {
+    if (catalogHasSpec(form, 'density') && !technicalSpecs.density.trim()) {
       errors.density = 'Density is required.';
     }
     if (!technicalSpecs.primaryApplication.trim()) {
@@ -222,6 +241,49 @@ export const useSellerProductStore = create<SellerProductStore>((set, get) => ({
       formErrors: {},
     }));
     persist(get());
+  },
+
+  applyCatalogGrade: (catalogId) => {
+    const patch = buildEditorFromCatalogId(catalogId);
+    if (!patch) {
+      return false;
+    }
+
+    set((state) => ({
+      form: {
+        ...state.form,
+        ...patch.form,
+        brand: state.form.brand,
+        availableQty: state.form.availableQty,
+        reservedQty: state.form.reservedQty,
+        warehouseLocation: state.form.warehouseLocation,
+        packagingType: state.form.packagingType || '25 kg bags',
+        unit: state.form.unit || 'MT',
+        currency: state.form.currency || 'INR',
+        gstPercent: state.form.gstPercent || '18',
+      },
+      pricing: patch.pricing,
+      tiers: patch.tiers,
+      technicalSpecs: {
+        ...state.technicalSpecs,
+        ...patch.technicalSpecs,
+      },
+      formErrors: {
+        ...state.formErrors,
+        name: undefined,
+        grade: undefined,
+        category: undefined,
+        polymerType: undefined,
+        origin: undefined,
+        description: undefined,
+        moq: undefined,
+        mfi: undefined,
+        density: undefined,
+        primaryApplication: undefined,
+      },
+    }));
+    persist(get());
+    return true;
   },
 
   clearSelection: () => {

@@ -60,10 +60,13 @@ export const getSellerSnapshot = (): SellerSnapshot => {
     dashboardAccess: getBoolean(STORAGE_KEYS.SELLER_DASHBOARD_ACCESS, false),
     otpVerified: getBoolean(STORAGE_KEYS.SELLER_OTP_VERIFIED, false),
     mobile: getStorageItem(STORAGE_KEYS.SELLER_MOBILE) ?? '',
-    company: safeParse(
-      STORAGE_KEYS.SELLER_COMPANY ? getStorageItem(STORAGE_KEYS.SELLER_COMPANY) : undefined,
-      fallback.company,
-    ),
+    company: {
+      ...fallback.company,
+      ...safeParse(
+        STORAGE_KEYS.SELLER_COMPANY ? getStorageItem(STORAGE_KEYS.SELLER_COMPANY) : undefined,
+        fallback.company,
+      ),
+    },
     documents: safeParse(
       STORAGE_KEYS.SELLER_DOCUMENTS ? getStorageItem(STORAGE_KEYS.SELLER_DOCUMENTS) : undefined,
       fallback.documents,
@@ -105,7 +108,12 @@ export const isSellerOnboardingComplete = (snapshot: SellerSnapshot): boolean =>
   snapshot.sellerProfileCompleted && snapshot.dashboardAccess;
 
 export const isSellerCompanyFilled = (snapshot: SellerSnapshot): boolean =>
-  Boolean(snapshot.company.companyName && snapshot.company.gst && snapshot.company.pan);
+  Boolean(
+    snapshot.company.companyName &&
+      snapshot.company.gst &&
+      snapshot.company.pan &&
+      snapshot.company.gstVerified,
+  );
 
 export const areSellerDocumentsReady = (snapshot: SellerSnapshot): boolean =>
   snapshot.documents.every((document) => document.status === 'uploaded');

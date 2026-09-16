@@ -67,7 +67,7 @@ export const SettlementDetailsScreen = memo(function SettlementDetailsScreen() {
 
   return (
     <View className="flex-1 bg-brand-background">
-      <SellerHeader title="Settlement Details" showBack onBack={() => router.back()} />
+      <SellerHeader title="Settlement details" showBack onBack={() => router.back()} />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 140 }}
@@ -85,10 +85,13 @@ export const SettlementDetailsScreen = memo(function SettlementDetailsScreen() {
         {canSimulateRelease ? (
           <Pressable
             onPress={handleAdvance}
-            className="mt-lg rounded-2xl border border-dashed border-brand-primary bg-brand-primary-light px-lg py-md"
+            className="mt-lg rounded-2xl bg-brand-primary-tint px-lg py-md"
           >
-            <Typography variant="roleTitle" className="text-center text-brand-primary">
-              Simulate next settlement stage
+            <Typography variant="roleTitle" className="text-center text-[14px] text-brand-navy">
+              Advance to next stage
+            </Typography>
+            <Typography variant="legal" className="mt-xs text-center text-brand-body">
+              Demo control — moves this payout through escrow
             </Typography>
           </Pressable>
         ) : null}
@@ -100,10 +103,10 @@ export const SettlementDetailsScreen = memo(function SettlementDetailsScreen() {
       >
         <View className="gap-sm">
           <DownloadButton
-            label="Download Settlement PDF"
+            label="Download settlement PDF"
             onPress={() => handleDownload('settlement_advice')}
           />
-          <DownloadButton label="Download Tax Invoice" onPress={() => handleDownload('invoice')} />
+          <DownloadButton label="Download tax invoice" onPress={() => handleDownload('invoice')} />
         </View>
       </View>
     </View>

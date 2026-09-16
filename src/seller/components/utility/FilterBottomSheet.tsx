@@ -1,16 +1,16 @@
 import { memo, useCallback, useEffect, useState } from 'react';
 
-import { Modal, Pressable, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
 import { PrimaryButton, SecondaryButton, Typography } from '@/components';
+import { SellerSheetShell } from '@/seller/components/SellerSheetShell';
+import { FilterChip } from '@/seller/components/utility/SearchBar';
 import {
   getFilterPreferences,
   resetFilterPreferences,
   saveFilterPreferences,
   type FilterPreferences,
 } from '@/seller/services/documentsService';
-
-import { FilterChip } from '@/seller/components/utility/SearchBar';
 
 export type FilterModule = 'orders' | 'products' | 'offers' | 'inventory' | 'shipments';
 
@@ -215,56 +215,58 @@ export const FilterBottomSheet = memo(function FilterBottomSheet({
   const groups = FILTER_GROUPS[module];
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable className="flex-1 justify-end bg-black/40" onPress={onClose}>
-        <Pressable className="max-h-[80%] rounded-t-[28px] bg-brand-white" onPress={() => undefined}>
-          <View className="px-lg pb-2xl pt-lg">
-            <View className="mb-lg h-1 w-12 self-center rounded-full bg-brand-border" />
-            <Typography variant="headingLeft" className="text-[22px]">
-              Filters
-            </Typography>
-            <Typography variant="subheading" className="mt-xs text-brand-body">
-              Refine your {module} list
-            </Typography>
+    <SellerSheetShell visible={visible} onClose={onClose}>
+      <Typography variant="headingLeft" className="text-[22px]">
+        Filters
+      </Typography>
+      <Typography variant="subheading" className="mt-xs text-brand-body">
+        Refine your {module} list
+      </Typography>
 
-            <ScrollView className="mt-lg max-h-96" showsVerticalScrollIndicator={false}>
-              {groups.map((group) => {
-                const selected = (draft[group.id] as string[] | undefined) ?? [];
-                return (
-                  <View key={group.id} className="mb-lg">
-                    <Typography variant="badge" className="mb-sm text-[11px] uppercase tracking-wide text-brand-body">
-                      {group.label}
-                    </Typography>
-                    <View className="flex-row flex-wrap gap-sm">
-                      {group.options.map((option) => (
-                        <FilterChip
-                          key={option.value}
-                          label={option.label}
-                          selected={selected.includes(option.value)}
-                          onPress={() => toggleValue(group.id, option.value, group.multi)}
-                        />
-                      ))}
-                    </View>
-                  </View>
-                );
-              })}
-            </ScrollView>
-
-            <View className="mt-lg flex-row gap-sm">
-              <View className="flex-1">
-                <SecondaryButton label="Reset" variant="outline" onPress={handleReset} />
-              </View>
-              <View className="flex-1">
-                <PrimaryButton label="Apply" onPress={handleApply} />
+      <ScrollView className="mt-lg max-h-96" showsVerticalScrollIndicator={false}>
+        {groups.map((group) => {
+          const selected = (draft[group.id] as string[] | undefined) ?? [];
+          return (
+            <View key={group.id} className="mb-lg">
+              <Typography
+                variant="badge"
+                className="mb-sm text-[11px] uppercase tracking-wide text-brand-body"
+              >
+                {group.label}
+              </Typography>
+              <View className="flex-row flex-wrap gap-sm">
+                {group.options.map((option) => (
+                  <FilterChip
+                    key={option.value}
+                    label={option.label}
+                    selected={selected.includes(option.value)}
+                    onPress={() => toggleValue(group.id, option.value, group.multi)}
+                  />
+                ))}
               </View>
             </View>
-          </View>
-        </Pressable>
-      </Pressable>
-    </Modal>
+          );
+        })}
+      </ScrollView>
+
+      <View className="mt-lg flex-row gap-sm">
+        <View className="flex-1">
+          <SecondaryButton label="Reset" variant="outline" onPress={handleReset} />
+        </View>
+        <View className="flex-1">
+          <PrimaryButton
+            label="Apply"
+            className="rounded-2xl bg-brand-navy"
+            onPress={handleApply}
+          />
+        </View>
+      </View>
+    </SellerSheetShell>
   );
 });
 
 export function getActiveFilterCount(prefs: FilterPreferences): number {
-  return Object.values(prefs).filter((v) => v !== undefined && (Array.isArray(v) ? v.length > 0 : true)).length;
+  return Object.values(prefs).filter(
+    (v) => v !== undefined && (Array.isArray(v) ? v.length > 0 : true),
+  ).length;
 }

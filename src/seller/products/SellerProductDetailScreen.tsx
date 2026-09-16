@@ -1,6 +1,6 @@
 import { memo, useMemo } from 'react';
 
-import { Alert, Image, Pressable, ScrollView, View } from 'react-native';
+import { Alert, Pressable, ScrollView, View } from 'react-native';
 
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -71,24 +71,29 @@ export const SellerProductDetailScreen = memo(function SellerProductDetailScreen
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: insets.bottom + 120, paddingTop: 8 }}
       >
-        <View className="overflow-hidden rounded-2xl bg-brand-white">
-          <Image
-            source={{ uri: product.imageUrl }}
-            className="h-48 w-full bg-brand-surface"
-            resizeMode="cover"
-          />
-          <View className="px-lg py-lg">
-            <Typography variant="headingLeft" className="text-[28px]">
-              {product.form.name}
-            </Typography>
-            <Typography variant="legal" className="mt-xs text-left text-brand-body">
-              {product.productId}
-            </Typography>
-            <View className="mt-lg flex-row flex-wrap">
-              <DetailRow label="Grade" value={product.form.grade} />
+        <View className="overflow-hidden rounded-2xl bg-brand-navy px-lg py-lg">
+          <Typography variant="badge" className="text-[11px] tracking-[1px] text-brand-primary-light">
+            {(product.form.category || 'GRADE').toUpperCase()}
+          </Typography>
+          <Typography variant="headingLeft" className="mt-sm text-[26px] text-brand-white">
+            {product.form.name}
+          </Typography>
+          <Typography variant="legal" className="mt-xs text-left text-brand-primary-light">
+            {product.productId}
+            {product.form.catalogProductId ? ` · ${product.form.grade}` : ''}
+          </Typography>
+          <View className="mt-lg rounded-2xl bg-brand-white px-md py-md">
+            <View className="flex-row flex-wrap">
+              <DetailRow label="Grade Name" value={product.form.name} />
+              <DetailRow label="Grade Code" value={product.form.grade} />
               <DetailRow label="Category" value={product.form.category} />
+              <DetailRow label="Manufacturer" value={product.form.brand} />
               <DetailRow label="Origin" value={product.form.origin} />
-              <DetailRow label="Brand" value={product.form.brand} />
+              <DetailRow label="Material" value={product.form.polymerType || '—'} />
+              <DetailRow label="Packaging" value={product.form.packagingType || detail.packaging} />
+              <DetailRow label="Unit" value={product.form.unit || 'MT'} />
+              <DetailRow label="GST" value={product.form.gstPercent ? `${product.form.gstPercent}%` : '—'} />
+              <DetailRow label="Currency" value={product.form.currency || 'INR'} />
             </View>
             <Typography variant="roleDescription" className="mt-sm">
               {product.form.description || 'No description provided.'}
@@ -98,29 +103,55 @@ export const SellerProductDetailScreen = memo(function SellerProductDetailScreen
 
         <SellerCard title="Inventory" className="mt-lg">
           <View className="flex-row flex-wrap">
-            <DetailRow label="Available" value={`${product.form.availableQty} MT`} />
-            <DetailRow label="Reserved" value={`${detail.reservedQty} MT`} />
-            <DetailRow label="MOQ" value={`${product.form.moq} MT`} />
+            <DetailRow
+              label="Available"
+              value={`${product.form.availableQty} ${product.form.unit || 'MT'}`}
+            />
+            <DetailRow
+              label="Reserved"
+              value={`${product.form.reservedQty || detail.reservedQty} ${product.form.unit || 'MT'}`}
+            />
+            <DetailRow label="MOQ" value={`${product.form.moq} ${product.form.unit || 'MT'}`} />
             <DetailRow label="Warehouse" value={product.form.warehouseLocation} />
           </View>
         </SellerCard>
 
-        <SellerCard title="Pricing" className="mt-lg">
+        <SellerCard title="Payment Term Pricing" className="mt-lg">
           <View className="flex-row flex-wrap">
-            <DetailRow label="Advance" value={`₹${product.pricing.advance}/kg`} />
-            <DetailRow label="On Loading" value={`₹${product.pricing.onLoading}/kg`} />
-            <DetailRow label="On Delivery" value={`₹${product.pricing.onDelivery}/kg`} />
-            <DetailRow label="Credit 15" value={`₹${product.pricing.credit15Days}/kg`} />
-            <DetailRow label="Credit 30" value={`₹${product.pricing.credit30Days}/kg`} />
+            <DetailRow label="Advance" value={`₹${Number(product.pricing.advance).toLocaleString('en-IN')}/MT`} />
+            <DetailRow label="On Loading" value={`₹${Number(product.pricing.onLoading).toLocaleString('en-IN')}/MT`} />
+            <DetailRow label="On Delivery" value={`₹${Number(product.pricing.onDelivery).toLocaleString('en-IN')}/MT`} />
+            <DetailRow label="Credit 15" value={`₹${Number(product.pricing.credit15Days).toLocaleString('en-IN')}/MT`} />
+            <DetailRow label="Credit 30" value={`₹${Number(product.pricing.credit30Days).toLocaleString('en-IN')}/MT`} />
           </View>
         </SellerCard>
+
+        {product.tiers.length > 0 ? (
+          <SellerCard title="Bulk Pricing Tiers" className="mt-lg">
+            <View className="gap-sm">
+              {product.tiers.map((tier) => (
+                <View key={tier.id} className="mb-sm flex-row items-center justify-between">
+                  <Typography variant="roleDescription">
+                    {tier.minQty}
+                    {tier.maxQty ? `-${tier.maxQty}` : '+'} {product.form.unit || 'MT'}
+                    {tier.discountLabel ? ` · ${tier.discountLabel}` : ''}
+                  </Typography>
+                  <Typography variant="roleTitle">₹{Number(tier.price).toLocaleString('en-IN')}/MT</Typography>
+                </View>
+              ))}
+            </View>
+          </SellerCard>
+        ) : null}
 
         <SellerCard title="Specifications" className="mt-lg">
           <View className="flex-row flex-wrap">
             <DetailRow label="Density" value={product.technicalSpecs.density} />
             <DetailRow label="MFI" value={product.technicalSpecs.mfi} />
-            <DetailRow label="Applications" value={detail.applications.join(', ')} />
-            <DetailRow label="Packaging" value={detail.packaging} />
+            <DetailRow
+              label="Applications"
+              value={product.technicalSpecs.primaryApplication || detail.applications.join(', ')}
+            />
+            <DetailRow label="Packaging" value={product.form.packagingType || detail.packaging} />
           </View>
         </SellerCard>
 

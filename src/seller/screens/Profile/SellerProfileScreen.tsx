@@ -1,8 +1,9 @@
-import { memo, useState } from 'react';
+import { memo } from 'react';
 
-import { Modal, Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
 import { type Href, useRouter } from 'expo-router';
+
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScreenWrapper, Typography } from '@/components';
@@ -19,7 +20,6 @@ import {
   StoreIcon,
   TruckIcon,
 } from '@/icons';
-import { brandColors } from '@/theme/colors';
 import { ROUTES } from '@/navigation/routes';
 import {
   ProfileHeader,
@@ -30,6 +30,8 @@ import {
 import { navigateSellerBottomTab } from '@/seller/navigation/useSellerBottomNavigation';
 import { getSellerProfile } from '@/seller/services/sellerMockService';
 import { useSellerStore } from '@/seller/store/sellerStore';
+import { showConfirmDialog } from '@/store/dialog-store';
+import { brandColors } from '@/theme/colors';
 
 const PROFILE_ROUTE_MAP = {
   'company-profile': ROUTES.SELLER.PROFILE_COMPANY,
@@ -51,16 +53,25 @@ export const SellerProfileScreen = memo(function SellerProfileScreen() {
   const insets = useSafeAreaInsets();
   const profile = getSellerProfile();
   const logoutSeller = useSellerStore((state) => state.logoutSeller);
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const navigateProfileRoute = (routeKey: keyof typeof PROFILE_ROUTE_MAP) => {
     router.push(PROFILE_ROUTE_MAP[routeKey] as Href);
   };
 
   const handleLogout = () => {
-    setShowLogoutModal(false);
     logoutSeller();
     router.replace(ROUTES.AUTH.ROLE_SELECTION as Href);
+  };
+
+  const confirmLogout = () => {
+    showConfirmDialog({
+      title: 'Logout?',
+      message: 'You will need to sign in again to access your seller account.',
+      confirmLabel: 'Logout',
+      cancelLabel: 'Stay signed in',
+      variant: 'danger',
+      onConfirm: handleLogout,
+    });
   };
 
   return (
@@ -81,7 +92,10 @@ export const SellerProfileScreen = memo(function SellerProfileScreen() {
             </View>
             <Pressable
               onPress={() => router.push(ROUTES.SELLER.NOTIFICATIONS as Href)}
-              className="h-10 w-10 items-center justify-center"
+              accessibilityRole="button"
+              accessibilityLabel="Notifications"
+              className="h-10 w-10 items-center justify-center rounded-full"
+              style={({ pressed }) => ({ opacity: pressed ? 0.72 : 1 })}
             >
               <BellIcon />
             </Pressable>
@@ -185,13 +199,15 @@ export const SellerProfileScreen = memo(function SellerProfileScreen() {
           </ProfileInfoCard>
 
           <Pressable
-            onPress={() => setShowLogoutModal(true)}
-            className="mt-xl flex-row items-center justify-center gap-sm rounded-2xl border border-brand-error bg-brand-white px-lg py-md"
+            onPress={confirmLogout}
+            accessibilityRole="button"
+            accessibilityLabel="Log out"
+            className="mt-xl flex-row items-center justify-center gap-sm rounded-2xl border border-brand-error/40 bg-brand-white px-lg py-md"
             style={({ pressed }) => ({ opacity: pressed ? 0.92 : 1 })}
           >
             <LogoutIcon size={18} color={brandColors.error} />
             <Typography variant="roleTitle" className="text-brand-error">
-              Logout from PetroTrade Pro
+              Log out
             </Typography>
           </Pressable>
 
@@ -204,38 +220,6 @@ export const SellerProfileScreen = memo(function SellerProfileScreen() {
           active="profile"
           onNavigate={(target) => navigateSellerBottomTab(router, target)}
         />
-
-        <Modal transparent visible={showLogoutModal} animationType="fade" onRequestClose={() => setShowLogoutModal(false)}>
-          <Pressable
-            className="flex-1 items-center justify-center bg-black/40 px-lg"
-            onPress={() => setShowLogoutModal(false)}
-          >
-            <Pressable className="w-full rounded-3xl bg-brand-white p-lg" onPress={(event) => event.stopPropagation()}>
-              <Typography variant="headingLeft" className="text-[22px]">
-                Logout?
-              </Typography>
-              <Typography variant="roleDescription" className="mt-sm">
-                You will need to sign in again to access your seller account.
-              </Typography>
-              <View className="mt-lg flex-row gap-md">
-                <Pressable
-                  onPress={() => setShowLogoutModal(false)}
-                  className="flex-1 items-center rounded-2xl border border-brand-border px-md py-md"
-                >
-                  <Typography variant="roleTitle">Cancel</Typography>
-                </Pressable>
-                <Pressable
-                  onPress={handleLogout}
-                  className="flex-1 items-center rounded-2xl bg-brand-error px-md py-md"
-                >
-                  <Typography variant="roleTitle" className="text-brand-white">
-                    Logout
-                  </Typography>
-                </Pressable>
-              </View>
-            </Pressable>
-          </Pressable>
-        </Modal>
       </View>
     </ScreenWrapper>
   );

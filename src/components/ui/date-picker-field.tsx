@@ -91,13 +91,14 @@ export const DatePickerField = memo(function DatePickerField({
       {Platform.OS === 'ios' && showPicker ? (
         <Modal visible transparent animationType="fade" onRequestClose={closePicker}>
           <Pressable
-            className="flex-1 justify-end bg-black/40"
+            className="flex-1 justify-end"
+            style={{ backgroundColor: 'rgba(16, 52, 96, 0.52)' }}
             onPress={closePicker}
             accessibilityRole="button"
             accessibilityLabel="Close date picker"
           >
             <Pressable
-              className="rounded-t-2xl bg-brand-white px-lg pb-2xl pt-lg"
+              className="rounded-t-[28px] bg-brand-white px-lg pb-2xl pt-lg"
               onPress={(event) => event.stopPropagation()}
             >
               <View className="mb-md flex-row items-center justify-between">

@@ -35,12 +35,25 @@ const safeParse = <T>(value: string | undefined, fallback: T): T => {
 };
 
 export const formatSettlementAmount = (value: number, compact = false): string => {
-  if (compact && value >= 10000000) {
-    return `₹${(value / 10000000).toFixed(2)} Cr`;
+  if (!Number.isFinite(value) || value === 0) {
+    return compact ? '₹0' : '₹0';
   }
-  if (compact && value >= 100000) {
-    return `₹${(value / 100000).toFixed(2)} L`;
+
+  if (compact) {
+    const trim = (amount: number): string =>
+      amount.toFixed(2).replace(/\.?0+$/, '');
+
+    if (value >= 10000000) {
+      return `₹${trim(value / 10000000)}Cr`;
+    }
+    if (value >= 100000) {
+      return `₹${trim(value / 100000)}L`;
+    }
+    if (value >= 1000) {
+      return `₹${trim(value / 1000)}K`;
+    }
   }
+
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency: 'INR',

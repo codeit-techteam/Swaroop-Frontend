@@ -44,17 +44,18 @@ export const AppBottomSheetPicker = memo(function AppBottomSheetPicker({
       statusBarTranslucent
     >
       <Pressable
-        className="flex-1 items-center justify-end bg-black/40"
+        className="flex-1 items-center justify-end"
+        style={{ backgroundColor: 'rgba(16, 52, 96, 0.52)' }}
         onPress={onClose}
         accessibilityRole="button"
         accessibilityLabel={`Close ${title}`}
       >
         <Pressable
-          className="max-h-[50%] w-full rounded-t-2xl bg-brand-white px-xl pb-2xl pt-lg"
+          className="max-h-[56%] w-full rounded-t-[28px] bg-brand-white px-xl pb-2xl pt-lg"
           onPress={(event) => event.stopPropagation()}
         >
-          <View className="mb-md h-1 w-10 self-center rounded-full bg-brand-border" />
-          <Typography variant="headingLeft" className="mb-md text-[18px]">
+          <View className="mb-md h-1.5 w-12 self-center rounded-full bg-brand-border" />
+          <Typography variant="headingLeft" className="mb-md text-[20px]">
             {title}
           </Typography>
           <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
@@ -72,7 +73,12 @@ export const AppBottomSheetPicker = memo(function AppBottomSheetPicker({
                     accessibilityRole="button"
                     accessibilityState={{ selected }}
                     accessibilityLabel={item}
-                    className={cn('rounded-md px-md py-md', selected && 'bg-brand-primary-light')}
+                    className={cn(
+                      'mb-sm rounded-2xl border px-md py-md',
+                      selected
+                        ? 'border-brand-primary bg-brand-primary-light'
+                        : 'border-brand-border bg-brand-surface',
+                    )}
                   >
                     <Typography
                       variant="body"

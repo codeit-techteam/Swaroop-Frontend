@@ -1,14 +1,10 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
-
+import { BlindSellerBadge } from '@/components/product/blind-seller-badge';
 import { Typography } from '@/components/ui/typography';
-import { formatPricePerKg } from '@/constants/productDetails';
-import { ClockIcon } from '@/icons';
-import { brandColors } from '@/theme/colors';
-import { iconSizes } from '@/theme/icons';
-import type { ProductDetails } from '@/types/product';
+import type { ProductAvailabilityLevel, ProductDetails } from '@/types/product';
 import { cn } from '@/utils/cn';
 
 type ProductInfoCardProps = {
@@ -16,24 +12,75 @@ type ProductInfoCardProps = {
   className?: string;
 };
 
+const DESCRIPTION_PREVIEW_CHARS = 180;
+
+const AVAILABILITY_BADGE_CLASS: Record<ProductAvailabilityLevel, string> = {
+  high: 'bg-brand-success-light',
+  medium: 'bg-brand-success-light',
+  limited: 'bg-[#FFF4E5]',
+  out_of_stock: 'bg-brand-error-light',
+};
+
+const AVAILABILITY_TEXT_CLASS: Record<ProductAvailabilityLevel, string> = {
+  high: 'text-brand-success',
+  medium: 'text-brand-success',
+  limited: 'text-[#B45309]',
+  out_of_stock: 'text-brand-error',
+};
+
 export const ProductInfoCard = memo(function ProductInfoCard({
   product,
   className,
 }: ProductInfoCardProps) {
-  const isTrendUp = product.trendDirection === 'up';
+  const [expanded, setExpanded] = useState(false);
+  const needsTruncate = product.description.length > DESCRIPTION_PREVIEW_CHARS;
+  const description =
+    !needsTruncate || expanded
+      ? product.description
+      : `${product.description.slice(0, DESCRIPTION_PREVIEW_CHARS).trimEnd()}…`;
 
   return (
     <View
-
       className={cn(
         'mx-lg rounded-xl border border-brand-border bg-brand-white p-lg shadow-sm',
         className,
       )}
     >
-      <View className="self-start rounded-md bg-brand-primary-light px-sm py-xs">
-        <Typography variant="badge" className="text-[10px] tracking-[0.6px] text-brand-badge-text">
-          Grade {product.grade}
-        </Typography>
+      <View className="flex-row flex-wrap items-center" style={{ gap: 8 }}>
+        <View
+          className={cn(
+            'self-start rounded-md px-sm py-xs',
+            AVAILABILITY_BADGE_CLASS[product.availability],
+          )}
+        >
+          <Typography
+            variant="badge"
+            className={cn(
+              'text-[10px] tracking-[0.6px]',
+              AVAILABILITY_TEXT_CLASS[product.availability],
+            )}
+          >
+            {product.availabilityLabel}
+          </Typography>
+        </View>
+        <View className="self-start rounded-md bg-brand-success-light px-sm py-xs">
+          <Typography variant="badge" className="text-[10px] tracking-[0.6px] text-brand-success">
+            Verified Supply
+          </Typography>
+        </View>
+        <View className="self-start rounded-md bg-brand-surface px-sm py-xs">
+          <Typography variant="badge" className="text-[10px] tracking-[0.6px] text-brand-heading">
+            {product.grade}
+          </Typography>
+        </View>
+        {product.sku ? (
+          <Typography
+            variant="caption"
+            className="font-sans text-[11px] normal-case tracking-normal text-brand-muted"
+          >
+            {product.sku}
+          </Typography>
+        ) : null}
       </View>
 
       <Typography
@@ -42,110 +89,34 @@ export const ProductInfoCard = memo(function ProductInfoCard({
       >
         {product.name}
       </Typography>
-      <Typography
-        variant="headingLeft"
-        className="text-[22px] leading-[28px] text-brand-heading"
-      >
-        {product.nameLine2}
+      <Typography variant="roleDescription" className="mt-xs text-[14px] text-brand-body">
+        {product.materialType} · Category: {product.categoryName}
       </Typography>
 
-      <View className="my-md h-px bg-brand-border" />
+      <BlindSellerBadge className="mt-sm" />
 
-      <Typography
-        variant="fieldLabel"
-        className="text-[10px] tracking-[0.8px] text-brand-muted"
-      >
-        Base Price
-      </Typography>
-      <View className="mt-xs flex-row items-end">
-        <Typography
-          variant="headingLeft"
-          className="text-[28px] leading-[32px] text-brand-heading"
-        >
-          {formatPricePerKg(product.basePricePerKg)}
-        </Typography>
-        <Typography
-          variant="roleTitle"
-          className="mb-0.5 ml-xs text-[14px] text-brand-heading"
-        >
-          / KG
-        </Typography>
-      </View>
-
-      <View className="mt-sm flex-row items-center justify-between">
-        <View>
+      {product.description ? (
+        <View className="mt-sm">
           <Typography
-            variant="fieldLabel"
-            className="text-[10px] tracking-[0.8px] text-brand-muted"
+            variant="caption"
+            className="font-sans text-[13px] normal-case leading-[18px] tracking-normal text-brand-body"
           >
-            Current Market Price
+            {description}
           </Typography>
-          <Typography variant="roleTitle" className="mt-xs text-[14px] text-brand-heading">
-            {formatPricePerKg(product.marketPricePerKg)} / KG
-          </Typography>
+          {needsTruncate ? (
+            <Pressable
+              onPress={() => setExpanded((value) => !value)}
+              accessibilityRole="button"
+              accessibilityLabel={expanded ? 'Show less description' : 'Read more description'}
+              className="mt-xs self-start"
+            >
+              <Typography variant="link" className="text-[13px] text-brand-primary">
+                {expanded ? 'Show Less' : 'Read More'}
+              </Typography>
+            </Pressable>
+          ) : null}
         </View>
-
-        <View className="items-end">
-          <Typography
-            variant="fieldLabel"
-            className="text-[10px] tracking-[0.8px] text-brand-muted"
-          >
-            Today&apos;s Trend
-          </Typography>
-          <Typography
-            variant="roleTitle"
-            className={cn(
-              'mt-xs text-[14px]',
-              isTrendUp ? 'text-brand-success' : 'text-brand-error',
-            )}
-          >
-            {isTrendUp ? '▲' : '▼'} {isTrendUp ? '+' : '-'}
-            {product.trendPercent}%
-          </Typography>
-        </View>
-      </View>
-
-      <View className="my-md h-px bg-brand-border" />
-
-      <View className="flex-row">
-        <View className="flex-1 pr-sm">
-          <Typography
-            variant="fieldLabel"
-            className="text-[10px] tracking-[0.8px] text-brand-muted"
-          >
-            Min Order (MOQ)
-          </Typography>
-          <Typography variant="roleTitle" className="mt-xs text-[14px] text-brand-heading">
-            {product.moqLabel}
-          </Typography>
-        </View>
-        <View className="flex-1 pl-sm">
-          <Typography
-            variant="fieldLabel"
-            className="text-[10px] tracking-[0.8px] text-brand-muted"
-          >
-            Stock Status
-          </Typography>
-          <Typography variant="roleTitle" className="mt-xs text-[14px] text-brand-primary-dark">
-            {product.stockLabel}
-          </Typography>
-        </View>
-      </View>
-
-      <View className="mt-md flex-row items-center rounded-lg bg-brand-surface px-md py-md">
-        <ClockIcon size={iconSizes.sm} color={brandColors.muted} />
-        <View className="ml-sm flex-1 flex-row flex-wrap items-center">
-          <Typography
-            variant="fieldLabel"
-            className="mr-sm text-[10px] tracking-[0.8px] text-brand-muted"
-          >
-            Est. Delivery
-          </Typography>
-          <Typography variant="roleTitle" className="text-[13px] text-brand-heading">
-            {product.eta}
-          </Typography>
-        </View>
-      </View>
+      ) : null}
     </View>
   );
 });

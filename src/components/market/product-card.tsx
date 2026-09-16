@@ -97,13 +97,19 @@ export const ProductCard = memo(function ProductCard({
   const stockLevel = getStockLevel(product.stock);
   const badgeStyle = BADGE_STYLES[product.badge];
 
-  const handleBookNow = useCallback(() => {
+  const handleOpenDetails = useCallback(() => {
     onBookNow(product);
   }, [onBookNow, product]);
 
   return (
     <View className={cn('mx-lg mb-md', className)}>
-      <View className="rounded-xl border border-brand-border bg-brand-white p-lg shadow-sm">
+      <Pressable
+        onPress={handleOpenDetails}
+        accessibilityRole="button"
+        accessibilityLabel={`View details for ${product.name}`}
+        className="rounded-xl border border-brand-border bg-brand-white p-lg shadow-sm"
+        style={({ pressed }) => ({ opacity: pressed ? 0.96 : 1 })}
+      >
         <View className="flex-row items-start justify-between">
           <View
             className={cn(
@@ -145,6 +151,26 @@ export const ProductCard = memo(function ProductCard({
         >
           {product.name}
         </Typography>
+        {product.gradeCode || product.technicalSpecs?.mfi ? (
+          <View className="mt-xs flex-row flex-wrap items-center" style={{ gap: 8 }}>
+            {product.gradeCode ? (
+              <Typography
+                variant="caption"
+                className="font-sans text-[12px] normal-case tracking-normal text-brand-muted"
+              >
+                {product.gradeCode}
+              </Typography>
+            ) : null}
+            {product.technicalSpecs?.mfi ? (
+              <Typography
+                variant="caption"
+                className="font-sans text-[12px] normal-case tracking-normal text-brand-body"
+              >
+                {product.technicalSpecs.mfi.replace(' g/10 min', '')} MFI
+              </Typography>
+            ) : null}
+          </View>
+        ) : null}
 
         <View
           className={cn(
@@ -217,19 +243,13 @@ export const ProductCard = memo(function ProductCard({
             </Typography>
           </View>
 
-          <Pressable
-            onPress={handleBookNow}
-            accessibilityRole="button"
-            accessibilityLabel={`Book ${product.name}`}
-            className="rounded-lg bg-brand-primary px-lg py-sm"
-            style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
-          >
+          <View className="rounded-lg bg-brand-primary px-lg py-sm">
             <Typography variant="button" className="text-[13px] tracking-normal">
               Book Now
             </Typography>
-          </Pressable>
+          </View>
         </View>
-      </View>
+      </Pressable>
     </View>
   );
 });

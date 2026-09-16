@@ -13,6 +13,9 @@ export type SellerCompany = {
   companyName: string;
   gst: string;
   pan: string;
+  gstVerified: boolean;
+  gstStateCode: string;
+  gstState: string;
   entityType: string;
   businessEmail: string;
   mobile: string;
@@ -113,6 +116,14 @@ export type SellerProductForm = {
   availableQty: string;
   moq: string;
   warehouseLocation: string;
+  polymerType: string;
+  packagingType: string;
+  unit: string;
+  currency: string;
+  gstPercent: string;
+  reservedQty: string;
+  /** Customer marketplace SKU id (`mkt-*`) so listings stay aligned with CX catalog. */
+  catalogProductId: string;
 };
 
 export type SellerProduct = {
@@ -201,6 +212,7 @@ export type SellerProductStoreActions = {
   saveDraftProduct: () => { success: boolean; productId?: string };
   publishProduct: () => { success: boolean; productId?: string };
   editProduct: (productId: string) => void;
+  applyCatalogGrade: (catalogId: string) => boolean;
   clearSelection: () => void;
   duplicateProduct: (productId: string) => void;
   deleteProduct: (productId: string) => void;

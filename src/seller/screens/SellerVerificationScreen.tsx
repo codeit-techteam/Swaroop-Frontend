@@ -81,7 +81,7 @@ export const SellerVerificationScreen = () => {
 
       <SellerSuccessBanner
         title="Document Uploads"
-        description="Upload GST, PAN, Aadhaar and Cancelled Cheque. Frontend only: uploaded files are marked as Uploaded until backend verification is available."
+        description="Upload GST, PAN, Aadhaar and Cancelled Cheque — the same documents required in Seller Webapp onboarding."
         className="mt-lg"
       />
 
