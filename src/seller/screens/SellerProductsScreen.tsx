@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 
 import { Modal, Pressable, ScrollView, View } from 'react-native';
 
@@ -7,7 +7,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScreenWrapper, Typography } from '@/components';
-import { blindGradesMock } from '@/constants/blind-grades';
+import { fetchSellerCatalogProducts } from '@/services/catalog';
 import { BackArrowIcon } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
 import {
@@ -33,6 +33,7 @@ import {
 import { navigateSellerBottomTab } from '@/seller/navigation/useSellerBottomNavigation';
 import { useSellerProductStore } from '@/seller/store/sellerProductStore';
 import type { SellerProduct, SellerProductStatus } from '@/seller/types';
+import type { MarketProduct } from '@/types/market';
 import { findSellerListingForCatalog } from '@/seller/utils/catalog';
 import { brandColors } from '@/theme/colors';
 import { elevation } from '@/theme/shadows';
@@ -60,14 +61,34 @@ export const SellerProductsScreen = memo(function SellerProductsScreen() {
   const clearSelection = useSellerProductStore((state) => state.clearSelection);
 
   const [workspace, setWorkspace] = useState<WorkspaceTab>('catalog');
+  const [query, setQuery] = useState('');
   const [parentGroup, setParentGroup] = useState<(typeof SELLER_CATALOG_PARENT_FILTERS)[number]>('All');
   const [selectedFamily, setSelectedFamily] = useState<SellerMaterialFamily | null>(null);
   const [subCategory, setSubCategory] = useState('All');
-  const [query, setQuery] = useState('');
+  const [catalogProducts, setCatalogProducts] = useState<MarketProduct[]>([]);
+  const [liveGradeCount, setLiveGradeCount] = useState<number | null>(null);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+
+  useEffect(() => {
+    void fetchSellerCatalogProducts()
+      .then((grades) => {
+        setCatalogProducts(grades);
+        setLiveGradeCount(grades.length);
+        setCatalogError(null);
+      })
+      .catch((error: unknown) => {
+        setCatalogProducts([]);
+        setLiveGradeCount(null);
+        setCatalogError(error instanceof Error ? error.message : 'Unable to load Grade Master.');
+      });
+  }, []);
   const [listingTab, setListingTab] = useState<SellerProductStatus>('published');
   const [pendingDelete, setPendingDelete] = useState<SellerProduct | null>(null);
 
-  const families = useMemo(() => getMaterialsByParentGroup(parentGroup), [parentGroup]);
+  const families = useMemo(
+    () => getMaterialsByParentGroup(catalogProducts, parentGroup),
+    [catalogProducts, parentGroup],
+  );
 
   const listedCountByFamily = useMemo(() => {
     const counts = new Map<string, number>();
@@ -81,7 +102,7 @@ export const SellerProductsScreen = memo(function SellerProductsScreen() {
   const catalogGrades = useMemo(() => {
     const trimmed = query.trim();
     if (trimmed) {
-      return searchCatalogGrades(trimmed).filter((product) => {
+      return searchCatalogGrades(catalogProducts, trimmed).filter((product) => {
         if (parentGroup === 'All') {
           return true;
         }
@@ -93,8 +114,8 @@ export const SellerProductsScreen = memo(function SellerProductsScreen() {
     if (!selectedFamily) {
       return [];
     }
-    return getCatalogGradesForFamily(selectedFamily.name, subCategory);
-  }, [families, parentGroup, query, selectedFamily, subCategory]);
+    return getCatalogGradesForFamily(catalogProducts, selectedFamily.name, subCategory);
+  }, [catalogProducts, families, parentGroup, query, selectedFamily, subCategory]);
 
   const listingProducts = useMemo(() => {
     if (listingTab === 'draft') {
@@ -183,7 +204,9 @@ export const SellerProductsScreen = memo(function SellerProductsScreen() {
                 Marketplace catalog
               </Typography>
               <Typography variant="legal" className="mt-xs text-left text-brand-body">
-                {blindGradesMock.length} grades live in the customer app. Tap a material to list it.
+                {catalogError
+                  ? catalogError
+                  : `${liveGradeCount ?? '…'} grades live in the customer app. Tap a material to list it.`}
               </Typography>
 
               <View className="mt-lg">

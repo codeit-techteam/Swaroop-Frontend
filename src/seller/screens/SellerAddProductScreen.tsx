@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
 import { ScreenWrapper, Typography } from '@/components';
-import { getBlindGradeById } from '@/constants/blind-grades';
+import { fetchSellerCatalogProducts, getLiveCatalogProduct } from '@/services/catalog';
 import {
   SELLER_CATALOG_PARENT_FILTERS,
   getCatalogGradesForFamily,
@@ -43,8 +43,10 @@ import {
 import { INVENTORY_WAREHOUSES } from '@/seller/services/inventoryService';
 import { useSellerProductStore } from '@/seller/store/sellerProductStore';
 import type { SellerPaymentPricing, SellerProductForm } from '@/seller/types';
+import { PETROTRADE_CREDIT_NOTE } from '@/seller/utils/pricing';
 import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
+import type { MarketProduct } from '@/types/market';
 import { cn } from '@/utils/cn';
 
 type ListingStep = 1 | 2 | 3;
@@ -125,20 +127,33 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
   const [parentGroup, setParentGroup] = useState<(typeof SELLER_CATALOG_PARENT_FILTERS)[number]>('All');
   const [selectedFamily, setSelectedFamily] = useState<SellerMaterialFamily | null>(null);
   const [query, setQuery] = useState('');
+  const [catalogProducts, setCatalogProducts] = useState<MarketProduct[]>([]);
   const appliedCatalogRef = useRef<string | null>(null);
 
-  const selectedCatalog = form.catalogProductId ? getBlindGradeById(form.catalogProductId) : undefined;
-  const families = useMemo(() => getMaterialsByParentGroup(parentGroup), [parentGroup]);
+  useEffect(() => {
+    void fetchSellerCatalogProducts()
+      .then(setCatalogProducts)
+      .catch(() => setCatalogProducts([]));
+  }, []);
+
+  const selectedCatalog = form.catalogProductId
+    ? getLiveCatalogProduct(form.catalogProductId) ??
+      catalogProducts.find((item) => item.id === form.catalogProductId)
+    : undefined;
+  const families = useMemo(
+    () => getMaterialsByParentGroup(catalogProducts, parentGroup),
+    [catalogProducts, parentGroup],
+  );
   const catalogGrades = useMemo(() => {
     const trimmed = query.trim();
     if (trimmed) {
-      return searchCatalogGrades(trimmed);
+      return searchCatalogGrades(catalogProducts, trimmed);
     }
     if (!selectedFamily) {
       return [];
     }
-    return getCatalogGradesForFamily(selectedFamily.name);
-  }, [query, selectedFamily]);
+    return getCatalogGradesForFamily(catalogProducts, selectedFamily.name);
+  }, [catalogProducts, query, selectedFamily]);
 
   useEffect(() => {
     if (isEdit) {
@@ -493,7 +508,7 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
                 Pricing
               </Typography>
               <Typography variant="legal" className="mt-xs text-left text-brand-body">
-                Payment-term prices buyers will see on this grade.
+                Enter the selling price for this listing. Payment method does not change this price.
               </Typography>
 
               {selectedCatalog ? (
@@ -503,7 +518,7 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
               ) : null}
 
               <View className="mt-lg">
-                <SpecificationCard title="Payment terms">
+                <SpecificationCard title="Selling price">
                   <View>
                     {SELLER_PAYMENT_TERM_PRICE_FIELDS.map((item) => (
                       <PriceRow
@@ -514,6 +529,14 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
                       />
                     ))}
                   </View>
+                  {formErrors.sellingPrice ? (
+                    <Typography variant="error" className="mt-sm">
+                      {formErrors.sellingPrice}
+                    </Typography>
+                  ) : null}
+                  <Typography variant="legal" className="mt-md text-left text-brand-body">
+                    {PETROTRADE_CREDIT_NOTE}
+                  </Typography>
                 </SpecificationCard>
               </View>
 

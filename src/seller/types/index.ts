@@ -83,11 +83,7 @@ export type SellerQuickActionId = 'add-product' | 'update-stock' | 'offers' | 'd
 export type SellerProductStatus = 'draft' | 'published' | 'inactive';
 
 export type SellerPaymentPricing = {
-  advance: string;
-  onLoading: string;
-  onDelivery: string;
-  credit15Days: string;
-  credit30Days: string;
+  sellingPrice: string;
 };
 
 export type SellerPricingTier = {
@@ -155,7 +151,7 @@ export type SellerProductSnapshot = {
   shipments: SellerShipment[];
   revenueToday: string;
   revenueDelta: string;
-  creditReceivables: string;
+  pendingSettlement: string;
   overdueCount: number;
 };
 
@@ -190,7 +186,9 @@ export type SellerStore = SellerStoreState & SellerStoreActions;
 
 export type SellerProductStoreState = SellerProductSnapshot & {
   isHydrated: boolean;
-  formErrors: Partial<Record<keyof SellerProductForm | keyof SellerTechnicalSpecs, string>>;
+  formErrors: Partial<
+    Record<keyof SellerProductForm | keyof SellerTechnicalSpecs | 'sellingPrice', string>
+  >;
 };
 
 export type SellerProductStoreActions = {

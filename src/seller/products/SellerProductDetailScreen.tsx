@@ -3,17 +3,19 @@ import { memo, useMemo } from 'react';
 import { Alert, Pressable, ScrollView, View } from 'react-native';
 
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
+
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScreenWrapper, SecondaryButton, Typography } from '@/components';
 import { ROUTES } from '@/navigation/routes';
-import { DocumentCard } from '@/seller/components/analytics';
 import { SellerCard, SellerHeader, SellerPrimaryButton } from '@/seller/components';
+import { DocumentCard } from '@/seller/components/analytics';
 import {
   getProductDetail,
   simulateProductDocumentDownload,
 } from '@/seller/services/productDetailService';
 import { useSellerProductStore } from '@/seller/store/sellerProductStore';
+import { formatSellerSellingPrice, PETROTRADE_CREDIT_NOTE } from '@/seller/utils/pricing';
 
 const DetailRow = ({ label, value }: { label: string; value: string }) => (
   <View className="mb-md w-1/2 pr-sm">
@@ -38,10 +40,7 @@ export const SellerProductDetailScreen = memo(function SellerProductDetailScreen
     [productId, products],
   );
 
-  const detail = useMemo(
-    () => getProductDetail(productId ?? ''),
-    [productId],
-  );
+  const detail = useMemo(() => getProductDetail(productId ?? ''), [productId]);
 
   if (!product) {
     return (
@@ -72,7 +71,10 @@ export const SellerProductDetailScreen = memo(function SellerProductDetailScreen
         contentContainerStyle={{ paddingBottom: insets.bottom + 120, paddingTop: 8 }}
       >
         <View className="overflow-hidden rounded-2xl bg-brand-navy px-lg py-lg">
-          <Typography variant="badge" className="text-[11px] tracking-[1px] text-brand-primary-light">
+          <Typography
+            variant="badge"
+            className="text-[11px] tracking-[1px] text-brand-primary-light"
+          >
             {(product.form.category || 'GRADE').toUpperCase()}
           </Typography>
           <Typography variant="headingLeft" className="mt-sm text-[26px] text-brand-white">
@@ -92,7 +94,10 @@ export const SellerProductDetailScreen = memo(function SellerProductDetailScreen
               <DetailRow label="Material" value={product.form.polymerType || '—'} />
               <DetailRow label="Packaging" value={product.form.packagingType || detail.packaging} />
               <DetailRow label="Unit" value={product.form.unit || 'MT'} />
-              <DetailRow label="GST" value={product.form.gstPercent ? `${product.form.gstPercent}%` : '—'} />
+              <DetailRow
+                label="GST"
+                value={product.form.gstPercent ? `${product.form.gstPercent}%` : '—'}
+              />
               <DetailRow label="Currency" value={product.form.currency || 'INR'} />
             </View>
             <Typography variant="roleDescription" className="mt-sm">
@@ -116,14 +121,17 @@ export const SellerProductDetailScreen = memo(function SellerProductDetailScreen
           </View>
         </SellerCard>
 
-        <SellerCard title="Payment Term Pricing" className="mt-lg">
+        <SellerCard title="Commercial" className="mt-lg">
           <View className="flex-row flex-wrap">
-            <DetailRow label="Advance" value={`₹${Number(product.pricing.advance).toLocaleString('en-IN')}/MT`} />
-            <DetailRow label="On Loading" value={`₹${Number(product.pricing.onLoading).toLocaleString('en-IN')}/MT`} />
-            <DetailRow label="On Delivery" value={`₹${Number(product.pricing.onDelivery).toLocaleString('en-IN')}/MT`} />
-            <DetailRow label="Credit 15" value={`₹${Number(product.pricing.credit15Days).toLocaleString('en-IN')}/MT`} />
-            <DetailRow label="Credit 30" value={`₹${Number(product.pricing.credit30Days).toLocaleString('en-IN')}/MT`} />
+            <DetailRow
+              label="Selling Price"
+              value={formatSellerSellingPrice(product.pricing, product.form.unit || 'MT')}
+            />
+            <DetailRow label="Currency" value={product.form.currency || 'INR'} />
           </View>
+          <Typography variant="legal" className="mt-sm text-left text-brand-body">
+            Payment: Platform-managed. {PETROTRADE_CREDIT_NOTE}
+          </Typography>
         </SellerCard>
 
         {product.tiers.length > 0 ? (
@@ -136,7 +144,9 @@ export const SellerProductDetailScreen = memo(function SellerProductDetailScreen
                     {tier.maxQty ? `-${tier.maxQty}` : '+'} {product.form.unit || 'MT'}
                     {tier.discountLabel ? ` · ${tier.discountLabel}` : ''}
                   </Typography>
-                  <Typography variant="roleTitle">₹{Number(tier.price).toLocaleString('en-IN')}/MT</Typography>
+                  <Typography variant="roleTitle">
+                    ₹{Number(tier.price).toLocaleString('en-IN')}/MT
+                  </Typography>
                 </View>
               ))}
             </View>
@@ -168,10 +178,7 @@ export const SellerProductDetailScreen = memo(function SellerProductDetailScreen
 
         <SellerCard title="Offer Status" className="mt-lg">
           <View className="flex-row flex-wrap">
-            <DetailRow
-              label="Offer Live"
-              value={detail.offerStatus.isLive ? 'Yes' : 'No'}
-            />
+            <DetailRow label="Offer Live" value={detail.offerStatus.isLive ? 'Yes' : 'No'} />
             <DetailRow label="Remaining Quantity" value={detail.offerStatus.remainingQuantity} />
             <DetailRow label="Views" value={String(detail.offerStatus.views)} />
             <DetailRow label="Orders" value={String(detail.offerStatus.orders)} />

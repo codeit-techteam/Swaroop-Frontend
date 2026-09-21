@@ -1,11 +1,5 @@
 import { create } from 'zustand';
 
-import { getBlindGradeById } from '@/constants/blind-grades';
-import type {
-  SellerProductForm,
-  SellerProductStore,
-  SellerTechnicalSpecs,
-} from '@/seller/types';
 import {
   createNextTier,
   deleteProduct,
@@ -19,16 +13,19 @@ import {
   saveDraft,
   updateStock,
 } from '@/seller/services/sellerProductService';
+import type { SellerProductForm, SellerProductStore, SellerTechnicalSpecs } from '@/seller/types';
 import { buildEditorFromCatalogId } from '@/seller/utils/catalog';
+import { getLiveCatalogProduct } from '@/services/catalog';
 
 const catalogHasSpec = (form: SellerProductForm, spec: 'mfi' | 'density'): boolean => {
-  const catalog = form.catalogProductId ? getBlindGradeById(form.catalogProductId) : undefined;
+  const catalog = form.catalogProductId ? getLiveCatalogProduct(form.catalogProductId) : undefined;
   return Boolean(catalog?.technicalSpecs?.[spec]);
 };
 
 const buildFormErrors = (
   form: SellerProductForm,
   technicalSpecs: SellerTechnicalSpecs,
+  pricingSellingPrice: string,
   mode: 'draft' | 'publish',
 ): SellerProductStore['formErrors'] => {
   const errors: SellerProductStore['formErrors'] = {};
@@ -83,6 +80,9 @@ const buildFormErrors = (
     if (!technicalSpecs.primaryApplication.trim()) {
       errors.primaryApplication = 'Primary application is required.';
     }
+    if (!pricingSellingPrice.trim() || Number(pricingSellingPrice) <= 0) {
+      errors.sellingPrice = 'Selling price is required.';
+    }
   }
 
   return errors;
@@ -103,7 +103,7 @@ const persist = (state: SellerProductStore): void => {
     shipments: state.shipments,
     revenueToday: state.revenueToday,
     revenueDelta: state.revenueDelta,
-    creditReceivables: state.creditReceivables,
+    pendingSettlement: state.pendingSettlement,
     overdueCount: state.overdueCount,
   });
 };
@@ -200,7 +200,12 @@ export const useSellerProductStore = create<SellerProductStore>((set, get) => ({
 
   validateProductForm: (mode) => {
     const state = get();
-    const formErrors = buildFormErrors(state.form, state.technicalSpecs, mode);
+    const formErrors = buildFormErrors(
+      state.form,
+      state.technicalSpecs,
+      state.pricing.sellingPrice,
+      mode,
+    );
     set({ formErrors });
     return Object.keys(formErrors).length === 0;
   },

@@ -21,12 +21,7 @@ import {
   TruckIcon,
   WalletIcon,
 } from '@/icons';
-import { brandColors } from '@/theme/colors';
-import { iconSizes } from '@/theme/icons';
-import { elevation } from '@/theme/shadows';
-import { cn } from '@/utils/cn';
 import type { SellerBottomNavTarget } from '@/seller/navigation/useSellerBottomNavigation';
-
 import type {
   SellerPaymentPricing,
   SellerPricingTier,
@@ -36,6 +31,11 @@ import type {
   SellerStat,
   SellerTechnicalSpecs,
 } from '@/seller/types';
+import { formatSellerSellingPrice, getSellerSellingPrice } from '@/seller/utils/pricing';
+import { brandColors } from '@/theme/colors';
+import { iconSizes } from '@/theme/icons';
+import { elevation } from '@/theme/shadows';
+import { cn } from '@/utils/cn';
 
 type SellerDashboardHeaderProps = {
   sellerName: string;
@@ -349,10 +349,10 @@ export const BuyerPreviewCard = memo(function BuyerPreviewCard({
     const tierPrices = tiers
       .map((tier) => Number(tier.price))
       .filter((value) => Number.isFinite(value) && value > 0);
-    const paymentPrices = Object.values(pricing)
-      .map((value) => Number(value))
-      .filter((value) => Number.isFinite(value) && value > 0);
-  const lowest = [...tierPrices, ...paymentPrices].sort((a, b) => a - b)[0];
+    const sellingPrice = getSellerSellingPrice(pricing);
+    const lowest = [...tierPrices, sellingPrice]
+      .filter((value) => value > 0)
+      .sort((a, b) => a - b)[0];
     return lowest ? `₹${lowest.toLocaleString('en-IN')}/MT` : '₹--/MT';
   }, [pricing, tiers]);
 
@@ -541,7 +541,7 @@ export const SellerProductCard = memo(function SellerProductCard({
           <View>
             <Typography variant="fieldLabel">Price</Typography>
             <Typography variant="roleTitle" className="mt-xs text-brand-primary">
-              ₹{product.pricing.advance}/MT
+              {formatSellerSellingPrice(product.pricing, product.form.unit || 'MT')}
             </Typography>
           </View>
           <View>

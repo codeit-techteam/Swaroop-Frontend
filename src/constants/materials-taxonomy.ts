@@ -1,9 +1,7 @@
 /**
- * Source.one-style material families derived from the customer blind catalog.
- * Keep this in sync with `blind-grades.ts` — tiles are computed, not hand-listed.
+ * Source.one-style material families derived from the live catalog API.
  */
 
-import { blindGradesMock } from '@/constants/blind-grades';
 import type { MarketParentCategoryId, MarketProduct } from '@/types/market';
 
 export const MATERIAL_PARENT_GROUPS = ['Polymers', 'Chemicals', 'Additives', 'Base Oils'] as const;
@@ -76,10 +74,10 @@ function familyId(materialType: string): string {
   return `mat-${materialType.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
 }
 
-function buildFamilies(): SellerMaterialFamily[] {
+export function materialsFromCatalog(products: MarketProduct[]): SellerMaterialFamily[] {
   const buckets = new Map<string, MarketProduct[]>();
 
-  blindGradesMock.forEach((product) => {
+  products.forEach((product) => {
     const name = product.materialType || product.category;
     const current = buckets.get(name) ?? [];
     current.push(product);
@@ -95,7 +93,7 @@ function buildFamilies(): SellerMaterialFamily[] {
       code: familyCode(name),
       name,
       categoryId,
-      parentGroup: PARENT_BY_CATEGORY[categoryId],
+      parentGroup: PARENT_BY_CATEGORY[categoryId] ?? 'Polymers',
       gradeCount: grades.length,
       startingPrice: prices.length > 0 ? Math.min(...prices) : 0,
       subCategories: Array.from(
@@ -119,30 +117,34 @@ function buildFamilies(): SellerMaterialFamily[] {
   });
 }
 
-export const materialsTaxonomy: SellerMaterialFamily[] = buildFamilies();
-
 export const SELLER_CATALOG_PARENT_FILTERS = ['All', ...MATERIAL_PARENT_GROUPS] as const;
 
-export function getMaterialFamilyByName(name: string): SellerMaterialFamily | undefined {
-  return materialsTaxonomy.find(
+export function getMaterialFamilyByName(
+  name: string,
+  families: SellerMaterialFamily[],
+): SellerMaterialFamily | undefined {
+  return families.find(
     (family) => family.name.toLowerCase() === name.toLowerCase() || family.code.toLowerCase() === name.toLowerCase(),
   );
 }
 
 export function getMaterialsByParentGroup(
+  products: MarketProduct[],
   parentGroup: MaterialParentGroup | 'All' | string,
 ): SellerMaterialFamily[] {
+  const families = materialsFromCatalog(products);
   if (parentGroup === 'All') {
-    return materialsTaxonomy;
+    return families;
   }
-  return materialsTaxonomy.filter((family) => family.parentGroup === parentGroup);
+  return families.filter((family) => family.parentGroup === parentGroup);
 }
 
 export function getCatalogGradesForFamily(
+  products: MarketProduct[],
   familyName: string,
   subCategory?: string | null,
 ): MarketProduct[] {
-  return blindGradesMock.filter((product) => {
+  return products.filter((product) => {
     const material = product.materialType || product.category;
     if (material.toLowerCase() !== familyName.toLowerCase()) {
       return false;
@@ -154,13 +156,13 @@ export function getCatalogGradesForFamily(
   });
 }
 
-export function searchCatalogGrades(query: string): MarketProduct[] {
+export function searchCatalogGrades(products: MarketProduct[], query: string): MarketProduct[] {
   const normalized = query.trim().toLowerCase();
   if (!normalized) {
     return [];
   }
 
-  return blindGradesMock.filter((product) =>
+  return products.filter((product) =>
     [
       product.name,
       product.grade,

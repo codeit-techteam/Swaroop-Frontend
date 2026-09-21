@@ -8,6 +8,7 @@ import { ScreenWrapper, Typography } from '@/components';
 import { ROUTES } from '@/navigation/routes';
 import { SellerPrimaryButton, SuccessBanner } from '@/seller/components';
 import { useSellerProductStore } from '@/seller/store/sellerProductStore';
+import { formatSellerSellingPrice } from '@/seller/utils/pricing';
 
 export const SellerProductPublishedScreen = memo(function SellerProductPublishedScreen() {
   const router = useRouter();
@@ -20,7 +21,7 @@ export const SellerProductPublishedScreen = memo(function SellerProductPublished
     [params.id, publishedProducts],
   );
 
-  const advance = Number(product?.pricing.advance ?? 0);
+  const sellingPrice = formatSellerSellingPrice(product?.pricing, product?.form.unit || 'MT');
 
   return (
     <ScreenWrapper className="bg-brand-background">
@@ -43,12 +44,15 @@ export const SellerProductPublishedScreen = memo(function SellerProductPublished
 
       <View className="mt-lg gap-sm">
         <DetailRow label="Brand" value={product?.form.brand || '—'} />
+        <DetailRow label="Selling price" value={sellingPrice} />
         <DetailRow
-          label="Advance price"
-          value={Number.isFinite(advance) && advance > 0 ? `₹${advance.toLocaleString('en-IN')}/MT` : '—'}
+          label="Stock"
+          value={`${product?.form.availableQty || '0'} ${product?.form.unit || 'MT'}`}
         />
-        <DetailRow label="Stock" value={`${product?.form.availableQty || '0'} ${product?.form.unit || 'MT'}`} />
-        <DetailRow label="MOQ" value={`${product?.form.moq || '—'} ${product?.form.unit || 'MT'}`} />
+        <DetailRow
+          label="MOQ"
+          value={`${product?.form.moq || '—'} ${product?.form.unit || 'MT'}`}
+        />
       </View>
 
       <View className="mt-auto gap-md">

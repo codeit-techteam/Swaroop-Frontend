@@ -20,7 +20,7 @@ type EnvSchema = z.infer<typeof envSchema>;
 const ENV_DEFAULTS: EnvSchema = {
   EXPO_PUBLIC_APP_ENV: 'development',
   EXPO_PUBLIC_APP_VERSION: '1.0.0',
-  EXPO_PUBLIC_API_BASE_URL: 'https://api.example.com',
+  EXPO_PUBLIC_API_BASE_URL: 'http://localhost:4000/api/v1',
   EXPO_PUBLIC_IMAGE_BASE_URL: 'https://cdn.example.com',
   EXPO_PUBLIC_GOOGLE_MAPS_API_KEY: 'preview-placeholder',
   EXPO_PUBLIC_FIREBASE_API_KEY: 'preview-placeholder',

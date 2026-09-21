@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { materialsTaxonomy, type SellerMaterialFamily } from '@/constants/materials-taxonomy';
+import { materialsFromCatalog, type SellerMaterialFamily } from '@/constants/materials-taxonomy';
 import {
   addRecentMarketSearch,
   clearRecentMarketSearches,
@@ -30,17 +30,19 @@ export const useMarketSearch = (catalog: MarketProduct[]) => {
     };
   }, []);
 
+  const taxonomy = useMemo(() => materialsFromCatalog(catalog), [catalog]);
+
   const popularMaterials = useMemo(
     () =>
-      [...materialsTaxonomy]
+      [...taxonomy]
         .sort((a, b) => b.gradeCount - a.gradeCount)
         .slice(0, POPULAR_MATERIAL_LIMIT),
-    [],
+    [taxonomy],
   );
 
   const suggestions = useMemo(
-    () => getGradeSearchSuggestions(catalog, materialsTaxonomy, query),
-    [catalog, query],
+    () => getGradeSearchSuggestions(catalog, taxonomy, query),
+    [catalog, query, taxonomy],
   );
 
   const rankedProducts = useMemo(() => searchProductsByGrade(catalog, query), [catalog, query]);

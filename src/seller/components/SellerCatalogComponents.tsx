@@ -3,11 +3,12 @@ import { memo } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { Typography } from '@/components';
-import { formatCatalogKgPrice, formatCatalogPrice } from '@/seller/utils/catalog';
 import type { SellerMaterialFamily } from '@/constants/materials-taxonomy';
 import type { SellerProduct, SellerProductStatus } from '@/seller/types';
-import type { MarketProduct } from '@/types/market';
+import { formatCatalogKgPrice, formatCatalogPrice } from '@/seller/utils/catalog';
+import { formatSellerSellingPrice } from '@/seller/utils/pricing';
 import { elevation } from '@/theme/shadows';
+import type { MarketProduct } from '@/types/market';
 import { cn } from '@/utils/cn';
 
 export const SellerMaterialTile = memo(function SellerMaterialTile({
@@ -158,7 +159,7 @@ export const SellerListingCard = memo(function SellerListingCard({
   onDelete: () => void;
 }) {
   const tone = listingStatusTone[product.status];
-  const price = Number(product.pricing.advance);
+  const priceLabel = formatSellerSellingPrice(product.pricing, product.form.unit || 'MT');
 
   return (
     <Pressable
@@ -197,9 +198,9 @@ export const SellerListingCard = memo(function SellerListingCard({
           </Typography>
         </View>
         <View className="flex-1">
-          <Typography variant="fieldLabel">Advance</Typography>
+          <Typography variant="fieldLabel">Price</Typography>
           <Typography variant="roleTitle" className="mt-xs text-[15px] text-brand-navy">
-            {Number.isFinite(price) && price > 0 ? formatCatalogPrice(price) : '—'}
+            {priceLabel}
           </Typography>
         </View>
       </View>

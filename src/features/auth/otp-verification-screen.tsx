@@ -15,7 +15,10 @@ import {
 import { ClockIcon, OtpIllustration } from '@/icons';
 import { getLoggedInRoute } from '@/navigation/post-auth-route';
 import { getInvalidOtpMessage, validateDevOtp } from '@/services/dev-auth';
+import { apiClient } from '@/api/client';
+import { STORAGE_KEYS } from '@/constants';
 import { useAuthStore } from '@/store/auth-store';
+import { setStorageItem } from '@/utils/storage';
 import { wp } from '@/utils/responsive';
 
 const RESEND_SECONDS = 44;
@@ -75,7 +78,7 @@ export const OtpVerificationScreen = () => {
     setOtpError(undefined);
   }, []);
 
-  const handleVerify = useCallback(() => {
+  const handleVerify = useCallback(async () => {
     if (!isOtpComplete) {
       return;
     }
@@ -86,6 +89,26 @@ export const OtpVerificationScreen = () => {
     }
 
     const mobileNumber = params.phone ?? '';
+    const role = useAuthStore.getState().selectedRole;
+    const email = role === 'seller' ? 'seller@test.local' : 'customer@test.local';
+    try {
+      const response = await apiClient.post('/auth/login', {
+        email,
+        password: 'Test@12345',
+      });
+      const payload = response.data?.data ?? response.data;
+      if (payload?.accessToken) {
+        setStorageItem(STORAGE_KEYS.ACCESS_TOKEN, payload.accessToken);
+        if (payload.refreshToken) {
+          setStorageItem(STORAGE_KEYS.REFRESH_TOKEN, payload.refreshToken);
+        }
+        useAuthStore.getState().setTokens(payload.accessToken, payload.refreshToken ?? '');
+      }
+    } catch {
+      setOtpError('Unable to authenticate against the catalog backend.');
+      return;
+    }
+
     completeLogin(mobileNumber);
     useAuthStore.getState().resolvePendingKycApproval();
 

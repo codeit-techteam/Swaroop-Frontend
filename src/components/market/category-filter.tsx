@@ -3,7 +3,6 @@ import { memo, useCallback } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { Typography } from '@/components/ui/typography';
-import { MARKET_CATEGORIES } from '@/constants/marketProducts';
 import { FilterIcon } from '@/icons';
 import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
@@ -43,6 +42,7 @@ const CategoryChip = memo(function CategoryChip({ label, selected, onPress }: Ca
 });
 
 type CategoryFilterProps = {
+  categories: MarketCategory[];
   selectedCategory: MarketCategory | null;
   onSelectCategory: (category: MarketCategory | null) => void;
   onFilterPress?: () => void;
@@ -50,6 +50,7 @@ type CategoryFilterProps = {
 };
 
 export const CategoryFilter = memo(function CategoryFilter({
+  categories,
   selectedCategory,
   onSelectCategory,
   onFilterPress,
@@ -84,7 +85,7 @@ export const CategoryFilter = memo(function CategoryFilter({
 
         <View className="mr-sm h-6 w-px bg-brand-border" />
 
-        {MARKET_CATEGORIES.map((category) => (
+        {categories.map((category) => (
           <CategoryChip
             key={category}
             label={category}

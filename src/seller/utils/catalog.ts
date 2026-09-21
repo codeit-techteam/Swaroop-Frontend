@@ -1,5 +1,4 @@
-import { getBlindGradeById } from '@/constants/blind-grades';
-import { getMaterialFamilyByName } from '@/constants/materials-taxonomy';
+import { getMaterialFamilyByName, materialsFromCatalog } from '@/constants/materials-taxonomy';
 import type {
   InventoryCategory,
   SellerPaymentPricing,
@@ -8,6 +7,7 @@ import type {
   SellerProductForm,
   SellerTechnicalSpecs,
 } from '@/seller/types';
+import { getLiveCatalogProduct } from '@/services/catalog';
 import type { MarketParentCategoryId, MarketProduct } from '@/types/market';
 
 const ORIGIN_MAP: Array<{ match: string; value: string }> = [
@@ -84,12 +84,11 @@ export type CatalogEditorPatch = {
 };
 
 export function buildEditorFromCatalog(product: MarketProduct): CatalogEditorPatch {
-  const advance = String(product.price);
-  const onLoading = String(Math.round(product.price * 1.01));
-  const onDelivery = String(Math.round(product.price * 1.02));
-  const credit15Days = String(Math.round(product.price * 1.04));
-  const credit30Days = String(Math.round(product.price * 1.05));
-  const family = getMaterialFamilyByName(product.materialType || product.category);
+  const sellingPrice = String(product.price);
+  const family = getMaterialFamilyByName(
+    product.materialType || product.category,
+    materialsFromCatalog([product]),
+  );
 
   return {
     form: {
@@ -103,11 +102,7 @@ export function buildEditorFromCatalog(product: MarketProduct): CatalogEditorPat
       moq: String(product.moq),
     },
     pricing: {
-      advance,
-      onLoading,
-      onDelivery,
-      credit15Days,
-      credit30Days,
+      sellingPrice,
     },
     technicalSpecs: {
       mfi: stripSpecUnit(product.technicalSpecs?.mfi),
@@ -119,29 +114,15 @@ export function buildEditorFromCatalog(product: MarketProduct): CatalogEditorPat
         id: 'tier-1',
         minQty: '1',
         maxQty: String(product.moq),
-        price: advance,
+        price: sellingPrice,
         discountLabel: 'Standard',
-      },
-      {
-        id: 'tier-2',
-        minQty: String(product.moq),
-        maxQty: String(Math.max(product.moq * 3, 30)),
-        price: String(Math.round(product.price * 0.98)),
-        discountLabel: 'Volume',
-      },
-      {
-        id: 'tier-3',
-        minQty: String(Math.max(product.moq * 3, 30)),
-        maxQty: '',
-        price: String(Math.round(product.price * 0.96)),
-        discountLabel: 'Contract',
       },
     ],
   };
 }
 
 export function buildEditorFromCatalogId(catalogId: string): CatalogEditorPatch | null {
-  const product = getBlindGradeById(catalogId);
+  const product = getLiveCatalogProduct(catalogId);
   if (!product) {
     return null;
   }
@@ -150,12 +131,7 @@ export function buildEditorFromCatalogId(catalogId: string): CatalogEditorPatch 
 
 export function matchCatalogForLegacyForm(form: SellerProductForm): MarketProduct | undefined {
   if (form.catalogProductId) {
-    return getBlindGradeById(form.catalogProductId);
-  }
-
-  const haystack = `${form.name} ${form.grade}`.toLowerCase();
-  if (haystack.includes('pe100')) {
-    return getBlindGradeById('mkt-hdpe-pipe');
+    return getLiveCatalogProduct(form.catalogProductId);
   }
 
   return undefined;

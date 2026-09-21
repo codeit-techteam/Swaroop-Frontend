@@ -58,7 +58,7 @@ const syncDashboardStats = (stats: SellerOffersStore['stats']): void => {
     shipments: state.shipments,
     revenueToday: state.revenueToday,
     revenueDelta: state.revenueDelta,
-    creditReceivables: state.creditReceivables,
+    pendingSettlement: state.pendingSettlement,
     overdueCount: state.overdueCount,
   });
 };

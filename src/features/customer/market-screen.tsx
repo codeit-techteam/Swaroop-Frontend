@@ -17,8 +17,9 @@ import {
 } from '@/components/market';
 import { Typography } from '@/components/ui/typography';
 import { TAB_BAR_HEIGHT } from '@/constants/dashboard';
+import { marketCategoriesFromCatalog } from '@/constants/marketProducts';
 import { useMarketSearch } from '@/hooks/use-market-search';
-import { useMarketplaceCatalog } from '@/hooks/use-marketplace-catalog';
+import { useMarketplaceCatalogQuery } from '@/hooks/use-marketplace-catalog';
 import { ROUTES } from '@/navigation/routes';
 import type { MarketProduct } from '@/types/market';
 
@@ -27,7 +28,7 @@ export const CustomerMarketScreen = () => {
   const insets = useSafeAreaInsets();
   const searchInputRef = useRef<TextInput>(null);
   const params = useLocalSearchParams<{ focusSearch?: string | string[] }>();
-  const marketProducts = useMarketplaceCatalog();
+  const { products: marketProducts, loading, error, refetch } = useMarketplaceCatalogQuery();
   const {
     query,
     selectedCategory,
@@ -50,6 +51,10 @@ export const CustomerMarketScreen = () => {
     handleSelectCategory,
     handleDismissSuggestions,
   } = useMarketSearch(marketProducts);
+  const categories = useMemo(
+    () => marketCategoriesFromCatalog(marketProducts),
+    [marketProducts],
+  );
 
   const shouldAutoFocus = useMemo(() => {
     const value = params.focusSearch;
@@ -127,6 +132,31 @@ export const CustomerMarketScreen = () => {
   const trimmedQuery = query.trim();
   const resultLabel = filteredProducts.length === 1 ? 'grade' : 'grades';
 
+  if (loading) {
+    return (
+      <View className="flex-1 bg-brand-white">
+        <MarketHeader onLocationPress={handleLocationPress} onCartPress={handleCartPress} />
+        <EmptyState title="Loading catalog" description="Fetching live grades from the marketplace." />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View className="flex-1 bg-brand-white">
+        <MarketHeader onLocationPress={handleLocationPress} onCartPress={handleCartPress} />
+        <EmptyState
+          title="Unable to load catalog"
+          description={error}
+          actionLabel="Retry"
+          onActionPress={() => {
+            void refetch();
+          }}
+        />
+      </View>
+    );
+  }
+
   return (
     <View className="flex-1 bg-brand-white">
       <MarketHeader onLocationPress={handleLocationPress} onCartPress={handleCartPress} />
@@ -167,6 +197,7 @@ export const CustomerMarketScreen = () => {
       ) : (
         <>
           <CategoryFilter
+            categories={categories}
             selectedCategory={selectedCategory}
             onSelectCategory={handleSelectCategory}
             onFilterPress={handleFilterPress}

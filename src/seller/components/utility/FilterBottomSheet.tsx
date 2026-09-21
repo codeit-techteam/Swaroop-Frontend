@@ -52,8 +52,9 @@ const FILTER_GROUPS: Record<FilterModule, FilterGroup[]> = {
       label: 'Payment Method',
       options: [
         { label: 'Advance', value: 'advance' },
-        { label: 'Credit 15 Days', value: 'credit_15' },
-        { label: 'Credit 30 Days', value: 'credit_30' },
+        { label: 'Credit — PetroTrade Managed', value: 'credit_15' },
+        { label: 'On Delivery', value: 'on_delivery' },
+        { label: 'On Loading', value: 'on_loading' },
       ],
       multi: true,
     },

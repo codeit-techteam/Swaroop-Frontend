@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { ScrollView, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 
 import { type Href, useRouter } from 'expo-router';
 
@@ -27,9 +27,9 @@ import {
   TAB_BAR_HEIGHT,
 } from '@/constants/dashboard';
 import { getTrackRouteForOrder, inferOrderStatus } from '@/constants/orderWorkflow';
-import { TRENDING_PRODUCTS } from '@/constants/trendingProducts';
-import { PRICE_WATCHLIST } from '@/constants/watchlist';
 import { ROUTES } from '@/navigation/routes';
+import { fetchCustomerMarketplaceProducts } from '@/services/catalog';
+import type { MarketProduct } from '@/types/market';
 import { selectLocation, useAuthStore } from '@/store/auth-store';
 import {
   selectActiveOrder,
@@ -37,7 +37,38 @@ import {
   selectOrders,
   useOrderStore,
 } from '@/store/order-store';
-import type { DeliveryLocation, HomeBanner, TrendingProduct, WatchlistItem } from '@/types/home';
+import type { DeliveryLocation, HomeBanner, LowestLandedCost, TrendingProduct, WatchlistItem } from '@/types/home';
+
+function formatMtPrice(price: number) {
+  if (!price) return 'Price on request';
+  return `₹${Math.round(price).toLocaleString('en-IN')} / MT`;
+}
+
+function initialsFor(name: string) {
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? 'P') + (parts[1]?.[0] ?? parts[0]?.[1] ?? '')).toUpperCase();
+}
+
+function toTrending(product: MarketProduct): TrendingProduct {
+  return {
+    id: product.id,
+    name: product.name,
+    grade: product.grade,
+    priceLabel: formatMtPrice(product.price),
+    imageUrl: product.image || '',
+  };
+}
+
+function toWatchlist(product: MarketProduct): WatchlistItem {
+  return {
+    id: product.id,
+    initials: initialsFor(product.grade || product.name),
+    materialName: `${product.name}${product.grade ? ` (${product.grade})` : ''}`,
+    priceLabel: formatMtPrice(product.price),
+    trend: 'stable',
+    changePercent: '—',
+  };
+}
 
 export const CustomerHomeScreen = () => {
   const router = useRouter();
@@ -52,12 +83,57 @@ export const CustomerHomeScreen = () => {
   const activeOrder = useOrderStore(selectActiveOrder);
   const isOrderHydrated = useOrderStore(selectOrderHydrated);
   const hydrateOrder = useOrderStore((state) => state.hydrateOrder);
+  const [catalog, setCatalog] = useState<MarketProduct[]>([]);
 
   useEffect(() => {
     if (!isOrderHydrated) {
       hydrateOrder();
     }
   }, [hydrateOrder, isOrderHydrated]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchCustomerMarketplaceProducts()
+      .then((products) => {
+        if (!cancelled) setCatalog(products);
+      })
+      .catch(() => {
+        if (!cancelled) setCatalog([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const pricedCatalog = useMemo(
+    () => [...catalog].filter((item) => item.price > 0).sort((a, b) => a.price - b.price),
+    [catalog],
+  );
+  const trendingProducts = useMemo(
+    () => (pricedCatalog.length ? pricedCatalog : catalog).slice(0, 8).map(toTrending),
+    [catalog, pricedCatalog],
+  );
+  const watchlist = useMemo(() => {
+    const unique = new Map<string, MarketProduct>();
+    for (const item of catalog) {
+      const key = item.grade || item.id;
+      if (!unique.has(key)) unique.set(key, item);
+      if (unique.size >= 3) break;
+    }
+    return [...unique.values()].map(toWatchlist);
+  }, [catalog]);
+  const lowestCost = useMemo<LowestLandedCost | undefined>(() => {
+    const cheapest = pricedCatalog[0];
+    if (!cheapest) return undefined;
+    return {
+      badge: 'LIVE MARKET PRICE',
+      title: 'Lowest Landed Cost',
+      description: `${cheapest.name} · ${cheapest.grade} currently offered from the marketplace catalog.`,
+      estimatedTotal: formatMtPrice(cheapest.price),
+      totalSavings: cheapest.moq ? `MOQ ${cheapest.moq}` : '—',
+      ctaLabel: 'Review in Marketplace',
+    };
+  }, [pricedCatalog]);
 
   const activeOrderCount = orders.filter(
     (order) => inferOrderStatus(order) !== 'DELIVERED' && order.shipmentStatus !== 'cancelled',
@@ -121,16 +197,22 @@ export const CustomerHomeScreen = () => {
 
   const handleWatchlistPress = useCallback(
     (item: WatchlistItem) => {
-      showInfoToast(item.materialName, `${item.priceLabel} · ${item.changePercent}`);
+      router.push({
+        pathname: ROUTES.CUSTOMER.PRODUCT_DETAILS,
+        params: { id: item.id },
+      } as unknown as Href);
     },
-    [showInfoToast],
+    [router],
   );
 
   const handleProductPress = useCallback(
     (product: TrendingProduct) => {
-      showInfoToast(product.name, `Grade ${product.grade} · ${product.priceLabel}`);
+      router.push({
+        pathname: ROUTES.CUSTOMER.PRODUCT_DETAILS,
+        params: { id: product.id },
+      } as unknown as Href);
     },
-    [showInfoToast],
+    [router],
   );
 
   const renderTrendingItem = useCallback(
@@ -181,41 +263,50 @@ export const CustomerHomeScreen = () => {
             }
           />
           <View className="mx-lg mt-md overflow-hidden rounded-xl border border-brand-border/60 bg-brand-white shadow-sm">
-            {PRICE_WATCHLIST.map((item, index) => (
-              <WatchlistCard
-                key={item.id}
-                item={item}
-                onPress={handleWatchlistPress}
-                showDivider={index < PRICE_WATCHLIST.length - 1}
-              />
-            ))}
+            {watchlist.length ? (
+              watchlist.map((item, index) => (
+                <WatchlistCard
+                  key={item.id}
+                  item={item}
+                  onPress={handleWatchlistPress}
+                  showDivider={index < watchlist.length - 1}
+                />
+              ))
+            ) : (
+              <View className="px-lg py-lg">
+                <Text className="text-sm text-brand-muted">
+                  No live prices available yet.
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 
         <View className="mt-xl">
           <SectionHeader title="Trending Materials" />
           <View className="mt-md h-[196px]">
-            <FlashList
-              data={TRENDING_PRODUCTS}
-              renderItem={renderTrendingItem}
-              keyExtractor={(item) => item.id}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingHorizontal: 16 }}
-            />
+            {trendingProducts.length ? (
+              <FlashList
+                data={trendingProducts}
+                renderItem={renderTrendingItem}
+                keyExtractor={(item) => item.id}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 16 }}
+              />
+            ) : (
+              <View className="mx-lg justify-center">
+                <Text className="text-sm text-brand-muted">No products available.</Text>
+              </View>
+            )}
           </View>
         </View>
 
-        <View className="mb-lg mt-lg">
-          <LowestCostCard
-            onPress={() =>
-              showInfoToast(
-                'Lowest Landed Cost',
-                'Review logistics and place your polypropylene order.',
-              )
-            }
-          />
-        </View>
+        {lowestCost ? (
+          <View className="mb-lg mt-lg">
+            <LowestCostCard data={lowestCost} onPress={navigateToMarket} />
+          </View>
+        ) : null}
       </ScrollView>
 
       <LocationBottomSheet

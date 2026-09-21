@@ -618,11 +618,11 @@ export const DashboardShipmentCard = memo(function DashboardShipmentCard({
 
 export const OverdueBanner = memo(function OverdueBanner({
   overdueCount,
-  creditReceivables,
+  pendingSettlement,
   onPress,
 }: {
   overdueCount: number;
-  creditReceivables: string;
+  pendingSettlement: string;
   onPress: () => void;
 }) {
   if (overdueCount <= 0) {
@@ -633,7 +633,7 @@ export const OverdueBanner = memo(function OverdueBanner({
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${overdueCount} overdue receivables`}
+      accessibilityLabel={`${overdueCount} overdue settlements`}
       className="mt-lg flex-row items-center rounded-2xl border border-[#F5D0A9] bg-[#FFF7ED] px-md py-md"
       style={pressableStyle()}
     >
@@ -642,10 +642,10 @@ export const OverdueBanner = memo(function OverdueBanner({
       </View>
       <View className="ml-sm flex-1">
         <Typography variant="roleTitle" className="text-[13px] text-[#9A3412]">
-          {overdueCount} overdue receivables
+          {overdueCount} overdue settlements
         </Typography>
         <Typography variant="legal" className="text-left text-[#B45309]">
-          {creditReceivables} sitting in credit book
+          {pendingSettlement} awaiting PetroTrade payout
         </Typography>
       </View>
       <ChevronRightIcon size={14} color="#B45309" />

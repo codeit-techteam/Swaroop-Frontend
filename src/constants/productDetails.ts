@@ -1,4 +1,4 @@
-import { MARKET_PRODUCTS, getMarketProductById } from '@/constants/marketProducts';
+import { getMarketProductById } from '@/constants/marketProducts';
 import type { MarketProduct, ProductTechnicalSpecs } from '@/types/market';
 import type { PaymentMethodId } from '@/types/payment';
 import type {
@@ -403,14 +403,7 @@ const buildLogisticsEstimate = (input: {
   freightPerMt: 1250,
 });
 
-const mergeCatalog = (extraProducts: MarketProduct[]): MarketProduct[] => {
-  if (!extraProducts.length) {
-    return MARKET_PRODUCTS;
-  }
-
-  const ids = new Set(extraProducts.map((product) => product.id));
-  return [...extraProducts, ...MARKET_PRODUCTS.filter((product) => !ids.has(product.id))];
-};
+const mergeCatalog = (extraProducts: MarketProduct[]): MarketProduct[] => extraProducts;
 
 const relatedCardsFor = (market: MarketProduct, catalog: MarketProduct[]): RelatedProductCard[] => {
   const materialType = market.materialType ?? market.category;
@@ -441,7 +434,7 @@ const relatedCardsFor = (market: MarketProduct, catalog: MarketProduct[]): Relat
 export const buildProductDetails = (
   market: MarketProduct,
   overrides: Partial<ProductDetails> = {},
-  catalog: MarketProduct[] = MARKET_PRODUCTS,
+  catalog: MarketProduct[] = [],
 ): ProductDetails => {
   const basePricePerKg = overrides.basePricePerKg ?? pricePerKgFromMarket(market.price);
   const trendPercent = overrides.trendPercent ?? 2.4;
@@ -548,7 +541,7 @@ const resolveMarketProduct = (
   id: string,
   extraProducts: MarketProduct[] = [],
 ): MarketProduct | undefined =>
-  extraProducts.find((product) => product.id === id) ?? getMarketProductById(id);
+  extraProducts.find((product) => product.id === id) ?? getMarketProductById(id, extraProducts);
 
 export const PRODUCT_DETAILS_SKELETON_MS = 450;
 

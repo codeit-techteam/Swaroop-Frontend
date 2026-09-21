@@ -68,7 +68,7 @@ export const SellerDashboardScreen = memo(function SellerDashboardScreen() {
   const revenueToday = useSellerProductStore((state) => state.revenueToday);
   const revenueDelta = useSellerProductStore((state) => state.revenueDelta);
   const overdueCount = useSellerProductStore((state) => state.overdueCount);
-  const creditReceivables = useSellerProductStore((state) => state.creditReceivables);
+  const pendingSettlement = useSellerProductStore((state) => state.pendingSettlement);
   const clearSelection = useSellerProductStore((state) => state.clearSelection);
   const settlementSummary = useSettlementStore((state) => state.summary);
 
@@ -201,7 +201,7 @@ export const SellerDashboardScreen = memo(function SellerDashboardScreen() {
               <AnimatedSection entering={FadeInDown.duration(380).delay(90)}>
                 <OverdueBanner
                   overdueCount={overdueCount}
-                  creditReceivables={creditReceivables}
+                  pendingSettlement={pendingSettlement}
                   onPress={() => router.push(ROUTES.SELLER.SETTLEMENTS as Href)}
                 />
               </AnimatedSection>

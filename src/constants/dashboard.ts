@@ -60,7 +60,7 @@ export const QUICK_SUMMARY_ITEMS: QuickSummaryItem[] = [
     id: 'summary-due-invoices',
     type: 'invoices',
     label: 'DUE INVOICES',
-    value: '₹14.2L',
+    value: '₹0',
     subtitle: '',
     valueTone: 'danger',
   },
@@ -71,8 +71,8 @@ export const LOWEST_LANDED_COST: LowestLandedCost = {
   title: 'Lowest Landed Cost',
   description:
     'Direct logistics optimized for 10MT Polypropylene from Mundra Port to your delivery region.',
-  estimatedTotal: '₹9.84L',
-  totalSavings: '₹12.4K',
+  estimatedTotal: 'Price on request',
+  totalSavings: '—',
   ctaLabel: 'Review & Place Order',
 };
 

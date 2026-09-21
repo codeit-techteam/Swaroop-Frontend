@@ -1,16 +1,14 @@
 import { STORAGE_KEYS } from '@/constants';
-import { getBlindGradeById } from '@/constants/blind-grades';
-import { buildEditorFromCatalog, matchCatalogForLegacyForm } from '@/seller/utils/catalog';
-import { getStorageItem, setStorageItem } from '@/utils/storage';
-
 import type {
-  SellerPaymentPricing,
   SellerPricingTier,
   SellerProduct,
   SellerProductForm,
   SellerProductSnapshot,
   SellerTechnicalSpecs,
 } from '@/seller/types';
+import { matchCatalogForLegacyForm } from '@/seller/utils/catalog';
+import { createEmptyPricing, normalizeSellerPricing } from '@/seller/utils/pricing';
+import { getStorageItem, setStorageItem } from '@/utils/storage';
 
 const safeParse = <T>(value: string | undefined, fallback: T): T => {
   if (!value) {
@@ -43,13 +41,7 @@ export const createEmptyProductForm = (): SellerProductForm => ({
   catalogProductId: '',
 });
 
-export const createEmptyPricing = (): SellerPaymentPricing => ({
-  advance: '',
-  onLoading: '',
-  onDelivery: '',
-  credit15Days: '',
-  credit30Days: '',
-});
+export { createEmptyPricing };
 
 export const createDefaultTiers = (): SellerPricingTier[] => [
   {
@@ -83,49 +75,11 @@ export const createEmptyTechnicalSpecs = (): SellerTechnicalSpecs => ({
   qualityCertificateName: '',
 });
 
-const DEMO_CATALOG_ID = 'mkt-hdpe-pipe';
-
-const createDemoPublishedProduct = (): SellerProduct => {
-  const now = new Date().toISOString();
-  const catalog = getBlindGradeById(DEMO_CATALOG_ID);
-  const patch = catalog ? buildEditorFromCatalog(catalog) : null;
-
-  return {
-    id: 'seller-product-demo-1',
-    productId: 'PT-PROD-1001',
-    status: 'published',
-    createdAt: now,
-    updatedAt: now,
-    imageUrl: '',
-    form: {
-      ...createEmptyProductForm(),
-      ...(patch?.form ?? {}),
-      catalogProductId: DEMO_CATALOG_ID,
-      brand: 'Reliance',
-      availableQty: '500',
-      warehouseLocation: 'JNPT',
-      packagingType: '25 kg bags',
-      unit: 'MT',
-      currency: 'INR',
-      gstPercent: '18',
-      reservedQty: '120',
-    },
-    pricing: patch?.pricing ?? createEmptyPricing(),
-    tiers: patch?.tiers ?? createDefaultTiers(),
-    technicalSpecs: {
-      ...createEmptyTechnicalSpecs(),
-      ...(patch?.technicalSpecs ?? {}),
-    },
-  };
-};
-
 export const buildDefaultSellerProductSnapshot = (): SellerProductSnapshot => {
-  const seedProduct = createDemoPublishedProduct();
-
   return {
-    products: [seedProduct],
+    products: [],
     draftProducts: [],
-    publishedProducts: [seedProduct],
+    publishedProducts: [],
     inactiveProducts: [],
     selectedProductId: null,
     form: createEmptyProductForm(),
@@ -163,7 +117,7 @@ export const buildDefaultSellerProductSnapshot = (): SellerProductSnapshot => {
     ],
     revenueToday: '₹24.5L',
     revenueDelta: '+12%',
-    creditReceivables: '₹1.2Cr',
+    pendingSettlement: '₹1.2Cr',
     overdueCount: 4,
   };
 };
@@ -197,11 +151,17 @@ export const getSellerProductSnapshot = (): SellerProductSnapshot => {
   const products = snapshot.products.map((product) => ({
     ...product,
     form: withFormDefaults(product.form),
+    pricing: normalizeSellerPricing(product.pricing),
   }));
 
   return {
     ...snapshot,
     form: withFormDefaults(snapshot.form),
+    pricing: normalizeSellerPricing(snapshot.pricing),
+    pendingSettlement:
+      snapshot.pendingSettlement ??
+      (snapshot as SellerProductSnapshot & { creditReceivables?: string }).creditReceivables ??
+      '₹0',
     products,
     draftProducts: products.filter((item) => item.status === 'draft'),
     publishedProducts: products.filter((item) => item.status === 'published'),
@@ -360,7 +320,7 @@ export const loadProductIntoEditor = (
     ...snapshot,
     selectedProductId: product.id,
     form: { ...createEmptyProductForm(), ...product.form },
-    pricing: { ...product.pricing },
+    pricing: normalizeSellerPricing(product.pricing),
     tiers: product.tiers.map((tier) => ({ ...tier })),
     technicalSpecs: { ...product.technicalSpecs },
   };

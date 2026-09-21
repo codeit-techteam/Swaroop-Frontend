@@ -218,15 +218,14 @@ export const mapSellerOrderToOrder = (sellerOrder: SellerOrder): Order =>
     documents: [],
     amount: sellerOrder.value,
     paymentMethod:
-      sellerOrder.paymentMethod === 'credit_15_days'
-        ? 'Credit 15 Days'
-        : sellerOrder.paymentMethod === 'credit_30_days'
-          ? 'Credit 30 Days'
-          : sellerOrder.paymentMethod === 'on_loading'
-            ? 'On Loading'
-            : sellerOrder.paymentMethod === 'on_delivery'
-              ? 'On Delivery'
-              : 'Advance Payment',
+      sellerOrder.paymentMethod === 'credit_15_days' ||
+      sellerOrder.paymentMethod === 'credit_30_days'
+        ? 'Credit — PetroTrade Managed'
+        : sellerOrder.paymentMethod === 'on_loading'
+          ? 'On Loading'
+          : sellerOrder.paymentMethod === 'on_delivery'
+            ? 'On Delivery'
+            : 'Advance Payment',
     paymentMethodId: mapPaymentMethodId(sellerOrder.paymentMethod),
     paymentStatus:
       sellerOrder.paymentStatus === 'completed'
@@ -424,8 +423,8 @@ export const PAYMENT_METHOD_LABELS: Record<SellerOrder['paymentMethod'], string>
   advance_payment: 'Advance Payment',
   on_loading: 'On Loading',
   on_delivery: 'On Delivery',
-  credit_15_days: 'Credit 15 Days',
-  credit_30_days: 'Credit 30 Days',
+  credit_15_days: 'Credit — PetroTrade Managed',
+  credit_30_days: 'Credit — PetroTrade Managed',
 };
 
 export const ORDER_STATUS_LABELS: Record<SellerOrderStatus, string> = {
