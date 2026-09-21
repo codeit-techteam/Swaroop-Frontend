@@ -49,6 +49,8 @@ export default function CustomerLayout() {
       <Stack.Screen name="profile/address-form" />
       <Stack.Screen name="profile/bank-accounts" />
       <Stack.Screen name="profile/tax-documents" />
+      <Stack.Screen name="profile/documents" />
+      <Stack.Screen name="profile/document-detail" />
       <Stack.Screen name="profile/bulk-logistics-quote" />
       <Stack.Screen name="notifications/index" />
     </Stack>

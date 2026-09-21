@@ -5,4 +5,6 @@ export { SavedAddressesScreen } from '@/screens/profile/SavedAddressesScreen';
 export { AddressFormScreen } from '@/screens/profile/AddressFormScreen';
 export { BankAccountsScreen } from '@/screens/profile/BankAccountsScreen';
 export { TaxDocumentsScreen } from '@/screens/profile/TaxDocumentsScreen';
+export { DocumentsScreen } from '@/screens/profile/DocumentsScreen';
+export { DocumentDetailScreen } from '@/screens/profile/DocumentDetailScreen';
 export { BulkLogisticsQuoteScreen } from '@/screens/profile/BulkLogisticsQuoteScreen';

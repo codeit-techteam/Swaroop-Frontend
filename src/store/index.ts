@@ -59,3 +59,4 @@ export {
   selectSelectedOrderId,
   createOrderId,
 } from '@/store/order-store';
+export { useDocumentsStore } from '@/store/documents-store';

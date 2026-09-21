@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import { EMPTY_BUSINESS_INFO, INITIAL_DOCUMENTS } from '@/constants/documents';
+import { EMPTY_BUSINESS_INFO, INITIAL_DOCUMENTS } from '@/constants/kyc';
 import {
   getBusinessInfo,
   getDefaultBusinessInfo,

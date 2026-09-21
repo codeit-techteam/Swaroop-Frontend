@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo } from 'react';
+import { memo, useCallback, useEffect, useMemo } from 'react';
 
 import { ScrollView, View } from 'react-native';
 
@@ -8,6 +8,7 @@ import {
   CompanyDetailsCard,
   ComplianceCard,
   CustomQuoteCard,
+  DocumentsCard,
   LogisticsFinanceCard,
   ProfileHeroCard,
   ProfileStickyHeader,
@@ -19,11 +20,25 @@ import { LOGISTICS_MENU_ITEMS } from '@/constants/profile';
 import { useProfile } from '@/hooks/useProfile';
 import { ROUTES } from '@/navigation/routes';
 import { useAuthStore } from '@/store/auth-store';
+import { useDocumentsStore } from '@/store/documents-store';
+import type { DocumentTab } from '@/types/documents';
 
 export const ProfileScreen = memo(function ProfileScreen() {
   const router = useRouter();
   const { profile } = useProfile();
   const logout = useAuthStore((state) => state.logout);
+  const fetchDocuments = useDocumentsStore((state) => state.fetchFromApi);
+  const purchaseOrdersCount = useDocumentsStore((state) => state.purchaseOrders.length);
+  const invoicesCount = useDocumentsStore((state) => state.invoices.length);
+  const proformasCount = useDocumentsStore((state) => state.proformas.length);
+  const gstInvoicesCount = useDocumentsStore((state) => state.gstInvoices.length);
+  const documentsHydrated = useDocumentsStore((state) => state.isHydrated);
+
+  useEffect(() => {
+    if (!documentsHydrated) {
+      void fetchDocuments();
+    }
+  }, [documentsHydrated, fetchDocuments]);
 
   const logisticsItems = useMemo(
     () =>
@@ -71,6 +86,29 @@ export const ProfileScreen = memo(function ProfileScreen() {
     router.push(ROUTES.CUSTOMER.NOTIFICATIONS as Href);
   }, [router]);
 
+  const handleDocuments = useCallback(
+    (tab: DocumentTab) => {
+      router.push({
+        pathname: ROUTES.CUSTOMER.PROFILE_DOCUMENTS,
+        params: { tab },
+      } as unknown as Href);
+    },
+    [router],
+  );
+
+  const documentCounts = useMemo(
+    () =>
+      documentsHydrated
+        ? {
+            purchase_orders: purchaseOrdersCount,
+            invoices: invoicesCount,
+            proforma: proformasCount,
+            gst_invoices: gstInvoicesCount,
+          }
+        : undefined,
+    [documentsHydrated, gstInvoicesCount, invoicesCount, proformasCount, purchaseOrdersCount],
+  );
+
   return (
     <View className="flex-1 bg-brand-background">
       <ProfileStickyHeader />
@@ -99,12 +137,11 @@ export const ProfileScreen = memo(function ProfileScreen() {
 
         <ComplianceCard compliance={profile.compliance} />
 
+        <DocumentsCard counts={documentCounts} onPressItem={handleDocuments} />
+
         <LogisticsFinanceCard items={logisticsItems} />
 
-        <SettingsMenu
-          onLogout={() => void handleLogout()}
-          onNotifications={handleNotifications}
-        />
+        <SettingsMenu onLogout={() => void handleLogout()} onNotifications={handleNotifications} />
 
         <CustomQuoteCard />
 

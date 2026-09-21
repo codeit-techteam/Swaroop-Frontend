@@ -8,3 +8,4 @@ export { CustomQuoteCard } from '@/components/profile/CustomQuoteCard';
 export { ProfileSectionHeader } from '@/components/profile/ProfileSectionHeader';
 export { ProfileInfoRow } from '@/components/profile/ProfileInfoRow';
 export { ProfileVersionFooter } from '@/components/profile/ProfileVersionFooter';
+export { DocumentsCard } from '@/components/profile/DocumentsCard';

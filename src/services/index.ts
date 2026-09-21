@@ -47,6 +47,7 @@ export {
   logout as logoutSession,
 } from '@/services/user-session';
 export { addToCart, getCart, clearCart } from '@/services/cart';
+export { fetchCustomerDocumentsCatalog } from '@/services/documents';
 export {
   fetchCustomerNotifications,
   fetchCustomerUnreadCount,

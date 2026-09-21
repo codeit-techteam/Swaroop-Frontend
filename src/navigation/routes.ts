@@ -56,6 +56,8 @@ export const ROUTES = {
     PROFILE_ADDRESS_FORM: '/(customer)/profile/address-form',
     PROFILE_BANK_ACCOUNTS: '/(customer)/profile/bank-accounts',
     PROFILE_TAX_DOCUMENTS: '/(customer)/profile/tax-documents',
+    PROFILE_DOCUMENTS: '/(customer)/profile/documents',
+    PROFILE_DOCUMENT_DETAIL: '/(customer)/profile/document-detail',
     BULK_LOGISTICS_QUOTE: '/(customer)/profile/bulk-logistics-quote',
     NOTIFICATIONS: '/(customer)/notifications',
   },
@@ -186,6 +188,8 @@ export type CustomerRoute =
   | typeof ROUTES.CUSTOMER.PROFILE_ADDRESS_FORM
   | typeof ROUTES.CUSTOMER.PROFILE_BANK_ACCOUNTS
   | typeof ROUTES.CUSTOMER.PROFILE_TAX_DOCUMENTS
+  | typeof ROUTES.CUSTOMER.PROFILE_DOCUMENTS
+  | typeof ROUTES.CUSTOMER.PROFILE_DOCUMENT_DETAIL
   | typeof ROUTES.CUSTOMER.BULK_LOGISTICS_QUOTE
   | typeof ROUTES.CUSTOMER.NOTIFICATIONS;
 
