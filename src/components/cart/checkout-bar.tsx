@@ -13,8 +13,10 @@ import { elevation } from '@/theme/shadows';
 import { cn } from '@/utils/cn';
 
 type CheckoutBarProps = {
-  totalPayable: number;
+  totalPayable: number | null;
   enabled: boolean;
+  loading?: boolean;
+  loadingLabel?: string;
   onCheckout: () => void;
   className?: string;
 };
@@ -22,6 +24,8 @@ type CheckoutBarProps = {
 export const CheckoutBar = memo(function CheckoutBar({
   totalPayable,
   enabled,
+  loading = false,
+  loadingLabel = 'Checking latest pricing...',
   onCheckout,
   className,
 }: CheckoutBarProps) {
@@ -45,27 +49,27 @@ export const CheckoutBar = memo(function CheckoutBar({
             className="text-[18px] text-brand-primary"
             accessibilityLiveRegion="polite"
           >
-            {formatCartCurrency(totalPayable)}
+            {loading || totalPayable == null ? '—' : formatCartCurrency(totalPayable)}
           </Typography>
         </View>
 
         <Pressable
           onPress={onCheckout}
-          disabled={!enabled}
+          disabled={!enabled || loading}
           accessibilityRole="button"
-          accessibilityState={{ disabled: !enabled }}
+          accessibilityState={{ disabled: !enabled || loading }}
           accessibilityLabel="Proceed to checkout"
           className={cn(
             'h-12 flex-1 flex-row items-center justify-center rounded-xl px-md',
-            enabled ? 'bg-brand-heading' : 'bg-brand-disabled',
+            enabled && !loading ? 'bg-brand-heading' : 'bg-brand-disabled',
           )}
-          style={({ pressed }) => ({ opacity: enabled && pressed ? 0.85 : 1 })}
+          style={({ pressed }) => ({ opacity: enabled && !loading && pressed ? 0.85 : 1 })}
         >
           <Typography
             variant="button"
             className="mr-xs text-[14px] tracking-normal text-brand-white"
           >
-            Proceed to Checkout
+            {loading ? loadingLabel : 'Proceed to Checkout'}
           </Typography>
           <ArrowRightIcon size={iconSizes.sm} color={brandColors.white} />
         </Pressable>

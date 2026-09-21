@@ -69,6 +69,13 @@ export {
 } from '@/components/checkout';
 
 export {
+  NotificationCard,
+  NotificationFilterTabs,
+  NotificationsEmptyState,
+  NotificationsSkeleton,
+} from '@/components/notifications';
+
+export {
   Typography,
   ScreenContainer,
   ScreenWrapper,

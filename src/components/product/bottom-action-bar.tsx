@@ -20,6 +20,7 @@ type BottomActionBarProps = {
   estimatedTotal: number;
   disabled?: boolean;
   quoting?: boolean;
+  adding?: boolean;
   onIncrement: () => void;
   onDecrement: () => void;
   onAddToCart: () => void;
@@ -35,6 +36,7 @@ export const BottomActionBar = memo(function BottomActionBar({
   estimatedTotal,
   disabled = false,
   quoting = false,
+  adding = false,
   onIncrement,
   onDecrement,
   onAddToCart,
@@ -71,12 +73,12 @@ export const BottomActionBar = memo(function BottomActionBar({
 
         <Pressable
           onPress={onAddToCart}
-          disabled={disabled}
+          disabled={disabled || adding || quoting}
           accessibilityRole="button"
           accessibilityLabel="Add to cart"
           className={cn(
             'h-11 flex-1 items-center justify-center rounded-lg border px-sm',
-            disabled
+            disabled || adding || quoting
               ? 'border-brand-border bg-brand-surface'
               : 'border-brand-heading bg-brand-white',
           )}
@@ -85,10 +87,10 @@ export const BottomActionBar = memo(function BottomActionBar({
             variant="button"
             className={cn(
               'text-[13px] tracking-normal',
-              disabled ? 'text-brand-muted' : 'text-brand-heading',
+              disabled || adding || quoting ? 'text-brand-muted' : 'text-brand-heading',
             )}
           >
-            Add to Cart
+            {adding ? 'Adding...' : 'Add to Cart'}
           </Typography>
         </Pressable>
 
@@ -103,7 +105,7 @@ export const BottomActionBar = memo(function BottomActionBar({
           )}
         >
           <Typography variant="button" className="mr-xs text-[13px] tracking-normal">
-            {quoting ? 'Loading...' : 'Buy Now'}
+            {quoting ? 'Getting latest price...' : 'Buy Now'}
           </Typography>
           <ArrowRightIcon size={iconSizes.sm} color={brandColors.white} />
         </Pressable>

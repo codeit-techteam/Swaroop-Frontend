@@ -6,6 +6,17 @@ export {
 export { firebaseConfig, initializeFirebase } from '@/services/firebase-service';
 export { mapsConfig, getMapsApiKey } from '@/services/maps-service';
 export {
+  fetchCurrentDeliveryAddress,
+  lookupPincode,
+  requestLocationPermission,
+} from '@/services/location';
+export {
+  fetchSavedAddresses,
+  createSavedAddress,
+  updateSavedAddress,
+  deleteSavedAddress,
+} from '@/services/addresses';
+export {
   saveAuth,
   getAuth,
   saveUser,
@@ -36,3 +47,9 @@ export {
   logout as logoutSession,
 } from '@/services/user-session';
 export { addToCart, getCart, clearCart } from '@/services/cart';
+export {
+  fetchCustomerNotifications,
+  fetchCustomerUnreadCount,
+  markCustomerNotificationRead,
+  markAllCustomerNotificationsRead,
+} from '@/services/notifications';

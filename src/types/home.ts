@@ -40,6 +40,13 @@ export type DeliveryLocation = {
   state: string;
   pincode: string;
   label: string;
+  source?: 'saved' | 'gps' | 'pincode' | 'preset' | 'manual';
+  addressId?: string | null;
+  line1?: string;
+  line2?: string | null;
+  landmark?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 };
 
 export type QuickSummaryItem = {

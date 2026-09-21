@@ -1,12 +1,13 @@
-import { memo } from 'react';
+import { memo, useCallback } from 'react';
 
 import { Pressable, View } from 'react-native';
 
+import { type Href, useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import Toast from 'react-native-toast-message';
 
 import { Typography } from '@/components/ui/typography';
 import { TruckIcon } from '@/icons';
+import { ROUTES } from '@/navigation/routes';
 import { brandColors } from '@/theme/colors';
 import { cn } from '@/utils/cn';
 
@@ -15,14 +16,11 @@ type CustomQuoteCardProps = {
 };
 
 export const CustomQuoteCard = memo(function CustomQuoteCard({ className }: CustomQuoteCardProps) {
-  const handlePress = () => {
-    Toast.show({
-      type: 'info',
-      text1: 'Coming Soon',
-      text2: 'Custom enterprise logistics quotes will be available shortly.',
-      visibilityTime: 2000,
-    });
-  };
+  const router = useRouter();
+
+  const handlePress = useCallback(() => {
+    router.push(ROUTES.CUSTOMER.BULK_LOGISTICS_QUOTE as Href);
+  }, [router]);
 
   return (
     <Animated.View entering={FadeIn.duration(300).delay(250)}>
@@ -49,12 +47,12 @@ export const CustomQuoteCard = memo(function CustomQuoteCard({ className }: Cust
           <Pressable
             onPress={handlePress}
             accessibilityRole="button"
-            accessibilityLabel="Get custom quote"
+            accessibilityLabel="Get bulk logistics quote"
             className="mt-lg self-start rounded-lg bg-brand-white px-md py-sm"
             style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1 })}
           >
             <Typography variant="badge" className="text-[11px] tracking-[0.6px] text-brand-primary">
-              GET CUSTOM QUOTE
+              GET BULK LOGISTICS
             </Typography>
           </Pressable>
         </View>

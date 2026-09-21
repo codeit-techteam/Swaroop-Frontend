@@ -39,7 +39,6 @@ export const OrdersScreen = memo(function OrdersScreen() {
     handleViewDetails,
     handlePayNow,
     handleExpandMasterShipment,
-    handleSearchPress,
     handleProfilePress,
     handleLocationPress,
     handleBrowseMarketplace,
@@ -51,7 +50,6 @@ export const OrdersScreen = memo(function OrdersScreen() {
     <View className="flex-1 bg-brand-background">
       <OrdersAppHeader
         onLocationPress={handleLocationPress}
-        onSearchPress={handleSearchPress}
         onProfilePress={handleProfilePress}
       />
 

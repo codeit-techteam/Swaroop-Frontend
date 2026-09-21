@@ -53,8 +53,11 @@ export const ROUTES = {
     PROFILE_EDIT: '/(customer)/profile/edit',
     PROFILE_COMPANY_DETAILS: '/(customer)/profile/company-details',
     PROFILE_SAVED_ADDRESSES: '/(customer)/profile/saved-addresses',
+    PROFILE_ADDRESS_FORM: '/(customer)/profile/address-form',
     PROFILE_BANK_ACCOUNTS: '/(customer)/profile/bank-accounts',
     PROFILE_TAX_DOCUMENTS: '/(customer)/profile/tax-documents',
+    BULK_LOGISTICS_QUOTE: '/(customer)/profile/bulk-logistics-quote',
+    NOTIFICATIONS: '/(customer)/notifications',
   },
   SELLER: {
     LOGIN: '/(seller)/login',
@@ -180,8 +183,11 @@ export type CustomerRoute =
   | typeof ROUTES.CUSTOMER.PROFILE_EDIT
   | typeof ROUTES.CUSTOMER.PROFILE_COMPANY_DETAILS
   | typeof ROUTES.CUSTOMER.PROFILE_SAVED_ADDRESSES
+  | typeof ROUTES.CUSTOMER.PROFILE_ADDRESS_FORM
   | typeof ROUTES.CUSTOMER.PROFILE_BANK_ACCOUNTS
-  | typeof ROUTES.CUSTOMER.PROFILE_TAX_DOCUMENTS;
+  | typeof ROUTES.CUSTOMER.PROFILE_TAX_DOCUMENTS
+  | typeof ROUTES.CUSTOMER.BULK_LOGISTICS_QUOTE
+  | typeof ROUTES.CUSTOMER.NOTIFICATIONS;
 
 export type SellerRoute =
   | typeof ROUTES.SELLER.LOGIN

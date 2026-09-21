@@ -4,9 +4,11 @@ import { FlatList, Keyboard, View, type TextInput } from 'react-native';
 
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 
+import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
+import { LocationBottomSheet } from '@/components/home';
 import {
   CategoryFilter,
   EmptyState,
@@ -19,6 +21,7 @@ import { MarketListSkeleton } from '@/components/ui/skeleton';
 import { Typography } from '@/components/ui/typography';
 import { TAB_BAR_HEIGHT } from '@/constants/dashboard';
 import { marketCategoriesFromCatalog } from '@/constants/marketProducts';
+import { useDeliveryLocation } from '@/hooks/use-delivery-location';
 import { useMarketSearch } from '@/hooks/use-market-search';
 import { useMarketplaceCatalogQuery } from '@/hooks/use-marketplace-catalog';
 import { ROUTES } from '@/navigation/routes';
@@ -28,6 +31,8 @@ export const CustomerMarketScreen = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const searchInputRef = useRef<TextInput>(null);
+  const locationSheetRef = useRef<BottomSheetModal>(null);
+  const { selectedLocation, openAddressForm } = useDeliveryLocation();
   const params = useLocalSearchParams<{ focusSearch?: string | string[] }>();
   const { products: marketProducts, loading, error, refetch } = useMarketplaceCatalogQuery();
   const {
@@ -45,6 +50,7 @@ export const CustomerMarketScreen = () => {
     handleClear,
     handleSubmit,
     handleViewAll,
+    handleBrowseAll,
     handleSelectMaterial,
     handleSelectRecent,
     handleSelectProduct,
@@ -63,12 +69,7 @@ export const CustomerMarketScreen = () => {
   }, [params.focusSearch]);
 
   const handleLocationPress = useCallback(() => {
-    Toast.show({
-      type: 'info',
-      text1: 'Delivery location',
-      text2: 'Mumbai, MH is set for this session.',
-      visibilityTime: 2000,
-    });
+    locationSheetRef.current?.present();
   }, []);
 
   const handleCartPress = useCallback(() => {
@@ -113,6 +114,20 @@ export const CustomerMarketScreen = () => {
     handleViewAll();
   }, [handleViewAll]);
 
+  const handleBrowseCatalog = useCallback(() => {
+    Keyboard.dismiss();
+    handleBrowseAll();
+  }, [handleBrowseAll]);
+
+  const handleClearSearch = useCallback(() => {
+    Keyboard.dismiss();
+    handleClear();
+  }, [handleClear]);
+
+  const handleShowAllCategories = useCallback(() => {
+    handleSelectCategory(null);
+  }, [handleSelectCategory]);
+
   const handleDismissOverlay = useCallback(() => {
     Keyboard.dismiss();
     handleDismissSuggestions();
@@ -129,12 +144,22 @@ export const CustomerMarketScreen = () => {
 
   const trimmedQuery = query.trim();
   const resultLabel = filteredProducts.length === 1 ? 'grade' : 'grades';
+  const listBottomPadding = TAB_BAR_HEIGHT + insets.bottom + 24;
 
   if (loading) {
     return (
       <View className="flex-1 bg-brand-white" accessibilityState={{ busy: true }}>
-        <MarketHeader onLocationPress={handleLocationPress} onCartPress={handleCartPress} />
+        <MarketHeader
+          locationLabel={selectedLocation.label}
+          onLocationPress={handleLocationPress}
+          onCartPress={handleCartPress}
+        />
         <MarketListSkeleton />
+        <LocationBottomSheet
+          ref={locationSheetRef}
+          selectedId={selectedLocation.id}
+          onAddAddress={openAddressForm}
+        />
       </View>
     );
   }
@@ -142,7 +167,11 @@ export const CustomerMarketScreen = () => {
   if (error) {
     return (
       <View className="flex-1 bg-brand-white">
-        <MarketHeader onLocationPress={handleLocationPress} onCartPress={handleCartPress} />
+        <MarketHeader
+          locationLabel={selectedLocation.label}
+          onLocationPress={handleLocationPress}
+          onCartPress={handleCartPress}
+        />
         <EmptyState
           title="Unable to load catalog"
           description={error}
@@ -151,13 +180,47 @@ export const CustomerMarketScreen = () => {
             void refetch();
           }}
         />
+        <LocationBottomSheet
+          ref={locationSheetRef}
+          selectedId={selectedLocation.id}
+          onAddAddress={openAddressForm}
+        />
+      </View>
+    );
+  }
+
+  if (marketProducts.length === 0) {
+    return (
+      <View className="flex-1 bg-brand-white">
+        <MarketHeader
+          locationLabel={selectedLocation.label}
+          onLocationPress={handleLocationPress}
+          onCartPress={handleCartPress}
+        />
+        <EmptyState
+          title="No materials available"
+          description="The marketplace catalog is empty right now. Pull to refresh or try again shortly."
+          actionLabel="Refresh"
+          onActionPress={() => {
+            void refetch();
+          }}
+        />
+        <LocationBottomSheet
+          ref={locationSheetRef}
+          selectedId={selectedLocation.id}
+          onAddAddress={openAddressForm}
+        />
       </View>
     );
   }
 
   return (
     <View className="flex-1 bg-brand-white">
-      <MarketHeader onLocationPress={handleLocationPress} onCartPress={handleCartPress} />
+      <MarketHeader
+        locationLabel={selectedLocation.label}
+        onLocationPress={handleLocationPress}
+        onCartPress={handleCartPress}
+      />
 
       <View className="bg-brand-white pb-sm pt-md">
         <SearchBar
@@ -167,7 +230,7 @@ export const CustomerMarketScreen = () => {
           onFocus={handleFocus}
           onBlur={handleBlur}
           onSubmit={handleSubmitSearch}
-          onClear={handleClear}
+          onClear={handleClearSearch}
           autoFocus={shouldAutoFocus}
         />
       </View>
@@ -189,6 +252,7 @@ export const CustomerMarketScreen = () => {
               handleSelectRecent(term);
             }}
             onViewAll={handleViewAllResults}
+            onBrowseAll={handleBrowseCatalog}
             onClearRecent={handleClearRecent}
           />
         </View>
@@ -232,24 +296,45 @@ export const CustomerMarketScreen = () => {
             onScrollBeginDrag={handleDismissOverlay}
             ListEmptyComponent={
               <EmptyState
-                title={trimmedQuery ? `No grades match “${trimmedQuery}”` : 'No materials found'}
+                title={
+                  trimmedQuery
+                    ? `No grades match “${trimmedQuery}”`
+                    : selectedCategory
+                      ? `No grades in ${selectedCategory}`
+                      : 'No materials found'
+                }
                 description={
                   trimmedQuery
                     ? 'Try a material like PP, HDPE, PVC, or a grade code.'
-                    : 'Try a different grade, category, or search term.'
+                    : selectedCategory
+                      ? 'Switch to All or pick another category to keep browsing.'
+                      : 'Try a different grade, category, or search term.'
                 }
-                actionLabel={trimmedQuery ? 'Clear search' : undefined}
-                onActionPress={trimmedQuery ? handleClear : undefined}
+                actionLabel={
+                  trimmedQuery ? 'Clear search' : selectedCategory ? 'Show all materials' : undefined
+                }
+                onActionPress={
+                  trimmedQuery
+                    ? handleClearSearch
+                    : selectedCategory
+                      ? handleShowAllCategories
+                      : undefined
+                }
               />
             }
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{
-              paddingBottom: TAB_BAR_HEIGHT + insets.bottom + 24,
+              paddingBottom: listBottomPadding,
               flexGrow: 1,
             }}
           />
         </>
       )}
+      <LocationBottomSheet
+        ref={locationSheetRef}
+        selectedId={selectedLocation.id}
+        onAddAddress={openAddressForm}
+      />
     </View>
   );
 };

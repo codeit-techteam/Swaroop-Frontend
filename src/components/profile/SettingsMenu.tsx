@@ -15,6 +15,7 @@ import { cn } from '@/utils/cn';
 
 type SettingsMenuProps = {
   onLogout: () => void;
+  onNotifications?: () => void;
   className?: string;
 };
 
@@ -25,7 +26,11 @@ const MENU_ICONS = {
   logout: LogoutIcon,
 } as const;
 
-export const SettingsMenu = memo(function SettingsMenu({ onLogout, className }: SettingsMenuProps) {
+export const SettingsMenu = memo(function SettingsMenu({
+  onLogout,
+  onNotifications,
+  className,
+}: SettingsMenuProps) {
   const showComingSoon = useCallback((title: string) => {
     Toast.show({
       type: 'info',
@@ -53,9 +58,14 @@ export const SettingsMenu = memo(function SettingsMenu({ onLogout, className }: 
         return;
       }
 
+      if (id === 'notifications' && onNotifications) {
+        onNotifications();
+        return;
+      }
+
       showComingSoon(title);
     },
-    [handleLogoutPress, showComingSoon],
+    [handleLogoutPress, onNotifications, showComingSoon],
   );
 
   return (

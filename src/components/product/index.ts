@@ -20,3 +20,4 @@ export { SpotPriceCard } from '@/components/product/spot-price-card';
 export { PaymentOptionsCard } from '@/components/product/payment-options-card';
 export { BuyingSummary } from '@/components/product/buying-summary';
 export { RelatedProducts } from '@/components/product/related-products';
+export { AddedToCartBanner } from '@/components/product/added-to-cart-banner';

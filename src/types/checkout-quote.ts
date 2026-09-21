@@ -38,6 +38,35 @@ export type CheckoutQuote = {
   billingAddressId: string | null;
 };
 
+export type CartPriceChange = {
+  cartItemId: string;
+  productId: string;
+  productName: string;
+  gradeName: string | null;
+  oldUnitPrice: number;
+  newUnitPrice: number;
+  quantity: number;
+  unit: string;
+};
+
+export type CartQuoteIssue = {
+  cartItemId: string;
+  code: string;
+  message: string;
+  currentUnitPrice?: number;
+};
+
+export type CartQuoteResult = {
+  status: 'OK' | 'PRICE_CHANGED' | 'INVALID';
+  valid: boolean;
+  issues: CartQuoteIssue[];
+  changes: CartPriceChange[];
+  quote: CheckoutQuote | null;
+  quotes: CheckoutQuote[];
+  shippingAddressId: string | null;
+  billingAddressId: string | null;
+};
+
 export type CheckoutAddress = {
   id: string;
   type: string;
@@ -49,6 +78,8 @@ export type CheckoutAddress = {
   country: string;
   postalCode: string;
   landmark: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   isDefault: boolean;
 };
 

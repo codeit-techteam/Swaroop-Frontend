@@ -31,7 +31,7 @@ export const ProfileScreen = memo(function ProfileScreen() {
         let subtitle = '';
 
         if (item.subtitleKey === 'addresses') {
-          subtitle = `${profile.savedAddresses.length} Warehouse Locations`;
+          subtitle = `${profile.savedAddresses.length} saved ${profile.savedAddresses.length === 1 ? 'location' : 'locations'}`;
         } else if (item.subtitleKey === 'banks') {
           subtitle = `${profile.bankAccounts.length} Accounts Linked`;
         } else {
@@ -67,6 +67,10 @@ export const ProfileScreen = memo(function ProfileScreen() {
     router.replace(ROUTES.AUTH.ROLE_SELECTION as Href);
   }, [logout, router]);
 
+  const handleNotifications = useCallback(() => {
+    router.push(ROUTES.CUSTOMER.NOTIFICATIONS as Href);
+  }, [router]);
+
   return (
     <View className="flex-1 bg-brand-background">
       <ProfileStickyHeader />
@@ -97,7 +101,10 @@ export const ProfileScreen = memo(function ProfileScreen() {
 
         <LogisticsFinanceCard items={logisticsItems} />
 
-        <SettingsMenu onLogout={() => void handleLogout()} />
+        <SettingsMenu
+          onLogout={() => void handleLogout()}
+          onNotifications={handleNotifications}
+        />
 
         <CustomQuoteCard />
 

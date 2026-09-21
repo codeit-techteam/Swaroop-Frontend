@@ -1,13 +1,10 @@
 import { Stack } from 'expo-router';
-import { View } from 'react-native';
 
-import { OrderSimulator } from '@/components/dev/OrderSimulator';
 import { brandColors } from '@/theme/colors';
 
 export default function CustomerLayout() {
   return (
-    <View className="flex-1">
-      <Stack
+    <Stack
       screenOptions={{
         headerShown: false,
         animation: 'none',
@@ -49,10 +46,11 @@ export default function CustomerLayout() {
       <Stack.Screen name="profile/edit" />
       <Stack.Screen name="profile/company-details" />
       <Stack.Screen name="profile/saved-addresses" />
+      <Stack.Screen name="profile/address-form" />
       <Stack.Screen name="profile/bank-accounts" />
       <Stack.Screen name="profile/tax-documents" />
+      <Stack.Screen name="profile/bulk-logistics-quote" />
+      <Stack.Screen name="notifications/index" />
     </Stack>
-      <OrderSimulator />
-    </View>
   );
 }

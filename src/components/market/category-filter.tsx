@@ -85,6 +85,12 @@ export const CategoryFilter = memo(function CategoryFilter({
 
         <View className="mr-sm h-6 w-px bg-brand-border" />
 
+        <CategoryChip
+          label="All"
+          selected={selectedCategory === null}
+          onPress={() => onSelectCategory(null)}
+        />
+
         {categories.map((category) => (
           <CategoryChip
             key={category}

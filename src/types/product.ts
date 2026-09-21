@@ -144,13 +144,16 @@ export type ProductDetails = {
 export type CartItem = {
   id: string;
   productId: string;
+  /** Backend cart item UUID when synced. Display prices are snapshots only. */
+  backendItemId?: string;
+  offerId?: string;
   /** Display name, e.g. "PP H110MA Homopolymer" */
   name: string;
   /** Grade badge label, e.g. "POLYPROPYLENE" */
   productType: string;
   grade: string;
   quantityMt: number;
-  /** Unit price in ₹ per MT */
+  /** Cached unit price in ₹ per MT — never used as checkout payable. */
   unitPricePerMt: number;
   tierId: string;
   imageUrl: string;
@@ -160,6 +163,7 @@ export type CartItem = {
   warehouseRegion: string;
   eta: string;
   addedAt: string;
+  paymentOption?: string;
 };
 
 export type CartDeliveryLocation = {
@@ -170,12 +174,16 @@ export type CartDeliveryLocation = {
 };
 
 export type CartOrderSummary = {
-  baseSubtotal: number;
-  freight: number;
-  gst: number;
-  platformFee: number;
+  baseSubtotal: number | null;
+  discount: number | null;
+  freight: number | null;
+  gst: number | null;
+  gstLabel: string;
+  platformFee: number | null;
   insuranceIncluded: boolean;
-  totalLandedCost: number;
+  insuranceAmount: number | null;
+  totalLandedCost: number | null;
   totalQuantityMt: number;
   meetsMoq: boolean;
+  fromQuote: boolean;
 };

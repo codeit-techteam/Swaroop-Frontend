@@ -22,30 +22,21 @@ import {
 } from '@/components/home';
 import { CurrentShipmentCard } from '@/components/home/current-shipment-card';
 import { HomeFeedSkeleton } from '@/components/ui/skeleton';
-import {
-  DEFAULT_DELIVERY_LOCATION,
-  QUICK_SUMMARY_ITEMS,
-  TAB_BAR_HEIGHT,
-} from '@/constants/dashboard';
+import { QUICK_SUMMARY_ITEMS, TAB_BAR_HEIGHT } from '@/constants/dashboard';
 import { getTrackRouteForOrder, inferOrderStatus } from '@/constants/orderWorkflow';
+import { useDeliveryLocation } from '@/hooks/use-delivery-location';
+import { useNotificationBadge } from '@/hooks/use-notifications';
 import { ROUTES } from '@/navigation/routes';
 import { fetchCustomerMarketplaceProducts } from '@/services/catalog';
 import { fetchCustomerHomeBanners } from '@/services/cms';
 import { fetchCustomerFinanceSummary } from '@/services/orders';
-import { selectLocation, useAuthStore } from '@/store/auth-store';
 import {
   selectActiveOrder,
   selectOrderHydrated,
   selectOrders,
   useOrderStore,
 } from '@/store/order-store';
-import type {
-  DeliveryLocation,
-  HomeBanner,
-  LowestLandedCost,
-  TrendingProduct,
-  WatchlistItem,
-} from '@/types/home';
+import type { HomeBanner, LowestLandedCost, TrendingProduct, WatchlistItem } from '@/types/home';
 import type { MarketProduct } from '@/types/market';
 
 function formatMtPrice(price: number) {
@@ -81,11 +72,8 @@ function toWatchlist(product: MarketProduct): WatchlistItem {
 export const CustomerHomeScreen = () => {
   const router = useRouter();
   const locationSheetRef = useRef<BottomSheetModal>(null);
-  const persistedLocation = useAuthStore(selectLocation);
-  const setLocation = useAuthStore((state) => state.setLocation);
-  const [selectedLocation, setSelectedLocation] = useState<DeliveryLocation>(
-    persistedLocation ?? DEFAULT_DELIVERY_LOCATION,
-  );
+  const unreadCount = useNotificationBadge();
+  const { selectedLocation, openAddressForm } = useDeliveryLocation();
 
   const orders = useOrderStore(selectOrders);
   const activeOrder = useOrderStore(selectActiveOrder);
@@ -188,14 +176,9 @@ export const CustomerHomeScreen = () => {
     locationSheetRef.current?.present();
   }, []);
 
-  const handleLocationSelect = useCallback(
-    (location: DeliveryLocation) => {
-      setSelectedLocation(location);
-      setLocation(location);
-      locationSheetRef.current?.dismiss();
-    },
-    [setLocation],
-  );
+  const handleLocationSelect = useCallback(() => {
+    locationSheetRef.current?.dismiss();
+  }, []);
 
   const navigateToMarket = useCallback(() => {
     router.push({
@@ -206,6 +189,10 @@ export const CustomerHomeScreen = () => {
 
   const navigateToCart = useCallback(() => {
     router.push(ROUTES.CUSTOMER.CART as Href);
+  }, [router]);
+
+  const navigateToNotifications = useCallback(() => {
+    router.push(ROUTES.CUSTOMER.NOTIFICATIONS as Href);
   }, [router]);
 
   const navigateToOrders = useCallback(() => {
@@ -266,8 +253,9 @@ export const CustomerHomeScreen = () => {
   return (
     <View className="flex-1 bg-brand-white">
       <HomeHeader
+        hasNotification={unreadCount > 0}
         onCartPress={navigateToCart}
-        onNotificationPress={() => showInfoToast('Notifications', 'You have 2 new market alerts.')}
+        onNotificationPress={navigateToNotifications}
       />
 
       {showHomeSkeleton ? (
@@ -366,6 +354,7 @@ export const CustomerHomeScreen = () => {
         ref={locationSheetRef}
         selectedId={selectedLocation.id}
         onSelect={handleLocationSelect}
+        onAddAddress={openAddressForm}
       />
     </View>
   );

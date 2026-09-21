@@ -2,5 +2,7 @@ export { ProfileScreen } from '@/screens/profile/ProfileScreen';
 export { EditProfileScreen } from '@/screens/profile/EditProfileScreen';
 export { CompanyDetailsScreen } from '@/screens/profile/CompanyDetailsScreen';
 export { SavedAddressesScreen } from '@/screens/profile/SavedAddressesScreen';
+export { AddressFormScreen } from '@/screens/profile/AddressFormScreen';
 export { BankAccountsScreen } from '@/screens/profile/BankAccountsScreen';
 export { TaxDocumentsScreen } from '@/screens/profile/TaxDocumentsScreen';
+export { BulkLogisticsQuoteScreen } from '@/screens/profile/BulkLogisticsQuoteScreen';

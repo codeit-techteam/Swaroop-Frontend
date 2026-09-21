@@ -6,7 +6,7 @@ import { HighlightedText } from '@/components/market/highlighted-text';
 import { Typography } from '@/components/ui/typography';
 import { formatMarketPrice } from '@/constants/marketProducts';
 import type { SellerMaterialFamily } from '@/constants/materials-taxonomy';
-import { ArrowRightIcon, ClockIcon, SearchIcon } from '@/icons';
+import { ArrowRightIcon, ClockIcon, MarketTabIcon, SearchIcon } from '@/icons';
 import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
 import type { MarketProduct } from '@/types/market';
@@ -22,6 +22,7 @@ type SearchSuggestionsProps = {
   onSelectProduct: (product: MarketProduct) => void;
   onSelectRecent: (term: string) => void;
   onViewAll: () => void;
+  onBrowseAll?: () => void;
   onClearRecent?: () => void;
   className?: string;
 };
@@ -35,17 +36,19 @@ export const SearchSuggestions = memo(function SearchSuggestions({
   onSelectProduct,
   onSelectRecent,
   onViewAll,
+  onBrowseAll,
   onClearRecent,
   className,
 }: SearchSuggestionsProps) {
   const trimmed = query.trim();
   const showIdle = trimmed.length === 0;
   const hasMatches = suggestions.materials.length > 0 || suggestions.products.length > 0;
+  const hasIdleContent = recentSearches.length > 0 || popularMaterials.length > 0;
 
   return (
     <View
       className={cn(
-        'mx-lg overflow-hidden rounded-xl border border-brand-border bg-brand-white shadow-sm',
+        'mx-lg flex-1 overflow-hidden rounded-xl border border-brand-border bg-brand-white shadow-sm',
         className,
       )}
     >
@@ -53,7 +56,7 @@ export const SearchSuggestions = memo(function SearchSuggestions({
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 24 }}
+        contentContainerStyle={{ paddingBottom: 24, flexGrow: 1 }}
         className="flex-1"
       >
         {showIdle ? (
@@ -97,52 +100,121 @@ export const SearchSuggestions = memo(function SearchSuggestions({
               </View>
             ) : null}
 
-            <View className="px-md pb-sm">
-              <Typography
-                variant="fieldLabel"
-                className="mb-sm text-[10px] tracking-[0.8px] text-brand-muted"
-              >
-                Popular Materials
-              </Typography>
-              {popularMaterials.map((material) => (
-                <Pressable
-                  key={material.id}
-                  onPress={() => onSelectMaterial(material)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Browse ${material.name}`}
-                  className="flex-row items-center py-sm"
+            {popularMaterials.length > 0 ? (
+              <View className="px-md pb-sm">
+                <Typography
+                  variant="fieldLabel"
+                  className="mb-sm text-[10px] tracking-[0.8px] text-brand-muted"
                 >
-                  <View className="h-9 w-9 items-center justify-center rounded-lg bg-brand-primary-light">
-                    <Typography variant="badge" className="text-[10px] text-brand-primary">
-                      {material.code.slice(0, 4)}
+                  Popular Materials
+                </Typography>
+                {popularMaterials.map((material) => (
+                  <Pressable
+                    key={material.id}
+                    onPress={() => onSelectMaterial(material)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Browse ${material.name}`}
+                    className="flex-row items-center py-sm"
+                  >
+                    <View className="h-9 w-9 items-center justify-center rounded-lg bg-brand-primary-light">
+                      <Typography variant="badge" className="text-[10px] text-brand-primary">
+                        {material.code.slice(0, 4)}
+                      </Typography>
+                    </View>
+                    <View className="ml-sm min-w-0 flex-1">
+                      <Typography variant="roleTitle" className="text-[13px] text-brand-heading">
+                        {material.code}
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        className="font-sans text-[11px] normal-case tracking-normal text-brand-muted"
+                      >
+                        {material.name} · {material.gradeCount} grades
+                      </Typography>
+                    </View>
+                    <Typography variant="roleTitle" className="text-[12px] text-brand-primary">
+                      From {formatMarketPrice(material.startingPrice)}
                     </Typography>
-                  </View>
-                  <View className="ml-sm min-w-0 flex-1">
-                    <Typography variant="roleTitle" className="text-[13px] text-brand-heading">
-                      {material.code}
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+
+            {!hasIdleContent ? (
+              <View className="items-center px-lg py-xl">
+                <View className="h-14 w-14 items-center justify-center rounded-full bg-brand-primary-tint">
+                  <MarketTabIcon color={brandColors.primary} />
+                </View>
+                <Typography
+                  variant="roleTitle"
+                  className="mt-md text-center text-[14px] text-brand-heading"
+                >
+                  Search the marketplace
+                </Typography>
+                <Typography variant="subheading" className="mt-xs text-center text-[13px]">
+                  Try PP, HDPE, PVC, a grade code, CAS, or MFI.
+                </Typography>
+                {onBrowseAll ? (
+                  <Pressable
+                    onPress={onBrowseAll}
+                    accessibilityRole="button"
+                    accessibilityLabel="Browse all materials"
+                    className="mt-lg rounded-lg bg-brand-primary px-lg py-sm"
+                  >
+                    <Typography variant="button" className="text-[13px] tracking-normal">
+                      Browse all materials
                     </Typography>
-                    <Typography
-                      variant="caption"
-                      className="font-sans text-[11px] normal-case tracking-normal text-brand-muted"
-                    >
-                      {material.name} · {material.gradeCount} grades
-                    </Typography>
-                  </View>
-                  <Typography variant="roleTitle" className="text-[12px] text-brand-primary">
-                    From {formatMarketPrice(material.startingPrice)}
+                  </Pressable>
+                ) : null}
+              </View>
+            ) : onBrowseAll ? (
+              <Pressable
+                onPress={onBrowseAll}
+                accessibilityRole="button"
+                accessibilityLabel="Browse all materials"
+                className="mx-md mb-sm flex-row items-center justify-between rounded-lg border border-brand-border bg-brand-surface px-md py-md"
+              >
+                <View className="min-w-0 flex-1">
+                  <Typography variant="roleTitle" className="text-[13px] text-brand-heading">
+                    Browse all materials
                   </Typography>
-                </Pressable>
-              ))}
-            </View>
+                  <Typography
+                    variant="caption"
+                    className="mt-0.5 font-sans text-[11px] normal-case tracking-normal text-brand-muted"
+                  >
+                    View the full catalog without a search
+                  </Typography>
+                </View>
+                <ArrowRightIcon size={iconSizes.sm} color={brandColors.primary} />
+              </Pressable>
+            ) : null}
           </View>
         ) : !hasMatches ? (
-          <View className="px-lg py-xl">
-            <Typography variant="roleTitle" className="text-center text-[14px] text-brand-heading">
+          <View className="items-center px-lg py-xl">
+            <View className="h-14 w-14 items-center justify-center rounded-full bg-brand-primary-tint">
+              <SearchIcon size={iconSizes.lg} color={brandColors.primary} />
+            </View>
+            <Typography
+              variant="roleTitle"
+              className="mt-md text-center text-[14px] text-brand-heading"
+            >
               No grades match “{trimmed}”
             </Typography>
             <Typography variant="subheading" className="mt-xs text-center text-[13px]">
-              Try a material like PP, HDPE, or PVC.
+              Try a material like PP, HDPE, or PVC — or browse the full catalog.
             </Typography>
+            {onBrowseAll ? (
+              <Pressable
+                onPress={onBrowseAll}
+                accessibilityRole="button"
+                accessibilityLabel="Browse all materials"
+                className="mt-lg rounded-lg bg-brand-primary px-lg py-sm"
+              >
+                <Typography variant="button" className="text-[13px] tracking-normal">
+                  Browse all materials
+                </Typography>
+              </Pressable>
+            ) : null}
           </View>
         ) : (
           <View className="py-sm">
@@ -246,7 +318,7 @@ export const SearchSuggestions = memo(function SearchSuggestions({
         )}
       </ScrollView>
 
-      {!showIdle ? (
+      {!showIdle && hasMatches ? (
         <Pressable
           onPress={onViewAll}
           accessibilityRole="button"

@@ -2,6 +2,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as LocalAuthentication from 'expo-local-authentication';
 
 import { appConfig } from '@/config/env';
+import { requestLocationPermission } from '@/services/location';
 import { logger } from '@/utils/logger';
 
 export type PermissionStatus = 'granted' | 'denied' | 'undetermined';
@@ -24,6 +25,9 @@ const loadNotifications = (): NotificationsModule | null => {
     return null;
   }
 };
+
+export const requestLocationPermissionStatus = async (): Promise<PermissionStatus> =>
+  requestLocationPermission();
 
 export const requestCameraPermission = async (): Promise<PermissionStatus> => {
   const { status } = await ImagePicker.requestCameraPermissionsAsync();

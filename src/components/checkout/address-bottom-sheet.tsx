@@ -21,11 +21,12 @@ type AddressBottomSheetProps = {
   selectedId: string;
   addresses?: CheckoutShippingAddress[];
   onSelect: (addressId: string) => void;
+  onAddAddress?: () => void;
 };
 
 export const AddressBottomSheet = memo(
   forwardRef<BottomSheetModal, AddressBottomSheetProps>(function AddressBottomSheet(
-    { selectedId, addresses = CHECKOUT_ADDRESSES, onSelect },
+    { selectedId, addresses = CHECKOUT_ADDRESSES, onSelect, onAddAddress },
     ref,
   ) {
     const snapPoints = useMemo(() => ['58%'], []);
@@ -119,6 +120,18 @@ export const AddressBottomSheet = memo(
               </Pressable>
             );
           })}
+          {onAddAddress ? (
+            <Pressable
+              onPress={onAddAddress}
+              accessibilityRole="button"
+              accessibilityLabel="Add new delivery address"
+              className="mt-sm items-center rounded-xl border border-dashed border-brand-primary py-md"
+            >
+              <Typography variant="roleTitle" className="text-[14px] text-brand-primary">
+                + Add new address
+              </Typography>
+            </Pressable>
+          ) : null}
         </BottomSheetView>
       </BottomSheetModal>
     );

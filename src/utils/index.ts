@@ -27,6 +27,7 @@ export {
   requestCameraPermission,
   requestMediaLibraryPermission,
   requestNotificationPermission,
+  requestLocationPermissionStatus,
   checkBiometricSupport,
   authenticateWithBiometrics,
 } from '@/utils/permissions';

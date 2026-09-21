@@ -1,12 +1,7 @@
 import { create } from 'zustand';
 
 import { STORAGE_KEYS } from '@/constants';
-import {
-  calculateFreightForQuantity,
-  CART_GST_RATE,
-  CART_PLATFORM_FEE,
-  DEFAULT_CART_DELIVERY,
-} from '@/constants/cart';
+import { DEFAULT_CART_DELIVERY } from '@/constants/cart';
 import type { CartDeliveryLocation, CartItem, CartOrderSummary } from '@/types/product';
 import { getStorageItem, setStorageItem } from '@/utils/storage';
 
@@ -18,24 +13,21 @@ type CartState = {
 
 type CartActions = {
   hydrateCart: () => void;
-  addItem: (item: Omit<CartItem, 'id' | 'addedAt'>) => void;
+  addItem: (item: Omit<CartItem, 'id' | 'addedAt'> & { id?: string }) => void;
+  replaceItems: (items: CartItem[]) => void;
   removeItem: (itemId: string) => void;
   increaseQuantity: (itemId: string) => void;
   decreaseQuantity: (itemId: string) => void;
   setQuantity: (itemId: string, quantityMt: number) => void;
   clearCart: () => void;
   setDelivery: (delivery: CartDeliveryLocation) => void;
-  calculateSubtotal: () => number;
-  calculateFreight: () => number;
-  calculateGST: () => number;
-  calculateTotal: () => number;
-  getOrderSummary: () => CartOrderSummary;
   meetsMoq: () => boolean;
 };
 
 export type CartStore = CartState & CartActions;
 
-const buildItemId = (productId: string, tierId: string): string => `${productId}::${tierId}`;
+const buildItemId = (productId: string, offerOrTierId: string): string =>
+  `${productId}::${offerOrTierId}`;
 
 const isValidCartItem = (item: unknown): item is CartItem => {
   if (!item || typeof item !== 'object') {
@@ -75,25 +67,6 @@ const persistItems = (items: CartItem[]): void => {
   setStorageItem(STORAGE_KEYS.CART_KEY, JSON.stringify(items));
 };
 
-const totalQuantityMt = (items: CartItem[]): number =>
-  items.reduce((sum, item) => sum + item.quantityMt, 0);
-
-const baseSubtotal = (items: CartItem[]): number =>
-  items.reduce((sum, item) => sum + item.unitPricePerMt * item.quantityMt, 0);
-
-const freightForItems = (items: CartItem[]): number => {
-  const qty = totalQuantityMt(items);
-  return calculateFreightForQuantity(qty);
-};
-
-const gstForItems = (items: CartItem[]): number => {
-  const taxable = baseSubtotal(items) + freightForItems(items);
-  return Math.round(taxable * CART_GST_RATE);
-};
-
-const totalForItems = (items: CartItem[]): number =>
-  baseSubtotal(items) + freightForItems(items) + gstForItems(items) + CART_PLATFORM_FEE;
-
 const meetsMoqForItems = (items: CartItem[]): boolean => {
   if (items.length === 0) {
     return false;
@@ -101,38 +74,20 @@ const meetsMoqForItems = (items: CartItem[]): boolean => {
   return items.every((item) => item.quantityMt >= item.moq);
 };
 
-const buildOrderSummary = (items: CartItem[]): CartOrderSummary => ({
-  baseSubtotal: baseSubtotal(items),
-  freight: freightForItems(items),
-  gst: gstForItems(items),
-  platformFee: CART_PLATFORM_FEE,
+export const emptyCartSummary = (items: CartItem[]): CartOrderSummary => ({
+  baseSubtotal: null,
+  discount: null,
+  freight: null,
+  gst: null,
+  gstLabel: 'GST',
+  platformFee: null,
   insuranceIncluded: true,
-  totalLandedCost: totalForItems(items),
-  totalQuantityMt: totalQuantityMt(items),
+  insuranceAmount: null,
+  totalLandedCost: null,
+  totalQuantityMt: items.reduce((sum, item) => sum + item.quantityMt, 0),
   meetsMoq: meetsMoqForItems(items),
+  fromQuote: false,
 });
-
-const isSameOrderSummary = (a: CartOrderSummary, b: CartOrderSummary): boolean =>
-  a.baseSubtotal === b.baseSubtotal &&
-  a.freight === b.freight &&
-  a.gst === b.gst &&
-  a.platformFee === b.platformFee &&
-  a.insuranceIncluded === b.insuranceIncluded &&
-  a.totalLandedCost === b.totalLandedCost &&
-  a.totalQuantityMt === b.totalQuantityMt &&
-  a.meetsMoq === b.meetsMoq;
-
-/** Cached so useSyncExternalStore does not loop on a fresh object each read. */
-let cachedOrderSummary: CartOrderSummary | null = null;
-
-const getStableOrderSummary = (items: CartItem[]): CartOrderSummary => {
-  const next = buildOrderSummary(items);
-  if (cachedOrderSummary && isSameOrderSummary(cachedOrderSummary, next)) {
-    return cachedOrderSummary;
-  }
-  cachedOrderSummary = next;
-  return next;
-};
 
 export const useCartStore = create<CartStore>((set, get) => ({
   items: [],
@@ -148,8 +103,13 @@ export const useCartStore = create<CartStore>((set, get) => ({
 
   addItem: (item) => {
     const items = [...get().items];
-    const id = buildItemId(item.productId, item.tierId);
-    const existingIndex = items.findIndex((entry) => entry.id === id);
+    const id = item.id ?? buildItemId(item.productId, item.offerId || item.tierId);
+    const existingIndex = items.findIndex(
+      (entry) =>
+        entry.id === id ||
+        (item.offerId && entry.offerId === item.offerId) ||
+        (entry.productId === item.productId && entry.tierId === item.tierId),
+    );
 
     const nextItem: CartItem = {
       ...item,
@@ -161,6 +121,8 @@ export const useCartStore = create<CartStore>((set, get) => ({
       const existing = items[existingIndex];
       items[existingIndex] = {
         ...nextItem,
+        id: existing.backendItemId ?? existing.id,
+        backendItemId: existing.backendItemId ?? item.backendItemId,
         quantityMt: existing.quantityMt + item.quantityMt,
         unitPricePerMt: item.unitPricePerMt,
       };
@@ -172,20 +134,26 @@ export const useCartStore = create<CartStore>((set, get) => ({
     set({ items });
   },
 
+  replaceItems: (items) => {
+    persistItems(items);
+    set({ items, isHydrated: true });
+  },
+
   removeItem: (itemId) => {
-    const items = get().items.filter((item) => item.id !== itemId);
+    const items = get().items.filter((item) => item.id !== itemId && item.backendItemId !== itemId);
     persistItems(items);
     set({ items });
   },
 
   increaseQuantity: (itemId) => {
     const items = get().items.map((item) => {
-      if (item.id !== itemId) {
+      if (item.id !== itemId && item.backendItemId !== itemId) {
         return item;
       }
+      const increment = item.quantityIncrement > 0 ? item.quantityIncrement : 1;
       return {
         ...item,
-        quantityMt: item.quantityMt + 1,
+        quantityMt: item.quantityMt + increment,
       };
     });
     persistItems(items);
@@ -194,13 +162,13 @@ export const useCartStore = create<CartStore>((set, get) => ({
 
   decreaseQuantity: (itemId) => {
     const items = get().items.map((item) => {
-      if (item.id !== itemId) {
+      if (item.id !== itemId && item.backendItemId !== itemId) {
         return item;
       }
+      const increment = item.quantityIncrement > 0 ? item.quantityIncrement : 1;
       return {
         ...item,
-        /** Allow values below MOQ so the warning + disabled checkout can surface. */
-        quantityMt: Math.max(1, item.quantityMt - 1),
+        quantityMt: Math.max(1, item.quantityMt - increment),
       };
     });
     persistItems(items);
@@ -209,7 +177,7 @@ export const useCartStore = create<CartStore>((set, get) => ({
 
   setQuantity: (itemId, quantityMt) => {
     const items = get().items.map((item) => {
-      if (item.id !== itemId) {
+      if (item.id !== itemId && item.backendItemId !== itemId) {
         return item;
       }
       return {
@@ -230,16 +198,6 @@ export const useCartStore = create<CartStore>((set, get) => ({
     set({ delivery });
   },
 
-  calculateSubtotal: () => baseSubtotal(get().items),
-
-  calculateFreight: () => freightForItems(get().items),
-
-  calculateGST: () => gstForItems(get().items),
-
-  calculateTotal: () => totalForItems(get().items),
-
-  getOrderSummary: (): CartOrderSummary => getStableOrderSummary(get().items),
-
   meetsMoq: () => meetsMoqForItems(get().items),
 }));
 
@@ -247,7 +205,7 @@ export const selectCartItems = (state: CartStore) => state.items;
 export const selectCartCount = (state: CartStore) => state.items.length;
 export const selectCartDelivery = (state: CartStore) => state.delivery;
 export const selectCartHydrated = (state: CartStore) => state.isHydrated;
-export const selectCartTotal = (state: CartStore) => state.calculateTotal();
 export const selectCartMeetsMoq = (state: CartStore) => state.meetsMoq();
+export const selectCartTotal = (_state: CartStore) => 0;
 export const selectOrderSummary = (state: CartStore): CartOrderSummary =>
-  getStableOrderSummary(state.items);
+  emptyCartSummary(state.items);

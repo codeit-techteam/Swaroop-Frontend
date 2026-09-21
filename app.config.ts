@@ -20,6 +20,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     bundleIdentifier: 'com.swaroop.app',
     infoPlist: {
       UIBackgroundModes: ['remote-notification'],
+      NSLocationWhenInUseUsageDescription:
+        'PetroTrade uses your location to detect the delivery pincode and save warehouse addresses, like Amazon or Myntra.',
+      NSLocationAlwaysAndWhenInUseUsageDescription:
+        'PetroTrade uses your location to detect the delivery pincode and save warehouse addresses.',
       NSAppTransportSecurity: {
         NSAllowsArbitraryLoads: true,
         NSAllowsLocalNetworking: true,
@@ -36,6 +40,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     permissions: [
       'android.permission.INTERNET',
       'android.permission.ACCESS_NETWORK_STATE',
+      'android.permission.ACCESS_COARSE_LOCATION',
+      'android.permission.ACCESS_FINE_LOCATION',
       'android.permission.CAMERA',
       'android.permission.READ_EXTERNAL_STORAGE',
       'android.permission.WRITE_EXTERNAL_STORAGE',
@@ -97,6 +103,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       {
         photosPermission: 'Allow Swaroop to access your photos.',
         cameraPermission: 'Allow Swaroop to access your camera.',
+      },
+    ],
+    [
+      'expo-location',
+      {
+        locationWhenInUsePermission:
+          'Allow PetroTrade to use your current location to set and save the delivery address.',
+        isIosBackgroundLocationEnabled: false,
+        isAndroidBackgroundLocationEnabled: false,
       },
     ],
   ],

@@ -39,8 +39,13 @@ export const SearchBar = memo(
     const hasValue = value.trim().length > 0;
 
     const handleClear = useCallback(() => {
+      // Prefer onClear so the parent can restore the browse list without
+      // racing onChangeText('') → suggestions overlay → blank screen.
+      if (onClear) {
+        onClear();
+        return;
+      }
       onChangeText('');
-      onClear?.();
     }, [onChangeText, onClear]);
 
     const handleFocus = useCallback(() => {

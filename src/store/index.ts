@@ -1,3 +1,4 @@
+export { useAddressStore, selectSavedAddresses, selectSelectedAddressId } from '@/store/address-store';
 export {
   useAuthStore,
   selectIsAuthenticated,

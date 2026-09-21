@@ -4,12 +4,14 @@ import { apiClient } from '@/api/client';
 import { ensureDevBackendSession } from '@/services/backend-session';
 import type { PaymentMethodId } from '@/types/payment';
 import type {
+  CartQuoteResult,
   CheckoutAddress,
   CheckoutPaymentOption,
   CheckoutQuote,
   PlacePurchaseRequestResult,
   PlatformPaymentOptionCode,
 } from '@/types/checkout-quote';
+import { commerceErrorCopy, isNetworkError } from '@/utils/commerce-errors';
 
 type Envelope<T> = {
   success: boolean;
@@ -43,25 +45,29 @@ export const toUiPaymentOption = (code?: string | null): PaymentMethodId => {
   return 'advance';
 };
 
+export function checkoutErrorCode(error: unknown): string | null {
+  if (isNetworkError(error)) {
+    return 'NETWORK_ERROR';
+  }
+  if (isAxiosError<Envelope<unknown>>(error)) {
+    const code = error.response?.data?.code;
+    if (typeof code === 'string' && code) {
+      return code;
+    }
+    if (!error.response) {
+      return 'NETWORK_ERROR';
+    }
+  }
+  return null;
+}
+
 export function checkoutErrorMessage(error: unknown, fallback: string): string {
+  const code = checkoutErrorCode(error);
+  if (code) {
+    return commerceErrorCopy(code, fallback).message;
+  }
   if (isAxiosError<Envelope<unknown>>(error)) {
     const payload = error.response?.data;
-    const code = payload?.code;
-    if (code === 'QUOTE_CHANGED') {
-      return 'Price Updated. Availability or pricing has changed. Please review the latest quote.';
-    }
-    if (code === 'QUOTE_EXPIRED') {
-      return 'This quote has expired. Please review the latest price.';
-    }
-    if (code === 'CREDIT_NOT_ELIGIBLE') {
-      return 'PetroTrade Credit is not available for this account.';
-    }
-    if (code === 'CREDIT_LIMIT_EXCEEDED') {
-      return 'Requested amount exceeds your available PetroTrade credit.';
-    }
-    if (code === 'NO_MATCHING_SELLER') {
-      return 'No seller can currently fulfil this quantity.';
-    }
     if (typeof payload?.message === 'string' && payload.message) {
       return payload.message;
     }
@@ -118,6 +124,20 @@ export async function fetchCheckoutQuote(quoteId: string): Promise<CheckoutQuote
   await ensureDevBackendSession('customer');
   const payload = await apiClient.get<Envelope<CheckoutQuote>>(
     `/customer/checkout/quotes/${quoteId}`,
+  );
+  return payload.data.data;
+}
+
+export async function quoteCartForCheckout(input?: {
+  paymentOption?: PlatformPaymentOptionCode;
+  shippingAddressId?: string;
+  billingAddressId?: string;
+  expectedPrices?: Array<{ cartItemId: string; unitPrice: number }>;
+}): Promise<CartQuoteResult> {
+  await ensureDevBackendSession('customer');
+  const payload = await apiClient.post<Envelope<CartQuoteResult>>(
+    '/customer/checkout/quote-from-cart',
+    input ?? {},
   );
   return payload.data.data;
 }

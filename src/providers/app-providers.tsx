@@ -32,6 +32,7 @@ import { useSellerProductStore } from '@/seller/store/sellerProductStore';
 import { useSellerStore } from '@/seller/store/sellerStore';
 import { applyDevResetIfNeeded } from '@/services/dev-reset';
 import { configureNotifications } from '@/services/notification-service';
+import { useAddressStore } from '@/store/address-store';
 import { useAuthStore } from '@/store/auth-store';
 import { useCartStore } from '@/store/cart-store';
 import { useKycStore } from '@/store/kyc-store';
@@ -81,6 +82,7 @@ export const AppProviders = ({ children }: AppProvidersProps) => {
   const hydrateSession = useAuthStore((state) => state.hydrateSession);
   const hydrateKyc = useKycStore((state) => state.hydrateKyc);
   const hydrateCart = useCartStore((state) => state.hydrateCart);
+  const hydrateAddresses = useAddressStore((state) => state.hydrate);
   const hydratePayment = usePaymentStore((state) => state.hydratePayment);
   const hydrateOrder = useOrderStore((state) => state.hydrateOrder);
   const hydrateSellerSession = useSellerStore((state) => state.hydrateSellerSession);
@@ -110,6 +112,7 @@ export const AppProviders = ({ children }: AppProvidersProps) => {
         hydrateSession();
         hydrateKyc();
         hydrateCart();
+        hydrateAddresses();
         hydratePayment();
         hydrateOrder();
 
@@ -141,6 +144,7 @@ export const AppProviders = ({ children }: AppProvidersProps) => {
       active = false;
     };
   }, [
+    hydrateAddresses,
     hydrateCart,
     hydrateKyc,
     hydrateInventoryState,

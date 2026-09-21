@@ -3,9 +3,9 @@ import { useCallback, useMemo } from 'react';
 import {
   DEFAULT_BANK_ACCOUNTS,
   DEFAULT_TAX_DOCUMENTS,
-  buildSavedAddresses,
   getComplianceValidTillLabel,
 } from '@/constants/profile';
+import { selectSavedAddresses, useAddressStore } from '@/store/address-store';
 import { selectKycApproved, selectMobileNumber, useAuthStore } from '@/store/auth-store';
 import {
   selectBusinessInfo,
@@ -82,6 +82,7 @@ export const useProfile = () => {
   const kycApproved = useAuthStore(selectKycApproved);
   const userProfile = useAuthStore((state) => state.userProfile);
   const updateUserProfile = useAuthStore((state) => state.updateUserProfile);
+  const savedDeliveryAddresses = useAddressStore(selectSavedAddresses);
 
   const businessInfo = useKycStore(selectBusinessInfo);
   const documents = useKycStore(selectDocuments);
@@ -99,13 +100,26 @@ export const useProfile = () => {
     );
 
     const companyName = businessInfo.businessEntityName;
-    const savedAddresses = buildSavedAddresses({
-      businessAddress: businessInfo.businessAddress,
-      city: businessInfo.city,
-      state: businessInfo.state,
-      pincode: businessInfo.pincode,
-      companyName,
-    });
+    const savedAddresses: ProfileData['savedAddresses'] =
+      savedDeliveryAddresses.length > 0
+        ? savedDeliveryAddresses.map((address) => ({
+            id: address.id,
+            type:
+              address.type === 'WAREHOUSE'
+                ? 'warehouse'
+                : address.type === 'OFFICE'
+                  ? 'office'
+                  : address.type === 'FACTORY'
+                    ? 'factory'
+                    : 'warehouse',
+            label: address.label,
+            addressLine: address.line1,
+            city: address.city,
+            state: address.state,
+            pincode: address.postalCode,
+            isPrimary: address.isDefault,
+          }))
+        : [];
 
     const bankAccounts = DEFAULT_BANK_ACCOUNTS.map((account) => ({
       ...account,
@@ -141,7 +155,7 @@ export const useProfile = () => {
       bankAccounts,
       taxDocuments: DEFAULT_TAX_DOCUMENTS,
     };
-  }, [businessInfo, docsReady, documents, kycApproved, mobileNumber, userProfile]);
+  }, [businessInfo, docsReady, documents, kycApproved, mobileNumber, savedDeliveryAddresses, userProfile]);
 
   const updateProfile = useCallback(
     (patch: ProfileUpdatePayload) => {

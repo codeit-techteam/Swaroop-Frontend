@@ -26,6 +26,7 @@ export const SearchBar = memo(function SearchBar({
       onPress={onPress}
       accessibilityRole="search"
       accessibilityLabel={placeholder}
+      accessibilityHint="Opens Market search"
       className={cn(
         'mx-lg flex-row items-center rounded-xl border border-brand-border bg-brand-white px-md py-md',
         className,
@@ -43,7 +44,7 @@ export const SearchBar = memo(function SearchBar({
         onPress={onFilterPress ?? onPress}
         hitSlop={8}
         accessibilityRole="button"
-        accessibilityLabel="Open filters"
+        accessibilityLabel="Open Market filters"
         className="pl-sm"
       >
         <FilterIcon color={brandColors.primary} />

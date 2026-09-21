@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Typography } from '@/components/ui/typography';
 import { DEFAULT_DELIVERY_LOCATION } from '@/constants/dashboard';
 import { AppLogo } from '@/components/ui/app-logo';
-import { LocationPinIcon, ProfileIcon, SearchIcon } from '@/icons';
+import { LocationPinIcon, ProfileIcon } from '@/icons';
 import { selectLocation, useAuthStore } from '@/store/auth-store';
 import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
@@ -15,14 +15,12 @@ import { cn } from '@/utils/cn';
 
 type OrdersAppHeaderProps = {
   onLocationPress?: () => void;
-  onSearchPress?: () => void;
   onProfilePress?: () => void;
   className?: string;
 };
 
 export const OrdersAppHeader = memo(function OrdersAppHeader({
   onLocationPress,
-  onSearchPress,
   onProfilePress,
   className,
 }: OrdersAppHeaderProps) {
@@ -55,27 +53,15 @@ export const OrdersAppHeader = memo(function OrdersAppHeader({
           </Typography>
         </Pressable>
 
-        <View className="flex-row items-center gap-xs">
-          <Pressable
-            onPress={onSearchPress}
-            hitSlop={10}
-            accessibilityRole="button"
-            accessibilityLabel="Search orders"
-            className="h-10 w-10 items-center justify-center"
-          >
-            <SearchIcon size={iconSizes.lg} color={brandColors.primary} />
-          </Pressable>
-
-          <Pressable
-            onPress={onProfilePress}
-            hitSlop={10}
-            accessibilityRole="button"
-            accessibilityLabel="Open profile"
-            className="h-10 w-10 items-center justify-center"
-          >
-            <ProfileIcon size={iconSizes.lg} color={brandColors.primary} />
-          </Pressable>
-        </View>
+        <Pressable
+          onPress={onProfilePress}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Open profile"
+          className="h-10 w-10 items-center justify-center"
+        >
+          <ProfileIcon size={iconSizes.lg} color={brandColors.primary} />
+        </Pressable>
       </View>
     </View>
   );

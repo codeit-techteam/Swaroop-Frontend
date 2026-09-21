@@ -42,7 +42,6 @@ type UseOrdersResult = {
   handleViewDetails: (order: Order) => void;
   handlePayNow: (order: Order) => void;
   handleExpandMasterShipment: (order: Order) => void;
-  handleSearchPress: () => void;
   handleProfilePress: () => void;
   handleLocationPress: () => void;
   handleBrowseMarketplace: () => void;
@@ -169,15 +168,6 @@ export const useOrders = (): UseOrdersResult => {
     });
   }, []);
 
-  const handleSearchPress = useCallback(() => {
-    Toast.show({
-      type: 'info',
-      text1: 'Search',
-      text2: 'Order search will be available soon.',
-      visibilityTime: 2000,
-    });
-  }, []);
-
   const handleProfilePress = useCallback(() => {
     router.push(ROUTES.CUSTOMER.PROFILE as Href);
   }, [router]);
@@ -215,7 +205,6 @@ export const useOrders = (): UseOrdersResult => {
     handleViewDetails,
     handlePayNow,
     handleExpandMasterShipment,
-    handleSearchPress,
     handleProfilePress,
     handleLocationPress,
     handleBrowseMarketplace,

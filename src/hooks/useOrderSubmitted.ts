@@ -51,7 +51,7 @@ export const useOrderSubmitted = (): UseOrderSubmittedResult => {
   }, [router]);
 
   const handleNotifications = useCallback(() => {
-    router.push(ROUTES.CUSTOMER.HOME as Href);
+    router.push(ROUTES.CUSTOMER.NOTIFICATIONS as Href);
   }, [router]);
 
   return {

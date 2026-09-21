@@ -29,7 +29,7 @@ export const CustomerCreditVerificationScreen = memo(function CustomerCreditVeri
   const { order, paymentProof, timeline, badgeStatus, handleBack } = useCreditPaymentVerification();
 
   const handleNotifications = useCallback(() => {
-    router.push(ROUTES.CUSTOMER.HOME as Href);
+    router.push(ROUTES.CUSTOMER.NOTIFICATIONS as Href);
   }, [router]);
 
   if (!order || !paymentProof) {

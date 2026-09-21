@@ -19,6 +19,7 @@ import { cn } from '@/utils/cn';
 
 type CartItemCardProps = {
   item: CartItem;
+  lineBaseAmount?: number | null;
   onIncrease: (itemId: string) => void;
   onDecrease: (itemId: string) => void;
   onRemove: (itemId: string) => void;
@@ -27,12 +28,13 @@ type CartItemCardProps = {
 
 export const CartItemCard = memo(function CartItemCard({
   item,
+  lineBaseAmount,
   onIncrease,
   onDecrease,
   onRemove,
   className,
 }: CartItemCardProps) {
-  const subtotal = item.unitPricePerMt * item.quantityMt;
+  const subtotal = lineBaseAmount ?? null;
   const belowMoq = item.quantityMt < item.moq;
 
   const handleRemove = useCallback(() => {
@@ -97,6 +99,9 @@ export const CartItemCard = memo(function CartItemCard({
                 <Typography variant="roleTitle" className="mt-xs text-[15px] text-brand-primary">
                   {formatPricePerMt(item.unitPricePerMt)}
                 </Typography>
+                <Typography variant="caption" className="mt-xs text-[10px] text-brand-muted">
+                  Current Price
+                </Typography>
               </View>
 
               <Pressable
@@ -122,7 +127,7 @@ export const CartItemCard = memo(function CartItemCard({
             </Typography>
             <CartQuantitySelector
               quantityMt={item.quantityMt}
-              increment={1}
+              increment={item.quantityIncrement > 0 ? item.quantityIncrement : 1}
               onIncrement={() => onIncrease(item.id)}
               onDecrement={() => onDecrease(item.id)}
             />
@@ -136,7 +141,7 @@ export const CartItemCard = memo(function CartItemCard({
               Subtotal
             </Typography>
             <Typography variant="roleTitle" className="text-[15px] text-brand-heading">
-              {formatCartCurrency(subtotal)}
+              {subtotal == null ? '—' : formatCartCurrency(subtotal)}
             </Typography>
           </View>
         </View>

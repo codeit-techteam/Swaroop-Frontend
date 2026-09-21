@@ -2,7 +2,6 @@ import { memo } from 'react';
 
 import { View } from 'react-native';
 
-
 import { Typography } from '@/components/ui/typography';
 import { formatCartCurrency } from '@/constants/cart';
 import { InfoIcon } from '@/icons';
@@ -14,6 +13,7 @@ import { cn } from '@/utils/cn';
 
 type OrderSummaryCardProps = {
   summary: CartOrderSummary;
+  loading?: boolean;
   className?: string;
 };
 
@@ -55,13 +55,23 @@ const SummaryRow = memo(function SummaryRow({
   );
 });
 
+const formatOrPlaceholder = (amount: number | null, loading?: boolean): string => {
+  if (loading) {
+    return '—';
+  }
+  if (amount == null) {
+    return '—';
+  }
+  return formatCartCurrency(amount);
+};
+
 export const OrderSummaryCard = memo(function OrderSummaryCard({
   summary,
+  loading = false,
   className,
 }: OrderSummaryCardProps) {
   return (
     <View
-
       className={cn('mx-lg rounded-2xl border border-brand-border bg-brand-white p-lg', className)}
       style={elevation.sm}
     >
@@ -72,13 +82,36 @@ export const OrderSummaryCard = memo(function OrderSummaryCard({
         ORDER SUMMARY
       </Typography>
 
-      <SummaryRow label="Base Subtotal" value={formatCartCurrency(summary.baseSubtotal)} />
-      <SummaryRow label="Estimated Freight" value={formatCartCurrency(summary.freight)} showInfo />
-      <SummaryRow label="GST (18%)" value={formatCartCurrency(summary.gst)} />
-      <SummaryRow label="Platform Fee" value={formatCartCurrency(summary.platformFee)} muted />
+      <SummaryRow
+        label="Base Subtotal"
+        value={formatOrPlaceholder(summary.baseSubtotal, loading)}
+      />
+      {summary.discount != null && summary.discount > 0 ? (
+        <SummaryRow label="Discount" value={`−${formatCartCurrency(summary.discount)}`} />
+      ) : null}
+      <SummaryRow
+        label="Estimated Freight"
+        value={formatOrPlaceholder(summary.freight, loading)}
+        showInfo
+      />
+      <SummaryRow
+        label={summary.gstLabel || 'GST'}
+        value={formatOrPlaceholder(summary.gst, loading)}
+      />
+      <SummaryRow
+        label="Platform Fee"
+        value={formatOrPlaceholder(summary.platformFee, loading)}
+        muted
+      />
       <SummaryRow
         label="Insurance"
-        value={summary.insuranceIncluded ? 'Included' : formatCartCurrency(0)}
+        value={
+          loading
+            ? '—'
+            : summary.insuranceIncluded
+              ? 'Included'
+              : formatOrPlaceholder(summary.insuranceAmount, loading)
+        }
         muted
       />
 
@@ -101,7 +134,7 @@ export const OrderSummaryCard = memo(function OrderSummaryCard({
           className="text-[20px] text-brand-primary"
           accessibilityLiveRegion="polite"
         >
-          {formatCartCurrency(summary.totalLandedCost)}
+          {loading ? 'Checking...' : formatOrPlaceholder(summary.totalLandedCost)}
         </Typography>
       </View>
     </View>

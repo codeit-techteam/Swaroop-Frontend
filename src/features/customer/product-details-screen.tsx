@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { Pressable, ScrollView, View } from 'react-native';
 
@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
 import {
+  AddedToCartBanner,
   BottomActionBar,
   BuyingSummary,
   DeliveryCard,
@@ -29,17 +30,20 @@ import {
   TrustCard,
 } from '@/components/product';
 import { Typography } from '@/components/ui/typography';
-import { buildBlindProductName, buildProductTypeBadge } from '@/constants/cart';
+import { buildBlindProductName } from '@/constants/cart';
 import {
   getProductDetailsById,
   getTierForQuantity,
   priceForQuantity,
 } from '@/constants/productDetails';
 import { useMarketplaceCatalogQuery } from '@/hooks/use-marketplace-catalog';
+import { useNotificationBadge } from '@/hooks/use-notifications';
 import { useProductQuote } from '@/hooks/use-product-quote';
 import { BackArrowIcon } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
 import { useCartStore } from '@/store/cart-store';
+import { addCustomerCartItem, mapBackendCartItems } from '@/services/cart';
+import { checkoutErrorMessage, toBackendPaymentOption } from '@/services/checkout';
 import { brandColors } from '@/theme/colors';
 import type { PaymentMethodId } from '@/types/payment';
 
@@ -73,6 +77,12 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
   const [quantityMt, setQuantityMt] = useState(25);
   const [selectedTierId, setSelectedTierId] = useState<string>('');
   const [paymentId, setPaymentId] = useState<PaymentMethodId>('advance');
+  const [addingToCart, setAddingToCart] = useState(false);
+  const [addedBanner, setAddedBanner] = useState<{
+    quantityMt: number;
+    productName: string;
+  } | null>(null);
+  const addingLock = useRef(false);
 
   const {
     quote,
@@ -151,11 +161,11 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
 
   const canPurchase = Boolean(
     product &&
-      quote &&
-      !quoteError &&
-      product.stock > 0 &&
-      quantityMt >= product.moq &&
-      quantityMt <= product.stock,
+    quote &&
+    !quoteError &&
+    product.stock > 0 &&
+    quantityMt >= product.moq &&
+    quantityMt <= product.stock,
   );
 
   const handleBack = useCallback(() => {
@@ -209,7 +219,7 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
     [product],
   );
 
-  const addCurrentItemToCart = useCallback(() => {
+  const addCurrentItemToCart = useCallback(async () => {
     if (!product || !selectedTier) {
       return false;
     }
@@ -227,48 +237,64 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
       return false;
     }
 
-    const cartName = product.name || buildBlindProductName(product.grade, product.nameLine2);
+    const offerId = quote?.offerId ?? product.offerId;
+    if (!offerId) {
+      Toast.show({
+        type: 'error',
+        text1: 'Unable to add',
+        text2: 'Latest market pricing is still loading. Please try again.',
+      });
+      return false;
+    }
 
-    useCartStore.getState().addItem({
-      productId: product.id,
-      name: cartName,
-      productType: buildProductTypeBadge(product.materialType || product.breadcrumbCategory),
-      grade: product.grade,
-      quantityMt,
-      unitPricePerMt: displayPricePerMt,
-      tierId: selectedTier.id,
-      imageUrl: '',
-      moq: product.moq,
-      quantityIncrement: product.quantityIncrement,
-      packaging: product.packaging,
-      warehouseRegion: product.warehouseRegion,
-      eta: product.eta,
-    });
+    if (addingLock.current) {
+      return false;
+    }
+    addingLock.current = true;
+    setAddingToCart(true);
+    try {
+      const result = await addCustomerCartItem({
+        offerId,
+        quantity: quantityMt,
+        paymentMethod: toBackendPaymentOption(paymentId),
+      });
+      useCartStore.getState().replaceItems(mapBackendCartItems(result.cart));
+      return true;
+    } catch (cause) {
+      Toast.show({
+        type: 'error',
+        text1: 'Unable to add to cart',
+        text2: checkoutErrorMessage(cause, 'Please check your connection and try again.'),
+      });
+      return false;
+    } finally {
+      addingLock.current = false;
+      setAddingToCart(false);
+    }
+  }, [canPurchase, paymentId, product, quantityMt, quote?.offerId, selectedTier]);
 
-    return true;
-  }, [canPurchase, displayPricePerMt, product, quantityMt, selectedTier]);
-
-  const handleAddToCart = useCallback(() => {
+  const handleAddToCart = useCallback(async () => {
     if (!product) {
       return;
     }
 
-    const added = addCurrentItemToCart();
+    const added = await addCurrentItemToCart();
     if (!added) {
       return;
     }
 
     const cartName = product.name || buildBlindProductName(product.grade, product.nameLine2);
-    Toast.show({
-      type: 'success',
-      text1: 'Added to cart',
-      text2: `${quantityMt} MT of ${cartName} added.`,
-      visibilityTime: 2200,
-    });
+    setAddedBanner({ quantityMt, productName: cartName });
   }, [addCurrentItemToCart, product, quantityMt]);
 
   const handleOpenCart = useCallback(() => {
     router.push(ROUTES.CUSTOMER.CART as Href);
+  }, [router]);
+
+  const unreadCount = useNotificationBadge();
+
+  const handleNotifications = useCallback(() => {
+    router.push(ROUTES.CUSTOMER.NOTIFICATIONS as Href);
   }, [router]);
 
   const handleBuyNow = useCallback(() => {
@@ -305,7 +331,12 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
   if (catalogLoading) {
     return (
       <View className="flex-1 bg-brand-background" accessibilityState={{ busy: true }}>
-        <ProductHeader onBackPress={handleBack} onCartPress={handleOpenCart} />
+        <ProductHeader
+          onBackPress={handleBack}
+          onCartPress={handleOpenCart}
+          onNotificationPress={handleNotifications}
+          hasNotification={unreadCount > 0}
+        />
         <ProductSkeleton />
       </View>
     );
@@ -366,13 +397,25 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
 
   return (
     <View className="flex-1 bg-brand-background">
-      <ProductHeader onBackPress={handleBack} onCartPress={handleOpenCart} />
+      <ProductHeader
+        onBackPress={handleBack}
+        onCartPress={handleOpenCart}
+        onNotificationPress={handleNotifications}
+        hasNotification={unreadCount > 0}
+      />
       <ProductBreadcrumb
         category={product.breadcrumbCategory}
         productName={product.breadcrumbProduct}
       />
 
       <View className="flex-1">
+        <AddedToCartBanner
+          visible={Boolean(addedBanner)}
+          quantityLabel={addedBanner ? `${addedBanner.quantityMt} MT` : undefined}
+          message={addedBanner?.productName ?? ''}
+          onDismiss={() => setAddedBanner(null)}
+          onViewCart={handleOpenCart}
+        />
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 24 }}
@@ -439,11 +482,7 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
                 </Typography>
               </View>
             </View>
-            <BuyingSummary
-              quote={quote}
-              loading={quoteLoading}
-              error={quoteError}
-            />
+            <BuyingSummary quote={quote} loading={quoteLoading} error={quoteError} />
             {quoteError ? (
               <Typography
                 variant="caption"
@@ -482,9 +521,12 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
           estimatedTotal={estimatedTotal}
           disabled={!canPurchase}
           quoting={quoteLoading || !quote}
+          adding={addingToCart}
           onIncrement={handleIncrement}
           onDecrement={handleDecrement}
-          onAddToCart={handleAddToCart}
+          onAddToCart={() => {
+            void handleAddToCart();
+          }}
           onBuyNow={handleBuyNow}
         />
       </View>

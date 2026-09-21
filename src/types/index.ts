@@ -96,10 +96,27 @@ export type {
 } from '@/types/payment';
 
 export type {
+  NotificationCategoryFilter,
+  NotificationCategory,
+  NotificationPriority,
+  CustomerNotification,
+  NotificationDateGroup,
+} from '@/types/notifications';
+
+export type {
   CheckoutShippingAddress,
   CheckoutOrderSummary,
   CheckoutProductLine,
 } from '@/types/checkout';
+
+export type {
+  SavedAddressKind,
+  AddressSource,
+  SavedDeliveryAddress,
+  AddressDraft,
+  ResolvedGeoAddress,
+  PincodeLocality,
+} from '@/types/address';
 
 export type {
   UserRole,
