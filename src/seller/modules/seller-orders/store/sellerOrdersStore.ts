@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
 import type { Order } from '@/types/order';
+import { useAuthStore } from '@/store/auth-store';
 import { useOrderStore } from '@/store/order-store';
 import { mapDispatchOrderToOrder } from '@/seller/modules/dispatch/services/dispatchService';
 import { useDispatchStore } from '@/seller/modules/dispatch/store/dispatchStore';
@@ -8,12 +9,13 @@ import { useInventoryStore } from '@/seller/store/inventoryStore';
 import {
   acceptOrder as applyAcceptOrder,
   buildDefaultSellerOrdersSnapshot,
-  getOrders,
   mapSellerOrderToOrder,
   persistSellerOrdersSnapshot,
   rejectOrder as applyRejectOrder,
+  snapshotFromOrders,
   syncSellerOrdersWithDispatch,
 } from '@/seller/modules/seller-orders/services/sellerOrdersService';
+import { fetchSellerPurchaseOrders } from '@/services/seller-operations';
 import type {
   SellerOrdersStore,
   SellerOrderTabFilter,
@@ -34,6 +36,11 @@ const syncSellerOrderToGlobal = (sellerOrder: Parameters<typeof mapSellerOrderTo
 };
 
 const syncAllSellerOrders = (orders: Parameters<typeof mapSellerOrderToOrder>[0][]): void => {
+  // Never inject seller POs into the customer Orders list.
+  const role = useAuthStore.getState().selectedRole;
+  if (role !== 'seller') {
+    return;
+  }
   orders.forEach((order) => syncSellerOrderToGlobal(order));
 };
 
@@ -42,24 +49,39 @@ export const useSellerOrdersStore = create<SellerOrdersStore>((set, get) => ({
   isHydrated: false,
 
   hydrateSellerOrdersState: () => {
-    const dispatchSnapshot = useDispatchStore.getState();
-    const baseSnapshot = getOrders();
-    const synced = syncSellerOrdersWithDispatch(baseSnapshot, dispatchSnapshot);
-    set({
-      ...synced,
-      isHydrated: true,
-    });
-    persistSellerOrdersSnapshot(synced);
-    syncAllSellerOrders(synced.orders);
+    set({ isHydrated: false });
+    void fetchSellerPurchaseOrders()
+      .then((orders) => {
+        const dispatchSnapshot = useDispatchStore.getState();
+        const synced = syncSellerOrdersWithDispatch(snapshotFromOrders(orders), dispatchSnapshot);
+        set({
+          ...synced,
+          isHydrated: true,
+        });
+        persistSellerOrdersSnapshot(synced);
+        syncAllSellerOrders(synced.orders);
+      })
+      .catch(() => {
+        const empty = buildDefaultSellerOrdersSnapshot();
+        set({ ...empty, isHydrated: true });
+        persistSellerOrdersSnapshot(empty);
+      });
   },
 
   refreshSellerOrdersState: () => {
-    const dispatchSnapshot = useDispatchStore.getState();
-    const baseSnapshot = getOrders();
-    const synced = syncSellerOrdersWithDispatch(baseSnapshot, dispatchSnapshot);
-    set(synced);
-    persistSellerOrdersSnapshot(synced);
-    syncAllSellerOrders(synced.orders);
+    void fetchSellerPurchaseOrders()
+      .then((orders) => {
+        const dispatchSnapshot = useDispatchStore.getState();
+        const synced = syncSellerOrdersWithDispatch(snapshotFromOrders(orders), dispatchSnapshot);
+        set(synced);
+        persistSellerOrdersSnapshot(synced);
+        syncAllSellerOrders(synced.orders);
+      })
+      .catch(() => {
+        const empty = buildDefaultSellerOrdersSnapshot();
+        set(empty);
+        persistSellerOrdersSnapshot(empty);
+      });
   },
 
   selectOrder: (orderId) => {

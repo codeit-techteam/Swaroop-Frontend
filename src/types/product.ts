@@ -137,6 +137,7 @@ export type ProductDetails = {
   documents: ComplianceDocument[];
   relatedProducts: RelatedProductCard[];
   creditEligible: boolean;
+  offerId?: string;
 };
 
 /** Blind-marketplace cart line — no supplier / manufacturer fields. */

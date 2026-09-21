@@ -19,6 +19,7 @@ type BottomActionBarProps = {
   increment: number;
   estimatedTotal: number;
   disabled?: boolean;
+  quoting?: boolean;
   onIncrement: () => void;
   onDecrement: () => void;
   onAddToCart: () => void;
@@ -33,6 +34,7 @@ export const BottomActionBar = memo(function BottomActionBar({
   increment,
   estimatedTotal,
   disabled = false,
+  quoting = false,
   onIncrement,
   onDecrement,
   onAddToCart,
@@ -54,7 +56,7 @@ export const BottomActionBar = memo(function BottomActionBar({
           Est. total · {quantityMt} MT
         </Typography>
         <Typography variant="roleTitle" className="text-[16px] text-brand-primary">
-          {formatInr(estimatedTotal)}
+          {quoting ? 'Calculating total...' : formatInr(estimatedTotal)}
         </Typography>
       </View>
       <View className="flex-row items-center" style={{ gap: 8 }}>
@@ -92,16 +94,16 @@ export const BottomActionBar = memo(function BottomActionBar({
 
         <Pressable
           onPress={onBuyNow}
-          disabled={disabled}
+          disabled={disabled || quoting}
           accessibilityRole="button"
           accessibilityLabel="Buy now"
           className={cn(
             'h-11 flex-1 flex-row items-center justify-center rounded-lg px-sm',
-            disabled ? 'bg-brand-disabled' : 'bg-brand-heading',
+            disabled || quoting ? 'bg-brand-disabled' : 'bg-brand-heading',
           )}
         >
           <Typography variant="button" className="mr-xs text-[13px] tracking-normal">
-            Buy Now
+            {quoting ? 'Loading...' : 'Buy Now'}
           </Typography>
           <ArrowRightIcon size={iconSizes.sm} color={brandColors.white} />
         </Pressable>

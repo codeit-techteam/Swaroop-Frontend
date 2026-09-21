@@ -4,12 +4,21 @@
  */
 export const DEVELOPMENT_MODE = true;
 
+/** Shared demo identity across Customer + Seller mobile panels. */
 export const DEMO_PHONE = '8240890242';
 export const DEMO_OTP = '123456';
+export const DEMO_USER_NAME = 'Karan Veer';
+export const DEMO_CUSTOMER_EMAIL = 'customer@test.local';
+export const DEMO_SELLER_EMAIL = 'seller@test.local';
+export const DEMO_PASSWORD = 'Test@12345';
 
 export const DEV_AUTH = {
   phoneNumber: DEMO_PHONE,
   otp: DEMO_OTP,
+  displayName: DEMO_USER_NAME,
+  customerEmail: DEMO_CUSTOMER_EMAIL,
+  sellerEmail: DEMO_SELLER_EMAIL,
+  password: DEMO_PASSWORD,
   invalidOtpMessage: 'Invalid OTP',
 } as const;
 
@@ -30,6 +39,8 @@ export const DEV_FEATURES = {
   autoKycApproval: true,
   /** Persist login + KYC locally via AsyncStorage. */
   localStorageLogin: true,
+  /** Allow local session when catalog backend is unreachable. */
+  allowOfflineBackendFallback: true,
   /** Dev-only wait before KYC is marked approved after submission. */
   kycVerificationDelayMs: 8000,
 } as const;
@@ -46,3 +57,6 @@ export const getKycVerificationDelayMs = (): number =>
 
 export const isLocalStorageLoginEnabled = (): boolean =>
   DEVELOPMENT_MODE && DEV_FEATURES.localStorageLogin;
+
+export const isOfflineBackendFallbackEnabled = (): boolean =>
+  DEVELOPMENT_MODE && DEV_FEATURES.allowOfflineBackendFallback;

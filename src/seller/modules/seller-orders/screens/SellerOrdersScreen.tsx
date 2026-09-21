@@ -51,6 +51,8 @@ export const SellerOrdersScreen = memo(function SellerOrdersScreen() {
   const rejectOrder = useSellerOrdersStore((state) => state.rejectOrder);
   const syncFromDispatch = useSellerOrdersStore((state) => state.syncFromDispatch);
   const refreshSellerOrdersState = useSellerOrdersStore((state) => state.refreshSellerOrdersState);
+  const hydrateSellerOrdersState = useSellerOrdersStore((state) => state.hydrateSellerOrdersState);
+  const ordersHydrated = useSellerOrdersStore((state) => state.isHydrated);
 
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<SellerOrderTabFilter>('all');
@@ -59,16 +61,18 @@ export const SellerOrdersScreen = memo(function SellerOrdersScreen() {
   const [rejectReason, setRejectReason] = useState<SellerRejectReason>('Insufficient Inventory');
   const [rejectRemarks, setRejectRemarks] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  const isLoading = useSkeletonLoading();
+  const isLoading = useSkeletonLoading(ordersHydrated);
   const { isRefreshing, refresh } = usePullToRefresh(async () => {
     refreshSellerOrdersState();
     syncFromDispatch();
   });
 
   useEffect(() => {
-    refreshSellerOrdersState();
+    if (!ordersHydrated) {
+      hydrateSellerOrdersState();
+    }
     syncFromDispatch();
-  }, [refreshSellerOrdersState, syncFromDispatch]);
+  }, [hydrateSellerOrdersState, ordersHydrated, syncFromDispatch]);
 
   const filteredOrders = useMemo(
     () => searchOrders(query, activeTab),

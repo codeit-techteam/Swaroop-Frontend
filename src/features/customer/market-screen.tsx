@@ -15,6 +15,7 @@ import {
   SearchBar,
   SearchSuggestions,
 } from '@/components/market';
+import { MarketListSkeleton } from '@/components/ui/skeleton';
 import { Typography } from '@/components/ui/typography';
 import { TAB_BAR_HEIGHT } from '@/constants/dashboard';
 import { marketCategoriesFromCatalog } from '@/constants/marketProducts';
@@ -51,10 +52,7 @@ export const CustomerMarketScreen = () => {
     handleSelectCategory,
     handleDismissSuggestions,
   } = useMarketSearch(marketProducts);
-  const categories = useMemo(
-    () => marketCategoriesFromCatalog(marketProducts),
-    [marketProducts],
-  );
+  const categories = useMemo(() => marketCategoriesFromCatalog(marketProducts), [marketProducts]);
 
   const shouldAutoFocus = useMemo(() => {
     const value = params.focusSearch;
@@ -134,9 +132,9 @@ export const CustomerMarketScreen = () => {
 
   if (loading) {
     return (
-      <View className="flex-1 bg-brand-white">
+      <View className="flex-1 bg-brand-white" accessibilityState={{ busy: true }}>
         <MarketHeader onLocationPress={handleLocationPress} onCartPress={handleCartPress} />
-        <EmptyState title="Loading catalog" description="Fetching live grades from the marketplace." />
+        <MarketListSkeleton />
       </View>
     );
   }

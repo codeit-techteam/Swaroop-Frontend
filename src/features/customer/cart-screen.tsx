@@ -1,8 +1,10 @@
-import { memo, useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect } from 'react';
 
 import { ScrollView, View } from 'react-native';
 
 import { type Href, useRouter } from 'expo-router';
+
+import Toast from 'react-native-toast-message';
 
 import {
   CartHeader,
@@ -14,7 +16,7 @@ import {
   OrderSummaryCard,
   TrustFeatures,
 } from '@/components/cart';
-import { CART_SKELETON_MS, DEFAULT_CART_DELIVERY } from '@/constants/cart';
+import { DEFAULT_CART_DELIVERY } from '@/constants/cart';
 import { ROUTES } from '@/navigation/routes';
 import {
   selectCartDelivery,
@@ -37,22 +39,11 @@ export const CustomerCartScreen = memo(function CustomerCartScreen() {
   const removeItem = useCartStore((state) => state.removeItem);
   const setDelivery = useCartStore((state) => state.setDelivery);
 
-  const [isLoading, setIsLoading] = useState(true);
-
   useEffect(() => {
     if (!isHydrated) {
       hydrateCart();
     }
   }, [hydrateCart, isHydrated]);
-
-  useEffect(() => {
-    setIsLoading(true);
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, CART_SKELETON_MS);
-
-    return () => clearTimeout(timer);
-  }, []);
 
   const handleBack = useCallback(() => {
     if (router.canGoBack()) {
@@ -118,8 +109,13 @@ export const CustomerCartScreen = memo(function CustomerCartScreen() {
     if (!summary.meetsMoq) {
       return;
     }
-    router.push(ROUTES.CUSTOMER.CHECKOUT as Href);
-  }, [router, summary.meetsMoq]);
+    Toast.show({
+      type: 'info',
+      text1: 'Use Buy Now for live pricing',
+      text2: 'Checkout totals come from a PetroTrade quote. Open the product and tap Buy Now.',
+      visibilityTime: 2800,
+    });
+  }, [summary.meetsMoq]);
 
   const isEmpty = items.length === 0;
 
@@ -127,7 +123,7 @@ export const CustomerCartScreen = memo(function CustomerCartScreen() {
     <View className="flex-1 bg-brand-background">
       <CartHeader onBackPress={handleBack} />
 
-      {isLoading || !isHydrated ? (
+      {!isHydrated ? (
         <CartSkeleton />
       ) : isEmpty ? (
         <EmptyCart onBrowsePress={handleBrowseMarketplace} />

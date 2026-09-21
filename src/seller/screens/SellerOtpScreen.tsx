@@ -5,11 +5,18 @@ import { Pressable, View } from 'react-native';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 
 import { AuthCard, FooterLinks, OtpInput, ScreenWrapper, Typography } from '@/components';
+import { isOfflineBackendFallbackEnabled } from '@/config/development';
+import { loginDevBackend } from '@/services/backend-session';
 import { SellerHeader, SellerPrimaryButton } from '@/seller/components';
-import { SELLER_DEMO_OTP, SELLER_RESEND_SECONDS } from '@/seller/constants';
+import {
+  SELLER_DEMO_NAME,
+  SELLER_DEMO_OTP,
+  SELLER_RESEND_SECONDS,
+} from '@/seller/constants';
 import { verifySellerOtp } from '@/seller/mock/mockSellerService';
 import { getSellerInitialRoute } from '@/seller/navigation/getSellerInitialRoute';
 import { useSellerStore } from '@/seller/store/sellerStore';
+import { logger } from '@/utils/logger';
 
 const formatTimer = (seconds: number): string => `00:${seconds.toString().padStart(2, '0')}`;
 
@@ -19,6 +26,7 @@ export const SellerOtpScreen = () => {
   const [otp, setOtp] = useState('');
   const [otpError, setOtpError] = useState<string | undefined>();
   const [secondsLeft, setSecondsLeft] = useState(SELLER_RESEND_SECONDS);
+  const [isVerifying, setIsVerifying] = useState(false);
   const setMobile = useSellerStore((state) => state.setMobile);
   const markOtpVerified = useSellerStore((state) => state.markOtpVerified);
 
@@ -33,11 +41,27 @@ export const SellerOtpScreen = () => {
     return () => clearInterval(timer);
   }, [secondsLeft]);
 
-  const handleVerify = useCallback(() => {
+  const handleVerify = useCallback(async () => {
     const mobile = params.mobile ?? '';
     if (!verifySellerOtp(mobile, otp)) {
       setOtpError(`Use ${SELLER_DEMO_OTP} for the frontend demo.`);
       return;
+    }
+
+    setIsVerifying(true);
+    try {
+      await loginDevBackend('seller');
+    } catch (error) {
+      logger.error('Seller OTP backend login failed', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+      if (!isOfflineBackendFallbackEnabled()) {
+        setOtpError('Unable to authenticate against the catalog backend.');
+        setIsVerifying(false);
+        return;
+      }
+    } finally {
+      setIsVerifying(false);
     }
 
     setMobile(mobile);
@@ -59,6 +83,9 @@ export const SellerOtpScreen = () => {
         </Typography>
         <Typography variant="subheadingLeft" className="mt-sm">
           Enter the 6-digit OTP sent to +91 {params.mobile ?? ''}.
+        </Typography>
+        <Typography variant="legal" className="mt-sm text-left">
+          Dev login: {SELLER_DEMO_NAME} · OTP {SELLER_DEMO_OTP}
         </Typography>
 
         <OtpInput
@@ -93,10 +120,12 @@ export const SellerOtpScreen = () => {
         </Pressable>
 
         <SellerPrimaryButton
-          label="Verify & Continue"
+          label={isVerifying ? 'Verifying…' : 'Verify & Continue'}
           className="mt-xl"
-          disabled={otp.length !== 6}
-          onPress={handleVerify}
+          disabled={otp.length !== 6 || isVerifying}
+          onPress={() => {
+            void handleVerify();
+          }}
         />
 
         <View className="mt-lg rounded-2xl bg-brand-surface p-md">

@@ -1,38 +1,16 @@
-import { useCallback, useEffect, useState } from 'react';
-
-const DEFAULT_SKELETON_MS = 1200;
-
-export function useSkeletonLoading(delayMs = DEFAULT_SKELETON_MS): boolean {
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), delayMs);
-    return () => clearTimeout(timer);
-  }, [delayMs]);
-
-  const reset = useCallback(() => {
-    setIsLoading(true);
-    const timer = setTimeout(() => setIsLoading(false), delayMs);
-    return () => clearTimeout(timer);
-  }, [delayMs]);
-
-  void reset;
-
-  return isLoading;
+/**
+ * Skeleton visibility must follow real request/hydrate state.
+ * Pass `ready=true` when data is available; skeleton shows while ready is false.
+ *
+ * Calling with no args returns false (never invents a delay).
+ */
+export function useSkeletonLoading(ready = true): boolean {
+  return !ready;
 }
 
-export function useDelayedLoading(active: boolean, delayMs = DEFAULT_SKELETON_MS): boolean {
-  const [isLoading, setIsLoading] = useState(active);
-
-  useEffect(() => {
-    if (!active) {
-      setIsLoading(false);
-      return;
-    }
-    setIsLoading(true);
-    const timer = setTimeout(() => setIsLoading(false), delayMs);
-    return () => clearTimeout(timer);
-  }, [active, delayMs]);
-
-  return isLoading;
+/**
+ * When `active` is true, treat as loading. No artificial delay.
+ */
+export function useDelayedLoading(active: boolean): boolean {
+  return active;
 }

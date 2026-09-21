@@ -42,8 +42,8 @@ export const SellerAppSettingsScreen = memo(function SellerAppSettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const isOffline = useSellerOffline();
-  const isLoading = useSkeletonLoading();
-  const { settings, appVersion, updateSetting, clearCache } = useSellerSettings();
+  const { settings, appVersion, updateSetting, clearCache, isReady } = useSellerSettings();
+  const isLoading = useSkeletonLoading(isReady);
   const [picker, setPicker] = useState<PickerState>({ visible: false, field: null });
   const [statusSheet, setStatusSheet] = useState<{ visible: boolean; success: boolean; message: string }>({
     visible: false,

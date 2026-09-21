@@ -68,7 +68,7 @@ export const OrderCard = memo(function OrderCard({
       <View className="flex-row items-start justify-between">
         <View className="flex-1 flex-row flex-wrap items-center gap-sm">
           <Typography variant="roleTitle" className="text-[14px] text-brand-primary">
-            {formatOrderNumber(order.id)}
+            {formatOrderNumber(order.id, order.poNumber)}
           </Typography>
           <OrderStatusBadge order={order} className="rounded-full" />
           {showPayNow ? (

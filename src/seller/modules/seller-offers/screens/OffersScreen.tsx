@@ -90,6 +90,8 @@ export const OffersScreen = memo(function OffersScreen() {
   const resetEditor = useSellerOffersStore((state) => state.resetEditor);
   const selectOffer = useSellerOffersStore((state) => state.selectOffer);
   const refreshSellerOffersState = useSellerOffersStore((state) => state.refreshSellerOffersState);
+  const hydrateSellerOffersState = useSellerOffersStore((state) => state.hydrateSellerOffersState);
+  const offersHydrated = useSellerOffersStore((state) => state.isHydrated);
   const stats = useSellerOffersStore((state) => state.stats);
   const offers = useSellerOffersStore((state) => state.offers);
 
@@ -100,14 +102,18 @@ export const OffersScreen = memo(function OffersScreen() {
   const [appliedFilters, setAppliedFilters] = useState<FilterPreferences>(() =>
     getFilterPreferences('offers'),
   );
-  const isLoading = useSkeletonLoading();
+  const isLoading = useSkeletonLoading(offersHydrated);
   const { isRefreshing, refresh } = usePullToRefresh(async () => {
     refreshSellerOffersState();
   });
 
   useEffect(() => {
+    if (!offersHydrated) {
+      hydrateSellerOffersState();
+      return;
+    }
     refreshSellerOffersState();
-  }, [refreshSellerOffersState]);
+  }, [hydrateSellerOffersState, offersHydrated, refreshSellerOffersState]);
 
   const filterCount = appliedFilters.warehouse?.length ?? 0;
 

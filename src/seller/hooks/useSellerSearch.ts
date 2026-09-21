@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { DEBOUNCE_DELAY } from '@/constants';
-import { useSkeletonLoading } from '@/seller/hooks/useSkeletonLoading';
 import {
   addRecentSearch,
   clearRecentSearches,
@@ -16,7 +15,7 @@ export function useSellerSearch() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [recentSnapshot, setRecentSnapshot] = useState(getSearchSnapshot);
   const [isSearching, setIsSearching] = useState(false);
-  const isLoading = useSkeletonLoading();
+  const isLoading = false;
 
   useEffect(() => {
     if (!query.trim()) {

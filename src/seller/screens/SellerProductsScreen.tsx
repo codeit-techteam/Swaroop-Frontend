@@ -3,16 +3,24 @@ import { memo, useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, View } from 'react-native';
 
 import { type Href, useRouter } from 'expo-router';
+
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScreenWrapper, Typography } from '@/components';
-import { fetchSellerCatalogProducts } from '@/services/catalog';
+import {
+  SELLER_CATALOG_PARENT_FILTERS,
+  getCatalogGradesForFamily,
+  getMaterialsByParentGroup,
+  searchCatalogGrades,
+  type SellerMaterialFamily,
+} from '@/constants/materials-taxonomy';
 import { BackArrowIcon } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
 import {
   EmptyState,
   FilterChipRow,
+  ProductSkeleton,
   SearchField,
   SellerBottomNavigation,
   SellerModuleTopBar,
@@ -23,20 +31,14 @@ import {
   SellerListingCard,
   SellerMaterialTile,
 } from '@/seller/components/SellerCatalogComponents';
-import {
-  SELLER_CATALOG_PARENT_FILTERS,
-  getCatalogGradesForFamily,
-  getMaterialsByParentGroup,
-  searchCatalogGrades,
-  type SellerMaterialFamily,
-} from '@/constants/materials-taxonomy';
 import { navigateSellerBottomTab } from '@/seller/navigation/useSellerBottomNavigation';
 import { useSellerProductStore } from '@/seller/store/sellerProductStore';
 import type { SellerProduct, SellerProductStatus } from '@/seller/types';
-import type { MarketProduct } from '@/types/market';
 import { findSellerListingForCatalog } from '@/seller/utils/catalog';
+import { fetchSellerCatalogProducts } from '@/services/catalog';
 import { brandColors } from '@/theme/colors';
 import { elevation } from '@/theme/shadows';
+import type { MarketProduct } from '@/types/market';
 
 const listingTabs: { id: SellerProductStatus; label: string }[] = [
   { id: 'published', label: 'Published' },
@@ -62,25 +64,36 @@ export const SellerProductsScreen = memo(function SellerProductsScreen() {
 
   const [workspace, setWorkspace] = useState<WorkspaceTab>('catalog');
   const [query, setQuery] = useState('');
-  const [parentGroup, setParentGroup] = useState<(typeof SELLER_CATALOG_PARENT_FILTERS)[number]>('All');
+  const [parentGroup, setParentGroup] =
+    useState<(typeof SELLER_CATALOG_PARENT_FILTERS)[number]>('All');
   const [selectedFamily, setSelectedFamily] = useState<SellerMaterialFamily | null>(null);
   const [subCategory, setSubCategory] = useState('All');
   const [catalogProducts, setCatalogProducts] = useState<MarketProduct[]>([]);
   const [liveGradeCount, setLiveGradeCount] = useState<number | null>(null);
   const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [catalogLoading, setCatalogLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+    setCatalogLoading(true);
     void fetchSellerCatalogProducts()
       .then((grades) => {
+        if (cancelled) return;
         setCatalogProducts(grades);
         setLiveGradeCount(grades.length);
         setCatalogError(null);
+        setCatalogLoading(false);
       })
       .catch((error: unknown) => {
+        if (cancelled) return;
         setCatalogProducts([]);
         setLiveGradeCount(null);
         setCatalogError(error instanceof Error ? error.message : 'Unable to load Grade Master.');
+        setCatalogLoading(false);
       });
+    return () => {
+      cancelled = true;
+    };
   }, []);
   const [listingTab, setListingTab] = useState<SellerProductStatus>('published');
   const [pendingDelete, setPendingDelete] = useState<SellerProduct | null>(null);
@@ -169,207 +182,215 @@ export const SellerProductsScreen = memo(function SellerProductsScreen() {
       />
 
       <View className="flex-1">
-        <ScrollView
-          className="flex-1 px-lg"
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ paddingTop: 16, paddingBottom: insets.bottom + 120 }}
-        >
-          <View className="flex-row rounded-2xl bg-brand-white p-xs">
-            {([
-              { id: 'catalog', label: 'Catalog' },
-              { id: 'listings', label: 'My listings' },
-            ] as const).map((tab) => {
-              const active = workspace === tab.id;
-              return (
-                <Pressable
-                  key={tab.id}
-                  onPress={() => setWorkspace(tab.id)}
-                  className={`flex-1 rounded-2xl px-md py-md ${active ? 'bg-brand-navy' : ''}`}
-                >
-                  <Typography
-                    variant="roleTitle"
-                    className={`text-center text-[14px] ${active ? 'text-brand-white' : 'text-brand-body'}`}
-                  >
-                    {tab.label}
-                  </Typography>
-                </Pressable>
-              );
-            })}
+        {catalogLoading && workspace === 'catalog' ? (
+          <View className="flex-1 px-lg pt-md">
+            <ProductSkeleton />
           </View>
-
-          {workspace === 'catalog' ? (
-            <AnimatedSection entering={FadeInDown.duration(280)} className="mt-lg">
-              <Typography variant="headingLeft" className="text-[26px] leading-[32px]">
-                Marketplace catalog
-              </Typography>
-              <Typography variant="legal" className="mt-xs text-left text-brand-body">
-                {catalogError
-                  ? catalogError
-                  : `${liveGradeCount ?? '…'} grades live in the customer app. Tap a material to list it.`}
-              </Typography>
-
-              <View className="mt-lg">
-                <SearchField
-                  value={query}
-                  onChangeText={setQuery}
-                  placeholder="Search HDPE, Melamine, PE100..."
-                />
-              </View>
-
-              <View className="mt-md">
-                <FilterChipRow
-                  options={[...SELLER_CATALOG_PARENT_FILTERS]}
-                  selected={parentGroup}
-                  onSelect={(value) => {
-                    setParentGroup(value as (typeof SELLER_CATALOG_PARENT_FILTERS)[number]);
-                    setSelectedFamily(null);
-                    setSubCategory('All');
-                  }}
-                />
-              </View>
-
-              {selectedFamily && !query.trim() ? (
-                <View className="mt-lg">
+        ) : (
+          <ScrollView
+            className="flex-1 px-lg"
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ paddingTop: 16, paddingBottom: insets.bottom + 120 }}
+          >
+            <View className="flex-row rounded-2xl bg-brand-white p-xs">
+              {(
+                [
+                  { id: 'catalog', label: 'Catalog' },
+                  { id: 'listings', label: 'My listings' },
+                ] as const
+              ).map((tab) => {
+                const active = workspace === tab.id;
+                return (
                   <Pressable
-                    onPress={() => {
+                    key={tab.id}
+                    onPress={() => setWorkspace(tab.id)}
+                    className={`flex-1 rounded-2xl px-md py-md ${active ? 'bg-brand-navy' : ''}`}
+                  >
+                    <Typography
+                      variant="roleTitle"
+                      className={`text-center text-[14px] ${active ? 'text-brand-white' : 'text-brand-body'}`}
+                    >
+                      {tab.label}
+                    </Typography>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {workspace === 'catalog' ? (
+              <AnimatedSection entering={FadeInDown.duration(280)} className="mt-lg">
+                <Typography variant="headingLeft" className="text-[26px] leading-[32px]">
+                  Marketplace catalog
+                </Typography>
+                <Typography variant="legal" className="mt-xs text-left text-brand-body">
+                  {catalogError
+                    ? catalogError
+                    : `${liveGradeCount ?? '…'} grades live in the customer app. Tap a material to list it.`}
+                </Typography>
+
+                <View className="mt-lg">
+                  <SearchField
+                    value={query}
+                    onChangeText={setQuery}
+                    placeholder="Search HDPE, Melamine, PE100..."
+                  />
+                </View>
+
+                <View className="mt-md">
+                  <FilterChipRow
+                    options={[...SELLER_CATALOG_PARENT_FILTERS]}
+                    selected={parentGroup}
+                    onSelect={(value) => {
+                      setParentGroup(value as (typeof SELLER_CATALOG_PARENT_FILTERS)[number]);
                       setSelectedFamily(null);
                       setSubCategory('All');
                     }}
-                    className="flex-row items-center"
-                    accessibilityRole="button"
-                    accessibilityLabel="Back to materials"
-                  >
-                    <BackArrowIcon size={16} color={brandColors.navy} />
-                    <Typography variant="roleTitle" className="ml-sm text-[14px] text-brand-navy">
-                      All materials
-                    </Typography>
-                  </Pressable>
-                  <Typography variant="headingLeft" className="mt-sm text-[22px]">
-                    {selectedFamily.code}
-                  </Typography>
-                  <Typography variant="legal" className="mt-xs text-left text-brand-body">
-                    {selectedFamily.gradeCount} grades · {selectedFamily.parentGroup}
-                  </Typography>
-                  {selectedFamily.subCategories.length > 1 ? (
-                    <View className="mt-md">
-                      <FilterChipRow
-                        options={['All', ...selectedFamily.subCategories]}
-                        selected={subCategory}
-                        onSelect={setSubCategory}
-                      />
-                    </View>
-                  ) : null}
+                  />
                 </View>
-              ) : null}
 
-              {showTiles ? (
-                <View className="mt-lg flex-row flex-wrap justify-between">
-                  {families.map((family) => (
-                    <View key={family.id} className="mb-md" style={{ width: '48.5%' }}>
-                      <SellerMaterialTile
-                        family={family}
-                        listedCount={listedCountByFamily.get(family.name) ?? 0}
-                        onPress={() => {
-                          setSelectedFamily(family);
-                          setSubCategory('All');
-                        }}
+                {selectedFamily && !query.trim() ? (
+                  <View className="mt-lg">
+                    <Pressable
+                      onPress={() => {
+                        setSelectedFamily(null);
+                        setSubCategory('All');
+                      }}
+                      className="flex-row items-center"
+                      accessibilityRole="button"
+                      accessibilityLabel="Back to materials"
+                    >
+                      <BackArrowIcon size={16} color={brandColors.navy} />
+                      <Typography variant="roleTitle" className="ml-sm text-[14px] text-brand-navy">
+                        All materials
+                      </Typography>
+                    </Pressable>
+                    <Typography variant="headingLeft" className="mt-sm text-[22px]">
+                      {selectedFamily.code}
+                    </Typography>
+                    <Typography variant="legal" className="mt-xs text-left text-brand-body">
+                      {selectedFamily.gradeCount} grades · {selectedFamily.parentGroup}
+                    </Typography>
+                    {selectedFamily.subCategories.length > 1 ? (
+                      <View className="mt-md">
+                        <FilterChipRow
+                          options={['All', ...selectedFamily.subCategories]}
+                          selected={subCategory}
+                          onSelect={setSubCategory}
+                        />
+                      </View>
+                    ) : null}
+                  </View>
+                ) : null}
+
+                {showTiles ? (
+                  <View className="mt-lg flex-row flex-wrap justify-between">
+                    {families.map((family) => (
+                      <View key={family.id} className="mb-md" style={{ width: '48.5%' }}>
+                        <SellerMaterialTile
+                          family={family}
+                          listedCount={listedCountByFamily.get(family.name) ?? 0}
+                          onPress={() => {
+                            setSelectedFamily(family);
+                            setSubCategory('All');
+                          }}
+                        />
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <View className="mt-lg gap-md">
+                    {catalogGrades.length > 0 ? (
+                      catalogGrades.map((product) => (
+                        <SellerCatalogGradeRow
+                          key={product.id}
+                          product={product}
+                          listing={findSellerListingForCatalog(
+                            products,
+                            product.id,
+                            product.gradeCode,
+                          )}
+                          onPress={() => handleGradePress(product.id, product.gradeCode)}
+                        />
+                      ))
+                    ) : (
+                      <EmptyState
+                        variant="no_search_results"
+                        title="No matching grades"
+                        description="Try another material, grade code, or clear the search."
+                        ctaLabel="Clear search"
+                        onCtaPress={() => setQuery('')}
                       />
-                    </View>
-                  ))}
+                    )}
+                  </View>
+                )}
+              </AnimatedSection>
+            ) : (
+              <AnimatedSection entering={FadeInDown.duration(280)} className="mt-lg">
+                <Typography variant="headingLeft" className="text-[26px] leading-[32px]">
+                  Your listings
+                </Typography>
+                <Typography variant="legal" className="mt-xs text-left text-brand-body">
+                  Published grades appear in the customer marketplace.
+                </Typography>
+
+                <View className="mt-lg flex-row rounded-2xl bg-brand-white p-xs">
+                  {listingTabs.map((tab) => {
+                    const active = listingTab === tab.id;
+                    return (
+                      <Pressable
+                        key={tab.id}
+                        onPress={() => setListingTab(tab.id)}
+                        className={`flex-1 rounded-2xl px-md py-md ${active ? 'bg-brand-primary-light' : ''}`}
+                      >
+                        <Typography
+                          variant="roleTitle"
+                          className={`text-center text-[13px] ${active ? 'text-brand-navy' : 'text-brand-body'}`}
+                        >
+                          {tab.label}
+                        </Typography>
+                      </Pressable>
+                    );
+                  })}
                 </View>
-              ) : (
+
                 <View className="mt-lg gap-md">
-                  {catalogGrades.length > 0 ? (
-                    catalogGrades.map((product) => (
-                      <SellerCatalogGradeRow
+                  {listingProducts.length > 0 ? (
+                    listingProducts.map((product) => (
+                      <SellerListingCard
                         key={product.id}
                         product={product}
-                        listing={findSellerListingForCatalog(
-                          products,
-                          product.id,
-                          product.gradeCode,
-                        )}
-                        onPress={() => handleGradePress(product.id, product.gradeCode)}
+                        onPress={() => {
+                          router.push({
+                            pathname: ROUTES.SELLER.PRODUCT_DETAIL,
+                            params: { productId: product.id },
+                          } as unknown as Href);
+                        }}
+                        onEdit={() => {
+                          editProduct(product.id);
+                          router.push({
+                            pathname: ROUTES.SELLER.EDIT_PRODUCT,
+                            params: { productId: product.id },
+                          } as unknown as Href);
+                        }}
+                        onDeactivate={() => deactivateProduct(product.id)}
+                        onDelete={() => setPendingDelete(product)}
                       />
                     ))
                   ) : (
                     <EmptyState
-                      variant="no_search_results"
-                      title="No matching grades"
-                      description="Try another material, grade code, or clear the search."
-                      ctaLabel="Clear search"
-                      onCtaPress={() => setQuery('')}
+                      variant="no_products"
+                      title={`No ${listingTab} listings`}
+                      description="Pick a grade from the marketplace catalog to publish it with your stock and price."
+                      ctaLabel="Browse catalog"
+                      onCtaPress={() => setWorkspace('catalog')}
                     />
                   )}
                 </View>
-              )}
-            </AnimatedSection>
-          ) : (
-            <AnimatedSection entering={FadeInDown.duration(280)} className="mt-lg">
-              <Typography variant="headingLeft" className="text-[26px] leading-[32px]">
-                Your listings
-              </Typography>
-              <Typography variant="legal" className="mt-xs text-left text-brand-body">
-                Published grades appear in the customer marketplace.
-              </Typography>
-
-              <View className="mt-lg flex-row rounded-2xl bg-brand-white p-xs">
-                {listingTabs.map((tab) => {
-                  const active = listingTab === tab.id;
-                  return (
-                    <Pressable
-                      key={tab.id}
-                      onPress={() => setListingTab(tab.id)}
-                      className={`flex-1 rounded-2xl px-md py-md ${active ? 'bg-brand-primary-light' : ''}`}
-                    >
-                      <Typography
-                        variant="roleTitle"
-                        className={`text-center text-[13px] ${active ? 'text-brand-navy' : 'text-brand-body'}`}
-                      >
-                        {tab.label}
-                      </Typography>
-                    </Pressable>
-                  );
-                })}
-              </View>
-
-              <View className="mt-lg gap-md">
-                {listingProducts.length > 0 ? (
-                  listingProducts.map((product) => (
-                    <SellerListingCard
-                      key={product.id}
-                      product={product}
-                      onPress={() => {
-                        router.push({
-                          pathname: ROUTES.SELLER.PRODUCT_DETAIL,
-                          params: { productId: product.id },
-                        } as unknown as Href);
-                      }}
-                      onEdit={() => {
-                        editProduct(product.id);
-                        router.push({
-                          pathname: ROUTES.SELLER.EDIT_PRODUCT,
-                          params: { productId: product.id },
-                        } as unknown as Href);
-                      }}
-                      onDeactivate={() => deactivateProduct(product.id)}
-                      onDelete={() => setPendingDelete(product)}
-                    />
-                  ))
-                ) : (
-                  <EmptyState
-                    variant="no_products"
-                    title={`No ${listingTab} listings`}
-                    description="Pick a grade from the marketplace catalog to publish it with your stock and price."
-                    ctaLabel="Browse catalog"
-                    onCtaPress={() => setWorkspace('catalog')}
-                  />
-                )}
-              </View>
-            </AnimatedSection>
-          )}
-        </ScrollView>
+              </AnimatedSection>
+            )}
+          </ScrollView>
+        )}
 
         <SellerBottomNavigation
           active="products"

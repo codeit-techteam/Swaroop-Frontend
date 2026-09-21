@@ -112,8 +112,14 @@ export const CheckoutOrderSummaryCard = memo(function CheckoutOrderSummaryCard({
         <View className="mb-md h-px bg-brand-border" />
 
         <SummaryRow label="Base Amount" value={formatCheckoutCurrency(summary.baseSubtotal)} />
+        {summary.discount && summary.discount > 0 ? (
+          <SummaryRow
+            label="Discount"
+            value={`−${formatCheckoutCurrency(summary.discount)}`}
+          />
+        ) : null}
         <SummaryRow label={summary.freightLabel} value={formatCheckoutCurrency(summary.freight)} />
-        <SummaryRow label="GST (18%)" value={formatCheckoutCurrency(summary.gst)} />
+        <SummaryRow label={summary.gstLabel ?? 'GST (18%)'} value={formatCheckoutCurrency(summary.gst)} />
         <SummaryRow
           label="Platform Fee"
           value={formatCheckoutCurrency(summary.platformFee)}
@@ -121,7 +127,11 @@ export const CheckoutOrderSummaryCard = memo(function CheckoutOrderSummaryCard({
         />
         <SummaryRow
           label="Insurance"
-          value={summary.insuranceIncluded ? 'Included' : formatCheckoutCurrency(0)}
+          value={
+            summary.insuranceIncluded
+              ? 'Included'
+              : formatCheckoutCurrency(summary.insuranceAmount ?? 0)
+          }
           muted
         />
 

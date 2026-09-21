@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react';
 
-import { useSkeletonLoading } from '@/seller/hooks/useSkeletonLoading';
 import {
   getSecuritySnapshot,
   logoutAllDevices,
@@ -9,8 +8,9 @@ import {
 import type { SecuritySettings } from '@/seller/types/security';
 
 export function useSellerSecurity() {
-  const [snapshot, setSnapshot] = useState(getSecuritySnapshot);
-  const isLoading = useSkeletonLoading();
+  const [snapshot, setSnapshot] = useState(() => getSecuritySnapshot());
+  // Local snapshot is available synchronously.
+  const isLoading = false;
 
   const updateSetting = useCallback((patch: Partial<SecuritySettings>) => {
     updateSecuritySettings(patch);

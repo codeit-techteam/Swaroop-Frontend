@@ -21,6 +21,7 @@ import {
   TrendingMaterialCard,
 } from '@/components/home';
 import { CurrentShipmentCard } from '@/components/home/current-shipment-card';
+import { HomeFeedSkeleton } from '@/components/ui/skeleton';
 import {
   DEFAULT_DELIVERY_LOCATION,
   QUICK_SUMMARY_ITEMS,
@@ -29,7 +30,8 @@ import {
 import { getTrackRouteForOrder, inferOrderStatus } from '@/constants/orderWorkflow';
 import { ROUTES } from '@/navigation/routes';
 import { fetchCustomerMarketplaceProducts } from '@/services/catalog';
-import type { MarketProduct } from '@/types/market';
+import { fetchCustomerHomeBanners } from '@/services/cms';
+import { fetchCustomerFinanceSummary } from '@/services/orders';
 import { selectLocation, useAuthStore } from '@/store/auth-store';
 import {
   selectActiveOrder,
@@ -37,7 +39,14 @@ import {
   selectOrders,
   useOrderStore,
 } from '@/store/order-store';
-import type { DeliveryLocation, HomeBanner, LowestLandedCost, TrendingProduct, WatchlistItem } from '@/types/home';
+import type {
+  DeliveryLocation,
+  HomeBanner,
+  LowestLandedCost,
+  TrendingProduct,
+  WatchlistItem,
+} from '@/types/home';
+import type { MarketProduct } from '@/types/market';
 
 function formatMtPrice(price: number) {
   if (!price) return 'Price on request';
@@ -55,7 +64,6 @@ function toTrending(product: MarketProduct): TrendingProduct {
     name: product.name,
     grade: product.grade,
     priceLabel: formatMtPrice(product.price),
-    imageUrl: product.image || '',
   };
 }
 
@@ -84,6 +92,10 @@ export const CustomerHomeScreen = () => {
   const isOrderHydrated = useOrderStore(selectOrderHydrated);
   const hydrateOrder = useOrderStore((state) => state.hydrateOrder);
   const [catalog, setCatalog] = useState<MarketProduct[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [banners, setBanners] = useState<HomeBanner[]>([]);
+  const [dueInvoicesLabel, setDueInvoicesLabel] = useState('₹0');
 
   useEffect(() => {
     if (!isOrderHydrated) {
@@ -95,15 +107,42 @@ export const CustomerHomeScreen = () => {
     let cancelled = false;
     void fetchCustomerMarketplaceProducts()
       .then((products) => {
-        if (!cancelled) setCatalog(products);
+        if (cancelled) return;
+        setCatalog(products);
+        setCatalogLoading(false);
+      })
+      .catch((cause: unknown) => {
+        if (cancelled) return;
+        setCatalog([]);
+        setCatalogError(
+          cause instanceof Error ? cause.message : 'Unable to load marketplace catalog.',
+        );
+        setCatalogLoading(false);
+      });
+    void fetchCustomerHomeBanners()
+      .then((items) => {
+        if (!cancelled) setBanners(items);
       })
       .catch(() => {
-        if (!cancelled) setCatalog([]);
+        if (!cancelled) setBanners([]);
+      });
+    void fetchCustomerFinanceSummary()
+      .then((summary) => {
+        if (cancelled) return;
+        const amount = Number(summary?.outstandingAmount ?? 0);
+        setDueInvoicesLabel(
+          Number.isFinite(amount) ? `₹${Math.round(amount).toLocaleString('en-IN')}` : '₹0',
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setDueInvoicesLabel('₹0');
       });
     return () => {
       cancelled = true;
     };
   }, []);
+
+  const showHomeSkeleton = catalogLoading || !isOrderHydrated;
 
   const pricedCatalog = useMemo(
     () => [...catalog].filter((item) => item.price > 0).sort((a, b) => a.price - b.price),
@@ -139,9 +178,11 @@ export const CustomerHomeScreen = () => {
     (order) => inferOrderStatus(order) !== 'DELIVERED' && order.shipmentStatus !== 'cancelled',
   ).length;
 
-  const quickSummaryItems = QUICK_SUMMARY_ITEMS.map((item) =>
-    item.id === 'summary-active-orders' ? { ...item, value: String(activeOrderCount) } : item,
-  );
+  const quickSummaryItems = QUICK_SUMMARY_ITEMS.map((item) => {
+    if (item.id === 'summary-active-orders') return { ...item, value: String(activeOrderCount) };
+    if (item.id === 'summary-due-invoices') return { ...item, value: dueInvoicesLabel };
+    return item;
+  });
 
   const openLocationSheet = useCallback(() => {
     locationSheetRef.current?.present();
@@ -229,85 +270,97 @@ export const CustomerHomeScreen = () => {
         onNotificationPress={() => showInfoToast('Notifications', 'You have 2 new market alerts.')}
       />
 
-      <ScrollView
-        className="flex-1"
-        showsVerticalScrollIndicator={false}
-        contentContainerClassName="pb-xl"
-        contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + 24 }}
-      >
-        <View>
-          <LocationSelector location={selectedLocation} onPress={openLocationSheet} />
-          <SearchBar onPress={navigateToMarket} onFilterPress={navigateToMarket} />
+      {showHomeSkeleton ? (
+        <View className="flex-1 pt-md" style={{ paddingBottom: TAB_BAR_HEIGHT + 24 }}>
+          <HomeFeedSkeleton />
         </View>
-
-        <HeroCarousel onActionPress={handleBannerAction} />
-
-        {activeOrder ? (
-          <View className="mt-lg">
-            <CurrentShipmentCard order={activeOrder} onTrackPress={handleTrackShipment} />
+      ) : (
+        <ScrollView
+          className="flex-1"
+          showsVerticalScrollIndicator={false}
+          contentContainerClassName="pb-xl"
+          contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + 24 }}
+        >
+          <View>
+            <LocationSelector location={selectedLocation} onPress={openLocationSheet} />
+            <SearchBar onPress={navigateToMarket} onFilterPress={navigateToMarket} />
           </View>
-        ) : null}
 
-        <View className="mt-lg flex-row gap-md px-lg">
-          {quickSummaryItems.map((item) => (
-            <QuickSummaryCard key={item.id} item={item} onPress={navigateToOrders} />
-          ))}
-        </View>
+          {banners.length > 0 ? (
+            <HeroCarousel banners={banners} onActionPress={handleBannerAction} />
+          ) : null}
 
-        <View className="mt-xl">
-          <SectionHeader
-            title="Price Watchlist"
-            actionLabel="EDIT"
-            onActionPress={() =>
-              showInfoToast('Edit Watchlist', 'Manage your polymer price alerts.')
-            }
-          />
-          <View className="mx-lg mt-md overflow-hidden rounded-xl border border-brand-border/60 bg-brand-white shadow-sm">
-            {watchlist.length ? (
-              watchlist.map((item, index) => (
-                <WatchlistCard
-                  key={item.id}
-                  item={item}
-                  onPress={handleWatchlistPress}
-                  showDivider={index < watchlist.length - 1}
+          {activeOrder ? (
+            <View className="mt-lg">
+              <CurrentShipmentCard order={activeOrder} onTrackPress={handleTrackShipment} />
+            </View>
+          ) : null}
+
+          <View className="mt-lg flex-row gap-md px-lg">
+            {quickSummaryItems.map((item) => (
+              <QuickSummaryCard key={item.id} item={item} onPress={navigateToOrders} />
+            ))}
+          </View>
+
+          <View className="mt-xl">
+            <SectionHeader
+              title="Price Watchlist"
+              actionLabel="EDIT"
+              onActionPress={() =>
+                showInfoToast('Edit Watchlist', 'Manage your polymer price alerts.')
+              }
+            />
+            <View className="mx-lg mt-md overflow-hidden rounded-xl border border-brand-border/60 bg-brand-white shadow-sm">
+              {catalogError ? (
+                <View className="px-lg py-lg">
+                  <Text className="text-sm text-brand-muted">{catalogError}</Text>
+                </View>
+              ) : watchlist.length ? (
+                watchlist.map((item, index) => (
+                  <WatchlistCard
+                    key={item.id}
+                    item={item}
+                    onPress={handleWatchlistPress}
+                    showDivider={index < watchlist.length - 1}
+                  />
+                ))
+              ) : (
+                <View className="px-lg py-lg">
+                  <Text className="text-sm text-brand-muted">No live prices available yet.</Text>
+                </View>
+              )}
+            </View>
+          </View>
+
+          <View className="mt-xl">
+            <SectionHeader title="Trending Materials" />
+            <View className="mt-md h-[168px]">
+              {trendingProducts.length ? (
+                <FlashList
+                  data={trendingProducts}
+                  renderItem={renderTrendingItem}
+                  keyExtractor={(item) => item.id}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ paddingHorizontal: 16 }}
                 />
-              ))
-            ) : (
-              <View className="px-lg py-lg">
-                <Text className="text-sm text-brand-muted">
-                  No live prices available yet.
-                </Text>
-              </View>
-            )}
+              ) : (
+                <View className="mx-lg justify-center">
+                  <Text className="text-sm text-brand-muted">
+                    {catalogError ? catalogError : 'No products available.'}
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
-        </View>
 
-        <View className="mt-xl">
-          <SectionHeader title="Trending Materials" />
-          <View className="mt-md h-[196px]">
-            {trendingProducts.length ? (
-              <FlashList
-                data={trendingProducts}
-                renderItem={renderTrendingItem}
-                keyExtractor={(item) => item.id}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: 16 }}
-              />
-            ) : (
-              <View className="mx-lg justify-center">
-                <Text className="text-sm text-brand-muted">No products available.</Text>
-              </View>
-            )}
-          </View>
-        </View>
-
-        {lowestCost ? (
-          <View className="mb-lg mt-lg">
-            <LowestCostCard data={lowestCost} onPress={navigateToMarket} />
-          </View>
-        ) : null}
-      </ScrollView>
+          {lowestCost ? (
+            <View className="mb-lg mt-lg">
+              <LowestCostCard data={lowestCost} onPress={navigateToMarket} />
+            </View>
+          ) : null}
+        </ScrollView>
+      )}
 
       <LocationBottomSheet
         ref={locationSheetRef}

@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 
 import { usePullToRefresh } from '@/seller/hooks/usePullToRefresh';
-import { useSkeletonLoading } from '@/seller/hooks/useSkeletonLoading';
 import {
   createSupportTicket,
   filterTicketsByTab,
@@ -11,9 +10,10 @@ import {
 import type { RaiseTicketInput, TicketFilterTab } from '@/seller/types/support';
 
 export function useSellerSupport() {
-  const [snapshot, setSnapshot] = useState(getSupportSnapshot);
+  const [snapshot, setSnapshot] = useState(() => getSupportSnapshot());
   const [activeTab, setActiveTab] = useState<TicketFilterTab>('open');
-  const isLoading = useSkeletonLoading();
+  // Local snapshot is available synchronously.
+  const isLoading = false;
 
   const filteredTickets = useMemo(
     () => filterTicketsByTab(snapshot.tickets, activeTab),

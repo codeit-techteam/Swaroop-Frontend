@@ -1,5 +1,5 @@
 import { PAGINATION, STORAGE_KEYS } from '@/constants';
-import { MOCK_DOCUMENTS } from '@/seller/mock/documents';
+import { fetchSellerDocuments } from '@/services/seller-operations';
 import type {
   DocumentFilterTab,
   DocumentsSnapshot,
@@ -9,11 +9,7 @@ import { getStorageItem, setStorageItem } from '@/utils/storage';
 
 const PAGE_SIZE = PAGINATION.DEFAULT_LIMIT;
 
-let documentsCache = [...MOCK_DOCUMENTS];
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+let documentsCache: SellerDocumentItem[] = [];
 
 export function filterDocuments(
   documents: SellerDocumentItem[],
@@ -62,14 +58,14 @@ export async function fetchDocuments(
   tab: DocumentFilterTab,
   page: number,
 ): Promise<DocumentsSnapshot> {
-  await delay(800);
+  const live = await fetchSellerDocuments();
+  documentsCache = live;
   const filtered = filterDocuments(documentsCache, query, tab);
   return paginateDocuments(filtered, page);
 }
 
 export async function refreshDocuments(): Promise<void> {
-  await delay(1500);
-  documentsCache = [...MOCK_DOCUMENTS];
+  documentsCache = await fetchSellerDocuments();
 }
 
 export function getDocumentById(documentId: string): SellerDocumentItem | undefined {

@@ -14,6 +14,7 @@ import {
   EmptyState,
   FilterChipRow,
   InventoryProductCard,
+  InventorySkeleton,
   InventorySummaryCard,
   SearchField,
   SellerBottomNavigation,
@@ -47,6 +48,8 @@ export const SellerInventoryScreen = memo(function SellerInventoryScreen() {
   const warehouses = useInventoryStore((state) => state.warehouses);
   const selectProduct = useInventoryStore((state) => state.selectProduct);
   const refreshInventoryCatalog = useInventoryStore((state) => state.refreshInventoryCatalog);
+  const hydrateInventoryState = useInventoryStore((state) => state.hydrateInventoryState);
+  const isHydrated = useInventoryStore((state) => state.isHydrated);
   const updateStock = useInventoryStore((state) => state.updateStock);
 
   const [query, setQuery] = useState('');
@@ -61,8 +64,12 @@ export const SellerInventoryScreen = memo(function SellerInventoryScreen() {
   const [reason, setReason] = useState<StockAdjustmentReason>('New Procurement');
 
   useEffect(() => {
+    if (!isHydrated) {
+      hydrateInventoryState();
+      return;
+    }
     refreshInventoryCatalog();
-  }, [refreshInventoryCatalog]);
+  }, [hydrateInventoryState, isHydrated, refreshInventoryCatalog]);
 
   const { isRefreshing, refresh } = usePullToRefresh(async () => {
     refreshInventoryCatalog();
@@ -89,9 +96,13 @@ export const SellerInventoryScreen = memo(function SellerInventoryScreen() {
         return true;
       }
 
-      return [product.productName, product.grade, product.brand, product.category, product.subcategory].some(
-        (value) => value.toLowerCase().includes(normalizedQuery),
-      );
+      return [
+        product.productName,
+        product.grade,
+        product.brand,
+        product.category,
+        product.subcategory,
+      ].some((value) => value.toLowerCase().includes(normalizedQuery));
     });
   }, [category, lens, products, query]);
 
@@ -139,144 +150,153 @@ export const SellerInventoryScreen = memo(function SellerInventoryScreen() {
         onBellPress={() => router.push(ROUTES.SELLER.NOTIFICATIONS as Href)}
       />
       <View className="flex-1">
-        <ScrollView
-          className="flex-1 px-lg"
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingTop: 16, paddingBottom: insets.bottom + 108 }}
-          keyboardShouldPersistTaps="handled"
-          refreshControl={
-            <RefreshControl refreshing={isRefreshing} onRefresh={() => void refresh()} />
-          }
-        >
-          <View className="flex-row items-end justify-between">
-            <View className="flex-1 pr-md">
-              <Typography variant="headingLeft" className="text-[26px] leading-[32px]">
-                Stock desk
-              </Typography>
-              <Typography variant="legal" className="mt-xs text-left text-brand-body">
-                Marketplace grades across {warehouses.length} warehouses
-              </Typography>
-            </View>
-            <Pressable
-              onPress={() => router.push(ROUTES.SELLER.INVENTORY_HISTORY as Href)}
-              accessibilityRole="button"
-              accessibilityLabel="View inventory history"
-              className="rounded-full bg-brand-primary-light px-md py-sm"
-            >
-              <Typography variant="badge" className="text-[11px] text-brand-primary-dark">
-                History
-              </Typography>
-            </Pressable>
+        {!isHydrated ? (
+          <View className="flex-1 px-lg pt-md">
+            <InventorySkeleton />
           </View>
+        ) : (
+          <ScrollView
+            className="flex-1 px-lg"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingTop: 16, paddingBottom: insets.bottom + 108 }}
+            keyboardShouldPersistTaps="handled"
+            refreshControl={
+              <RefreshControl refreshing={isRefreshing} onRefresh={() => void refresh()} />
+            }
+          >
+            <View className="flex-row items-end justify-between">
+              <View className="flex-1 pr-md">
+                <Typography variant="headingLeft" className="text-[26px] leading-[32px]">
+                  Stock desk
+                </Typography>
+                <Typography variant="legal" className="mt-xs text-left text-brand-body">
+                  Marketplace grades across {warehouses.length} warehouses
+                </Typography>
+              </View>
+              <Pressable
+                onPress={() => router.push(ROUTES.SELLER.INVENTORY_HISTORY as Href)}
+                accessibilityRole="button"
+                accessibilityLabel="View inventory history"
+                className="rounded-full bg-brand-primary-light px-md py-sm"
+              >
+                <Typography variant="badge" className="text-[11px] text-brand-primary-dark">
+                  History
+                </Typography>
+              </Pressable>
+            </View>
 
-          <AnimatedSection entering={FadeInDown.duration(360).delay(40)} className="mt-lg">
-            <View className="flex-row gap-sm">
-              <View className="flex-1">
-                <InventorySummaryCard
-                  title="Total products"
-                  value={summary.totalProducts}
-                  accent="blue"
-                  selected={false}
-                  icon={<StoreIcon size={15} color={brandColors.primaryDark} />}
-                  onPress={() => {
-                    setLens('all');
-                    setCategory('All Products');
+            <AnimatedSection entering={FadeInDown.duration(360).delay(40)} className="mt-lg">
+              <View className="flex-row gap-sm">
+                <View className="flex-1">
+                  <InventorySummaryCard
+                    title="Total products"
+                    value={summary.totalProducts}
+                    accent="blue"
+                    selected={false}
+                    icon={<StoreIcon size={15} color={brandColors.primaryDark} />}
+                    onPress={() => {
+                      setLens('all');
+                      setCategory('All Products');
+                    }}
+                  />
+                </View>
+                <View className="flex-1">
+                  <InventorySummaryCard
+                    title="Active offers"
+                    value={summary.activeOffers}
+                    accent="navy"
+                    selected={lens === 'offers'}
+                    icon={<CurrencyIcon size={15} color={brandColors.navy} />}
+                    onPress={() => toggleLens('offers')}
+                  />
+                </View>
+              </View>
+              <View className="mt-sm flex-row gap-sm">
+                <View className="flex-1">
+                  <InventorySummaryCard
+                    title="Low stock"
+                    value={summary.lowStock}
+                    accent="red"
+                    selected={lens === 'low_stock'}
+                    icon={<AlertCircleIcon size={15} color={brandColors.error} />}
+                    onPress={() => toggleLens('low_stock')}
+                  />
+                </View>
+                <View className="flex-1">
+                  <InventorySummaryCard
+                    title="Out of stock"
+                    value={summary.outOfStock}
+                    accent="gray"
+                    selected={lens === 'out_of_stock'}
+                    icon={<ClipboardCheckIcon size={15} color={brandColors.body} />}
+                    onPress={() => toggleLens('out_of_stock')}
+                  />
+                </View>
+              </View>
+            </AnimatedSection>
+
+            <AnimatedSection entering={FadeInDown.duration(360).delay(90)} className="mt-lg">
+              <SearchField
+                value={query}
+                onChangeText={setQuery}
+                placeholder="Search grade, material, or category"
+              />
+              <View className="mt-md">
+                <FilterChipRow
+                  options={inventoryCategoryOptions}
+                  selected={category}
+                  onSelect={(value) =>
+                    setCategory(value as (typeof inventoryCategoryOptions)[number])
+                  }
+                />
+              </View>
+              <Typography variant="legal" className="mt-md text-left text-brand-body">
+                {filteredProducts.length} of {products.length} grades
+                {lens === 'offers'
+                  ? ' with live offers'
+                  : lens === 'low_stock'
+                    ? ' running low'
+                    : lens === 'out_of_stock'
+                      ? ' out of stock'
+                      : ''}
+              </Typography>
+            </AnimatedSection>
+
+            <AnimatedSection
+              entering={FadeInDown.duration(360).delay(140)}
+              className="mt-md gap-md"
+            >
+              {filteredProducts.map((product) => (
+                <InventoryProductCard
+                  key={product.id}
+                  product={product}
+                  onUpdateStock={openStockSheet}
+                />
+              ))}
+              {filteredProducts.length === 0 ? (
+                <EmptyState
+                  variant={query.trim() ? 'no_search_results' : 'no_inventory'}
+                  title={query.trim() ? 'No matching grades' : 'No inventory items'}
+                  description={
+                    query.trim()
+                      ? 'Try another grade, brand, or clear the stock filter.'
+                      : 'Published products will show available, reserved, and offered stock here.'
+                  }
+                  ctaLabel={query.trim() || lens !== 'all' ? 'Clear filters' : 'Add Product'}
+                  onCtaPress={() => {
+                    if (query.trim() || lens !== 'all' || category !== 'All Products') {
+                      setQuery('');
+                      setLens('all');
+                      setCategory('All Products');
+                      return;
+                    }
+                    router.push(ROUTES.SELLER.ADD_PRODUCT as Href);
                   }}
                 />
-              </View>
-              <View className="flex-1">
-                <InventorySummaryCard
-                  title="Active offers"
-                  value={summary.activeOffers}
-                  accent="navy"
-                  selected={lens === 'offers'}
-                  icon={<CurrencyIcon size={15} color={brandColors.navy} />}
-                  onPress={() => toggleLens('offers')}
-                />
-              </View>
-            </View>
-            <View className="mt-sm flex-row gap-sm">
-              <View className="flex-1">
-                <InventorySummaryCard
-                  title="Low stock"
-                  value={summary.lowStock}
-                  accent="red"
-                  selected={lens === 'low_stock'}
-                  icon={<AlertCircleIcon size={15} color={brandColors.error} />}
-                  onPress={() => toggleLens('low_stock')}
-                />
-              </View>
-              <View className="flex-1">
-                <InventorySummaryCard
-                  title="Out of stock"
-                  value={summary.outOfStock}
-                  accent="gray"
-                  selected={lens === 'out_of_stock'}
-                  icon={<ClipboardCheckIcon size={15} color={brandColors.body} />}
-                  onPress={() => toggleLens('out_of_stock')}
-                />
-              </View>
-            </View>
-          </AnimatedSection>
-
-          <AnimatedSection entering={FadeInDown.duration(360).delay(90)} className="mt-lg">
-            <SearchField
-              value={query}
-              onChangeText={setQuery}
-              placeholder="Search grade, material, or category"
-            />
-            <View className="mt-md">
-              <FilterChipRow
-                options={inventoryCategoryOptions}
-                selected={category}
-                onSelect={(value) =>
-                  setCategory(value as (typeof inventoryCategoryOptions)[number])
-                }
-              />
-            </View>
-            <Typography variant="legal" className="mt-md text-left text-brand-body">
-              {filteredProducts.length} of {products.length} grades
-              {lens === 'offers'
-                ? ' with live offers'
-                : lens === 'low_stock'
-                  ? ' running low'
-                  : lens === 'out_of_stock'
-                    ? ' out of stock'
-                    : ''}
-            </Typography>
-          </AnimatedSection>
-
-          <AnimatedSection entering={FadeInDown.duration(360).delay(140)} className="mt-md gap-md">
-            {filteredProducts.map((product) => (
-              <InventoryProductCard
-                key={product.id}
-                product={product}
-                onUpdateStock={openStockSheet}
-              />
-            ))}
-            {filteredProducts.length === 0 ? (
-              <EmptyState
-                variant={query.trim() ? 'no_search_results' : 'no_inventory'}
-                title={query.trim() ? 'No matching grades' : 'No inventory items'}
-                description={
-                  query.trim()
-                    ? 'Try another grade, brand, or clear the stock filter.'
-                    : 'Published products will show available, reserved, and offered stock here.'
-                }
-                ctaLabel={query.trim() || lens !== 'all' ? 'Clear filters' : 'Add Product'}
-                onCtaPress={() => {
-                  if (query.trim() || lens !== 'all' || category !== 'All Products') {
-                    setQuery('');
-                    setLens('all');
-                    setCategory('All Products');
-                    return;
-                  }
-                  router.push(ROUTES.SELLER.ADD_PRODUCT as Href);
-                }}
-              />
-            ) : null}
-          </AnimatedSection>
-        </ScrollView>
+              ) : null}
+            </AnimatedSection>
+          </ScrollView>
+        )}
 
         <SellerBottomNavigation
           active="products"

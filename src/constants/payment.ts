@@ -39,28 +39,28 @@ export const PAYMENT_METHODS: PaymentMethod[] = [
   },
   {
     id: 'credit_15',
-    title: 'Credit 15 Days',
+    title: 'PetroTrade Credit — 15 Days',
     description: '',
     badge: { label: 'Credit Available', variant: 'credit' },
     discount: 0,
     interestRate: 1.5,
-    creditLimit: 5000000,
-    availableCredit: 3750000,
+    creditLimit: undefined,
+    availableCredit: undefined,
     timing: 'Net 15 days',
-    bestFor: 'Short-term working capital',
+    bestFor: 'Short-term working capital via PetroTrade Credit',
     hasCredit: true,
   },
   {
     id: 'credit_30',
-    title: 'Credit 30 Days',
+    title: 'PetroTrade Credit — 30 Days',
     description: '',
     badge: { label: 'Premium Credit', variant: 'premium' },
     discount: 0,
     interestRate: 2.5,
-    creditLimit: 5000000,
-    availableCredit: 3750000,
+    creditLimit: undefined,
+    availableCredit: undefined,
     timing: 'Net 30 days',
-    bestFor: 'Extended payment flexibility',
+    bestFor: 'Extended payment flexibility via PetroTrade Credit',
     hasCredit: true,
   },
 ];
@@ -71,7 +71,9 @@ export const PAYMENT_COMPARISON_ROWS: PaymentComparisonRow[] = PAYMENT_METHODS.m
   timing: method.timing,
   interest: method.interestRate > 0 ? `${method.interestRate}%` : 'None',
   credit: method.hasCredit
-    ? `₹${(method.availableCredit ?? 0).toLocaleString('en-IN')}`
+    ? method.availableCredit
+      ? `₹${method.availableCredit.toLocaleString('en-IN')}`
+      : 'PetroTrade managed'
     : 'Not required',
   bestFor: method.bestFor,
 }));

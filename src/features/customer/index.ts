@@ -23,3 +23,4 @@ export { CustomerDispatchStartedScreen } from '@/features/customer/dispatch-star
 export { CustomerShipmentTrackingScreen } from '@/features/customer/shipment-tracking-screen';
 export { CustomerOrderDetailScreen } from '@/features/customer/order-detail-screen';
 export { CustomerOrderConfirmationScreen } from '@/features/customer/order-confirmation-screen';
+export { CustomerPurchaseRequestSuccessScreen } from '@/features/customer/purchase-request-success-screen';

@@ -372,9 +372,16 @@ export const getOrderStatusBadgeConfigFromOrder = (order: Order): OrderStatusBad
 
 export const getCanonicalOrderStatus = (order: Order): OrderStatus => inferOrderStatus(order);
 
-export const formatOrderNumber = (orderId: string): string => {
-  const normalized = orderId.replace(/^PT-ORD-/, '');
-  return `#ORD-${normalized}`;
+export const formatOrderNumber = (orderId: string, poNumber?: string | null): string => {
+  if (poNumber?.trim()) {
+    const ref = poNumber.trim().replace(/^#/, '');
+    return ref.startsWith('PO-') || ref.startsWith('ORD-') || ref.startsWith('PR-')
+      ? `#${ref}`
+      : `#${ref}`;
+  }
+  // Prefer short UUID suffix only when PO number is unavailable
+  const short = orderId.replace(/-/g, '').slice(0, 8).toUpperCase();
+  return `#PO-${short}`;
 };
 
 export const formatOrderDate = (isoDate: string): string => {

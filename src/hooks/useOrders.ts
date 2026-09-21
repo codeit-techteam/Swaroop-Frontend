@@ -31,6 +31,7 @@ type UseOrdersResult = {
   filters: OrderFilterState;
   emptyStateTitle: string;
   showBrowseMarketplace: boolean;
+  isHydrated: boolean;
   setSelectedTab: (tab: OrderTabCategory) => void;
   filterSheetRef: React.RefObject<BottomSheetModal | null>;
   handleOpenFilters: () => void;
@@ -48,7 +49,7 @@ type UseOrdersResult = {
 };
 
 const EMPTY_STATE_COPY: Record<OrderTabCategory, { title: string; showBrowse: boolean }> = {
-  active: { title: 'No Active Orders', showBrowse: true },
+  active: { title: 'No orders yet', showBrowse: true },
   completed: { title: 'No Completed Orders', showBrowse: false },
   cancelled: { title: 'No Cancelled Orders', showBrowse: false },
 };
@@ -203,6 +204,7 @@ export const useOrders = (): UseOrdersResult => {
     filters,
     emptyStateTitle: emptyCopy.title,
     showBrowseMarketplace: emptyCopy.showBrowse,
+    isHydrated,
     setSelectedTab,
     filterSheetRef,
     handleOpenFilters,

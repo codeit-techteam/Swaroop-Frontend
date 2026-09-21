@@ -19,11 +19,11 @@ import type { CurrentUser, UserRole } from '@/types/session';
 const DEMO_REFERENCE_ID = 'PT-KYC-DEMO';
 
 const DEMO_BUSINESS_INFO: BusinessInformation = {
-  businessEntityName: 'Global PetroChem Ltd.',
+  businessEntityName: 'Karan Veer Trading',
   companyType: 'Private Limited',
   gstNumber: '22AAAAA0000A1Z5',
   panNumber: 'ABCDE1234F',
-  businessEmail: 'ops@globalpetrochem.demo',
+  businessEmail: 'karan.veer@test.local',
   mobileNumber: DEMO_PHONE,
   businessAddress: 'Mumbai, Maharashtra',
   state: 'Maharashtra',
@@ -184,7 +184,7 @@ export const seedDemoUser = (): CurrentUser => {
   saveUser({
     mobileNumber: DEMO_PHONE,
     selectedRole: 'buyer',
-    displayName: DEMO_BUSINESS_INFO.businessEntityName,
+    displayName: 'Karan Veer',
   });
 
   saveBusinessInfo({ ...DEMO_BUSINESS_INFO });

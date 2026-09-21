@@ -19,6 +19,7 @@ import {
   SecondaryButton,
   Typography,
 } from '@/components';
+import { DEMO_PHONE, DEMO_OTP, DEMO_USER_NAME } from '@/config/development';
 import { LockIcon } from '@/icons';
 import { useZodForm } from '@/lib/forms';
 import { ROUTES } from '@/navigation/routes';
@@ -38,7 +39,7 @@ export const CustomerLoginScreen = () => {
     handleSubmit,
     formState: { isValid },
   } = useZodForm(loginSchema, {
-    defaultValues: { mobile: '' },
+    defaultValues: { mobile: DEMO_PHONE },
     mode: 'onChange',
   });
 
@@ -97,6 +98,10 @@ export const CustomerLoginScreen = () => {
             disabled={!isValid}
             onPress={handleSubmit(onGetOtp)}
           />
+
+          <Typography variant="legal" className="mt-md text-center">
+            Dev: {DEMO_USER_NAME} · {DEMO_PHONE} · OTP {DEMO_OTP}
+          </Typography>
 
           <Divider className="my-xl" />
 

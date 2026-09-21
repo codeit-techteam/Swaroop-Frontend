@@ -1,4 +1,5 @@
 import { apiClient } from '@/api/client';
+import { ensureDevBackendSession } from '@/services/backend-session';
 import type { MarketProduct } from '@/types/market';
 
 type Envelope<T> = {
@@ -65,10 +66,12 @@ export function mapBlindProduct(product: BlindProduct): MarketProduct {
       form: typeof specs.form === 'string' ? specs.form : undefined,
     },
     creditEligible: Boolean(specs.creditEligible),
+    offerId: listing?.offerId,
   };
 }
 
 export async function fetchCustomerMarketplaceProducts(): Promise<MarketProduct[]> {
+  await ensureDevBackendSession('customer');
   const pages: BlindProduct[] = [];
   let page = 1;
   let totalPages = 1;
@@ -121,6 +124,7 @@ export function getLiveCatalogProduct(id?: string | null): MarketProduct | undef
 }
 
 export async function fetchSellerVisibleGrades(): Promise<SellerGrade[]> {
+  await ensureDevBackendSession('seller');
   const pages: SellerGrade[] = [];
   let page = 1;
   let totalPages = 1;

@@ -20,6 +20,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     bundleIdentifier: 'com.swaroop.app',
     infoPlist: {
       UIBackgroundModes: ['remote-notification'],
+      NSAppTransportSecurity: {
+        NSAllowsArbitraryLoads: true,
+        NSAllowsLocalNetworking: true,
+      },
     },
   },
   android: {
@@ -28,6 +32,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       backgroundColor: '#ffffff',
     },
     package: 'com.swaroop.app',
+    usesCleartextTraffic: true,
     permissions: [
       'android.permission.INTERNET',
       'android.permission.ACCESS_NETWORK_STATE',
@@ -80,6 +85,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           targetSdkVersion: 36,
           buildToolsVersion: '36.0.0',
           minSdkVersion: 24,
+          usesCleartextTraffic: true,
         },
         ios: {
           deploymentTarget: '16.4',

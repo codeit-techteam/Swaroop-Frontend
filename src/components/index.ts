@@ -15,7 +15,6 @@ export {
   BottomNavigation,
   NotificationBadge,
   BannerIndicator,
-  ProductImageCard,
   StatCard,
   PrimaryCTAButton,
 } from '@/components/home';

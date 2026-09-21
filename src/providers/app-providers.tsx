@@ -112,13 +112,22 @@ export const AppProviders = ({ children }: AppProvidersProps) => {
         hydrateCart();
         hydratePayment();
         hydrateOrder();
+
+        const selectedRole = useAuthStore.getState().selectedRole;
+        const isSellerSession = selectedRole === 'seller';
+
+        // Local seller mock/session stores are cheap; keep them available for role switch.
         hydrateSellerSession();
         hydrateProductState();
         hydrateInventoryState();
         hydrateDispatchState();
-        hydrateSellerOrdersState();
         hydrateSellerOffersState();
         hydrateSettlementState();
+
+        // Seller purchase-orders API requires a seller profile — never call it on customer sessions.
+        if (isSellerSession) {
+          hydrateSellerOrdersState();
+        }
       } finally {
         if (active) {
           setSessionReady(true);

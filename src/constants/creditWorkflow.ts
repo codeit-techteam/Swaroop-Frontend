@@ -114,7 +114,7 @@ export const createInitialCreditState = (
   orderAmount: number,
 ): CreditState => {
   const method = getPaymentMethodById(methodId);
-  const creditLimit = method.creditLimit ?? 5_000_000;
+  const creditLimit = method.creditLimit ?? 0;
   const availableLimit = method.availableCredit ?? 3_750_000;
 
   return {

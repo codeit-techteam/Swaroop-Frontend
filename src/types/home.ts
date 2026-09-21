@@ -24,7 +24,6 @@ export type TrendingProduct = {
   name: string;
   grade: string;
   priceLabel: string;
-  imageUrl: string;
 };
 
 export type MarketInsight = {

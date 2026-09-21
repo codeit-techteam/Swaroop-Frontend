@@ -20,8 +20,7 @@ export const PaymentOptionsCard = memo(function PaymentOptionsCard({
   onSelect,
   className,
 }: PaymentOptionsCardProps) {
-  const eligible = options.filter((option) => option.eligible);
-  const selected = eligible.find((option) => option.id === selectedId) ?? eligible[0];
+  const selected = options.find((option) => option.id === selectedId) ?? options.find((option) => option.eligible);
 
   return (
     <View
@@ -34,20 +33,26 @@ export const PaymentOptionsCard = memo(function PaymentOptionsCard({
         Payment Method
       </Typography>
       <View className="mt-md" style={{ gap: 8 }}>
-        {eligible.map((option) => {
+        {options.map((option) => {
           const isSelected = option.id === selectedId;
           return (
             <Pressable
               key={option.id}
-              onPress={() => onSelect(option.id)}
+              onPress={() => {
+                if (option.eligible) {
+                  onSelect(option.id);
+                }
+              }}
+              disabled={!option.eligible}
               accessibilityRole="radio"
-              accessibilityState={{ selected: isSelected }}
+              accessibilityState={{ selected: isSelected, disabled: !option.eligible }}
               accessibilityLabel={option.title}
               className={cn(
                 'flex-row items-center rounded-lg border px-md py-md',
                 isSelected
                   ? 'border-brand-primary bg-brand-primary-tint'
                   : 'border-brand-border bg-brand-surface',
+                !option.eligible && 'opacity-50',
               )}
             >
               <View

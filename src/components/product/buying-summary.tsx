@@ -1,36 +1,35 @@
-import { memo, useMemo } from 'react';
+import { memo } from 'react';
 
 import { View } from 'react-native';
 
 import { Typography } from '@/components/ui/typography';
-import { formatInr, PRODUCT_GST_RATE } from '@/constants/productDetails';
+import { formatInr } from '@/constants/productDetails';
+import type { CheckoutQuote } from '@/types/checkout-quote';
 import { cn } from '@/utils/cn';
 
 type BuyingSummaryProps = {
-  pricePerMt: number;
-  quantity: number;
-  freightPerMt: number;
-  discountRate?: number;
+  quote?: CheckoutQuote | null;
+  loading?: boolean;
+  error?: string | null;
   className?: string;
 };
 
 export const BuyingSummary = memo(function BuyingSummary({
-  pricePerMt,
-  quantity,
-  freightPerMt,
-  discountRate = 0,
+  quote,
+  loading = false,
+  error = null,
   className,
 }: BuyingSummaryProps) {
-  const summary = useMemo(() => {
-    const materialSubtotal = pricePerMt * quantity;
-    const discount = Math.round(materialSubtotal * discountRate);
-    const taxable = materialSubtotal - discount;
-    const freight = freightPerMt * quantity;
-    const gst = Math.round(taxable * PRODUCT_GST_RATE);
-    const grandTotal = taxable + freight + gst;
-
-    return { materialSubtotal, discount, freight, gst, grandTotal };
-  }, [discountRate, freightPerMt, pricePerMt, quantity]);
+  const summary = quote
+    ? {
+        materialSubtotal: Number(quote.baseAmount),
+        discount: Number(quote.discountAmount),
+        freight: Number(quote.freightAmount),
+        gst: Number(quote.taxAmount),
+        gstLabel: `Estimated GST (${quote.taxRate}%)`,
+        grandTotal: Number(quote.totalAmount),
+      }
+    : null;
 
   return (
     <View
@@ -42,62 +41,76 @@ export const BuyingSummary = memo(function BuyingSummary({
       <Typography variant="fieldLabel" className="text-[10px] tracking-[0.8px] text-brand-muted">
         Buying Summary
       </Typography>
-      <View className="mt-md" style={{ gap: 8 }}>
-        <View className="flex-row items-center justify-between">
-          <Typography
-            variant="caption"
-            className="font-sans text-[13px] normal-case tracking-normal text-brand-muted"
-          >
-            Price
-          </Typography>
-          <Typography variant="roleTitle" className="text-[13px] text-brand-heading">
-            {formatInr(summary.materialSubtotal)}
-          </Typography>
-        </View>
-        {summary.discount > 0 ? (
+      {error ? (
+        <Typography variant="caption" className="mt-md font-sans text-[13px] normal-case text-brand-danger">
+          {error}
+        </Typography>
+      ) : loading && !quote ? (
+        <Typography variant="caption" className="mt-md font-sans text-[13px] normal-case text-brand-muted">
+          Calculating total...
+        </Typography>
+      ) : !summary ? (
+        <Typography variant="caption" className="mt-md font-sans text-[13px] normal-case text-brand-muted">
+          Unable to load latest pricing
+        </Typography>
+      ) : (
+        <View className="mt-md" style={{ gap: 8 }}>
           <View className="flex-row items-center justify-between">
             <Typography
               variant="caption"
               className="font-sans text-[13px] normal-case tracking-normal text-brand-muted"
             >
-              Discount
+              Price
             </Typography>
-            <Typography variant="success" className="text-[13px]">
-              −{formatInr(summary.discount)}
+            <Typography variant="roleTitle" className="text-[13px] text-brand-heading">
+              {formatInr(summary.materialSubtotal)}
             </Typography>
           </View>
-        ) : null}
-        <View className="flex-row items-center justify-between">
-          <Typography
-            variant="caption"
-            className="font-sans text-[13px] normal-case tracking-normal text-brand-muted"
-          >
-            Estimated Freight
-          </Typography>
-          <Typography variant="roleTitle" className="text-[13px] text-brand-heading">
-            {formatInr(summary.freight)}
-          </Typography>
+          {summary.discount > 0 ? (
+            <View className="flex-row items-center justify-between">
+              <Typography
+                variant="caption"
+                className="font-sans text-[13px] normal-case tracking-normal text-brand-muted"
+              >
+                Discount
+              </Typography>
+              <Typography variant="success" className="text-[13px]">
+                −{formatInr(summary.discount)}
+              </Typography>
+            </View>
+          ) : null}
+          <View className="flex-row items-center justify-between">
+            <Typography
+              variant="caption"
+              className="font-sans text-[13px] normal-case tracking-normal text-brand-muted"
+            >
+              Estimated Freight
+            </Typography>
+            <Typography variant="roleTitle" className="text-[13px] text-brand-heading">
+              {formatInr(summary.freight)}
+            </Typography>
+          </View>
+          <View className="flex-row items-center justify-between">
+            <Typography
+              variant="caption"
+              className="font-sans text-[13px] normal-case tracking-normal text-brand-muted"
+            >
+              {summary.gstLabel}
+            </Typography>
+            <Typography variant="roleTitle" className="text-[13px] text-brand-heading">
+              {formatInr(summary.gst)}
+            </Typography>
+          </View>
+          <View className="mt-xs flex-row items-center justify-between border-t border-brand-border pt-sm">
+            <Typography variant="roleTitle" className="text-[14px] text-brand-heading">
+              Grand Total
+            </Typography>
+            <Typography variant="roleTitle" className="text-[16px] text-brand-primary">
+              {formatInr(summary.grandTotal)}
+            </Typography>
+          </View>
         </View>
-        <View className="flex-row items-center justify-between">
-          <Typography
-            variant="caption"
-            className="font-sans text-[13px] normal-case tracking-normal text-brand-muted"
-          >
-            Estimated GST ({Math.round(PRODUCT_GST_RATE * 100)}%)
-          </Typography>
-          <Typography variant="roleTitle" className="text-[13px] text-brand-heading">
-            {formatInr(summary.gst)}
-          </Typography>
-        </View>
-        <View className="mt-xs flex-row items-center justify-between border-t border-brand-border pt-sm">
-          <Typography variant="roleTitle" className="text-[14px] text-brand-heading">
-            Grand Total
-          </Typography>
-          <Typography variant="roleTitle" className="text-[16px] text-brand-primary">
-            {formatInr(summary.grandTotal)}
-          </Typography>
-        </View>
-      </View>
+      )}
     </View>
   );
 });

@@ -1,72 +1,90 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import {
-  deleteNotification,
-  filterNotificationsByCategory,
-  getSellerNotificationsSnapshot,
-  loadMoreNotifications,
-  markNotificationRead,
-  refreshSellerNotifications,
-} from '@/seller/services/sellerMockService';
+import { fetchSellerNotifications, markSellerNotificationRead } from '@/services/seller-operations';
 import type {
   NotificationCategoryFilter,
-  SellerNotification,
   SellerNotificationsSnapshot,
 } from '@/seller/types/notifications';
 
+const EMPTY_SNAPSHOT: SellerNotificationsSnapshot = {
+  criticalActions: [],
+  recentActivity: [],
+  archivedActivity: [],
+};
+
 export function useSellerNotifications() {
-  const [snapshot, setSnapshot] = useState<SellerNotificationsSnapshot>(getSellerNotificationsSnapshot);
+  const [snapshot, setSnapshot] = useState<SellerNotificationsSnapshot>(EMPTY_SNAPSHOT);
   const [selectedCategory, setSelectedCategory] = useState<NotificationCategoryFilter>('all');
-  const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isLoadingMore] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    const next = await fetchSellerNotifications();
+    setSnapshot(next);
+  }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 1200);
-    return () => clearTimeout(timer);
-  }, []);
+    let cancelled = false;
+    void load()
+      .catch(() => {
+        if (!cancelled) setSnapshot(EMPTY_SNAPSHOT);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [load]);
 
   const refresh = useCallback(async () => {
     setIsRefreshing(true);
-    const nextSnapshot = await refreshSellerNotifications();
-    setSnapshot(nextSnapshot);
-    setIsRefreshing(false);
-  }, []);
+    try {
+      await load();
+    } catch {
+      setSnapshot(EMPTY_SNAPSHOT);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [load]);
 
   const filteredCriticalActions = useMemo(
-    () => filterNotificationsByCategory(snapshot.criticalActions, selectedCategory),
+    () =>
+      selectedCategory === 'all'
+        ? snapshot.criticalActions
+        : snapshot.criticalActions.filter((item) => item.category === selectedCategory),
     [selectedCategory, snapshot.criticalActions],
   );
 
   const filteredRecentActivity = useMemo(
-    () => filterNotificationsByCategory(snapshot.recentActivity, selectedCategory),
+    () =>
+      selectedCategory === 'all'
+        ? snapshot.recentActivity
+        : snapshot.recentActivity.filter((item) => item.category === selectedCategory),
     [selectedCategory, snapshot.recentActivity],
   );
 
-  const handleMarkRead = useCallback((notificationId: string) => {
-    markNotificationRead(notificationId);
-    setSnapshot(getSellerNotificationsSnapshot());
-  }, []);
+  const handleMarkRead = useCallback(
+    (notificationId: string) => {
+      void markSellerNotificationRead(notificationId)
+        .then(() => void load())
+        .catch(() => undefined);
+    },
+    [load],
+  );
 
   const handleDelete = useCallback((notificationId: string) => {
-    deleteNotification(notificationId);
-    setSnapshot(getSellerNotificationsSnapshot());
+    setSnapshot((current) => ({
+      ...current,
+      criticalActions: current.criticalActions.filter((item) => item.id !== notificationId),
+      recentActivity: current.recentActivity.filter((item) => item.id !== notificationId),
+    }));
   }, []);
 
-  const handleLoadMore = useCallback(async () => {
-    if (isLoadingMore || snapshot.archivedActivity.length === 0) {
-      return;
-    }
+  const handleLoadMore = useCallback(async () => undefined, []);
 
-    setIsLoadingMore(true);
-    await new Promise<void>((resolve) => setTimeout(resolve, 600));
-    loadMoreNotifications();
-    setSnapshot(getSellerNotificationsSnapshot());
-    setIsLoadingMore(false);
-  }, [isLoadingMore, snapshot.archivedActivity.length]);
-
-  const hasNotifications =
-    filteredCriticalActions.length > 0 || filteredRecentActivity.length > 0;
+  const hasNotifications = filteredCriticalActions.length > 0 || filteredRecentActivity.length > 0;
 
   return {
     snapshot,
@@ -85,7 +103,3 @@ export function useSellerNotifications() {
     handleLoadMore,
   };
 }
-
-export type UseSellerNotificationsReturn = ReturnType<typeof useSellerNotifications>;
-
-export type { SellerNotification };

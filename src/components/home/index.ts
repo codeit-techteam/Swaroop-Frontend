@@ -13,6 +13,5 @@ export { SectionHeader } from '@/components/home/section-header';
 export { BottomNavigation } from '@/components/home/bottom-navigation';
 export { NotificationBadge } from '@/components/home/notification-badge';
 export { BannerIndicator } from '@/components/home/banner-indicator';
-export { ProductImageCard } from '@/components/home/product-image-card';
 export { StatCard } from '@/components/home/stat-card';
 export { PrimaryCTAButton } from '@/components/home/primary-cta-button';

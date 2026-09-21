@@ -354,7 +354,7 @@ const buildPaymentOptions = (creditEligible: boolean): ProductPaymentOption[] =>
     id: 'advance' satisfies PaymentMethodId,
     title: 'Advance',
     description: 'Pay before dispatch for preferred pricing.',
-    benefitLabel: '5% Discount Eligible',
+    benefitLabel: 'Platform Discount Eligible',
     discountRate: 0.05,
     eligible: true,
   },
@@ -374,17 +374,15 @@ const buildPaymentOptions = (creditEligible: boolean): ProductPaymentOption[] =>
   },
   {
     id: 'credit_15',
-    title: 'Credit 15 Days',
-    description: 'Net 15 days working capital.',
-    surchargeLabel: '+1.5%',
+    title: 'PetroTrade Credit — 15 Days',
+    description: 'PetroTrade managed working capital. Seller does not extend credit.',
     benefitLabel: 'Approval Required',
     eligible: creditEligible,
   },
   {
     id: 'credit_30',
-    title: 'Credit 30 Days',
-    description: 'Net 30 days extended terms.',
-    surchargeLabel: '+2.5%',
+    title: 'PetroTrade Credit — 30 Days',
+    description: 'PetroTrade managed working capital. Seller does not extend credit.',
     benefitLabel: 'Approval Required',
     eligible: creditEligible,
   },
@@ -534,6 +532,7 @@ export const buildProductDetails = (
     documents: overrides.documents ?? buildProductDocuments(name),
     relatedProducts: overrides.relatedProducts ?? relatedCardsFor(market, catalog),
     creditEligible,
+    offerId: overrides.offerId ?? market.offerId,
   };
 };
 
@@ -542,8 +541,6 @@ const resolveMarketProduct = (
   extraProducts: MarketProduct[] = [],
 ): MarketProduct | undefined =>
   extraProducts.find((product) => product.id === id) ?? getMarketProductById(id, extraProducts);
-
-export const PRODUCT_DETAILS_SKELETON_MS = 450;
 
 export const PRODUCT_GST_RATE = 0.18;
 

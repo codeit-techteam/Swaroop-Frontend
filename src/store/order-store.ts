@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
 import { STORAGE_KEYS } from '@/constants';
-import { createDemoOrders } from '@/constants/demoOrders';
+import { fetchCustomerOrders } from '@/services/orders';
 import {
   buildOrderTimeline,
   createInitialOrderFields,
@@ -166,20 +166,22 @@ const persistOrderState = (state: PersistedOrderState): void => {
   setStorageItem(STORAGE_KEYS.ORDER_KEY, JSON.stringify(state));
 };
 
+const EMPTY_ORDER_STATE: PersistedOrderState = {
+  currentOrder: null,
+  paymentProof: null,
+  orders: [],
+};
+
 const readPersistedOrderState = (): PersistedOrderState => {
   const raw = getStorageItem(STORAGE_KEYS.ORDER_KEY);
   if (!raw) {
-    return { currentOrder: null, paymentProof: null, orders: createDemoOrders() };
+    return EMPTY_ORDER_STATE;
   }
 
   try {
     const parsed = JSON.parse(raw) as Partial<PersistedOrderState>;
     const currentOrder = parsed.currentOrder ? normalizeOrder(parsed.currentOrder) : null;
-    const orders =
-      parsed.orders && parsed.orders.length > 0
-        ? parsed.orders.map(normalizeOrder)
-        : createDemoOrders();
-
+    const orders = (parsed.orders ?? []).map(normalizeOrder);
     const mergedOrders = currentOrder ? upsertOrderInList(orders, currentOrder) : orders;
 
     return {
@@ -188,7 +190,7 @@ const readPersistedOrderState = (): PersistedOrderState => {
       orders: mergedOrders,
     };
   } catch {
-    return { currentOrder: null, paymentProof: null, orders: createDemoOrders() };
+    return EMPTY_ORDER_STATE;
   }
 };
 
@@ -234,8 +236,37 @@ export const useOrderStore = create<OrderStore>((set, get) => {
         currentOrder: persisted.currentOrder,
         paymentProof: persisted.paymentProof,
         orders: persisted.orders,
-        isHydrated: true,
+        isHydrated: false,
       });
+      // Authoritative source: PurchaseOrder projection via /customer/orders
+      void fetchCustomerOrders()
+        .then((orders) => {
+          const currentOrder =
+            persisted.currentOrder && orders.some((item) => item.id === persisted.currentOrder?.id)
+              ? orders.find((item) => item.id === persisted.currentOrder?.id) ?? persisted.currentOrder
+              : orders[0] ?? null;
+          persistOrderState({
+            currentOrder,
+            paymentProof: persisted.paymentProof,
+            orders,
+          });
+          set({
+            currentOrder,
+            paymentProof: persisted.paymentProof,
+            orders,
+            isHydrated: true,
+          });
+        })
+        .catch(() => {
+          // Never fall back to mock/static orders on API failure
+          persistOrderState({ currentOrder: null, paymentProof: null, orders: [] });
+          set({
+            currentOrder: null,
+            paymentProof: persisted.paymentProof,
+            orders: [],
+            isHydrated: true,
+          });
+        });
     },
 
     createOrder: (order) => {
@@ -460,9 +491,8 @@ export const useOrderStore = create<OrderStore>((set, get) => {
     },
 
     resetOrder: () => {
-      const demoOrders = createDemoOrders();
-      persistOrderState({ currentOrder: null, paymentProof: null, orders: demoOrders });
-      set({ currentOrder: null, paymentProof: null, orders: demoOrders, selectedOrderId: null });
+      persistOrderState({ currentOrder: null, paymentProof: null, orders: [] });
+      set({ currentOrder: null, paymentProof: null, orders: [], selectedOrderId: null });
     },
 
     setSelectedOrderId: (orderId) => {

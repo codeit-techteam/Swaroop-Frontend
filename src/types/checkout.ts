@@ -14,11 +14,14 @@ export type CheckoutShippingAddress = {
 
 export type CheckoutOrderSummary = {
   baseSubtotal: number;
+  discount?: number;
   freight: number;
   freightLabel: string;
   gst: number;
+  gstLabel?: string;
   platformFee: number;
   insuranceIncluded: boolean;
+  insuranceAmount?: number;
   totalPayable: number;
   totalQuantityMt: number;
 };

@@ -77,8 +77,8 @@ export const useCreditApproval = (): UseCreditApprovalResult => {
           const method = getPaymentMethodById(order.paymentMethodId);
           return buildCreditDetails(
             order.paymentMethodId,
-            method.creditLimit ?? 5_000_000,
-            method.availableCredit ?? 3_750_000,
+            method.creditLimit ?? 0,
+            method.availableCredit ?? 0,
             method.interestRate,
           );
         })()

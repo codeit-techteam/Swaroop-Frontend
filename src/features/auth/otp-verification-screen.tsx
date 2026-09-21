@@ -14,12 +14,12 @@ import {
 } from '@/components';
 import { ClockIcon, OtpIllustration } from '@/icons';
 import { getLoggedInRoute } from '@/navigation/post-auth-route';
+import { isOfflineBackendFallbackEnabled } from '@/config/development';
 import { getInvalidOtpMessage, validateDevOtp } from '@/services/dev-auth';
-import { apiClient } from '@/api/client';
-import { STORAGE_KEYS } from '@/constants';
+import { loginDevBackend } from '@/services/backend-session';
 import { useAuthStore } from '@/store/auth-store';
-import { setStorageItem } from '@/utils/storage';
 import { wp } from '@/utils/responsive';
+import { logger } from '@/utils/logger';
 
 const RESEND_SECONDS = 44;
 
@@ -89,24 +89,18 @@ export const OtpVerificationScreen = () => {
     }
 
     const mobileNumber = params.phone ?? '';
-    const role = useAuthStore.getState().selectedRole;
-    const email = role === 'seller' ? 'seller@test.local' : 'customer@test.local';
+    const role = useAuthStore.getState().selectedRole === 'seller' ? 'seller' : 'customer';
     try {
-      const response = await apiClient.post('/auth/login', {
-        email,
-        password: 'Test@12345',
+      await loginDevBackend(role);
+    } catch (error) {
+      logger.error('Dev OTP backend login failed', {
+        message: error instanceof Error ? error.message : 'Unknown error',
       });
-      const payload = response.data?.data ?? response.data;
-      if (payload?.accessToken) {
-        setStorageItem(STORAGE_KEYS.ACCESS_TOKEN, payload.accessToken);
-        if (payload.refreshToken) {
-          setStorageItem(STORAGE_KEYS.REFRESH_TOKEN, payload.refreshToken);
-        }
-        useAuthStore.getState().setTokens(payload.accessToken, payload.refreshToken ?? '');
+      if (!isOfflineBackendFallbackEnabled()) {
+        setOtpError('Unable to authenticate against the catalog backend.');
+        return;
       }
-    } catch {
-      setOtpError('Unable to authenticate against the catalog backend.');
-      return;
+      // Backend unreachable (common on device/simulator localhost) — continue with local demo session.
     }
 
     completeLogin(mobileNumber);

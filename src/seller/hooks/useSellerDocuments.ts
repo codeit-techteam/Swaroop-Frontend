@@ -1,21 +1,39 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import {
   fetchDocuments,
   filterDocuments,
   refreshDocuments,
 } from '@/seller/services/documentsService';
-import { MOCK_DOCUMENTS } from '@/seller/mock/documents';
 import type { DocumentFilterTab, SellerDocumentItem } from '@/seller/types/documents';
 import { usePullToRefresh } from '@/seller/hooks/usePullToRefresh';
-import { useSkeletonLoading } from '@/seller/hooks/useSkeletonLoading';
 import { usePaginatedList } from '@/seller/hooks/usePaginatedList';
 
 export function useSellerDocuments() {
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<DocumentFilterTab>('all');
-  const [allDocuments, setAllDocuments] = useState<SellerDocumentItem[]>(MOCK_DOCUMENTS);
-  const isLoading = useSkeletonLoading();
+  const [allDocuments, setAllDocuments] = useState<SellerDocumentItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchDocuments(query, activeTab, 1)
+      .then((snapshot) => {
+        if (!cancelled) {
+          setAllDocuments(snapshot.documents);
+          setIsLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAllDocuments([]);
+          setIsLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [query, activeTab]);
 
   const filtered = useMemo(
     () => filterDocuments(allDocuments, query, activeTab),
@@ -30,14 +48,10 @@ export function useSellerDocuments() {
     reset();
   }, [query, activeTab, reset]);
 
-  const loadData = useCallback(async () => {
-    const snapshot = await fetchDocuments(query, activeTab, 1);
-    setAllDocuments(snapshot.documents.length > 0 ? MOCK_DOCUMENTS : MOCK_DOCUMENTS);
-  }, [query, activeTab]);
-
   const { isRefreshing, refresh } = usePullToRefresh(async () => {
     await refreshDocuments();
-    await loadData();
+    const snapshot = await fetchDocuments(query, activeTab, 1);
+    setAllDocuments(snapshot.documents);
   });
 
   return {
@@ -47,11 +61,11 @@ export function useSellerDocuments() {
     setActiveTab,
     documents: visibleItems,
     totalCount: filtered.length,
+    hasMore,
+    isLoadingMore,
+    loadMore,
     isLoading,
     isRefreshing,
-    isLoadingMore,
-    hasMore,
     refresh,
-    loadMore,
   };
 }

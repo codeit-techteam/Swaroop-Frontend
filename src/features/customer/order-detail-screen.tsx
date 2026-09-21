@@ -113,7 +113,7 @@ export const CustomerOrderDetailScreen = memo(function CustomerOrderDetailScreen
         {order ? (
           <>
             <Typography variant="headingLeft" className="text-[20px] text-brand-heading">
-              {formatOrderNumber(order.id)}
+              {formatOrderNumber(order.id, order.poNumber)}
             </Typography>
             <Typography variant="subheadingLeft" className="mt-xs text-[14px] text-brand-body">
               {order.productName} • {order.quantityMt} MT • {order.destination}

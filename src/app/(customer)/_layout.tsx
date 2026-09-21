@@ -45,6 +45,7 @@ export default function CustomerLayout() {
       <Stack.Screen name="shipment-tracking/index" />
       <Stack.Screen name="order-detail/index" />
       <Stack.Screen name="order-confirmation/index" />
+      <Stack.Screen name="purchase-request-success/index" />
       <Stack.Screen name="profile/edit" />
       <Stack.Screen name="profile/company-details" />
       <Stack.Screen name="profile/saved-addresses" />

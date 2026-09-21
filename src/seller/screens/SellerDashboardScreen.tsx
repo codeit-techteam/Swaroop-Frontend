@@ -44,15 +44,15 @@ const AnimatedSection = Animated.View;
 export const SellerDashboardScreen = memo(function SellerDashboardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const isLoading = useSkeletonLoading();
+  const settlementHydrated = useSettlementStore((state) => state.isHydrated);
+  const ordersHydrated = useSellerOrdersStore((state) => state.isHydrated);
+  const offersHydrated = useSellerOffersStore((state) => state.isHydrated);
+  const isLoading = useSkeletonLoading(settlementHydrated && ordersHydrated && offersHydrated);
   const refreshSellerOrdersState = useSellerOrdersStore((state) => state.refreshSellerOrdersState);
   const refreshSellerOffersState = useSellerOffersStore((state) => state.refreshSellerOffersState);
   const hydrateSettlementState = useSettlementStore((state) => state.hydrateSettlementState);
-  const settlementHydrated = useSettlementStore((state) => state.isHydrated);
   const hydrateSellerOrdersState = useSellerOrdersStore((state) => state.hydrateSellerOrdersState);
-  const ordersHydrated = useSellerOrdersStore((state) => state.isHydrated);
   const hydrateSellerOffersState = useSellerOffersStore((state) => state.hydrateSellerOffersState);
-  const offersHydrated = useSellerOffersStore((state) => state.isHydrated);
   const { isRefreshing, refresh } = usePullToRefresh(async () => {
     refreshSellerOffersState();
     refreshSellerOrdersState();

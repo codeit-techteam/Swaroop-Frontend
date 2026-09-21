@@ -43,6 +43,7 @@ export type MarketProduct = {
   applications?: string[];
   technicalSpecs?: ProductTechnicalSpecs;
   creditEligible?: boolean;
+  offerId?: string;
 };
 
 export type StockLevel = 'high' | 'medium' | 'low';

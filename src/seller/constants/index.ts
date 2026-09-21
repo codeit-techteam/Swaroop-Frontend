@@ -7,6 +7,9 @@ import type {
 
 export const SELLER_DEMO_MOBILE = '8240890242';
 export const SELLER_DEMO_OTP = '123456';
+export const SELLER_DEMO_NAME = 'Karan Veer';
+export const SELLER_DEMO_EMAIL = 'seller@test.local';
+export const SELLER_DEMO_PASSWORD = 'Test@12345';
 export const SELLER_RESEND_SECONDS = 45;
 export const SELLER_UPLOAD_DURATION_MS = 900;
 

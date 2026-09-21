@@ -1,13 +1,20 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
+
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
 import { ScreenWrapper, Typography } from '@/components';
-import { fetchSellerCatalogProducts, getLiveCatalogProduct } from '@/services/catalog';
 import {
   SELLER_CATALOG_PARENT_FILTERS,
   getCatalogGradesForFamily,
@@ -20,6 +27,7 @@ import { ROUTES } from '@/navigation/routes';
 import {
   BuyerPreviewCard,
   FilterChipRow,
+  ProductSkeleton,
   SearchField,
   SellerBottomSheet,
   SellerHeader,
@@ -44,6 +52,7 @@ import { INVENTORY_WAREHOUSES } from '@/seller/services/inventoryService';
 import { useSellerProductStore } from '@/seller/store/sellerProductStore';
 import type { SellerPaymentPricing, SellerProductForm } from '@/seller/types';
 import { PETROTRADE_CREDIT_NOTE } from '@/seller/utils/pricing';
+import { fetchSellerCatalogProducts, getLiveCatalogProduct } from '@/services/catalog';
 import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
 import type { MarketProduct } from '@/types/market';
@@ -82,7 +91,7 @@ const PriceRow = memo(function PriceRow({
           keyboardType="numeric"
           placeholder="0"
           placeholderTextColor={brandColors.footer}
-          className="flex-1 py-sm text-right font-sans text-[16px] font-bold text-brand-heading"
+          className="flex-1 py-sm text-right font-bold font-sans text-[16px] text-brand-heading"
         />
         <Typography variant="legal" className="ml-xs text-brand-footer">
           /MT
@@ -124,21 +133,38 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
   const isEdit = mode === 'edit' || Boolean(selectedProductId);
   const [step, setStep] = useState<ListingStep>(isEdit || catalogId ? 2 : 1);
   const [activePicker, setActivePicker] = useState<PickerKey | null>(null);
-  const [parentGroup, setParentGroup] = useState<(typeof SELLER_CATALOG_PARENT_FILTERS)[number]>('All');
+  const [parentGroup, setParentGroup] =
+    useState<(typeof SELLER_CATALOG_PARENT_FILTERS)[number]>('All');
   const [selectedFamily, setSelectedFamily] = useState<SellerMaterialFamily | null>(null);
   const [query, setQuery] = useState('');
   const [catalogProducts, setCatalogProducts] = useState<MarketProduct[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(true);
   const appliedCatalogRef = useRef<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+    setCatalogLoading(true);
     void fetchSellerCatalogProducts()
-      .then(setCatalogProducts)
-      .catch(() => setCatalogProducts([]));
+      .then((products) => {
+        if (!cancelled) {
+          setCatalogProducts(products);
+          setCatalogLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCatalogProducts([]);
+          setCatalogLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const selectedCatalog = form.catalogProductId
-    ? getLiveCatalogProduct(form.catalogProductId) ??
-      catalogProducts.find((item) => item.id === form.catalogProductId)
+    ? (getLiveCatalogProduct(form.catalogProductId) ??
+      catalogProducts.find((item) => item.id === form.catalogProductId))
     : undefined;
   const families = useMemo(
     () => getMaterialsByParentGroup(catalogProducts, parentGroup),
@@ -170,13 +196,32 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
       const family = families.find((item) => item.name === materialType) ?? null;
       setSelectedFamily(family);
     }
-  }, [applyCatalogGrade, catalogId, families, form.category, isEdit, materialType, updateFormField]);
+  }, [
+    applyCatalogGrade,
+    catalogId,
+    families,
+    form.category,
+    isEdit,
+    materialType,
+    updateFormField,
+  ]);
 
-  const pickers: Record<PickerKey, { title: string; field: keyof SellerProductForm; items: readonly string[] }> = {
+  const pickers: Record<
+    PickerKey,
+    { title: string; field: keyof SellerProductForm; items: readonly string[] }
+  > = {
     origin: { title: 'Select origin', field: 'origin', items: SELLER_ORIGIN_OPTIONS },
-    packagingType: { title: 'Select packaging', field: 'packagingType', items: SELLER_PACKAGING_TYPES },
+    packagingType: {
+      title: 'Select packaging',
+      field: 'packagingType',
+      items: SELLER_PACKAGING_TYPES,
+    },
     unit: { title: 'Select unit', field: 'unit', items: SELLER_UNIT_OPTIONS },
-    warehouse: { title: 'Select warehouse', field: 'warehouseLocation', items: INVENTORY_WAREHOUSES },
+    warehouse: {
+      title: 'Select warehouse',
+      field: 'warehouseLocation',
+      items: INVENTORY_WAREHOUSES,
+    },
   };
 
   const screenTitle = isEdit ? 'Edit listing' : 'Add listing';
@@ -197,7 +242,12 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
       goToStep(1);
       return;
     }
-    if (!form.brand.trim() || !form.availableQty.trim() || !form.warehouseLocation.trim() || !form.moq.trim()) {
+    if (
+      !form.brand.trim() ||
+      !form.availableQty.trim() ||
+      !form.warehouseLocation.trim() ||
+      !form.moq.trim()
+    ) {
       Toast.show({
         type: 'info',
         text1: 'Complete offer details',
@@ -273,7 +323,10 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
               >
                 <Typography
                   variant="badge"
-                  className={cn('text-[11px]', active || done ? 'text-brand-white' : 'text-brand-body')}
+                  className={cn(
+                    'text-[11px]',
+                    active || done ? 'text-brand-white' : 'text-brand-body',
+                  )}
                 >
                   {item.id}
                 </Typography>
@@ -285,7 +338,9 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
                 {item.label}
               </Typography>
               {index < STEPS.length - 1 ? (
-                <View className={cn('mx-sm h-px flex-1', done ? 'bg-brand-navy' : 'bg-brand-border')} />
+                <View
+                  className={cn('mx-sm h-px flex-1', done ? 'bg-brand-navy' : 'bg-brand-border')}
+                />
               ) : null}
             </Pressable>
           );
@@ -304,67 +359,71 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
           contentContainerStyle={{ paddingBottom: insets.bottom + 108, paddingTop: 8 }}
         >
           {step === 1 ? (
-            <View>
-              <Typography variant="headingLeft" className="text-[26px] leading-[32px]">
-                Choose a grade
-              </Typography>
-              <Typography variant="legal" className="mt-xs text-left text-brand-body">
-                List the same SKU buyers already browse in the customer app.
-              </Typography>
+            catalogLoading ? (
+              <ProductSkeleton />
+            ) : (
+              <View>
+                <Typography variant="headingLeft" className="text-[26px] leading-[32px]">
+                  Choose a grade
+                </Typography>
+                <Typography variant="legal" className="mt-xs text-left text-brand-body">
+                  List the same SKU buyers already browse in the customer app.
+                </Typography>
 
-              <View className="mt-lg">
-                <SearchField
-                  value={query}
-                  onChangeText={setQuery}
-                  placeholder="Search HDPE, Melamine, PE100..."
-                />
-              </View>
-              <View className="mt-md">
-                <FilterChipRow
-                  options={[...SELLER_CATALOG_PARENT_FILTERS]}
-                  selected={parentGroup}
-                  onSelect={(value) => {
-                    setParentGroup(value as (typeof SELLER_CATALOG_PARENT_FILTERS)[number]);
-                    setSelectedFamily(null);
-                  }}
-                />
-              </View>
+                <View className="mt-lg">
+                  <SearchField
+                    value={query}
+                    onChangeText={setQuery}
+                    placeholder="Search HDPE, Melamine, PE100..."
+                  />
+                </View>
+                <View className="mt-md">
+                  <FilterChipRow
+                    options={[...SELLER_CATALOG_PARENT_FILTERS]}
+                    selected={parentGroup}
+                    onSelect={(value) => {
+                      setParentGroup(value as (typeof SELLER_CATALOG_PARENT_FILTERS)[number]);
+                      setSelectedFamily(null);
+                    }}
+                  />
+                </View>
 
-              {selectedFamily && !query.trim() ? (
-                <Pressable
-                  onPress={() => setSelectedFamily(null)}
-                  className="mt-lg flex-row items-center"
-                >
-                  <BackArrowIcon size={16} color={brandColors.navy} />
-                  <Typography variant="roleTitle" className="ml-sm text-[14px] text-brand-navy">
-                    {selectedFamily.code}
-                  </Typography>
-                </Pressable>
-              ) : null}
+                {selectedFamily && !query.trim() ? (
+                  <Pressable
+                    onPress={() => setSelectedFamily(null)}
+                    className="mt-lg flex-row items-center"
+                  >
+                    <BackArrowIcon size={16} color={brandColors.navy} />
+                    <Typography variant="roleTitle" className="ml-sm text-[14px] text-brand-navy">
+                      {selectedFamily.code}
+                    </Typography>
+                  </Pressable>
+                ) : null}
 
-              {showTiles ? (
-                <View className="mt-lg flex-row flex-wrap justify-between">
-                  {families.map((family) => (
-                    <View key={family.id} className="mb-md" style={{ width: '48.5%' }}>
-                      <SellerMaterialTile
-                        family={family}
-                        onPress={() => setSelectedFamily(family)}
+                {showTiles ? (
+                  <View className="mt-lg flex-row flex-wrap justify-between">
+                    {families.map((family) => (
+                      <View key={family.id} className="mb-md" style={{ width: '48.5%' }}>
+                        <SellerMaterialTile
+                          family={family}
+                          onPress={() => setSelectedFamily(family)}
+                        />
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <View className="mt-lg gap-md">
+                    {catalogGrades.map((product) => (
+                      <SellerCatalogGradeRow
+                        key={product.id}
+                        product={product}
+                        onPress={() => handleSelectGrade(product.id)}
                       />
-                    </View>
-                  ))}
-                </View>
-              ) : (
-                <View className="mt-lg gap-md">
-                  {catalogGrades.map((product) => (
-                    <SellerCatalogGradeRow
-                      key={product.id}
-                      product={product}
-                      onPress={() => handleSelectGrade(product.id)}
-                    />
-                  ))}
-                </View>
-              )}
-            </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            )
           ) : null}
 
           {step === 2 ? (
@@ -378,7 +437,10 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
 
               <View className="mt-lg">
                 {selectedCatalog ? (
-                  <SellerCatalogSelectedBanner product={selectedCatalog} onChange={() => goToStep(1)} />
+                  <SellerCatalogSelectedBanner
+                    product={selectedCatalog}
+                    onChange={() => goToStep(1)}
+                  />
                 ) : (
                   <Pressable
                     onPress={() => goToStep(1)}
@@ -445,15 +507,24 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
                         containerClassName="flex-1"
                       />
                     </View>
-                    {renderPickerField('packagingType', 'Packaging', form.packagingType, formErrors.packagingType)}
+                    {renderPickerField(
+                      'packagingType',
+                      'Packaging',
+                      form.packagingType,
+                      formErrors.packagingType,
+                    )}
                     <SellerTextField
                       label="Application"
                       value={technicalSpecs.primaryApplication}
-                      onChangeText={(value) => updateTechnicalSpecField('primaryApplication', value)}
+                      onChangeText={(value) =>
+                        updateTechnicalSpecField('primaryApplication', value)
+                      }
                       placeholder="Pipe, film, raffia"
                       error={formErrors.primaryApplication}
                     />
-                    {(technicalSpecs.mfi || technicalSpecs.density || selectedCatalog?.technicalSpecs?.mfi) ? (
+                    {technicalSpecs.mfi ||
+                    technicalSpecs.density ||
+                    selectedCatalog?.technicalSpecs?.mfi ? (
                       <View className="flex-row gap-md">
                         <SellerTextField
                           label="MFI"
@@ -513,7 +584,10 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
 
               {selectedCatalog ? (
                 <View className="mt-lg">
-                  <SellerCatalogSelectedBanner product={selectedCatalog} onChange={() => goToStep(1)} />
+                  <SellerCatalogSelectedBanner
+                    product={selectedCatalog}
+                    onChange={() => goToStep(1)}
+                  />
                 </View>
               ) : null}
 
@@ -545,7 +619,10 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
                   <Typography variant="roleTitle" className="text-[16px]">
                     Bulk tiers
                   </Typography>
-                  <Pressable onPress={addTier} className="rounded-full bg-brand-primary-light px-md py-sm">
+                  <Pressable
+                    onPress={addTier}
+                    className="rounded-full bg-brand-primary-light px-md py-sm"
+                  >
                     <Typography variant="badge" className="text-[11px] text-brand-navy">
                       Add tier
                     </Typography>

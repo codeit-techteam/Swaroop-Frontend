@@ -11,7 +11,7 @@ import Animated, { useAnimatedScrollHandler, useSharedValue } from 'react-native
 
 import { BannerIndicator } from '@/components/home/banner-indicator';
 import { HeroBanner } from '@/components/home/hero-banner';
-import { HERO_AUTO_SLIDE_MS, HOME_BANNERS } from '@/constants/homeBanners';
+import { HERO_AUTO_SLIDE_MS } from '@/constants/homeBanners';
 import { spacing } from '@/theme/spacing';
 import type { HomeBanner } from '@/types/home';
 import { cn } from '@/utils/cn';
@@ -23,7 +23,7 @@ type HeroCarouselProps = {
 };
 
 export const HeroCarousel = memo(function HeroCarousel({
-  banners = HOME_BANNERS,
+  banners = [],
   onActionPress,
   className,
 }: HeroCarouselProps) {

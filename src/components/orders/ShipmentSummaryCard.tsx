@@ -52,7 +52,7 @@ export const ShipmentSummaryCard = memo(function ShipmentSummaryCard({
       style={elevation.sm}
     >
       <Typography variant="roleTitle" className="text-[16px] text-brand-heading">
-        Bulk {order.productName} {formatOrderNumber(order.id)}
+        Bulk {order.productName} {formatOrderNumber(order.id, order.poNumber)}
       </Typography>
 
       <View className="mt-lg gap-lg">

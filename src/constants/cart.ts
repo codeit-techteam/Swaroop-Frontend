@@ -1,7 +1,5 @@
 import type { CartDeliveryLocation, CartItem } from '@/types/product';
 
-export const CART_SKELETON_MS = 400;
-
 export const CART_GST_RATE = 0.18;
 
 export const CART_PLATFORM_FEE = 0;

@@ -18,12 +18,6 @@ import type {
   SellerRejectReason,
 } from '@/seller/modules/seller-orders/types/sellerOrders';
 
-type SellerOrdersSeed = {
-  orders: SellerOrder[];
-};
-
-const sellerOrdersSeed = require('@/seller/modules/seller-orders/mock/sellerOrders.json') as SellerOrdersSeed;
-
 const safeParse = <T>(value: string | undefined, fallback: T): T => {
   if (!value) {
     return fallback;
@@ -75,17 +69,18 @@ const buildSnapshot = (
 };
 
 export const buildDefaultSellerOrdersSnapshot = (): SellerOrdersSnapshot =>
-  buildSnapshot(sellerOrdersSeed.orders, sellerOrdersSeed.orders[0]?.id ?? null);
+  buildSnapshot([], null);
+
+export const snapshotFromOrders = (orders: SellerOrder[]): SellerOrdersSnapshot =>
+  buildSnapshot(orders, orders[0]?.id ?? null);
 
 export const getOrders = (): SellerOrdersSnapshot => {
-  const fallback = buildDefaultSellerOrdersSnapshot();
   const persisted = safeParse<Partial<SellerOrdersSnapshot>>(
     getStorageItem(STORAGE_KEYS.SELLER_ORDERS_STATE),
-    fallback,
+    { orders: [] },
   );
-
-  const orders = persisted.orders?.length ? persisted.orders : fallback.orders;
-  return buildSnapshot(orders, persisted.selectedOrderId ?? fallback.selectedOrderId);
+  const orders = persisted.orders ?? [];
+  return buildSnapshot(orders, persisted.selectedOrderId ?? null);
 };
 
 export const persistSellerOrdersSnapshot = (snapshot: SellerOrdersSnapshot): void => {
