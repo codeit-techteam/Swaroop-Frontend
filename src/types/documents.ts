@@ -1,7 +1,7 @@
 export type DocumentStatus =
   'generated' | 'downloaded' | 'pending' | 'approved' | 'verified' | 'cancelled';
 
-export type DocumentTab = 'purchase_orders' | 'invoices' | 'proforma' | 'gst_invoices';
+export type DocumentTab = 'purchase_orders' | 'invoices' | 'proforma';
 
 export type DocumentKind = 'purchase_order' | 'invoice' | 'proforma' | 'gst_invoice';
 

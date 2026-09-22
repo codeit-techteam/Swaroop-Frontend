@@ -23,7 +23,11 @@ type TierRowProps = {
 const TierSelectCard = memo(function TierSelectCard({ tier, selected, onPress }: TierRowProps) {
   return (
     <Pressable
-      onPress={() => onPress(tier.id)}
+      onPress={() => {
+        if (!selected) {
+          onPress(tier.id);
+        }
+      }}
       accessibilityRole="radio"
       accessibilityState={{ selected }}
       accessibilityLabel={`${tier.quantityLabel}, ${formatInr(tier.pricePerMt)} per MT`}

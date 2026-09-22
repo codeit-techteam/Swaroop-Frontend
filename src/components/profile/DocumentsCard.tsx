@@ -41,7 +41,7 @@ export const DocumentsCard = memo(function DocumentsCard({
         />
 
         <Typography variant="legal" className="mt-xs text-left text-brand-muted">
-          Purchase orders, tax invoices, proforma, and GST documents across your order lifecycle.
+          Purchase orders, tax invoices, and proforma invoices across your order lifecycle.
         </Typography>
 
         <View className="mt-md">

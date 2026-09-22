@@ -1,6 +1,6 @@
 import { memo } from 'react';
 
-import { Pressable, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -19,7 +19,8 @@ type BottomActionBarProps = {
   increment: number;
   estimatedTotal: number;
   disabled?: boolean;
-  quoting?: boolean;
+  refreshing?: boolean;
+  lockingPrice?: boolean;
   adding?: boolean;
   onIncrement: () => void;
   onDecrement: () => void;
@@ -35,7 +36,8 @@ export const BottomActionBar = memo(function BottomActionBar({
   increment,
   estimatedTotal,
   disabled = false,
-  quoting = false,
+  refreshing = false,
+  lockingPrice = false,
   adding = false,
   onIncrement,
   onDecrement,
@@ -44,6 +46,9 @@ export const BottomActionBar = memo(function BottomActionBar({
   className,
 }: BottomActionBarProps) {
   const insets = useSafeAreaInsets();
+  const hasTotal = estimatedTotal > 0;
+  const addDisabled = disabled || adding;
+  const buyDisabled = disabled || lockingPrice;
 
   return (
     <View
@@ -51,15 +56,35 @@ export const BottomActionBar = memo(function BottomActionBar({
       style={{ paddingBottom: Math.max(insets.bottom, 12) }}
     >
       <View className="mb-sm flex-row items-end justify-between">
-        <Typography
-          variant="caption"
-          className="font-sans text-[11px] normal-case tracking-normal text-brand-muted"
-        >
-          Est. total · {quantityMt} MT
-        </Typography>
-        <Typography variant="roleTitle" className="text-[16px] text-brand-primary">
-          {quoting ? 'Calculating total...' : formatInr(estimatedTotal)}
-        </Typography>
+        <View className="mr-sm min-w-0 flex-1">
+          <Typography
+            variant="caption"
+            className="font-sans text-[11px] normal-case tracking-normal text-brand-muted"
+          >
+            Est. total · {quantityMt} MT
+          </Typography>
+          {refreshing ? (
+            <Typography
+              variant="caption"
+              className="mt-0.5 font-sans text-[10px] normal-case tracking-normal text-brand-primary"
+            >
+              Confirming latest price
+            </Typography>
+          ) : null}
+        </View>
+        <View className="flex-row items-center" style={{ gap: 6 }}>
+          <View style={{ width: 16, height: 16 }} accessibilityElementsHidden={!refreshing}>
+            {refreshing ? <ActivityIndicator size="small" color={brandColors.primary} /> : null}
+          </View>
+          <Typography
+            variant="roleTitle"
+            className="text-[16px] text-brand-primary"
+            accessibilityLiveRegion="polite"
+            style={{ opacity: refreshing && hasTotal ? 0.85 : 1 }}
+          >
+            {hasTotal ? formatInr(estimatedTotal) : '—'}
+          </Typography>
+        </View>
       </View>
       <View className="flex-row items-center" style={{ gap: 8 }}>
         <QuantitySelector
@@ -73,12 +98,12 @@ export const BottomActionBar = memo(function BottomActionBar({
 
         <Pressable
           onPress={onAddToCart}
-          disabled={disabled || adding || quoting}
+          disabled={addDisabled}
           accessibilityRole="button"
           accessibilityLabel="Add to cart"
           className={cn(
             'h-11 flex-1 items-center justify-center rounded-lg border px-sm',
-            disabled || adding || quoting
+            addDisabled
               ? 'border-brand-border bg-brand-surface'
               : 'border-brand-heading bg-brand-white',
           )}
@@ -87,7 +112,7 @@ export const BottomActionBar = memo(function BottomActionBar({
             variant="button"
             className={cn(
               'text-[13px] tracking-normal',
-              disabled || adding || quoting ? 'text-brand-muted' : 'text-brand-heading',
+              addDisabled ? 'text-brand-muted' : 'text-brand-heading',
             )}
           >
             {adding ? 'Adding...' : 'Add to Cart'}
@@ -96,18 +121,23 @@ export const BottomActionBar = memo(function BottomActionBar({
 
         <Pressable
           onPress={onBuyNow}
-          disabled={disabled || quoting}
+          disabled={buyDisabled}
           accessibilityRole="button"
           accessibilityLabel="Buy now"
+          accessibilityState={{ busy: lockingPrice, disabled: buyDisabled }}
           className={cn(
             'h-11 flex-1 flex-row items-center justify-center rounded-lg px-sm',
-            disabled || quoting ? 'bg-brand-disabled' : 'bg-brand-heading',
+            buyDisabled ? 'bg-brand-disabled' : 'bg-brand-heading',
           )}
         >
-          <Typography variant="button" className="mr-xs text-[13px] tracking-normal">
-            {quoting ? 'Getting latest price...' : 'Buy Now'}
+          {lockingPrice ? <ActivityIndicator size="small" color={brandColors.white} /> : null}
+          <Typography
+            variant="button"
+            className={cn('text-[13px] tracking-normal', lockingPrice ? 'ml-xs' : 'mr-xs')}
+          >
+            {lockingPrice ? 'Locking price...' : 'Buy Now'}
           </Typography>
-          <ArrowRightIcon size={iconSizes.sm} color={brandColors.white} />
+          {lockingPrice ? null : <ArrowRightIcon size={iconSizes.sm} color={brandColors.white} />}
         </Pressable>
       </View>
     </View>

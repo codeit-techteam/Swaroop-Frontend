@@ -97,7 +97,7 @@ export const DEFAULT_TAX_DOCUMENTS: TaxDocument[] = [
   },
   {
     id: 'tax-invoices',
-    title: 'Invoices',
+    title: 'Tax Invoices',
     subtitle: 'GST-compliant billing documents',
     available: true,
   },

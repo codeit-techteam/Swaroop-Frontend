@@ -19,12 +19,14 @@ import { cn } from '@/utils/cn';
 type HeroCarouselProps = {
   banners?: HomeBanner[];
   onActionPress?: (banner: HomeBanner) => void;
+  onImpression?: (banner: HomeBanner) => void;
   className?: string;
 };
 
 export const HeroCarousel = memo(function HeroCarousel({
   banners = [],
   onActionPress,
+  onImpression,
   className,
 }: HeroCarouselProps) {
   const { width: screenWidth } = useWindowDimensions();
@@ -45,6 +47,11 @@ export const HeroCarousel = memo(function HeroCarousel({
     },
     [screenWidth],
   );
+
+  useEffect(() => {
+    const visible = banners[activeIndex];
+    if (visible) onImpression?.(visible);
+  }, [activeIndex, banners, onImpression]);
 
   useEffect(() => {
     if (banners.length <= 1) {

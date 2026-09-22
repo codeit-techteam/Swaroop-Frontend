@@ -6,6 +6,10 @@ export type HomeBanner = {
   description: string;
   buttonLabel: string;
   imageUrl: string;
+  targetRoute?: string | null;
+  ctaAction?: string | null;
+  externalUrl?: string | null;
+  targetId?: string | null;
 };
 
 export type PriceTrend = 'up' | 'down' | 'stable';

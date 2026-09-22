@@ -1,8 +1,9 @@
-import { memo, type ReactNode } from 'react';
+import { memo, type ReactNode, useEffect } from 'react';
 
 import { Pressable, View } from 'react-native';
 
 import Animated, {
+  interpolateColor,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -11,6 +12,8 @@ import Animated, {
 
 import { Typography } from '@/components/ui/typography';
 import { CheckCircleIcon } from '@/icons';
+import { brandColors } from '@/theme/colors';
+import { elevation } from '@/theme/shadows';
 import { cn } from '@/utils/cn';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -21,6 +24,7 @@ type RoleCardProps = {
   icon: ReactNode;
   selected: boolean;
   onPress: () => void;
+  highlights?: string[];
   className?: string;
 };
 
@@ -30,50 +34,92 @@ export const RoleCard = memo(function RoleCard({
   icon,
   selected,
   onPress,
+  highlights,
   className,
 }: RoleCardProps) {
   const scale = useSharedValue(1);
+  const selectedProgress = useSharedValue(selected ? 1 : 0);
+
+  useEffect(() => {
+    selectedProgress.value = withTiming(selected ? 1 : 0, { duration: 220 });
+  }, [selected, selectedProgress]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
+    borderColor: interpolateColor(
+      selectedProgress.value,
+      [0, 1],
+      [brandColors.border, brandColors.primary],
+    ),
+    backgroundColor: interpolateColor(
+      selectedProgress.value,
+      [0, 1],
+      [brandColors.white, brandColors.primaryTint],
+    ),
   }));
 
   return (
     <AnimatedPressable
       onPress={onPress}
       onPressIn={() => {
-        scale.value = withSpring(0.98, { damping: 16, stiffness: 280 });
+        scale.value = withSpring(0.985, { damping: 16, stiffness: 280 });
       }}
       onPressOut={() => {
-        scale.value = withTiming(1, { duration: 150 });
+        scale.value = withSpring(1, { damping: 16, stiffness: 240 });
       }}
       accessibilityRole="radio"
       accessibilityState={{ selected }}
       accessibilityLabel={`${title}. ${description}`}
-      className={cn(
-        'w-full flex-row items-center rounded-lg border-2 px-lg py-lg',
-        selected
-          ? 'border-brand-primary bg-brand-primary-tint'
-          : 'border-brand-border bg-brand-white',
-        className,
-      )}
-      style={animatedStyle}
+      className={cn('w-full rounded-2xl border-2 px-lg py-lg', className)}
+      style={[animatedStyle, selected ? elevation.md : elevation.sm]}
     >
-      <View
-        className={cn(
-          'mr-md h-12 w-12 items-center justify-center rounded-md',
-          selected ? 'bg-brand-primary-light' : 'bg-brand-surface',
+      <View className="flex-row items-center">
+        <View
+          className={cn(
+            'mr-md h-14 w-14 items-center justify-center rounded-full',
+            selected ? 'bg-brand-primary' : 'bg-brand-primary-light',
+          )}
+        >
+          {icon}
+        </View>
+        <View className="flex-1 pr-sm">
+          <Typography variant="roleTitle" className="text-[17px]">
+            {title}
+          </Typography>
+          <Typography variant="roleDescription" className="mt-xs leading-[18px]">
+            {description}
+          </Typography>
+        </View>
+        {selected ? (
+          <CheckCircleIcon size={24} />
+        ) : (
+          <View className="h-6 w-6 rounded-full border-2 border-brand-indicator" />
         )}
-      >
-        {icon}
       </View>
-      <View className="flex-1">
-        <Typography variant="roleTitle">{title}</Typography>
-        <Typography variant="roleDescription" className="mt-xs">
-          {description}
-        </Typography>
-      </View>
-      {selected ? <CheckCircleIcon /> : <View className="h-5 w-5" />}
+
+      {highlights?.length ? (
+        <View className="mt-md flex-row flex-wrap gap-xs">
+          {highlights.map((item) => (
+            <View
+              key={item}
+              className={cn(
+                'rounded-full px-sm py-xs',
+                selected ? 'bg-brand-primary-light' : 'bg-brand-surface',
+              )}
+            >
+              <Typography
+                variant="badge"
+                className={cn(
+                  'text-[11px] normal-case tracking-normal',
+                  selected ? 'text-brand-badge-text' : 'text-brand-body',
+                )}
+              >
+                {item}
+              </Typography>
+            </View>
+          ))}
+        </View>
+      ) : null}
     </AnimatedPressable>
   );
 });

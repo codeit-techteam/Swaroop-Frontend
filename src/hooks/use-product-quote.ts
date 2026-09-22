@@ -18,9 +18,12 @@ type UseProductQuoteArgs = {
   enabled: boolean;
 };
 
-export function mapBackendPaymentOptions(
-  options: CheckoutPaymentOption[],
-): ProductPaymentOption[] {
+type QuotedState = {
+  productId: string;
+  value: CheckoutQuote;
+};
+
+export function mapBackendPaymentOptions(options: CheckoutPaymentOption[]): ProductPaymentOption[] {
   return options.map((option) => {
     const id =
       option.paymentOption === 'ON_LOADING'
@@ -50,18 +53,31 @@ export function useProductQuote({
   paymentId,
   enabled,
 }: UseProductQuoteArgs) {
-  const [quote, setQuote] = useState<CheckoutQuote | null>(null);
+  const [quoted, setQuoted] = useState<QuotedState | null>(null);
   const [paymentOptions, setPaymentOptions] = useState<ProductPaymentOption[]>([]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const requestSeq = useRef(0);
+  const quotedRef = useRef<QuotedState | null>(null);
+
+  useEffect(() => {
+    quotedRef.current = quoted;
+  }, [quoted]);
+
+  const quote = productId && quoted?.productId === productId ? quoted.value : null;
 
   const refresh = useCallback(async () => {
     if (!enabled || !productId || !(quantity > 0)) {
       return;
     }
     const seq = ++requestSeq.current;
-    setLoading(true);
+    const keepPrevious = quotedRef.current?.productId === productId;
+    if (keepPrevious) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     setError(null);
     try {
       const next = await createCheckoutQuote({
@@ -73,16 +89,20 @@ export function useProductQuote({
       if (seq !== requestSeq.current) {
         return;
       }
-      setQuote(next);
+      setQuoted({ productId, value: next });
+      setError(null);
     } catch (cause) {
       if (seq !== requestSeq.current) {
         return;
       }
-      setQuote(null);
+      if (!keepPrevious) {
+        setQuoted(null);
+      }
       setError(checkoutErrorMessage(cause, 'Unable to load latest pricing'));
     } finally {
       if (seq === requestSeq.current) {
         setLoading(false);
+        setRefreshing(false);
       }
     }
   }, [enabled, offerId, paymentId, productId, quantity]);
@@ -90,7 +110,7 @@ export function useProductQuote({
   useEffect(() => {
     const handle = setTimeout(() => {
       void refresh();
-    }, 250);
+    }, 160);
     return () => clearTimeout(handle);
   }, [refresh]);
 
@@ -112,5 +132,5 @@ export function useProductQuote({
     };
   }, []);
 
-  return { quote, paymentOptions, loading, error, refresh };
+  return { quote, paymentOptions, loading, refreshing, error, refresh };
 }

@@ -27,16 +27,23 @@ export const HeroBanner = memo(function HeroBanner({
       className={cn('overflow-hidden rounded-xl bg-brand-navy', className)}
       style={{ width, height: HERO_BANNER_HEIGHT }}
     >
-      <Image
-        source={{ uri: banner.imageUrl }}
-        style={{ width, height: HERO_BANNER_HEIGHT }}
-        contentFit="cover"
-        contentPosition="center"
-        transition={0}
-        cachePolicy="memory-disk"
-        recyclingKey={banner.id}
-        accessibilityIgnoresInvertColors
-      />
+      {banner.imageUrl ? (
+        <Image
+          source={{ uri: banner.imageUrl }}
+          style={{ width, height: HERO_BANNER_HEIGHT }}
+          contentFit="cover"
+          contentPosition="center"
+          transition={0}
+          cachePolicy="memory-disk"
+          recyclingKey={banner.id}
+          accessibilityIgnoresInvertColors
+        />
+      ) : (
+        <View
+          className="absolute inset-0 bg-brand-navy"
+          style={{ width, height: HERO_BANNER_HEIGHT }}
+        />
+      )}
 
       {/* Overlay gradient layers for readable text without stretching the image */}
       <View className="absolute inset-0 bg-brand-navy/45" />

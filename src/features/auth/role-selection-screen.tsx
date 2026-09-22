@@ -1,16 +1,18 @@
 import { useCallback, useState } from 'react';
 
-import { View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
 import { type Href, useRouter } from 'expo-router';
 
-import { AppHeader, PrimaryButton, RoleCard, ScreenWrapper, SectionTitle } from '@/components';
-import { CartIcon, IndustrialTanks, StoreIcon } from '@/icons';
+import { AppHeader, PrimaryButton, RoleCard, ScreenWrapper, Typography } from '@/components';
+import { CartIcon, LockIcon, StoreIcon } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
 import { useAuthStore } from '@/store/auth-store';
 import { brandColors } from '@/theme/colors';
 import type { UserRole } from '@/types/session';
-import { wp } from '@/utils/responsive';
+
+const BUYER_HIGHLIGHTS = ['Live prices', 'GST invoices', 'Doorstep delivery'];
+const SELLER_HIGHLIGHTS = ['List inventory', 'Track orders', 'Fast payouts'];
 
 export const RoleSelectionScreen = () => {
   const router = useRouter();
@@ -25,50 +27,78 @@ export const RoleSelectionScreen = () => {
     );
   }, [persistRole, router, selectedRole]);
 
+  const continueLabel = selectedRole === 'seller' ? 'CONTINUE AS SELLER' : 'CONTINUE AS BUYER';
+
   return (
-    <ScreenWrapper padded={false} edges={['bottom']} className="bg-brand-surface">
+    <ScreenWrapper padded={false} edges={['bottom']} className="bg-brand-background">
       <AppHeader variant="role" />
 
-      <View className="flex-1 px-xl pt-2xl">
-        <SectionTitle
-          title="Choose Your Role"
-          subtitle="Select how you will use PetroTrade to get started."
+      <ScrollView
+        className="flex-1"
+        contentContainerClassName="grow px-xl pt-lg pb-lg"
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        style={{ zIndex: 0 }}
+      >
+        <View className="items-center">
+          <View
+            className="mb-md rounded-full bg-brand-badge px-md py-sm"
+            style={{ alignSelf: 'center' }}
+          >
+            <Typography variant="badge">Get started</Typography>
+          </View>
+          <Typography variant="sectionTitle">Choose Your Role</Typography>
+          <Typography variant="subheading" className="mt-sm max-w-[300px]">
+            Select how you will use PetroTrade so we can open the right workspace.
+          </Typography>
+        </View>
+
+        <View accessibilityRole="radiogroup" className="mt-2xl gap-md">
+          <RoleCard
+            title="Buyer"
+            description="Purchase industrial materials at live market rates"
+            selected={selectedRole === 'buyer'}
+            onPress={() => setSelectedRole('buyer')}
+            highlights={BUYER_HIGHLIGHTS}
+            icon={
+              <CartIcon
+                size={26}
+                color={selectedRole === 'buyer' ? brandColors.white : brandColors.primary}
+              />
+            }
+          />
+          <RoleCard
+            title="Seller"
+            description="List stock, manage orders, and get paid faster"
+            selected={selectedRole === 'seller'}
+            onPress={() => setSelectedRole('seller')}
+            highlights={SELLER_HIGHLIGHTS}
+            icon={
+              <StoreIcon
+                size={26}
+                color={selectedRole === 'seller' ? brandColors.white : brandColors.primary}
+              />
+            }
+          />
+        </View>
+      </ScrollView>
+
+      <View
+        className="border-t border-brand-border px-xl pb-lg pt-md"
+        style={{ zIndex: 2, backgroundColor: brandColors.background }}
+      >
+        <View className="mb-md flex-row items-center justify-center gap-xs">
+          <LockIcon size={12} color={brandColors.badgeText} />
+          <Typography variant="legal">GST invoicing · Verified partners · Secure access</Typography>
+        </View>
+
+        <PrimaryButton
+          label={continueLabel}
+          showArrow
+          className="rounded-xl"
+          accessibilityLabel={continueLabel}
+          onPress={handleContinue}
         />
-
-        <View className="relative mt-2xl flex-1">
-          <View className="absolute bottom-16 left-0 right-0 items-center">
-            <IndustrialTanks width={wp(100)} height={wp(42)} />
-          </View>
-
-          <View className="gap-md">
-            <RoleCard
-              title="Buyer"
-              description="Purchase industrial materials"
-              selected={selectedRole === 'buyer'}
-              onPress={() => setSelectedRole('buyer')}
-              icon={
-                <CartIcon
-                  color={selectedRole === 'buyer' ? brandColors.primary : brandColors.body}
-                />
-              }
-            />
-            <RoleCard
-              title="Seller"
-              description="Sell & manage inventory"
-              selected={selectedRole === 'seller'}
-              onPress={() => setSelectedRole('seller')}
-              icon={
-                <StoreIcon
-                  color={selectedRole === 'seller' ? brandColors.primary : brandColors.body}
-                />
-              }
-            />
-          </View>
-        </View>
-
-        <View className="pb-xl pt-lg">
-          <PrimaryButton label="CONTINUE" showArrow onPress={handleContinue} />
-        </View>
       </View>
     </ScreenWrapper>
   );

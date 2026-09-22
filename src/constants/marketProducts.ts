@@ -1,6 +1,7 @@
 import type { MarketCategory, MarketProduct, StockLevel } from '@/types/market';
 
-export const MARKET_SEARCH_PLACEHOLDER = 'Search materials, grades, CAS, MFI...';
+export const MARKET_SEARCH_PLACEHOLDER =
+  'Search GST, invoices, grades, materials, orders…';
 
 export const MARKET_LOCATION_LABEL = 'Mumbai, MH';
 

@@ -76,6 +76,7 @@ export const LOWEST_LANDED_COST: LowestLandedCost = {
   ctaLabel: 'Review & Place Order',
 };
 
-export const HOME_SEARCH_PLACEHOLDER = 'Search Polymers (PP, HDPE, PVC...)';
+export const HOME_SEARCH_PLACEHOLDER =
+  'Search GST, invoices, grades, orders, POs…';
 
 export const TAB_BAR_HEIGHT = 64;

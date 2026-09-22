@@ -51,18 +51,13 @@ export const DOCUMENT_TABS: {
   },
   {
     id: 'invoices',
-    title: 'Invoices',
+    title: 'Tax Invoices',
     description: 'Tax invoices generated after commercial confirmation and payment milestones.',
   },
   {
     id: 'proforma',
     title: 'Proforma Invoice',
     description: 'Commercial proforma invoices pending conversion to tax invoices.',
-  },
-  {
-    id: 'gst_invoices',
-    title: 'GST Invoices',
-    description: 'GST-compliant tax invoices with CGST, SGST, and IGST breakups.',
   },
 ];
 
@@ -74,18 +69,13 @@ export const DOCUMENT_PROFILE_ITEMS = [
   },
   {
     id: 'invoices' as const,
-    title: 'Invoices',
+    title: 'Tax Invoices',
     subtitle: 'Tax invoices after commercial confirmation',
   },
   {
     id: 'proforma' as const,
     title: 'Proforma Invoice',
     subtitle: 'Proformas pending conversion',
-  },
-  {
-    id: 'gst_invoices' as const,
-    title: 'GST Invoices',
-    subtitle: 'GST-compliant billing with tax breakup',
   },
 ] as const;
 

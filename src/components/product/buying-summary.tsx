@@ -1,36 +1,26 @@
 import { memo } from 'react';
 
-import { View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 
 import { Typography } from '@/components/ui/typography';
 import { formatInr } from '@/constants/productDetails';
-import type { CheckoutQuote } from '@/types/checkout-quote';
+import { brandColors } from '@/theme/colors';
 import { cn } from '@/utils/cn';
+import type { ProductQuoteEstimate } from '@/utils/product-quote-estimate';
 
 type BuyingSummaryProps = {
-  quote?: CheckoutQuote | null;
-  loading?: boolean;
+  summary?: ProductQuoteEstimate | null;
+  refreshing?: boolean;
   error?: string | null;
   className?: string;
 };
 
 export const BuyingSummary = memo(function BuyingSummary({
-  quote,
-  loading = false,
+  summary,
+  refreshing = false,
   error = null,
   className,
 }: BuyingSummaryProps) {
-  const summary = quote
-    ? {
-        materialSubtotal: Number(quote.baseAmount),
-        discount: Number(quote.discountAmount),
-        freight: Number(quote.freightAmount),
-        gst: Number(quote.taxAmount),
-        gstLabel: `Estimated GST (${quote.taxRate}%)`,
-        grandTotal: Number(quote.totalAmount),
-      }
-    : null;
-
   return (
     <View
       className={cn(
@@ -38,23 +28,38 @@ export const BuyingSummary = memo(function BuyingSummary({
         className,
       )}
     >
-      <Typography variant="fieldLabel" className="text-[10px] tracking-[0.8px] text-brand-muted">
-        Buying Summary
-      </Typography>
-      {error ? (
-        <Typography variant="caption" className="mt-md font-sans text-[13px] normal-case text-brand-danger">
+      <View className="flex-row items-center justify-between">
+        <Typography variant="fieldLabel" className="text-[10px] tracking-[0.8px] text-brand-muted">
+          Buying Summary
+        </Typography>
+        {refreshing ? (
+          <View className="flex-row items-center" style={{ gap: 6 }}>
+            <ActivityIndicator size="small" color={brandColors.primary} />
+            <Typography
+              variant="caption"
+              className="font-sans text-[10px] normal-case tracking-normal text-brand-primary"
+            >
+              Updating
+            </Typography>
+          </View>
+        ) : null}
+      </View>
+      {error && !summary ? (
+        <Typography
+          variant="caption"
+          className="text-brand-danger mt-md font-sans text-[13px] normal-case"
+        >
           {error}
         </Typography>
-      ) : loading && !quote ? (
-        <Typography variant="caption" className="mt-md font-sans text-[13px] normal-case text-brand-muted">
-          Calculating total...
-        </Typography>
       ) : !summary ? (
-        <Typography variant="caption" className="mt-md font-sans text-[13px] normal-case text-brand-muted">
-          Unable to load latest pricing
+        <Typography
+          variant="caption"
+          className="mt-md font-sans text-[13px] normal-case text-brand-muted"
+        >
+          Select a quantity to see the estimated total.
         </Typography>
       ) : (
-        <View className="mt-md" style={{ gap: 8 }}>
+        <View className="mt-md" style={{ gap: 8, opacity: refreshing ? 0.82 : 1 }}>
           <View className="flex-row items-center justify-between">
             <Typography
               variant="caption"

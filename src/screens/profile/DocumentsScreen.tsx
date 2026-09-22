@@ -24,7 +24,6 @@ import {
 import { formatInr } from '@/constants/productDetails';
 import { ROUTES } from '@/navigation/routes';
 import {
-  filterGstInvoices,
   filterInvoices,
   filterProformas,
   filterPurchaseOrders,
@@ -35,13 +34,12 @@ import { brandColors } from '@/theme/colors';
 import type { DocumentKind, DocumentPreviewState, DocumentTab } from '@/types/documents';
 import { formatDate } from '@/utils/date';
 import {
-  buildGstDocumentContent,
   buildInvoiceDocumentContent,
   buildPoDocumentContent,
   buildProformaDocumentContent,
 } from '@/utils/document-content';
 
-const TAB_IDS: DocumentTab[] = ['purchase_orders', 'invoices', 'proforma', 'gst_invoices'];
+const TAB_IDS: DocumentTab[] = ['purchase_orders', 'invoices', 'proforma'];
 
 function parseTab(value?: string | string[]): DocumentTab {
   const raw = Array.isArray(value) ? value[0] : value;
@@ -64,7 +62,6 @@ export const DocumentsScreen = memo(function DocumentsScreen() {
   const purchaseOrders = useDocumentsStore((state) => state.purchaseOrders);
   const invoices = useDocumentsStore((state) => state.invoices);
   const proformas = useDocumentsStore((state) => state.proformas);
-  const gstInvoices = useDocumentsStore((state) => state.gstInvoices);
   const filters = useDocumentsStore((state) => state.filters);
   const setFilters = useDocumentsStore((state) => state.setFilters);
   const resetFilters = useDocumentsStore((state) => state.resetFilters);
@@ -94,16 +91,13 @@ export const DocumentsScreen = memo(function DocumentsScreen() {
   );
   const invoiceRows = useMemo(() => filterInvoices(invoices, filters), [invoices, filters]);
   const proformaRows = useMemo(() => filterProformas(proformas, filters), [proformas, filters]);
-  const gstRows = useMemo(() => filterGstInvoices(gstInvoices, filters), [gstInvoices, filters]);
 
   const searchPlaceholder =
     tab === 'purchase_orders'
       ? 'Search PO number, order, product, warehouse…'
       : tab === 'invoices'
-        ? 'Search invoice, order, PO, warehouse…'
-        : tab === 'proforma'
-          ? 'Search proforma, order, product…'
-          : 'Search GST invoice, GSTIN, order, PO…';
+        ? 'Search GST, GSTIN, invoice, order, PO, warehouse…'
+        : 'Search proforma, order, product…';
 
   const openDetail = useCallback(
     (kind: DocumentKind, id: string) => {
@@ -148,19 +142,15 @@ export const DocumentsScreen = memo(function DocumentsScreen() {
     if (tab === 'purchase_orders')
       return poRows.map((item) => ({ type: 'purchase_order' as const, item }));
     if (tab === 'invoices') return invoiceRows.map((item) => ({ type: 'invoice' as const, item }));
-    if (tab === 'proforma')
-      return proformaRows.map((item) => ({ type: 'proforma' as const, item }));
-    return gstRows.map((item) => ({ type: 'gst_invoice' as const, item }));
-  }, [tab, poRows, invoiceRows, proformaRows, gstRows]);
+    return proformaRows.map((item) => ({ type: 'proforma' as const, item }));
+  }, [tab, poRows, invoiceRows, proformaRows]);
 
   const totalCount =
     tab === 'purchase_orders'
       ? purchaseOrders.length
       : tab === 'invoices'
         ? invoices.length
-        : tab === 'proforma'
-          ? proformas.length
-          : gstInvoices.length;
+        : proformas.length;
 
   const renderItem = useCallback(
     ({ item }: { item: (typeof listData)[number] }) => {
@@ -213,73 +203,47 @@ export const DocumentsScreen = memo(function DocumentsScreen() {
         );
       }
 
-      if (item.type === 'proforma') {
-        const pi = item.item;
-        const content = buildProformaDocumentContent(pi);
-        return (
-          <DocumentListCard
-            title={pi.proformaNumber}
-            subtitle={`${pi.product}${pi.grade !== '—' ? ` · ${pi.grade}` : ''}`}
-            meta={`${pi.orderNumber} · ${formatDate(pi.createdDate, 'DD/MM/YYYY')} · Expires ${formatDate(pi.expiryDate, 'DD/MM/YYYY')}`}
-            amount={formatInr(pi.amount)}
-            status={pi.docStatus}
-            extraBadge={PROFORMA_STATUS_LABELS[pi.status]}
-            extraBadgeTone={
-              pi.status === 'converted'
-                ? 'emerald'
-                : pi.status === 'expired'
-                  ? 'amber'
-                  : pi.status === 'cancelled'
-                    ? 'slate'
-                    : 'sky'
-            }
-            onView={() => {
-              setPreview({
-                title: `Proforma ${pi.proformaNumber}`,
-                categoryLabel: 'Proforma Invoice',
-                fileName: `${pi.proformaNumber}.pdf`,
-                documentNumber: pi.proformaNumber,
-                orderNumber: pi.orderNumber,
-                content,
-              });
-            }}
-            onDownload={() => void handleDownload('proforma', pi.id, pi.proformaNumber, content)}
-            onShare={() => void handleShare(pi.proformaNumber, content)}
-            onConvert={() => {
-              const invId = convertProformaToInvoice(pi.id);
-              if (invId) {
-                Toast.show({ type: 'success', text1: 'Converted to tax invoice' });
-                openDetail('invoice', invId);
-              } else {
-                Toast.show({ type: 'error', text1: 'Unable to convert this proforma' });
-              }
-            }}
-            convertDisabled={pi.status === 'converted' || pi.status === 'cancelled'}
-          />
-        );
-      }
-
-      const gst = item.item;
-      const content = buildGstDocumentContent(gst);
+      const pi = item.item;
+      const content = buildProformaDocumentContent(pi);
       return (
         <DocumentListCard
-          title={gst.invoiceNumber}
-          subtitle={`${gst.orderNumber} · ${gst.product}`}
-          meta={`${gst.seller} · ${gst.warehouse} · GST ${formatInr(gst.totalGst)} · ${formatDate(gst.invoiceDate, 'DD/MM/YYYY')}`}
-          amount={formatInr(gst.grandTotal)}
-          status={gst.status}
+          title={pi.proformaNumber}
+          subtitle={`${pi.product}${pi.grade !== '—' ? ` · ${pi.grade}` : ''}`}
+          meta={`${pi.orderNumber} · ${formatDate(pi.createdDate, 'DD/MM/YYYY')} · Expires ${formatDate(pi.expiryDate, 'DD/MM/YYYY')}`}
+          amount={formatInr(pi.amount)}
+          status={pi.docStatus}
+          extraBadge={PROFORMA_STATUS_LABELS[pi.status]}
+          extraBadgeTone={
+            pi.status === 'converted'
+              ? 'emerald'
+              : pi.status === 'expired'
+                ? 'amber'
+                : pi.status === 'cancelled'
+                  ? 'slate'
+                  : 'sky'
+          }
           onView={() => {
             setPreview({
-              title: `GST Invoice ${gst.invoiceNumber}`,
-              categoryLabel: 'GST Invoice',
-              fileName: `${gst.invoiceNumber}.pdf`,
-              documentNumber: gst.invoiceNumber,
-              orderNumber: gst.orderNumber,
+              title: `Proforma ${pi.proformaNumber}`,
+              categoryLabel: 'Proforma Invoice',
+              fileName: `${pi.proformaNumber}.pdf`,
+              documentNumber: pi.proformaNumber,
+              orderNumber: pi.orderNumber,
               content,
             });
           }}
-          onDownload={() => void handleDownload('gst_invoice', gst.id, gst.invoiceNumber, content)}
-          onShare={() => void handleShare(gst.invoiceNumber, content)}
+          onDownload={() => void handleDownload('proforma', pi.id, pi.proformaNumber, content)}
+          onShare={() => void handleShare(pi.proformaNumber, content)}
+          onConvert={() => {
+            const invId = convertProformaToInvoice(pi.id);
+            if (invId) {
+              Toast.show({ type: 'success', text1: 'Converted to tax invoice' });
+              openDetail('invoice', invId);
+            } else {
+              Toast.show({ type: 'error', text1: 'Unable to convert this proforma' });
+            }
+          }}
+          convertDisabled={pi.status === 'converted' || pi.status === 'cancelled'}
         />
       );
     },

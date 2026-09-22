@@ -41,11 +41,17 @@ import { useNotificationBadge } from '@/hooks/use-notifications';
 import { useProductQuote } from '@/hooks/use-product-quote';
 import { BackArrowIcon } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
-import { useCartStore } from '@/store/cart-store';
 import { addCustomerCartItem, mapBackendCartItems } from '@/services/cart';
 import { checkoutErrorMessage, toBackendPaymentOption } from '@/services/checkout';
+import { useCartStore } from '@/store/cart-store';
 import { brandColors } from '@/theme/colors';
 import type { PaymentMethodId } from '@/types/payment';
+import {
+  DEFAULT_ADVANCE_DISCOUNT_RATE,
+  buyingSummaryFromQuote,
+  estimateProductQuote,
+  quoteMatchesSelection,
+} from '@/utils/product-quote-estimate';
 
 export const CustomerProductDetailsScreen = memo(function CustomerProductDetailsScreen() {
   const router = useRouter();
@@ -83,11 +89,14 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
     productName: string;
   } | null>(null);
   const addingLock = useRef(false);
+  const pendingCheckout = useRef(false);
+  const [awaitingQuote, setAwaitingQuote] = useState(false);
 
   const {
     quote,
     paymentOptions: backendPaymentOptions,
     loading: quoteLoading,
+    refreshing: quoteRefreshing,
     error: quoteError,
   } = useProductQuote({
     productId,
@@ -97,7 +106,11 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
     enabled: Boolean(product),
   });
 
-  const paymentOptions = backendPaymentOptions;
+  const paymentOptions = useMemo(
+    () =>
+      backendPaymentOptions.length > 0 ? backendPaymentOptions : (product?.paymentOptions ?? []),
+    [backendPaymentOptions, product?.paymentOptions],
+  );
 
   useEffect(() => {
     if (!product) {
@@ -137,15 +150,17 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
     }
   }, [paymentId, paymentOptions, selectedPayment]);
 
+  const matchingQuote = quoteMatchesSelection(quote, quantityMt, paymentId) ? quote : null;
+
   const displayPricePerMt = useMemo(() => {
-    if (quote) {
-      return Number(quote.unitPrice);
+    if (matchingQuote) {
+      return Number(matchingQuote.unitPrice);
     }
     if (!product) {
       return 0;
     }
     return priceForQuantity(product.pricingTiers, quantityMt) ?? product.spotPrice.pricePerMt;
-  }, [product, quantityMt, quote]);
+  }, [matchingQuote, product, quantityMt]);
 
   const displaySpotPrice = useMemo(() => {
     if (!product) {
@@ -157,15 +172,36 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
     return { ...product.spotPrice, pricePerMt: displayPricePerMt };
   }, [displayPricePerMt, product]);
 
-  const estimatedTotal = Number(quote?.totalAmount ?? 0);
+  const buyingSummary = useMemo(() => {
+    if (matchingQuote) {
+      return buyingSummaryFromQuote(matchingQuote);
+    }
+    if (!product || !(displayPricePerMt > 0)) {
+      return null;
+    }
+    const discountRate =
+      selectedPayment?.discountRate ??
+      (paymentId === 'advance' ? DEFAULT_ADVANCE_DISCOUNT_RATE : 0);
+    return estimateProductQuote({
+      unitPrice: displayPricePerMt,
+      quantity: quantityMt,
+      discountRate,
+      freightPerMt: product.logistics.freightPerMt,
+    });
+  }, [
+    displayPricePerMt,
+    matchingQuote,
+    paymentId,
+    product,
+    quantityMt,
+    selectedPayment?.discountRate,
+  ]);
+
+  const estimatedTotal = buyingSummary?.grandTotal ?? 0;
+  const confirmingPrice = Boolean(product) && !matchingQuote && !quoteError;
 
   const canPurchase = Boolean(
-    product &&
-    quote &&
-    !quoteError &&
-    product.stock > 0 &&
-    quantityMt >= product.moq &&
-    quantityMt <= product.stock,
+    product && product.stock > 0 && quantityMt >= product.moq && quantityMt <= product.stock,
   );
 
   const handleBack = useCallback(() => {
@@ -237,7 +273,7 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
       return false;
     }
 
-    const offerId = quote?.offerId ?? product.offerId;
+    const offerId = matchingQuote?.offerId ?? product.offerId;
     if (!offerId) {
       Toast.show({
         type: 'error',
@@ -271,7 +307,7 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
       addingLock.current = false;
       setAddingToCart(false);
     }
-  }, [canPurchase, paymentId, product, quantityMt, quote?.offerId, selectedTier]);
+  }, [canPurchase, matchingQuote?.offerId, paymentId, product, quantityMt, selectedTier]);
 
   const handleAddToCart = useCallback(async () => {
     if (!product) {
@@ -297,22 +333,75 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
     router.push(ROUTES.CUSTOMER.NOTIFICATIONS as Href);
   }, [router]);
 
+  const goToCheckout = useCallback(
+    (quoteId: string) => {
+      pendingCheckout.current = false;
+      setAwaitingQuote(false);
+      router.push({
+        pathname: ROUTES.CUSTOMER.CHECKOUT,
+        params: { quoteId },
+      } as unknown as Href);
+    },
+    [router],
+  );
+
   const handleBuyNow = useCallback(() => {
-    if (!quote || !canPurchase) {
+    if (!canPurchase) {
       Toast.show({
         type: 'error',
-        text1: 'Unable to load latest pricing',
-        text2: quoteError ?? 'Please wait for the latest quote before placing a request.',
+        text1: product?.stock === 0 ? 'Out of stock' : 'Unable to buy',
+        text2: 'Please choose an available quantity before placing a request.',
         visibilityTime: 2200,
       });
       return;
     }
 
-    router.push({
-      pathname: ROUTES.CUSTOMER.CHECKOUT,
-      params: { quoteId: quote.quoteId },
-    } as unknown as Href);
-  }, [canPurchase, quote, quoteError, router]);
+    if (matchingQuote) {
+      goToCheckout(matchingQuote.quoteId);
+      return;
+    }
+
+    if (quoteError && !quoteLoading && !quoteRefreshing) {
+      Toast.show({
+        type: 'error',
+        text1: 'Unable to load latest pricing',
+        text2: quoteError,
+        visibilityTime: 2200,
+      });
+      return;
+    }
+
+    pendingCheckout.current = true;
+    setAwaitingQuote(true);
+  }, [
+    canPurchase,
+    goToCheckout,
+    matchingQuote,
+    product?.stock,
+    quoteError,
+    quoteLoading,
+    quoteRefreshing,
+  ]);
+
+  useEffect(() => {
+    if (!pendingCheckout.current) {
+      return;
+    }
+    if (matchingQuote) {
+      goToCheckout(matchingQuote.quoteId);
+      return;
+    }
+    if (quoteError && !quoteLoading && !quoteRefreshing) {
+      pendingCheckout.current = false;
+      setAwaitingQuote(false);
+      Toast.show({
+        type: 'error',
+        text1: 'Unable to load latest pricing',
+        text2: quoteError,
+        visibilityTime: 2200,
+      });
+    }
+  }, [goToCheckout, matchingQuote, quoteError, quoteLoading, quoteRefreshing]);
 
   const handleContinueShopping = useCallback(() => {
     router.replace(ROUTES.CUSTOMER.MARKET as Href);
@@ -482,7 +571,11 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
                 </Typography>
               </View>
             </View>
-            <BuyingSummary quote={quote} loading={quoteLoading} error={quoteError} />
+            <BuyingSummary
+              summary={buyingSummary}
+              refreshing={confirmingPrice}
+              error={quoteError}
+            />
             {quoteError ? (
               <Typography
                 variant="caption"
@@ -495,7 +588,9 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
                 variant="caption"
                 className="mx-lg font-sans text-[11px] normal-case leading-[16px] tracking-normal text-brand-muted"
               >
-                Prices include platform freight and GST from the latest PetroTrade quote.
+                {confirmingPrice
+                  ? 'Showing an estimated total while we confirm freight, GST, and the latest market price.'
+                  : 'Prices include platform freight and GST from the latest PetroTrade quote.'}
               </Typography>
             )}
             <TrustCard product={product} />
@@ -520,7 +615,8 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
           increment={product.quantityIncrement}
           estimatedTotal={estimatedTotal}
           disabled={!canPurchase}
-          quoting={quoteLoading || !quote}
+          refreshing={confirmingPrice}
+          lockingPrice={awaitingQuote}
           adding={addingToCart}
           onIncrement={handleIncrement}
           onDecrement={handleDecrement}

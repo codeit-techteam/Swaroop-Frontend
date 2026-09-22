@@ -20,7 +20,7 @@ import { buildInvoiceDocumentContent, buildPoDocumentContent } from '@/utils/doc
 
 function parseKind(value?: string | string[]): DocumentKind {
   const raw = Array.isArray(value) ? value[0] : value;
-  if (raw === 'invoice' || raw === 'proforma' || raw === 'gst_invoice') return raw;
+  if (raw === 'invoice' || raw === 'proforma') return raw;
   return 'purchase_order';
 }
 

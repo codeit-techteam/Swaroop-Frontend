@@ -1,4 +1,4 @@
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 
 import { Pressable, View } from 'react-native';
 
@@ -16,10 +16,25 @@ type DocumentDownloadsProps = {
   className?: string;
 };
 
+const isOptionalProductDownload = (doc: ComplianceDocument): boolean => {
+  const title = doc.title.trim().toUpperCase();
+  return (
+    title === 'TDS' ||
+    title === 'MSDS' ||
+    doc.type === 'msds' ||
+    (doc.type === 'test_certificate' && title.includes('TDS'))
+  );
+};
+
 export const DocumentDownloads = memo(function DocumentDownloads({
   documents,
   className,
 }: DocumentDownloadsProps) {
+  const visibleDocuments = useMemo(
+    () => documents.filter(isOptionalProductDownload),
+    [documents],
+  );
+
   const handleDownload = useCallback((doc: ComplianceDocument) => {
     Toast.show({
       type: 'success',
@@ -29,7 +44,7 @@ export const DocumentDownloads = memo(function DocumentDownloads({
     });
   }, []);
 
-  if (documents.length === 0) {
+  if (visibleDocuments.length === 0) {
     return null;
   }
 
@@ -47,10 +62,10 @@ export const DocumentDownloads = memo(function DocumentDownloads({
         variant="caption"
         className="mt-xs font-sans text-[12px] normal-case tracking-normal text-brand-muted"
       >
-        Product documents and certificates
+        Optional TDS and MSDS when available
       </Typography>
       <View className="mt-md" style={{ gap: 8 }}>
-        {documents.map((doc) => (
+        {visibleDocuments.map((doc) => (
           <Pressable
             key={doc.id}
             onPress={() => handleDownload(doc)}

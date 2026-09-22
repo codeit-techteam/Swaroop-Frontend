@@ -31,7 +31,6 @@ export const ProfileScreen = memo(function ProfileScreen() {
   const purchaseOrdersCount = useDocumentsStore((state) => state.purchaseOrders.length);
   const invoicesCount = useDocumentsStore((state) => state.invoices.length);
   const proformasCount = useDocumentsStore((state) => state.proformas.length);
-  const gstInvoicesCount = useDocumentsStore((state) => state.gstInvoices.length);
   const documentsHydrated = useDocumentsStore((state) => state.isHydrated);
 
   useEffect(() => {
@@ -103,10 +102,9 @@ export const ProfileScreen = memo(function ProfileScreen() {
             purchase_orders: purchaseOrdersCount,
             invoices: invoicesCount,
             proforma: proformasCount,
-            gst_invoices: gstInvoicesCount,
           }
         : undefined,
-    [documentsHydrated, gstInvoicesCount, invoicesCount, proformasCount, purchaseOrdersCount],
+    [documentsHydrated, invoicesCount, proformasCount, purchaseOrdersCount],
   );
 
   return (

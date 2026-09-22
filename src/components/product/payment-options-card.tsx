@@ -20,7 +20,8 @@ export const PaymentOptionsCard = memo(function PaymentOptionsCard({
   onSelect,
   className,
 }: PaymentOptionsCardProps) {
-  const selected = options.find((option) => option.id === selectedId) ?? options.find((option) => option.eligible);
+  const selected =
+    options.find((option) => option.id === selectedId) ?? options.find((option) => option.eligible);
 
   return (
     <View
@@ -39,7 +40,7 @@ export const PaymentOptionsCard = memo(function PaymentOptionsCard({
             <Pressable
               key={option.id}
               onPress={() => {
-                if (option.eligible) {
+                if (option.eligible && option.id !== selectedId) {
                   onSelect(option.id);
                 }
               }}
@@ -47,6 +48,7 @@ export const PaymentOptionsCard = memo(function PaymentOptionsCard({
               accessibilityRole="radio"
               accessibilityState={{ selected: isSelected, disabled: !option.eligible }}
               accessibilityLabel={option.title}
+              style={({ pressed }) => ({ opacity: option.eligible && pressed ? 0.85 : 1 })}
               className={cn(
                 'flex-row items-center rounded-lg border px-md py-md',
                 isSelected
@@ -70,7 +72,11 @@ export const PaymentOptionsCard = memo(function PaymentOptionsCard({
                   <Typography variant="roleTitle" className="text-[14px] text-brand-heading">
                     {option.title}
                   </Typography>
-                  {option.surchargeLabel ? (
+                  {option.discountRate ? (
+                    <Typography variant="success" className="text-[11px]">
+                      Save {(option.discountRate * 100).toFixed(0)}%
+                    </Typography>
+                  ) : option.surchargeLabel ? (
                     <Typography
                       variant="caption"
                       className="font-sans text-[11px] normal-case tracking-normal text-brand-muted"

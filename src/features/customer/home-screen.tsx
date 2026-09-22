@@ -28,7 +28,8 @@ import { useDeliveryLocation } from '@/hooks/use-delivery-location';
 import { useNotificationBadge } from '@/hooks/use-notifications';
 import { ROUTES } from '@/navigation/routes';
 import { fetchCustomerMarketplaceProducts } from '@/services/catalog';
-import { fetchCustomerHomeBanners } from '@/services/cms';
+import { fetchCustomerHomeBanners, trackCmsBannerEvent } from '@/services/cms';
+import { openCustomerBanner } from '@/lib/cms-banner';
 import { fetchCustomerFinanceSummary } from '@/services/orders';
 import {
   selectActiveOrder,
@@ -218,10 +219,17 @@ export const CustomerHomeScreen = () => {
 
   const handleBannerAction = useCallback(
     (banner: HomeBanner) => {
-      showInfoToast(banner.title, banner.description);
+      trackCmsBannerEvent(banner.id, 'CLICK');
+      if (!openCustomerBanner(router, banner)) {
+        showInfoToast(banner.title, banner.description);
+      }
     },
-    [showInfoToast],
+    [router, showInfoToast],
   );
+
+  const handleBannerImpression = useCallback((banner: HomeBanner) => {
+    trackCmsBannerEvent(banner.id, 'IMPRESSION');
+  }, []);
 
   const handleWatchlistPress = useCallback(
     (item: WatchlistItem) => {
@@ -275,7 +283,11 @@ export const CustomerHomeScreen = () => {
           </View>
 
           {banners.length > 0 ? (
-            <HeroCarousel banners={banners} onActionPress={handleBannerAction} />
+            <HeroCarousel
+              banners={banners}
+              onActionPress={handleBannerAction}
+              onImpression={handleBannerImpression}
+            />
           ) : null}
 
           {activeOrder ? (

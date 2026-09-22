@@ -127,7 +127,7 @@ const DEFAULT_FEATURES = [
 
 const DEFAULT_PRODUCT_HIGHLIGHTS = [
   'PetroTrade Verified',
-  'GST Invoice Available',
+  'Tax Invoice Available',
   'Fast Dispatch',
   'Credit Eligible',
   'Quality Certified',
@@ -252,16 +252,10 @@ const buildProductHighlights = (creditEligible: boolean): string[] =>
     item === 'Credit Eligible' && !creditEligible ? 'Advance Preferred' : item,
   );
 
+/** Optional product downloads — only TDS and MSDS are supported on PDP. */
 const buildProductDocuments = (productName: string): ComplianceDocument[] => {
   const safe = productName.replace(/\s+/g, '-').toLowerCase();
   return [
-    {
-      id: 'doc-spec',
-      type: 'coa',
-      title: 'Specification PDF',
-      description: 'Grade specification sheet',
-      fileName: `${safe}-specification.pdf`,
-    },
     {
       id: 'doc-tds',
       type: 'test_certificate',
@@ -275,20 +269,6 @@ const buildProductDocuments = (productName: string): ComplianceDocument[] => {
       title: 'MSDS',
       description: 'Material safety data sheet',
       fileName: `${safe}-msds.pdf`,
-    },
-    {
-      id: 'doc-iso',
-      type: 'iso',
-      title: 'Certificate',
-      description: 'Quality / ISO certificate',
-      fileName: `${safe}-certificate.pdf`,
-    },
-    {
-      id: 'doc-qr',
-      type: 'quality_report',
-      title: 'Quality Report',
-      description: 'Latest batch quality report',
-      fileName: `${safe}-quality-report.pdf`,
     },
   ];
 };

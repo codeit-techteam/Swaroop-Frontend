@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { FlatList, Keyboard, View, type TextInput } from 'react-native';
 
@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
 import { LocationBottomSheet } from '@/components/home';
+import { HeroCarousel } from '@/components/home/hero-carousel';
 import {
   CategoryFilter,
   EmptyState,
@@ -25,6 +26,9 @@ import { useDeliveryLocation } from '@/hooks/use-delivery-location';
 import { useMarketSearch } from '@/hooks/use-market-search';
 import { useMarketplaceCatalogQuery } from '@/hooks/use-marketplace-catalog';
 import { ROUTES } from '@/navigation/routes';
+import { fetchCustomerMarketplaceBanners, trackCmsBannerEvent } from '@/services/cms';
+import { openCustomerBanner } from '@/lib/cms-banner';
+import type { HomeBanner } from '@/types/home';
 import type { MarketProduct } from '@/types/market';
 
 export const CustomerMarketScreen = () => {
@@ -35,6 +39,7 @@ export const CustomerMarketScreen = () => {
   const { selectedLocation, openAddressForm } = useDeliveryLocation();
   const params = useLocalSearchParams<{ focusSearch?: string | string[] }>();
   const { products: marketProducts, loading, error, refetch } = useMarketplaceCatalogQuery();
+  const [promoBanners, setPromoBanners] = useState<HomeBanner[]>([]);
   const {
     query,
     selectedCategory,
@@ -75,6 +80,32 @@ export const CustomerMarketScreen = () => {
   const handleCartPress = useCallback(() => {
     router.push(ROUTES.CUSTOMER.CART as Href);
   }, [router]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchCustomerMarketplaceBanners()
+      .then((items) => {
+        if (!cancelled) setPromoBanners(items);
+      })
+      .catch(() => {
+        if (!cancelled) setPromoBanners([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handlePromoAction = useCallback(
+    (banner: HomeBanner) => {
+      trackCmsBannerEvent(banner.id, 'CLICK');
+      openCustomerBanner(router, banner);
+    },
+    [router],
+  );
+
+  const handlePromoImpression = useCallback((banner: HomeBanner) => {
+    trackCmsBannerEvent(banner.id, 'IMPRESSION');
+  }, []);
 
   const handleFilterPress = useCallback(() => {
     Toast.show({
@@ -264,6 +295,14 @@ export const CustomerMarketScreen = () => {
             onSelectCategory={handleSelectCategory}
             onFilterPress={handleFilterPress}
           />
+
+          {promoBanners.length > 0 ? (
+            <HeroCarousel
+              banners={promoBanners}
+              onActionPress={handlePromoAction}
+              onImpression={handlePromoImpression}
+            />
+          ) : null}
 
           <View className="flex-row items-center justify-between px-lg pb-sm pt-md">
             <Typography
