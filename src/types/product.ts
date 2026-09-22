@@ -35,7 +35,15 @@ export type ProductPaymentOption = {
   eligible: boolean;
 };
 
-export type ComplianceDocumentType = 'coa' | 'msds' | 'iso' | 'test_certificate' | 'quality_report';
+export type ComplianceDocumentType =
+  | 'coa'
+  | 'msds'
+  | 'tds'
+  | 'iso'
+  | 'test_certificate'
+  | 'quality_report'
+  | 'technical_specification'
+  | 'other';
 
 export type ComplianceDocument = {
   id: string;
@@ -43,6 +51,9 @@ export type ComplianceDocument = {
   title: string;
   description: string;
   fileName: string;
+  version?: number;
+  status?: string;
+  productId?: string;
 };
 
 export type LogisticsEstimate = {

@@ -16,6 +16,19 @@ type BlindListing = {
   leadTime?: string | null;
 };
 
+type BlindProductDocument = {
+  id: string;
+  type: string;
+  title: string;
+  description?: string;
+  version?: number;
+  status?: string;
+  available?: boolean;
+  mimeType?: string | null;
+  fileName?: string;
+  fileSizeBytes?: string | null;
+};
+
 type BlindProduct = {
   id: string;
   code: string;
@@ -30,6 +43,7 @@ type BlindProduct = {
   supplyOrigin?: string | null;
   listing?: BlindListing | null;
   grade?: { code?: string; name?: string } | null;
+  documents?: BlindProductDocument[];
 };
 
 function num(value: unknown, fallback = 0) {
@@ -67,6 +81,7 @@ export function mapBlindProduct(product: BlindProduct): MarketProduct {
     },
     creditEligible: Boolean(specs.creditEligible),
     offerId: listing?.offerId,
+    documents: product.documents ?? [],
   };
 }
 

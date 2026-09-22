@@ -42,9 +42,11 @@ import { useProductQuote } from '@/hooks/use-product-quote';
 import { BackArrowIcon } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
 import { addCustomerCartItem, mapBackendCartItems } from '@/services/cart';
+import { fetchCustomerMarketplaceProduct } from '@/services/catalog';
 import { checkoutErrorMessage, toBackendPaymentOption } from '@/services/checkout';
 import { useCartStore } from '@/store/cart-store';
 import { brandColors } from '@/theme/colors';
+import type { MarketProduct } from '@/types/market';
 import type { PaymentMethodId } from '@/types/payment';
 import {
   DEFAULT_ADVANCE_DISCOUNT_RATE,
@@ -75,10 +77,46 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
     return null;
   }, [params.id]);
 
-  const product = useMemo(
-    () => (productId ? getProductDetailsById(productId, catalog) : null),
-    [catalog, productId],
-  );
+  const [detailProduct, setDetailProduct] = useState<MarketProduct | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!productId) return;
+    let cancelled = false;
+    setDetailLoading(true);
+    setDetailError(null);
+    void fetchCustomerMarketplaceProduct(productId)
+      .then((item) => {
+        if (!cancelled) {
+          setDetailProduct(item);
+          setDetailLoading(false);
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setDetailProduct(null);
+          setDetailLoading(false);
+          setDetailError(
+            error instanceof Error ? error.message : 'Unable to load product',
+          );
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [productId]);
+
+  const product = useMemo(() => {
+    if (!productId) return null;
+    if (detailProduct) {
+      return getProductDetailsById(productId, [detailProduct, ...catalog]);
+    }
+    return getProductDetailsById(productId, catalog);
+  }, [catalog, detailProduct, productId]);
+
+  const loading = catalogLoading || detailLoading;
+  const loadError = detailError ?? catalogError;
 
   const [quantityMt, setQuantityMt] = useState(25);
   const [selectedTierId, setSelectedTierId] = useState<string>('');
@@ -417,7 +455,7 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
     [router],
   );
 
-  if (catalogLoading) {
+  if (loading && !product) {
     return (
       <View className="flex-1 bg-brand-background" accessibilityState={{ busy: true }}>
         <ProductHeader
@@ -431,7 +469,7 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
     );
   }
 
-  if (catalogError) {
+  if (loadError && !product) {
     return (
       <View className="flex-1 bg-brand-white px-lg" style={{ paddingTop: insets.top + 16 }}>
         <Pressable
@@ -446,7 +484,7 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
           Unable to load product
         </Typography>
         <Typography variant="subheadingLeft" className="mt-sm">
-          {catalogError}
+          {loadError}
         </Typography>
         <Pressable
           onPress={() => {
@@ -527,7 +565,10 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
             <ProductFeatures features={product.features} />
             <ProductApplications applications={product.applications} industry={product.industry} />
             <ProductSpecs product={product} />
-            <DocumentDownloads documents={product.documents} />
+            <DocumentDownloads
+              documents={product.documents}
+              productId={product.id}
+            />
             {displaySpotPrice ? <SpotPriceCard spotPrice={displaySpotPrice} /> : null}
             <PricingTiersCard
               tiers={product.pricingTiers}

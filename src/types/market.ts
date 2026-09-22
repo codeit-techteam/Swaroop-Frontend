@@ -44,6 +44,15 @@ export type MarketProduct = {
   technicalSpecs?: ProductTechnicalSpecs;
   creditEligible?: boolean;
   offerId?: string;
+  documents?: Array<{
+    id: string;
+    type: string;
+    title: string;
+    description?: string;
+    version?: number;
+    status?: string;
+    fileName?: string;
+  }>;
 };
 
 export type StockLevel = 'high' | 'medium' | 'low';

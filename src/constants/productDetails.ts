@@ -252,25 +252,34 @@ const buildProductHighlights = (creditEligible: boolean): string[] =>
     item === 'Credit Eligible' && !creditEligible ? 'Advance Preferred' : item,
   );
 
-/** Optional product downloads — only TDS and MSDS are supported on PDP. */
-const buildProductDocuments = (productName: string): ComplianceDocument[] => {
-  const safe = productName.replace(/\s+/g, '-').toLowerCase();
-  return [
-    {
-      id: 'doc-tds',
-      type: 'test_certificate',
-      title: 'TDS',
-      description: 'Technical data sheet',
-      fileName: `${safe}-tds.pdf`,
-    },
-    {
-      id: 'doc-msds',
-      type: 'msds',
-      title: 'MSDS',
-      description: 'Material safety data sheet',
-      fileName: `${safe}-msds.pdf`,
-    },
-  ];
+/** Map backend blind documents — never invent mock TDS/MSDS. */
+const mapApiDocuments = (
+  productId: string,
+  docs?: MarketProduct['documents'],
+): ComplianceDocument[] => {
+  if (!docs?.length) return [];
+  return docs.map((doc) => {
+    const t = String(doc.type).toUpperCase();
+    let type: ComplianceDocument['type'] = 'other';
+    if (t === 'TDS' || t === 'PRODUCT_TDS') type = 'tds';
+    else if (t === 'MSDS' || t === 'SDS' || t === 'MDS') type = 'msds';
+    else if (t === 'COA') type = 'coa';
+    else if (t === 'ISO') type = 'iso';
+    else if (t.includes('TEST')) type = 'test_certificate';
+    else if (t.includes('QUALITY')) type = 'quality_report';
+    else if (t.includes('TECHNICAL') || t.includes('SPEC'))
+      type = 'technical_specification';
+    return {
+      id: doc.id,
+      type,
+      title: doc.title,
+      description: doc.description ?? 'Verified Product Document',
+      fileName: doc.fileName ?? `${doc.title}.pdf`,
+      version: doc.version,
+      status: doc.status,
+      productId,
+    };
+  });
 };
 
 const buildSpotPrice = (pricePerMt: number): SpotPriceInfo => {
@@ -509,7 +518,8 @@ export const buildProductDetails = (
     paymentOptions: overrides.paymentOptions ?? buildPaymentOptions(creditEligible),
     logistics:
       overrides.logistics ?? buildLogisticsEstimate({ warehouseLabel: warehouseRegion, eta }),
-    documents: overrides.documents ?? buildProductDocuments(name),
+    documents:
+      overrides.documents ?? mapApiDocuments(market.id, market.documents),
     relatedProducts: overrides.relatedProducts ?? relatedCardsFor(market, catalog),
     creditEligible,
     offerId: overrides.offerId ?? market.offerId,
