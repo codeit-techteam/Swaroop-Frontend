@@ -7,17 +7,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScreenWrapper, Typography } from '@/components';
 import { ROUTES } from '@/navigation/routes';
-import {
-  ConfirmationBottomSheet,
-  RejectReasonSheet,
-  SellerOrderCard,
-} from '@/seller/modules/seller-orders/components';
+import { SellerOrderCard } from '@/seller/modules/seller-orders/components';
 import { useSellerOrdersStore } from '@/seller/modules/seller-orders/store/sellerOrdersStore';
-import type {
-  SellerOrder,
-  SellerOrderTabFilter,
-  SellerRejectReason,
-} from '@/seller/modules/seller-orders/types/sellerOrders';
+import type { SellerOrder, SellerOrderTabFilter } from '@/seller/modules/seller-orders/types/sellerOrders';
 import {
   EmptyState,
   FilterBottomSheet,
@@ -47,8 +39,6 @@ export const SellerOrdersScreen = memo(function SellerOrdersScreen() {
   const summary = useSellerOrdersStore((state) => state.summary);
   const searchOrders = useSellerOrdersStore((state) => state.searchOrders);
   const selectOrder = useSellerOrdersStore((state) => state.selectOrder);
-  const acceptOrder = useSellerOrdersStore((state) => state.acceptOrder);
-  const rejectOrder = useSellerOrdersStore((state) => state.rejectOrder);
   const syncFromDispatch = useSellerOrdersStore((state) => state.syncFromDispatch);
   const refreshSellerOrdersState = useSellerOrdersStore((state) => state.refreshSellerOrdersState);
   const hydrateSellerOrdersState = useSellerOrdersStore((state) => state.hydrateSellerOrdersState);
@@ -56,10 +46,6 @@ export const SellerOrdersScreen = memo(function SellerOrdersScreen() {
 
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<SellerOrderTabFilter>('all');
-  const [acceptTarget, setAcceptTarget] = useState<SellerOrder | null>(null);
-  const [rejectTarget, setRejectTarget] = useState<SellerOrder | null>(null);
-  const [rejectReason, setRejectReason] = useState<SellerRejectReason>('Insufficient Inventory');
-  const [rejectRemarks, setRejectRemarks] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const isLoading = useSkeletonLoading(ordersHydrated);
   const { isRefreshing, refresh } = usePullToRefresh(async () => {
@@ -86,29 +72,6 @@ export const SellerOrdersScreen = memo(function SellerOrdersScreen() {
   const openEligibility = (order: SellerOrder) => {
     selectOrder(order.id);
     router.push(`${ROUTES.SELLER.ORDER_ELIGIBILITY}?orderId=${order.id}` as Href);
-  };
-
-  const handleAcceptConfirm = () => {
-    if (!acceptTarget) {
-      return;
-    }
-    const accepted = acceptOrder(acceptTarget.id);
-    setAcceptTarget(null);
-    if (accepted) {
-      router.push(`${ROUTES.SELLER.ORDER_ACCEPTED}?orderId=${accepted.id}` as Href);
-    }
-  };
-
-  const handleRejectConfirm = () => {
-    if (!rejectTarget) {
-      return;
-    }
-    const rejected = rejectOrder(rejectTarget.id, rejectReason, rejectRemarks);
-    setRejectTarget(null);
-    setRejectRemarks('');
-    if (rejected) {
-      router.push(`${ROUTES.SELLER.ORDER_REJECTED}?orderId=${rejected.id}` as Href);
-    }
   };
 
   const handleBottomNav = (target: Parameters<typeof navigateSellerBottomTab>[1]) => {
@@ -164,53 +127,59 @@ export const SellerOrdersScreen = memo(function SellerOrdersScreen() {
             </View>
           ) : (
             <>
-          <View className="mt-md flex-row flex-wrap gap-sm">
-            {[
-              { label: 'Pending', value: summary.pending },
-              { label: 'Accepted', value: summary.accepted },
-              { label: 'Dispatch', value: summary.dispatchPending },
-              { label: 'Delivered', value: summary.delivered },
-            ].map((item) => (
-              <View
-                key={item.label}
-                className="rounded-full border border-brand-border bg-brand-white px-md py-xs"
-              >
-                <Typography variant="legal" className="text-brand-body">
-                  {item.label}: {item.value}
-                </Typography>
+              <View className="mt-md flex-row flex-wrap gap-sm">
+                {[
+                  { label: 'Pending', value: summary.pending },
+                  { label: 'Accepted', value: summary.accepted },
+                  { label: 'Dispatch', value: summary.dispatchPending },
+                  { label: 'Delivered', value: summary.delivered },
+                ].map((item) => (
+                  <View
+                    key={item.label}
+                    className="rounded-full border border-brand-border bg-brand-white px-md py-xs"
+                  >
+                    <Typography variant="legal" className="text-brand-body">
+                      {item.label}: {item.value}
+                    </Typography>
+                  </View>
+                ))}
               </View>
-            ))}
-          </View>
 
-          <View className="mt-lg gap-md">
-            {visibleItems.length === 0 ? (
-              <EmptyState
-                variant="no_orders"
-                onCtaPress={() => router.push(ROUTES.SELLER.OFFERS as Href)}
-              />
-            ) : (
-              visibleItems.map((order) => (
-                <SellerOrderCard
-                  key={order.id}
-                  order={order}
-                  onAccept={setAcceptTarget}
-                  onReject={setRejectTarget}
-                  onViewDetails={openEligibility}
-                  onUploadLorryReceipt={(item) =>
-                    router.push(
-                      `${ROUTES.SELLER.DISPATCH_MANAGEMENT}?orderId=${item.dispatchLinkId}` as Href,
-                    )
-                  }
-                />
-              ))
-            )}
-            {hasMore || isLoadingMore ? <ListFooterLoader /> : null}
-            {hasMore && !isLoadingMore ? (
-              <Pressable onPress={() => void loadMore()} className="items-center py-sm">
-                <Typography variant="link">Load More</Typography>
-              </Pressable>
-            ) : null}
-          </View>
+              <View className="mt-sm">
+                <Pressable onPress={() => router.push(ROUTES.SELLER.PURCHASE_REQUESTS as Href)}>
+                  <Typography variant="badge" className="text-brand-primary">
+                    Review purchase requests →
+                  </Typography>
+                </Pressable>
+              </View>
+
+              <View className="mt-lg gap-md">
+                {visibleItems.length === 0 ? (
+                  <EmptyState
+                    variant="no_orders"
+                    onCtaPress={() => router.push(ROUTES.SELLER.PURCHASE_REQUESTS as Href)}
+                  />
+                ) : (
+                  visibleItems.map((order) => (
+                    <SellerOrderCard
+                      key={order.id}
+                      order={order}
+                      onViewDetails={openEligibility}
+                      onUploadLorryReceipt={(item) =>
+                        router.push(
+                          `${ROUTES.SELLER.DISPATCH_MANAGEMENT}?orderId=${item.dispatchLinkId}` as Href,
+                        )
+                      }
+                    />
+                  ))
+                )}
+                {hasMore || isLoadingMore ? <ListFooterLoader /> : null}
+                {hasMore && !isLoadingMore ? (
+                  <Pressable onPress={() => void loadMore()} className="items-center py-sm">
+                    <Typography variant="link">Load More</Typography>
+                  </Pressable>
+                ) : null}
+              </View>
             </>
           )}
         </ScrollView>
@@ -225,27 +194,6 @@ export const SellerOrdersScreen = memo(function SellerOrdersScreen() {
         module="orders"
         onClose={() => setShowFilters(false)}
         onApply={() => undefined}
-      />
-
-      <ConfirmationBottomSheet
-        visible={Boolean(acceptTarget)}
-        title="Accept this order?"
-        message="Inventory is available. Proceed?"
-        onCancel={() => setAcceptTarget(null)}
-        onConfirm={handleAcceptConfirm}
-      />
-
-      <RejectReasonSheet
-        visible={Boolean(rejectTarget)}
-        reason={rejectReason}
-        remarks={rejectRemarks}
-        onReasonChange={setRejectReason}
-        onRemarksChange={setRejectRemarks}
-        onCancel={() => {
-          setRejectTarget(null);
-          setRejectRemarks('');
-        }}
-        onReject={handleRejectConfirm}
       />
     </ScreenWrapper>
   );

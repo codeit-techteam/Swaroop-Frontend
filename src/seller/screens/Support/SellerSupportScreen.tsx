@@ -1,4 +1,4 @@
-import { memo, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 
 import { Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
@@ -29,8 +29,21 @@ const TAB_OPTIONS = [
 export const SellerSupportScreen = memo(function SellerSupportScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { snapshot, filteredTickets, activeTab, setActiveTab, isLoading, isRefreshing, refresh } =
-    useSellerSupport();
+  const {
+    snapshot,
+    filteredTickets,
+    activeTab,
+    setActiveTab,
+    isLoading,
+    isRefreshing,
+    refresh,
+    pullRefresh,
+  } = useSellerSupport();
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
   const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
   const [statusSheet, setStatusSheet] = useState(false);
 
@@ -58,7 +71,7 @@ export const SellerSupportScreen = memo(function SellerSupportScreen() {
         className="flex-1 px-lg"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => void refresh()} />}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => void pullRefresh()} />}
       >
         <Typography variant="subheading" className="mt-md text-brand-body">
           Get help with orders, payments, dispatch, and account issues.

@@ -1,7 +1,21 @@
-import { STORAGE_KEYS } from '@/constants';
 import type { MarketProduct } from '@/types/market';
-import { getStorageItem, setStorageItem } from '@/utils/storage';
+import { useSellerProductStore } from '@/seller/store/sellerProductStore';
 
+import type {
+  BackendOffer,
+  BackendOfferSummary,
+  CreateBackendOfferPayload,
+  UpdateBackendOfferPayload,
+} from '@/seller/modules/seller-offers/services/sellerOffersApi';
+import {
+  activateSellerOffer,
+  cancelSellerOffer,
+  createSellerOffer,
+  deleteSellerOffer,
+  listSellerOffers,
+  pauseSellerOffer,
+  updateSellerOffer,
+} from '@/seller/modules/seller-offers/services/sellerOffersApi';
 import type {
   CreateOfferInput,
   OfferEditorForm,
@@ -9,17 +23,15 @@ import type {
   OfferPricingTier,
   OfferReviewTimelineStep,
   OfferStats,
+  OfferStatus,
   OfferTabFilter,
   OfferValidity,
   SellerOffer,
   SellerOffersSnapshot,
 } from '@/seller/modules/seller-offers/types/offers';
 
-type OffersSeed = {
-  offers: SellerOffer[];
-};
-
-const offersSeed = require('@/seller/modules/seller-offers/mock/offers.json') as OffersSeed;
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const VALIDITY_HOURS: Record<OfferValidity, number> = {
   '12h': 12,
@@ -49,34 +61,56 @@ export const DEFAULT_WAREHOUSE = {
   location: 'Hazira, Gujarat',
 };
 
-const safeParse = <T>(value: string | undefined, fallback: T): T => {
-  if (!value) {
-    return fallback;
-  }
-
-  try {
-    return JSON.parse(value) as T;
-  } catch {
-    return fallback;
-  }
-};
-
 const nowIso = (): string => new Date().toISOString();
 
-const generateOfferCode = (): string => {
-  const segment = Math.floor(1000 + Math.random() * 9000);
-  const suffix =
-    String.fromCharCode(65 + Math.floor(Math.random() * 26)) +
-    String.fromCharCode(65 + Math.floor(Math.random() * 26));
-  return `#${segment}-${suffix}`;
-};
+const isUuid = (value?: string | null): value is string =>
+  Boolean(value && UUID_RE.test(value));
 
-const computeExpiresAt = (validity: OfferValidity, from = new Date()): string => {
+export const computeExpiresAt = (validity: OfferValidity, from = new Date()): string => {
   const hours = VALIDITY_HOURS[validity];
   return new Date(from.getTime() + hours * 60 * 60 * 1000).toISOString();
 };
 
-const buildDefaultReviewTimeline = (status: SellerOffer['status']): OfferReviewTimelineStep[] => {
+const inferValidity = (validFrom?: string | null, validUntil?: string | null): OfferValidity => {
+  if (!validUntil) {
+    return '72h';
+  }
+  const from = validFrom ? new Date(validFrom).getTime() : Date.now();
+  const until = new Date(validUntil).getTime();
+  if (!Number.isFinite(until) || !Number.isFinite(from)) {
+    return '72h';
+  }
+  const hours = Math.max(0, (until - from) / (60 * 60 * 1000));
+  if (hours <= 12) return '12h';
+  if (hours <= 24) return '24h';
+  if (hours <= 72) return '72h';
+  return '7d';
+};
+
+export const mapBackendStatusToUi = (status?: string | null): OfferStatus => {
+  switch ((status ?? '').toUpperCase()) {
+    case 'DRAFT':
+      return 'draft';
+    case 'PENDING_REVIEW':
+    case 'NEED_CHANGES':
+      return 'pending_review';
+    case 'ACTIVE':
+      return 'active';
+    case 'PAUSED':
+      return 'paused';
+    case 'EXPIRED':
+    case 'CLOSED':
+      return 'expired';
+    case 'REJECTED':
+      return 'rejected';
+    default:
+      return 'draft';
+  }
+};
+
+export const buildDefaultReviewTimeline = (
+  status: SellerOffer['status'],
+): OfferReviewTimelineStep[] => {
   const submitted: OfferReviewTimelineStep = {
     id: 'submitted',
     title: 'Submitted',
@@ -127,6 +161,99 @@ export const formatReviewTimestamp = (date: Date): string =>
     minute: '2-digit',
   }).format(date);
 
+const num = (value: unknown, fallback = 0): number => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+};
+
+const buildTierLabel = (minQty: number, maxQty: number | null): string => {
+  if (minQty === 0 && maxQty !== null) {
+    return `< ${maxQty} MT`;
+  }
+  if (maxQty === null) {
+    return minQty > 0 ? `${minQty}+ MT` : '> 0 MT';
+  }
+  if (minQty === maxQty) {
+    return `${minQty} MT`;
+  }
+  return `${minQty} - ${maxQty} MT`;
+};
+
+export const mapBackendOfferToSellerOffer = (item: BackendOffer): SellerOffer => {
+  const quantity = num(item.quantity);
+  const reserved = num(item.inventory?.reservedQty);
+  const basePrice = num(item.basePrice);
+  const status = mapBackendStatusToUi(item.status);
+  const warehouseName = item.warehouse?.name ?? DEFAULT_WAREHOUSE.name;
+  const locationParts = [item.warehouse?.city, item.warehouse?.state].filter(Boolean);
+  const warehouseLocation =
+    locationParts.length > 0 ? locationParts.join(', ') : DEFAULT_WAREHOUSE.location;
+  const productName = item.product?.name ?? item.grade?.displayName ?? item.grade?.name ?? 'Offer';
+  const gradeLabel = item.grade?.code ?? item.grade?.name ?? '';
+  const remarks =
+    (typeof item.metadata?.remarks === 'string' ? item.metadata.remarks : undefined) ??
+    item.deliveryTerms ??
+    '';
+
+  const tiers: OfferPricingTier[] = (item.priceTiers ?? []).map((tier, index) => {
+    const minQty = num(tier.minQty);
+    const maxQty =
+      tier.maxQty === null || tier.maxQty === undefined ? null : num(tier.maxQty);
+    const pricePerKg = num(tier.price);
+    const discountPercent =
+      basePrice > 0 ? Number((((basePrice - pricePerKg) / basePrice) * 100).toFixed(1)) : 0;
+    return {
+      id: tier.id ?? `tier-${item.id}-${index}`,
+      minQty,
+      maxQty,
+      discountPercent,
+      pricePerKg,
+      label: buildTierLabel(minQty, maxQty),
+    };
+  });
+
+  const quotes = num(item._count?.purchaseRequestItems);
+
+  return {
+    id: item.id,
+    offerId: item.referenceNumber ?? item.id,
+    product: productName,
+    grade: gradeLabel,
+    category: item.grade?.name ?? 'POLYMER',
+    warehouse: warehouseName,
+    warehouseLocation,
+    basePrice,
+    moq: num(item.moq),
+    validity: inferValidity(item.validFrom, item.validUntil),
+    remarks,
+    status,
+    allocatedStock: quantity,
+    reservedStock: reserved,
+    remainingStock: Math.max(quantity - reserved, 0),
+    tiers,
+    analytics: {
+      views: 0,
+      quotes,
+      orders: 0,
+      conversionRate: 0,
+    },
+    productId: item.productId ?? item.product?.id,
+    inventoryProductId: item.inventoryId ?? item.inventory?.id ?? undefined,
+    warehouseId: item.warehouseId ?? item.warehouse?.id ?? undefined,
+    gradeId: item.gradeId ?? item.grade?.id ?? undefined,
+    version: item.version,
+    createdAt: item.createdAt ?? nowIso(),
+    updatedAt: item.updatedAt ?? item.createdAt ?? nowIso(),
+    expiresAt: item.validUntil ?? computeExpiresAt('72h'),
+    submittedAt:
+      status === 'pending_review' || status === 'active' || status === 'paused'
+        ? item.updatedAt ?? item.createdAt
+        : undefined,
+    approvedAt: status === 'active' || status === 'paused' ? item.updatedAt : undefined,
+    reviewTimeline: buildDefaultReviewTimeline(status),
+  };
+};
+
 export const createEmptyEditorForm = (): OfferEditorForm => ({
   productGrade: 'HDPE PE100',
   product: 'HDPE PE100 (Pipe Grade)',
@@ -138,6 +265,10 @@ export const createEmptyEditorForm = (): OfferEditorForm => ({
   validity: '72h',
   warehouse: DEFAULT_WAREHOUSE.name,
   warehouseLocation: DEFAULT_WAREHOUSE.location,
+  productId: undefined,
+  warehouseId: undefined,
+  inventoryId: undefined,
+  quantity: '500',
   tiers: [
     {
       id: 'editor-tier-1',
@@ -177,21 +308,12 @@ export const createEditorFormFromOffer = (offer: SellerOffer): OfferEditorForm =
   validity: offer.validity,
   warehouse: offer.warehouse,
   warehouseLocation: offer.warehouseLocation,
+  productId: offer.productId,
+  warehouseId: offer.warehouseId,
+  inventoryId: offer.inventoryProductId,
+  quantity: String(offer.allocatedStock),
   tiers: offer.tiers.map((tier) => ({ ...tier })),
 });
-
-const buildTierLabel = (minQty: number, maxQty: number | null): string => {
-  if (minQty === 0 && maxQty !== null) {
-    return `< ${maxQty} MT`;
-  }
-  if (maxQty === null) {
-    return minQty > 0 ? `${minQty}+ MT` : '> 0 MT';
-  }
-  if (minQty === maxQty) {
-    return `${minQty} MT`;
-  }
-  return `${minQty} - ${maxQty} MT`;
-};
 
 export const calculateTierPrice = (basePrice: number, discountPercent: number): number =>
   Number((basePrice * (1 - discountPercent / 100)).toFixed(2));
@@ -232,29 +354,48 @@ const partitionOffers = (offers: SellerOffer[]) => ({
   ),
 });
 
-const buildStats = (offers: SellerOffer[]): OfferStats => ({
-  total: offers.length,
-  active: offers.filter((offer) => offer.status === 'active').length,
-  paused: offers.filter((offer) => offer.status === 'paused').length,
-  expired: offers.filter((offer) => offer.status === 'expired').length,
-  draft: offers.filter((offer) => offer.status === 'draft').length,
-  pendingReview: offers.filter((offer) => offer.status === 'pending_review').length,
-  approved: offers.filter(
-    (offer) =>
-      offer.status === 'approved' || offer.status === 'active' || offer.status === 'paused',
-  ).length,
-});
+const buildStats = (
+  offers: SellerOffer[],
+  summary?: BackendOfferSummary | null,
+): OfferStats => {
+  if (summary) {
+    return {
+      total: num(summary.total, offers.length),
+      active: num(summary.active),
+      paused: num(summary.paused),
+      expired: num(summary.expired),
+      draft: num(summary.draft),
+      pendingReview: num(summary.pendingReview),
+      approved: num(summary.active) + num(summary.paused),
+    };
+  }
+
+  return {
+    total: offers.length,
+    active: offers.filter((offer) => offer.status === 'active').length,
+    paused: offers.filter((offer) => offer.status === 'paused').length,
+    expired: offers.filter((offer) => offer.status === 'expired').length,
+    draft: offers.filter((offer) => offer.status === 'draft').length,
+    pendingReview: offers.filter((offer) => offer.status === 'pending_review').length,
+    approved: offers.filter(
+      (offer) =>
+        offer.status === 'approved' || offer.status === 'active' || offer.status === 'paused',
+    ).length,
+  };
+};
 
 const sortOffers = (offers: SellerOffer[]): SellerOffer[] =>
   [...offers].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 
-const buildSnapshot = (
+export const buildSnapshot = (
   offers: SellerOffer[],
   selectedOfferId: string | null = null,
   editorForm: OfferEditorForm = createEmptyEditorForm(),
   editingOfferId: string | null = null,
   filters: OfferTabFilter = 'all',
   search = '',
+  summary?: BackendOfferSummary | null,
+  loadError: string | null = null,
 ): SellerOffersSnapshot => {
   const normalized = sortOffers(offers);
   const partitions = partitionOffers(normalized);
@@ -270,33 +411,20 @@ const buildSnapshot = (
     editingOfferId,
     filters,
     search,
-    stats: buildStats(normalized),
+    stats: buildStats(normalized, summary),
+    loadError,
   };
 };
 
 export const buildDefaultSellerOffersSnapshot = (): SellerOffersSnapshot =>
-  buildSnapshot(offersSeed.offers);
+  buildSnapshot([]);
 
-export const getOffers = (): SellerOffersSnapshot => {
-  const fallback = buildDefaultSellerOffersSnapshot();
-  const persisted = safeParse<Partial<SellerOffersSnapshot>>(
-    getStorageItem(STORAGE_KEYS.SELLER_OFFERS_STATE),
-    fallback,
-  );
+/** Empty in-memory baseline — backend is the source of truth. */
+export const getOffers = (): SellerOffersSnapshot => buildDefaultSellerOffersSnapshot();
 
-  const offers = persisted.offers?.length ? persisted.offers : fallback.offers;
-  return buildSnapshot(
-    offers,
-    persisted.selectedOfferId ?? fallback.selectedOfferId,
-    persisted.editorForm ?? fallback.editorForm,
-    persisted.editingOfferId ?? null,
-    persisted.filters ?? 'all',
-    persisted.search ?? '',
-  );
-};
-
-export const persistSellerOffersSnapshot = (snapshot: SellerOffersSnapshot): void => {
-  setStorageItem(STORAGE_KEYS.SELLER_OFFERS_STATE, JSON.stringify(snapshot));
+/** No longer persists authoritative offer list; kept as no-op for call-site compatibility. */
+export const persistSellerOffersSnapshot = (_snapshot: SellerOffersSnapshot): void => {
+  // Intentionally empty — AsyncStorage is not the source of truth for offers.
 };
 
 export const filterOffersByTab = (offers: SellerOffer[], tab: OfferTabFilter): SellerOffer[] => {
@@ -344,6 +472,112 @@ export const searchOffers = (
   });
 };
 
+export const resolveOfferProductId = (
+  form: OfferEditorForm,
+  input?: Partial<CreateOfferInput>,
+): string => {
+  const candidates = [
+    input?.productId,
+    form.productId,
+    useSellerProductStore.getState().selectedProductId ?? undefined,
+  ];
+
+  for (const candidate of candidates) {
+    if (isUuid(candidate)) {
+      return candidate;
+    }
+  }
+
+  const products = useSellerProductStore.getState().products;
+  const needleProduct = (input?.product ?? form.product ?? form.productGrade).trim().toLowerCase();
+  const needleGrade = (input?.grade ?? form.grade).trim().toLowerCase();
+
+  const match = products.find((product) => {
+    if (isUuid(product.id) && (product.id === input?.productId || product.id === form.productId)) {
+      return true;
+    }
+    const name = product.form.name.trim().toLowerCase();
+    const grade = product.form.grade.trim().toLowerCase();
+    return (
+      (needleProduct && (name === needleProduct || name.includes(needleProduct))) ||
+      (needleGrade && grade === needleGrade)
+    );
+  });
+
+  if (match) {
+    if (isUuid(match.id)) {
+      return match.id;
+    }
+    if (isUuid(match.form.catalogProductId)) {
+      return match.form.catalogProductId;
+    }
+  }
+
+  throw new Error(
+    'Select a product listing before creating an offer. A backend productId is required.',
+  );
+};
+
+export const buildCreatePayloadFromEditor = (
+  form: OfferEditorForm,
+  input?: Partial<CreateOfferInput>,
+): CreateBackendOfferPayload => {
+  const productId = resolveOfferProductId(form, input);
+  const basePrice = num(input?.basePrice ?? form.basePrice);
+  const moq = num(input?.moq ?? form.moq);
+  const quantity = num(
+    input?.allocatedStock ?? form.quantity ?? input?.remainingStock ?? 500,
+    500,
+  );
+  const validity = input?.validity ?? form.validity;
+  const remarks = input?.remarks ?? form.remarks;
+  const tiers = input?.tiers ?? form.tiers;
+
+  if (!productId) {
+    throw new Error(
+      'Select a product listing before creating an offer. A backend productId is required.',
+    );
+  }
+  if (basePrice <= 0) {
+    throw new Error('Base price must be greater than 0.');
+  }
+  if (quantity <= 0) {
+    throw new Error('Quantity must be greater than 0.');
+  }
+
+  return {
+    productId,
+    warehouseId: form.warehouseId || input?.warehouseId || undefined,
+    inventoryId: form.inventoryId || input?.inventoryProductId || undefined,
+    quantity,
+    moq: moq > 0 ? moq : undefined,
+    unit: 'MT',
+    basePrice,
+    validUntil: computeExpiresAt(validity),
+    deliveryTerms: remarks || undefined,
+    metadata: remarks ? { remarks } : undefined,
+    priceTiers: tiers.map((tier) => ({
+      minQty: tier.minQty,
+      maxQty: tier.maxQty ?? undefined,
+      price: tier.pricePerKg,
+    })),
+  };
+};
+
+export const buildUpdatePayloadFromEditor = (
+  form: OfferEditorForm,
+  offer: SellerOffer,
+): UpdateBackendOfferPayload => {
+  const base = buildCreatePayloadFromEditor(form, {
+    productId: form.productId ?? offer.productId,
+    allocatedStock: num(form.quantity, offer.allocatedStock),
+  });
+  return {
+    ...base,
+    version: offer.version,
+  };
+};
+
 export const buildOfferFromEditor = (
   form: OfferEditorForm,
   status: SellerOffer['status'],
@@ -352,10 +586,11 @@ export const buildOfferFromEditor = (
   const now = nowIso();
   const basePrice = Number(form.basePrice) || 0;
   const moq = Number(form.moq) || 0;
+  const quantity = Number(form.quantity) || existing?.allocatedStock || 500;
 
   return {
     id: existing?.id ?? `offer-${Date.now()}`,
-    offerId: existing?.offerId ?? generateOfferCode(),
+    offerId: existing?.offerId ?? `#LOCAL`,
     product: form.product || form.productGrade,
     grade: form.grade,
     category: form.category,
@@ -366,9 +601,9 @@ export const buildOfferFromEditor = (
     validity: form.validity,
     remarks: form.remarks,
     status,
-    allocatedStock: existing?.allocatedStock ?? 500,
+    allocatedStock: quantity,
     reservedStock: existing?.reservedStock ?? 0,
-    remainingStock: existing?.remainingStock ?? 500,
+    remainingStock: existing?.remainingStock ?? quantity,
     tiers: form.tiers.map((tier) => ({ ...tier })),
     analytics: existing?.analytics ?? {
       views: 0,
@@ -376,8 +611,11 @@ export const buildOfferFromEditor = (
       orders: 0,
       conversionRate: 0,
     },
-    productId: existing?.productId,
-    inventoryProductId: existing?.inventoryProductId,
+    productId: form.productId ?? existing?.productId,
+    inventoryProductId: form.inventoryId ?? existing?.inventoryProductId,
+    warehouseId: form.warehouseId ?? existing?.warehouseId,
+    gradeId: existing?.gradeId,
+    version: existing?.version,
     createdAt: existing?.createdAt ?? now,
     updatedAt: now,
     expiresAt: computeExpiresAt(form.validity),
@@ -391,6 +629,82 @@ export const buildOfferFromEditor = (
   };
 };
 
+export const fetchSellerOffersSnapshot = async (
+  current: SellerOffersSnapshot,
+  options?: { search?: string },
+): Promise<SellerOffersSnapshot> => {
+  const search = options?.search ?? current.search;
+  try {
+    const { items } = await listSellerOffers({
+      page: 1,
+      limit: 100,
+      search: search.trim() || undefined,
+    });
+    const offers = items.map(mapBackendOfferToSellerOffer);
+    return buildSnapshot(
+      offers,
+      current.selectedOfferId,
+      current.editorForm,
+      current.editingOfferId,
+      current.filters,
+      search,
+      null,
+      null,
+    );
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'Failed to load offers from backend.';
+    return buildSnapshot(
+      [],
+      current.selectedOfferId,
+      current.editorForm,
+      current.editingOfferId,
+      current.filters,
+      search,
+      null,
+      message,
+    );
+  }
+};
+
+export const createOfferOnBackend = async (
+  form: OfferEditorForm,
+  input?: Partial<CreateOfferInput>,
+): Promise<SellerOffer> => {
+  const payload = buildCreatePayloadFromEditor(form, input);
+  const created = await createSellerOffer(payload);
+  return mapBackendOfferToSellerOffer(created);
+};
+
+export const updateOfferOnBackend = async (
+  offer: SellerOffer,
+  form: OfferEditorForm,
+): Promise<SellerOffer> => {
+  const payload = buildUpdatePayloadFromEditor(form, offer);
+  const updated = await updateSellerOffer(offer.id, payload);
+  return mapBackendOfferToSellerOffer(updated);
+};
+
+export const activateOfferOnBackend = async (offerId: string): Promise<SellerOffer> => {
+  const updated = await activateSellerOffer(offerId);
+  return mapBackendOfferToSellerOffer(updated);
+};
+
+export const pauseOfferOnBackend = async (offerId: string): Promise<SellerOffer> => {
+  const updated = await pauseSellerOffer(offerId);
+  return mapBackendOfferToSellerOffer(updated);
+};
+
+export const deleteOfferOnBackend = async (offerId: string): Promise<void> => {
+  await deleteSellerOffer(offerId);
+};
+
+export const cancelOfferOnBackend = async (offerId: string): Promise<SellerOffer> => {
+  const updated = await cancelSellerOffer(offerId);
+  return mapBackendOfferToSellerOffer(updated);
+};
+
+/** Local snapshot helpers retained for preview / offline UI composition only. */
 export const createOffer = (
   snapshot: SellerOffersSnapshot,
   input: Partial<CreateOfferInput>,
@@ -408,6 +722,7 @@ export const createOffer = (
       validity: input.validity ?? form.validity,
       warehouse: input.warehouse ?? form.warehouse,
       warehouseLocation: input.warehouseLocation ?? form.warehouseLocation,
+      productId: input.productId ?? form.productId,
       tiers: input.tiers ?? form.tiers,
     },
     input.status ?? 'draft',
@@ -426,6 +741,8 @@ export const createOffer = (
     null,
     snapshot.filters,
     snapshot.search,
+    null,
+    snapshot.loadError,
   );
 
   return { snapshot: nextSnapshot, offer };
@@ -457,6 +774,8 @@ export const updateOfferInSnapshot = (
     snapshot.editingOfferId,
     snapshot.filters,
     snapshot.search,
+    null,
+    snapshot.loadError,
   );
 
   return { snapshot: nextSnapshot, offer: updated };
@@ -474,6 +793,8 @@ export const deleteOfferFromSnapshot = (
     snapshot.editingOfferId === offerId ? null : snapshot.editingOfferId,
     snapshot.filters,
     snapshot.search,
+    null,
+    snapshot.loadError,
   );
 };
 
@@ -493,6 +814,7 @@ export const duplicateOfferInSnapshot = (
   duplicated.allocatedStock = source.allocatedStock;
   duplicated.remainingStock = source.remainingStock;
   duplicated.reservedStock = 0;
+  duplicated.productId = source.productId;
   duplicated.analytics = { views: 0, quotes: 0, orders: 0, conversionRate: 0 };
 
   const offers = sortOffers([duplicated, ...snapshot.offers]);
@@ -503,6 +825,8 @@ export const duplicateOfferInSnapshot = (
     duplicated.id,
     snapshot.filters,
     snapshot.search,
+    null,
+    snapshot.loadError,
   );
 
   return { snapshot: nextSnapshot, offer: duplicated };
@@ -600,6 +924,8 @@ export const submitOfferForReview = (
     null,
     snapshot.filters,
     snapshot.search,
+    null,
+    snapshot.loadError,
   );
 
   return { snapshot: nextSnapshot, offer };
@@ -616,6 +942,8 @@ export const rebuildSellerOffersSnapshot = (
     current.editingOfferId,
     current.filters,
     current.search,
+    null,
+    current.loadError,
   );
 
 export const saveDraftFromEditor = (
@@ -634,6 +962,8 @@ export const saveDraftFromEditor = (
         updated.id,
         snapshot.filters,
         snapshot.search,
+        null,
+        snapshot.loadError,
       );
       return { snapshot: nextSnapshot, offer: updated };
     }

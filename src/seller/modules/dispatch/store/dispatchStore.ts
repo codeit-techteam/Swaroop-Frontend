@@ -7,6 +7,7 @@ import {
   assignVehicle as applyAssignVehicle,
   buildDefaultDispatchSnapshot,
   downloadDocument as resolveDocumentDownload,
+  fetchSellerDispatchesSnapshot,
   generateInvoice as applyGenerateInvoice,
   getDispatchOrders,
   getDocuments as resolveDocuments,
@@ -18,6 +19,7 @@ import {
 } from '@/seller/modules/dispatch/services/dispatchService';
 import type { DispatchStore } from '@/seller/modules/dispatch/types/dispatch';
 import { useSellerOrdersStore } from '@/seller/modules/seller-orders/store/sellerOrdersStore';
+import { logger } from '@/utils/logger';
 
 const syncSellerOrdersFromDispatch = (): void => {
   useSellerOrdersStore.getState().syncFromDispatch();
@@ -42,18 +44,51 @@ export const useDispatchStore = create<DispatchStore>((set, get) => ({
   isHydrated: false,
 
   hydrateDispatchState: () => {
-    const snapshot = getDispatchOrders();
-    set({
-      ...snapshot,
-      isHydrated: true,
-    });
-    syncAllOrders(snapshot.dispatchOrders.map(mapDispatchOrderToOrder));
+    void get().hydrateFromApi();
   },
 
   refreshDispatchState: () => {
-    const snapshot = getDispatchOrders();
-    set(snapshot);
-    syncAllOrders(snapshot.dispatchOrders.map(mapDispatchOrderToOrder));
+    void get().refreshFromApi();
+  },
+
+  hydrateFromApi: async () => {
+    try {
+      const snapshot = await fetchSellerDispatchesSnapshot();
+      set({
+        ...snapshot,
+        isHydrated: true,
+      });
+      persistDispatchSnapshot(snapshot);
+      syncAllOrders(snapshot.dispatchOrders.map(mapDispatchOrderToOrder));
+      syncSellerOrdersFromDispatch();
+    } catch (error) {
+      logger.warn('Seller dispatch API hydrate failed; using local snapshot', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+      const snapshot = getDispatchOrders();
+      set({
+        ...snapshot,
+        isHydrated: true,
+      });
+      syncAllOrders(snapshot.dispatchOrders.map(mapDispatchOrderToOrder));
+    }
+  },
+
+  refreshFromApi: async () => {
+    try {
+      const snapshot = await fetchSellerDispatchesSnapshot();
+      set(snapshot);
+      persistDispatchSnapshot(snapshot);
+      syncAllOrders(snapshot.dispatchOrders.map(mapDispatchOrderToOrder));
+      syncSellerOrdersFromDispatch();
+    } catch (error) {
+      logger.warn('Seller dispatch API refresh failed; using local snapshot', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+      const snapshot = getDispatchOrders();
+      set(snapshot);
+      syncAllOrders(snapshot.dispatchOrders.map(mapDispatchOrderToOrder));
+    }
   },
 
   selectDispatch: (orderId) => {

@@ -8,6 +8,7 @@ import type {
 } from '@/seller/types';
 import { matchCatalogForLegacyForm } from '@/seller/utils/catalog';
 import { createEmptyPricing, normalizeSellerPricing } from '@/seller/utils/pricing';
+import { fetchSellerProducts } from '@/services/seller-products';
 import { getStorageItem, setStorageItem } from '@/utils/storage';
 
 const safeParse = <T>(value: string | undefined, fallback: T): T => {
@@ -120,6 +121,11 @@ export const buildDefaultSellerProductSnapshot = (): SellerProductSnapshot => {
     pendingSettlement: '₹1.2Cr',
     overdueCount: 4,
   };
+};
+
+/** Prefer live seller catalog when available; falls back to local snapshot. */
+export const fetchSellerProductsFromApi = async (): Promise<SellerProduct[]> => {
+  return fetchSellerProducts();
 };
 
 export const getSellerProductSnapshot = (): SellerProductSnapshot => {
@@ -377,3 +383,12 @@ const reconcileCollections = (snapshot: SellerProductSnapshot): SellerProductSna
     inactiveProducts: products.filter((item) => item.status === 'inactive'),
   };
 };
+
+export const applyApiProductsToSnapshot = (
+  snapshot: SellerProductSnapshot,
+  products: SellerProduct[],
+): SellerProductSnapshot =>
+  reconcileCollections({
+    ...snapshot,
+    products,
+  });

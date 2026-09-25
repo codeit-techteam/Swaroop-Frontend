@@ -35,6 +35,9 @@ export const ROUTES = {
     CREDIT_UPLOAD_PROOF: '/(customer)/credit/upload-proof',
     CREDIT_VERIFICATION: '/(customer)/credit/verification',
     CREDIT_RESTORED: '/(customer)/credit-restored',
+    CREDIT_FACILITY: '/(customer)/credit/facility',
+    CREDIT_REQUEST: '/(customer)/credit/request',
+    CREDIT_APPLICATION_STATUS: '/(customer)/credit/application-status',
     LOADING_SCHEDULED: '/(customer)/loading-scheduled',
     LOADING_COMPLETED: '/(customer)/loading-completed',
     PAYMENT_REMINDER: '/(customer)/payment-reminder',
@@ -60,6 +63,8 @@ export const ROUTES = {
     PROFILE_DOCUMENT_DETAIL: '/(customer)/profile/document-detail',
     BULK_LOGISTICS_QUOTE: '/(customer)/profile/bulk-logistics-quote',
     NOTIFICATIONS: '/(customer)/notifications',
+    SUPPORT: '/(customer)/profile/support',
+    SUPPORT_RAISE: '/(customer)/profile/raise-ticket',
   },
   SELLER: {
     LOGIN: '/(seller)/login',
@@ -87,6 +92,7 @@ export const ROUTES = {
     SETTLEMENT_RELEASED: '/(seller)/settlement-released',
     SETTLEMENT_HISTORY: '/(seller)/settlement-history',
     SETTLEMENT_DOCUMENTS: '/(seller)/settlement-documents',
+    PAYMENTS: '/(seller)/payments',
     WAREHOUSE: '/(seller)/warehouse',
     DISPATCH: '/(seller)/dispatch',
     DISPATCH_DETAIL: '/(seller)/dispatch-detail',
@@ -120,6 +126,11 @@ export const ROUTES = {
     OFFER_APPROVED: '/(seller)/offer-approved',
     OFFER_PAUSED: '/(seller)/offer-paused',
     OFFER_EXPIRED: '/(seller)/offer-expired',
+    PURCHASE_REQUESTS: '/(seller)/purchase-requests',
+    PURCHASE_REQUEST_DETAIL: '/(seller)/purchase-request-detail',
+    PRICE_REVISIONS: '/(seller)/price-revisions',
+    VEHICLE_SLOTS: '/(seller)/vehicle-slots',
+    PROCUREMENT_WORKBENCH: '/(seller)/procurement-workbench',
     SEARCH: '/(seller)/search',
     RAISE_TICKET: '/(seller)/raise-ticket',
   },
@@ -167,6 +178,9 @@ export type CustomerRoute =
   | typeof ROUTES.CUSTOMER.CREDIT_UPLOAD_PROOF
   | typeof ROUTES.CUSTOMER.CREDIT_VERIFICATION
   | typeof ROUTES.CUSTOMER.CREDIT_RESTORED
+  | typeof ROUTES.CUSTOMER.CREDIT_FACILITY
+  | typeof ROUTES.CUSTOMER.CREDIT_REQUEST
+  | typeof ROUTES.CUSTOMER.CREDIT_APPLICATION_STATUS
   | typeof ROUTES.CUSTOMER.LOADING_SCHEDULED
   | typeof ROUTES.CUSTOMER.LOADING_COMPLETED
   | typeof ROUTES.CUSTOMER.PAYMENT_REMINDER
@@ -191,7 +205,9 @@ export type CustomerRoute =
   | typeof ROUTES.CUSTOMER.PROFILE_DOCUMENTS
   | typeof ROUTES.CUSTOMER.PROFILE_DOCUMENT_DETAIL
   | typeof ROUTES.CUSTOMER.BULK_LOGISTICS_QUOTE
-  | typeof ROUTES.CUSTOMER.NOTIFICATIONS;
+  | typeof ROUTES.CUSTOMER.NOTIFICATIONS
+  | typeof ROUTES.CUSTOMER.SUPPORT
+  | typeof ROUTES.CUSTOMER.SUPPORT_RAISE;
 
 export type SellerRoute =
   | typeof ROUTES.SELLER.LOGIN
@@ -219,6 +235,7 @@ export type SellerRoute =
   | typeof ROUTES.SELLER.SETTLEMENT_RELEASED
   | typeof ROUTES.SELLER.SETTLEMENT_HISTORY
   | typeof ROUTES.SELLER.SETTLEMENT_DOCUMENTS
+  | typeof ROUTES.SELLER.PAYMENTS
   | typeof ROUTES.SELLER.WAREHOUSE
   | typeof ROUTES.SELLER.DISPATCH
   | typeof ROUTES.SELLER.DISPATCH_DETAIL
@@ -251,7 +268,14 @@ export type SellerRoute =
   | typeof ROUTES.SELLER.OFFER_DETAILS
   | typeof ROUTES.SELLER.OFFER_APPROVED
   | typeof ROUTES.SELLER.OFFER_PAUSED
-  | typeof ROUTES.SELLER.OFFER_EXPIRED;
+  | typeof ROUTES.SELLER.OFFER_EXPIRED
+  | typeof ROUTES.SELLER.PURCHASE_REQUESTS
+  | typeof ROUTES.SELLER.PURCHASE_REQUEST_DETAIL
+  | typeof ROUTES.SELLER.PRICE_REVISIONS
+  | typeof ROUTES.SELLER.VEHICLE_SLOTS
+  | typeof ROUTES.SELLER.PROCUREMENT_WORKBENCH
+  | typeof ROUTES.SELLER.SEARCH
+  | typeof ROUTES.SELLER.RAISE_TICKET;
 
 export type PublicRoute = typeof ROUTES.PUBLIC.ROOT;
 

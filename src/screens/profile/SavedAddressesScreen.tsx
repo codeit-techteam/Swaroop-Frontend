@@ -2,7 +2,7 @@ import { memo, useCallback } from 'react';
 
 import { Alert, Pressable, View } from 'react-native';
 
-import { type Href, useRouter } from 'expo-router';
+import { type Href, useFocusEffect, useRouter } from 'expo-router';
 
 import Toast from 'react-native-toast-message';
 
@@ -20,6 +20,13 @@ export const SavedAddressesScreen = memo(function SavedAddressesScreen() {
   const { addresses, selectedLocation, refreshAddresses } = useDeliveryLocation();
   const makeDefault = useAddressStore((state) => state.makeDefault);
   const removeAddress = useAddressStore((state) => state.removeAddress);
+  const isSyncing = useAddressStore((state) => state.isSyncing);
+
+  useFocusEffect(
+    useCallback(() => {
+      void refreshAddresses();
+    }, [refreshAddresses]),
+  );
 
   const handleBack = useCallback(() => {
     router.back();
@@ -33,6 +40,23 @@ export const SavedAddressesScreen = memo(function SavedAddressesScreen() {
       } as unknown as Href);
     },
     [router],
+  );
+
+  const handleMakeDefault = useCallback(
+    (id: string, label: string) => {
+      void makeDefault(id)
+        .then(() => {
+          Toast.show({ type: 'success', text1: 'Primary address updated', text2: label });
+        })
+        .catch((cause: unknown) => {
+          Toast.show({
+            type: 'error',
+            text1: 'Unable to set primary',
+            text2: cause instanceof Error ? cause.message : 'Try again.',
+          });
+        });
+    },
+    [makeDefault],
   );
 
   const handleDelete = useCallback(
@@ -76,7 +100,8 @@ export const SavedAddressesScreen = memo(function SavedAddressesScreen() {
       ) : (
         <View className="mt-lg gap-md">
           {addresses.map((address) => {
-            const selected = address.id === selectedLocation.addressId || address.id === selectedLocation.id;
+            const selected =
+              address.id === selectedLocation.addressId || address.id === selectedLocation.id;
             return (
               <View
                 key={address.id}
@@ -94,7 +119,10 @@ export const SavedAddressesScreen = memo(function SavedAddressesScreen() {
                     </View>
                   ) : null}
                 </View>
-                <Typography variant="caption" className="mt-xs font-sans text-[12px] normal-case tracking-normal text-brand-muted">
+                <Typography
+                  variant="caption"
+                  className="mt-xs font-sans text-[12px] normal-case tracking-normal text-brand-muted"
+                >
                   {addressKindLabel(address.type)}
                 </Typography>
                 <Typography variant="subheadingLeft" className="mt-sm text-[13px] text-brand-body">
@@ -112,9 +140,7 @@ export const SavedAddressesScreen = memo(function SavedAddressesScreen() {
                 <View className="mt-md flex-row items-center gap-md">
                   {!address.isDefault ? (
                     <Pressable
-                      onPress={() => {
-                        void makeDefault(address.id);
-                      }}
+                      onPress={() => handleMakeDefault(address.id, address.label)}
                       accessibilityRole="button"
                     >
                       <Typography variant="link" className="text-[13px] text-brand-primary">
@@ -154,10 +180,11 @@ export const SavedAddressesScreen = memo(function SavedAddressesScreen() {
         onPress={() => {
           void refreshAddresses();
         }}
+        disabled={isSyncing}
         className="mt-md items-center py-sm"
       >
         <Typography variant="link" className="text-[13px] text-brand-primary">
-          Refresh from account
+          {isSyncing ? 'Refreshing…' : 'Refresh from account'}
         </Typography>
       </Pressable>
     </ScreenWrapper>

@@ -20,6 +20,22 @@ type PublishedProduct = {
 };
 
 function toMarketProduct(product: PublishedProduct): MarketProduct {
+  const bulkPricing =
+    product.bulkPrices && product.bulkPrices.length > 0
+      ? product.bulkPrices.map((tier, index) => {
+          const minMt = tier.minQty;
+          const maxMt = tier.maxQty;
+          return {
+            id: `tier-${index}-${minMt}`,
+            minMt,
+            maxMt,
+            pricePerMt: tier.price,
+            quantityLabel:
+              maxMt == null ? `${minMt}+ MT` : `${minMt} - ${maxMt} MT`,
+          };
+        })
+      : undefined;
+
   return {
     id: product.id,
     name: product.name,
@@ -35,6 +51,7 @@ function toMarketProduct(product: PublishedProduct): MarketProduct {
     materialType: product.material,
     subCategory: product.grade,
     description: `${product.name} offered through verified supply.`,
+    bulkPricing,
   };
 }
 

@@ -94,6 +94,7 @@ export const OffersScreen = memo(function OffersScreen() {
   const offersHydrated = useSellerOffersStore((state) => state.isHydrated);
   const stats = useSellerOffersStore((state) => state.stats);
   const offers = useSellerOffersStore((state) => state.offers);
+  const loadError = useSellerOffersStore((state) => state.loadError);
 
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<OfferTabFilter>('active');
@@ -104,15 +105,17 @@ export const OffersScreen = memo(function OffersScreen() {
   );
   const isLoading = useSkeletonLoading(offersHydrated);
   const { isRefreshing, refresh } = usePullToRefresh(async () => {
-    refreshSellerOffersState();
+    await refreshSellerOffersState(query);
   });
 
   useEffect(() => {
     if (!offersHydrated) {
-      hydrateSellerOffersState();
+      void hydrateSellerOffersState();
       return;
     }
-    refreshSellerOffersState();
+    void refreshSellerOffersState(query);
+    // Initial / remount refresh only — typing uses client filter + pull-to-refresh for server search.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- avoid refetch on every keystroke
   }, [hydrateSellerOffersState, offersHydrated, refreshSellerOffersState]);
 
   const filterCount = appliedFilters.warehouse?.length ?? 0;
@@ -167,29 +170,33 @@ export const OffersScreen = memo(function OffersScreen() {
     router.push(`${ROUTES.SELLER.EDIT_OFFER}?offerId=${offer.id}` as Href);
   };
 
-  const openDuplicate = (offer: SellerOffer) => {
-    const duplicated = duplicateOffer(offer.id);
+  const openDuplicate = async (offer: SellerOffer) => {
+    const duplicated = await duplicateOffer(offer.id);
     if (duplicated) {
       loadEditorFromOffer(duplicated.id);
       router.push(ROUTES.SELLER.CREATE_OFFER as Href);
     }
   };
 
-  const handlePause = (offer: SellerOffer) => {
-    pauseOffer(offer.id);
-    router.push(`${ROUTES.SELLER.OFFER_PAUSED}?offerId=${offer.id}` as Href);
+  const handlePause = async (offer: SellerOffer) => {
+    const paused = await pauseOffer(offer.id);
+    if (paused) {
+      router.push(`${ROUTES.SELLER.OFFER_PAUSED}?offerId=${offer.id}` as Href);
+    }
   };
 
-  const handleResume = (offer: SellerOffer) => {
-    resumeOffer(offer.id);
+  const handleResume = async (offer: SellerOffer) => {
+    await resumeOffer(offer.id);
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (!deleteTarget) {
       return;
     }
-    deleteOffer(deleteTarget.id);
-    setDeleteTarget(null);
+    const ok = await deleteOffer(deleteTarget.id);
+    if (ok) {
+      setDeleteTarget(null);
+    }
   };
 
   const openDetails = (offer: SellerOffer) => {
@@ -237,6 +244,14 @@ export const OffersScreen = memo(function OffersScreen() {
               </Typography>
             </Pressable>
           </View>
+
+          {loadError ? (
+            <View className="mt-md rounded-xl border border-brand-error/30 bg-brand-error-light px-md py-sm">
+              <Typography variant="legal" className="text-left text-brand-error">
+                {loadError}
+              </Typography>
+            </View>
+          ) : null}
 
           {isLoading ? (
             <View className="mt-lg">

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { ScrollView, Text, View } from 'react-native';
 
-import { type Href, useRouter } from 'expo-router';
+import { type Href, useFocusEffect, useRouter } from 'expo-router';
 
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { FlashList } from '@shopify/flash-list';
@@ -108,13 +108,6 @@ export const CustomerHomeScreen = () => {
         );
         setCatalogLoading(false);
       });
-    void fetchCustomerHomeBanners()
-      .then((items) => {
-        if (!cancelled) setBanners(items);
-      })
-      .catch(() => {
-        if (!cancelled) setBanners([]);
-      });
     void fetchCustomerFinanceSummary()
       .then((summary) => {
         if (cancelled) return;
@@ -130,6 +123,23 @@ export const CustomerHomeScreen = () => {
       cancelled = true;
     };
   }, []);
+
+  // Refresh CMS banners whenever Home is focused (Admin activate/upload → APP).
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      void fetchCustomerHomeBanners()
+        .then((items) => {
+          if (!cancelled) setBanners(items);
+        })
+        .catch(() => {
+          if (!cancelled) setBanners([]);
+        });
+      return () => {
+        cancelled = true;
+      };
+    }, []),
+  );
 
   const showHomeSkeleton = catalogLoading || !isOrderHydrated;
 

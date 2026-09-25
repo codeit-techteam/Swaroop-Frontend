@@ -44,6 +44,14 @@ export type MarketProduct = {
   technicalSpecs?: ProductTechnicalSpecs;
   creditEligible?: boolean;
   offerId?: string;
+  /** Seller-configured bulk pricing from the active offer listing. */
+  bulkPricing?: Array<{
+    id: string;
+    minMt: number;
+    maxMt: number | null;
+    pricePerMt: number;
+    quantityLabel: string;
+  }>;
   documents?: Array<{
     id: string;
     type: string;

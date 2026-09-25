@@ -1,24 +1,23 @@
 import { create } from 'zustand';
+import Toast from 'react-native-toast-message';
 
 import { persistSellerProductSnapshot } from '@/seller/services/sellerProductService';
 import { useInventoryStore } from '@/seller/store/inventoryStore';
 import { useSellerProductStore } from '@/seller/store/sellerProductStore';
 import {
-  approveOfferInSnapshot,
+  activateOfferOnBackend,
   buildOfferFromEditor,
+  cancelOfferOnBackend,
   createEditorFormFromOffer,
   createEmptyEditorForm,
-  createOffer,
-  deleteOfferFromSnapshot,
-  duplicateOfferInSnapshot,
-  getOffers,
-  persistSellerOffersSnapshot,
+  createOfferOnBackend,
+  deleteOfferOnBackend,
+  fetchSellerOffersSnapshot,
+  pauseOfferOnBackend,
   rebuildSellerOffersSnapshot,
-  saveDraftFromEditor,
   searchOffers as filterSearchOffers,
-  submitOfferForReview,
   syncOfferInventory,
-  updateOfferInSnapshot,
+  updateOfferOnBackend,
 } from '@/seller/modules/seller-offers/services/sellerOffersService';
 import type {
   CreateOfferInput,
@@ -29,8 +28,13 @@ import type {
   SellerOffersStore,
 } from '@/seller/modules/seller-offers/types/offers';
 
-const persist = (snapshot: Parameters<typeof persistSellerOffersSnapshot>[0]): void => {
-  persistSellerOffersSnapshot(snapshot);
+const showOfferError = (error: unknown, fallback: string): void => {
+  const message = error instanceof Error ? error.message : fallback;
+  Toast.show({
+    type: 'error',
+    text1: 'Offers',
+    text2: message,
+  });
 };
 
 const syncDashboardStats = (stats: SellerOffersStore['stats']): void => {
@@ -81,44 +85,69 @@ const syncInventoryForOffers = (offers: SellerOffer[]): SellerOffer[] => {
   });
 };
 
+const applyFetchedSnapshot = (
+  set: (partial: Partial<SellerOffersStore>) => void,
+  snapshot: Awaited<ReturnType<typeof fetchSellerOffersSnapshot>>,
+  hydrated = true,
+): void => {
+  const syncedOffers = syncInventoryForOffers(snapshot.offers);
+  const next = rebuildSellerOffersSnapshot(snapshot, syncedOffers);
+  set({ ...next, isHydrated: hydrated, loadError: snapshot.loadError });
+  syncDashboardStats(next.stats);
+};
+
 export const useSellerOffersStore = create<SellerOffersStore>((set, get) => ({
-  ...getOffers(),
+  offers: [],
+  draftOffers: [],
+  activeOffers: [],
+  pausedOffers: [],
+  expiredOffers: [],
+  pendingReviewOffers: [],
+  approvedOffers: [],
+  selectedOfferId: null,
+  editorForm: createEmptyEditorForm(),
+  editingOfferId: null,
+  filters: 'all',
+  search: '',
+  stats: {
+    total: 0,
+    active: 0,
+    paused: 0,
+    expired: 0,
+    draft: 0,
+    pendingReview: 0,
+    approved: 0,
+  },
+  loadError: null,
   isHydrated: false,
 
-  hydrateSellerOffersState: () => {
-    const base = getOffers();
-    const syncedOffers = syncInventoryForOffers(base.offers);
-    const snapshot = rebuildSellerOffersSnapshot(base, syncedOffers);
-    set({ ...snapshot, isHydrated: true });
-    persist(snapshot);
-    syncDashboardStats(snapshot.stats);
+  hydrateSellerOffersState: async () => {
+    const snapshot = await fetchSellerOffersSnapshot(get(), { search: get().search });
+    applyFetchedSnapshot(set, snapshot, true);
   },
 
-  refreshSellerOffersState: () => {
-    const base = getOffers();
-    const syncedOffers = syncInventoryForOffers(base.offers);
-    const snapshot = rebuildSellerOffersSnapshot(base, syncedOffers);
-    set(snapshot);
-    persist(snapshot);
-    syncDashboardStats(snapshot.stats);
+  refreshSellerOffersState: async (searchOverride?: string) => {
+    const search = searchOverride ?? get().search;
+    if (searchOverride !== undefined) {
+      set({ search: searchOverride });
+    }
+    const snapshot = await fetchSellerOffersSnapshot(
+      { ...get(), search },
+      { search },
+    );
+    applyFetchedSnapshot(set, snapshot, true);
   },
 
   setFilter: (filter: OfferTabFilter) => {
-    const snapshot = { ...get(), filters: filter };
     set({ filters: filter });
-    persist(snapshot);
   },
 
   setSearch: (query: string) => {
-    const snapshot = { ...get(), search: query };
     set({ search: query });
-    persist(snapshot);
   },
 
   selectOffer: (offerId) => {
-    const snapshot = { ...get(), selectedOfferId: offerId };
     set({ selectedOfferId: offerId });
-    persist(snapshot);
   },
 
   loadEditorFromOffer: (offerId) => {
@@ -127,52 +156,39 @@ export const useSellerOffersStore = create<SellerOffersStore>((set, get) => ({
       return;
     }
     const editorForm = createEditorFormFromOffer(offer);
-    const snapshot = { ...get(), editorForm, editingOfferId: offerId, selectedOfferId: offerId };
     set({ editorForm, editingOfferId: offerId, selectedOfferId: offerId });
-    persist(snapshot);
   },
 
   resetEditor: () => {
-    const editorForm = createEmptyEditorForm();
-    const snapshot = { ...get(), editorForm, editingOfferId: null };
-    set({ editorForm, editingOfferId: null });
-    persist(snapshot);
+    set({ editorForm: createEmptyEditorForm(), editingOfferId: null });
   },
 
   updateEditorField: (key, value) => {
-    const editorForm = { ...get().editorForm, [key]: value };
-    const snapshot = { ...get(), editorForm };
-    set({ editorForm });
-    persist(snapshot);
+    set({ editorForm: { ...get().editorForm, [key]: value } });
   },
 
   addEditorTier: (tier: OfferPricingTier) => {
-    const editorForm = { ...get().editorForm, tiers: [...get().editorForm.tiers, tier] };
-    const snapshot = { ...get(), editorForm };
-    set({ editorForm });
-    persist(snapshot);
+    set({ editorForm: { ...get().editorForm, tiers: [...get().editorForm.tiers, tier] } });
   },
 
   updateEditorTier: (tierId, tier) => {
-    const editorForm = {
-      ...get().editorForm,
-      tiers: get().editorForm.tiers.map((item) =>
-        item.id === tierId ? { ...item, ...tier } : item,
-      ),
-    };
-    const snapshot = { ...get(), editorForm };
-    set({ editorForm });
-    persist(snapshot);
+    set({
+      editorForm: {
+        ...get().editorForm,
+        tiers: get().editorForm.tiers.map((item) =>
+          item.id === tierId ? { ...item, ...tier } : item,
+        ),
+      },
+    });
   },
 
   removeEditorTier: (tierId) => {
-    const editorForm = {
-      ...get().editorForm,
-      tiers: get().editorForm.tiers.filter((item) => item.id !== tierId),
-    };
-    const snapshot = { ...get(), editorForm };
-    set({ editorForm });
-    persist(snapshot);
+    set({
+      editorForm: {
+        ...get().editorForm,
+        tiers: get().editorForm.tiers.filter((item) => item.id !== tierId),
+      },
+    });
   },
 
   getFilteredOffers: () => filterSearchOffers(get().offers, get().search, get().filters),
@@ -182,143 +198,195 @@ export const useSellerOffersStore = create<SellerOffersStore>((set, get) => ({
   getOffer: (offerId) =>
     get().offers.find((offer) => offer.id === offerId || offer.offerId === offerId),
 
-  createOffer: (input: Partial<CreateOfferInput>) => {
-    const result = createOffer(get(), input);
-    set(result.snapshot);
-    persist(result.snapshot);
-    syncDashboardStats(result.snapshot.stats);
-    return result.offer;
+  createOffer: async (input: Partial<CreateOfferInput> = {}) => {
+    try {
+      const offer = await createOfferOnBackend(get().editorForm, input);
+      await get().refreshSellerOffersState();
+      set({
+        selectedOfferId: offer.id,
+        editorForm: createEmptyEditorForm(),
+        editingOfferId: null,
+      });
+      return get().getOffer(offer.id) ?? offer;
+    } catch (error) {
+      showOfferError(error, 'Failed to create offer.');
+      throw error;
+    }
   },
 
-  updateOffer: (offerId, input) => {
-    const result = updateOfferInSnapshot(get(), offerId, input);
-    if (!result.offer) {
+  updateOffer: async (offerId, input) => {
+    const existing = get().getOffer(offerId);
+    if (!existing) {
       return null;
     }
-    set(result.snapshot);
-    persist(result.snapshot);
-    syncDashboardStats(result.snapshot.stats);
-    return result.offer;
+    try {
+      const form = input
+        ? {
+            ...createEditorFormFromOffer({ ...existing, ...input }),
+          }
+        : get().editingOfferId === offerId
+          ? get().editorForm
+          : createEditorFormFromOffer(existing);
+      const updated = await updateOfferOnBackend(existing, form);
+      await get().refreshSellerOffersState();
+      return get().getOffer(updated.id) ?? updated;
+    } catch (error) {
+      showOfferError(error, 'Failed to update offer.');
+      return null;
+    }
   },
 
-  saveDraft: () => {
-    const result = saveDraftFromEditor(get());
-    set(result.snapshot);
-    persist(result.snapshot);
-    syncDashboardStats(result.snapshot.stats);
-    return result.offer;
-  },
-
-  activateOffer: (offerId) => {
-    const result = submitOfferForReview(get(), offerId);
-    if (!result.offer) {
-      const submitted = submitOfferForReview(get());
-      if (!submitted.offer) {
-        return null;
+  saveDraft: async () => {
+    try {
+      const editingId = get().editingOfferId;
+      if (editingId) {
+        const existing = get().getOffer(editingId);
+        if (!existing) {
+          return null;
+        }
+        const updated = await updateOfferOnBackend(existing, get().editorForm);
+        await get().refreshSellerOffersState();
+        return get().getOffer(updated.id) ?? updated;
       }
-      set(submitted.snapshot);
-      persist(submitted.snapshot);
-      syncDashboardStats(submitted.snapshot.stats);
-      return submitted.offer;
-    }
-    set(result.snapshot);
-    persist(result.snapshot);
-    syncDashboardStats(result.snapshot.stats);
-    return result.offer;
-  },
 
-  pauseOffer: (offerId) => {
-    const result = updateOfferInSnapshot(get(), offerId, { status: 'paused' });
-    if (!result.offer) {
+      const created = await createOfferOnBackend(get().editorForm, { status: 'draft' });
+      await get().refreshSellerOffersState();
+      set({
+        selectedOfferId: created.id,
+        editorForm: createEmptyEditorForm(),
+        editingOfferId: null,
+      });
+      return get().getOffer(created.id) ?? created;
+    } catch (error) {
+      showOfferError(error, 'Failed to save draft.');
       return null;
     }
-    set(result.snapshot);
-    persist(result.snapshot);
-    syncDashboardStats(result.snapshot.stats);
-    return result.offer;
   },
 
-  resumeOffer: (offerId) => {
-    const result = updateOfferInSnapshot(get(), offerId, { status: 'active' });
-    if (!result.offer) {
+  activateOffer: async (offerId) => {
+    try {
+      let targetId = offerId;
+
+      if (!targetId) {
+        const created = await createOfferOnBackend(get().editorForm, { status: 'draft' });
+        targetId = created.id;
+      }
+
+      const activated = await activateOfferOnBackend(targetId);
+      await get().refreshSellerOffersState();
+      set({
+        selectedOfferId: activated.id,
+        editorForm: createEmptyEditorForm(),
+        editingOfferId: null,
+      });
+      return get().getOffer(activated.id) ?? activated;
+    } catch (error) {
+      showOfferError(error, 'Failed to activate offer.');
       return null;
     }
-    set(result.snapshot);
-    persist(result.snapshot);
-    syncDashboardStats(result.snapshot.stats);
-    return result.offer;
   },
 
-  duplicateOffer: (offerId) => {
-    const result = duplicateOfferInSnapshot(get(), offerId);
-    if (!result.offer) {
+  pauseOffer: async (offerId) => {
+    try {
+      const paused = await pauseOfferOnBackend(offerId);
+      await get().refreshSellerOffersState();
+      return get().getOffer(paused.id) ?? paused;
+    } catch (error) {
+      showOfferError(error, 'Failed to pause offer.');
       return null;
     }
-    set(result.snapshot);
-    persist(result.snapshot);
-    syncDashboardStats(result.snapshot.stats);
-    return result.offer;
   },
 
-  deleteOffer: (offerId) => {
-    const snapshot = deleteOfferFromSnapshot(get(), offerId);
-    set(snapshot);
-    persist(snapshot);
-    syncDashboardStats(snapshot.stats);
-    return true;
-  },
-
-  approveOffer: (offerId) => {
-    const result = approveOfferInSnapshot(get(), offerId);
-    if (!result.offer) {
+  resumeOffer: async (offerId) => {
+    try {
+      const resumed = await activateOfferOnBackend(offerId);
+      await get().refreshSellerOffersState();
+      return get().getOffer(resumed.id) ?? resumed;
+    } catch (error) {
+      showOfferError(error, 'Failed to resume offer.');
       return null;
     }
-    set(result.snapshot);
-    persist(result.snapshot);
-    syncDashboardStats(result.snapshot.stats);
-    return result.offer;
   },
 
-  rejectOffer: (offerId, comments) => {
-    const result = updateOfferInSnapshot(get(), offerId, {
-      status: 'rejected',
-      reviewerComments: comments ?? 'Offer rejected by review team.',
-    });
-    if (!result.offer) {
+  duplicateOffer: async (offerId) => {
+    const source = get().getOffer(offerId);
+    if (!source) {
       return null;
     }
-    set(result.snapshot);
-    persist(result.snapshot);
-    syncDashboardStats(result.snapshot.stats);
-    return result.offer;
-  },
-
-  expireOffer: (offerId) => {
-    const result = updateOfferInSnapshot(get(), offerId, { status: 'expired' });
-    if (!result.offer) {
+    try {
+      const form = createEditorFormFromOffer(source);
+      const created = await createOfferOnBackend(form, {
+        status: 'draft',
+        productId: source.productId,
+        allocatedStock: source.allocatedStock,
+      });
+      await get().refreshSellerOffersState();
+      const offer = get().getOffer(created.id) ?? created;
+      set({
+        selectedOfferId: offer.id,
+        editorForm: createEditorFormFromOffer(offer),
+        editingOfferId: offer.id,
+      });
+      return offer;
+    } catch (error) {
+      showOfferError(error, 'Failed to duplicate offer.');
       return null;
     }
-    set(result.snapshot);
-    persist(result.snapshot);
-    syncDashboardStats(result.snapshot.stats);
-    return result.offer;
   },
 
-  refreshReviewStatus: (offerId) => {
-    const offer = get().getOffer(offerId);
-    if (!offer || offer.status !== 'pending_review') {
-      return offer ?? null;
+  deleteOffer: async (offerId) => {
+    try {
+      await deleteOfferOnBackend(offerId);
+      await get().refreshSellerOffersState();
+      return true;
+    } catch (error) {
+      showOfferError(error, 'Failed to delete offer.');
+      return false;
     }
+  },
 
-    const approved = get().approveOffer(offerId);
-    return approved;
+  approveOffer: async (offerId) => {
+    try {
+      const activated = await activateOfferOnBackend(offerId);
+      await get().refreshSellerOffersState();
+      return get().getOffer(activated.id) ?? activated;
+    } catch (error) {
+      showOfferError(error, 'Failed to approve offer.');
+      return null;
+    }
+  },
+
+  rejectOffer: async (offerId, _comments) => {
+    try {
+      const cancelled = await cancelOfferOnBackend(offerId);
+      await get().refreshSellerOffersState();
+      return get().getOffer(cancelled.id) ?? cancelled;
+    } catch (error) {
+      showOfferError(error, 'Failed to reject offer.');
+      return null;
+    }
+  },
+
+  expireOffer: async (offerId) => {
+    try {
+      const cancelled = await cancelOfferOnBackend(offerId);
+      await get().refreshSellerOffersState();
+      return get().getOffer(cancelled.id) ?? cancelled;
+    } catch (error) {
+      showOfferError(error, 'Failed to expire offer.');
+      return null;
+    }
+  },
+
+  refreshReviewStatus: async (offerId) => {
+    await get().refreshSellerOffersState();
+    return get().getOffer(offerId) ?? null;
   },
 
   syncInventoryFromCatalog: () => {
     const syncedOffers = syncInventoryForOffers(get().offers);
     const snapshot = rebuildSellerOffersSnapshot(get(), syncedOffers);
     set(snapshot);
-    persist(snapshot);
   },
 
   syncDashboardStats: () => {

@@ -5,13 +5,10 @@ import { useAuthStore } from '@/store/auth-store';
 import { useOrderStore } from '@/store/order-store';
 import { mapDispatchOrderToOrder } from '@/seller/modules/dispatch/services/dispatchService';
 import { useDispatchStore } from '@/seller/modules/dispatch/store/dispatchStore';
-import { useInventoryStore } from '@/seller/store/inventoryStore';
 import {
-  acceptOrder as applyAcceptOrder,
   buildDefaultSellerOrdersSnapshot,
   mapSellerOrderToOrder,
   persistSellerOrdersSnapshot,
-  rejectOrder as applyRejectOrder,
   snapshotFromOrders,
   syncSellerOrdersWithDispatch,
 } from '@/seller/modules/seller-orders/services/sellerOrdersService';
@@ -90,41 +87,10 @@ export const useSellerOrdersStore = create<SellerOrdersStore>((set, get) => ({
     persistSellerOrdersSnapshot(snapshot);
   },
 
-  acceptOrder: (orderId) => {
-    const reserveInventory = useInventoryStore.getState().reserveStockForOrder;
-    const result = applyAcceptOrder(get(), orderId, reserveInventory);
-    if (!result.order) {
-      return null;
-    }
+  // Accept/reject inventing local dispatch is disabled — use Purchase Requests APIs.
+  acceptOrder: (_orderId) => null,
 
-    set(result.snapshot);
-    persistSellerOrdersSnapshot(result.snapshot);
-    syncSellerOrderToGlobal(result.order);
-
-    if (result.dispatchSnapshot) {
-      useDispatchStore.setState(result.dispatchSnapshot);
-      const dispatchOrder = result.dispatchSnapshot.dispatchOrders.find(
-        (order) => order.id === result.order?.dispatchLinkId,
-      );
-      if (dispatchOrder) {
-        syncGlobalOrder(mapDispatchOrderToOrder(dispatchOrder));
-      }
-    }
-
-    return result.order;
-  },
-
-  rejectOrder: (orderId, reason, remarks) => {
-    const result = applyRejectOrder(get(), orderId, reason, remarks);
-    if (!result.order) {
-      return null;
-    }
-
-    set(result.snapshot);
-    persistSellerOrdersSnapshot(result.snapshot);
-    syncSellerOrderToGlobal(result.order);
-    return result.order;
-  },
+  rejectOrder: (_orderId, _reason, _remarks) => null,
 
   syncFromDispatch: () => {
     const dispatchSnapshot = useDispatchStore.getState();

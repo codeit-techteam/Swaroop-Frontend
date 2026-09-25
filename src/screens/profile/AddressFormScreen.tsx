@@ -8,7 +8,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import Toast from 'react-native-toast-message';
 
 import { AppHeader, DropdownField, InputField, PrimaryButton, ScreenWrapper, Typography } from '@/components';
-import { ADDRESS_KIND_OPTIONS, PINCODE_REGEX } from '@/constants/locations';
+import { ADDRESS_KIND_OPTIONS, PINCODE_REGEX, toApiAddressType } from '@/constants/locations';
 import { fetchCurrentDeliveryAddress, lookupPincode } from '@/services/location';
 import { useAddressStore } from '@/store/address-store';
 import { brandColors } from '@/theme/colors';
@@ -81,7 +81,8 @@ export const AddressFormScreen = memo(function AddressFormScreen() {
       isDefault: false,
     };
 
-    const kind = ADDRESS_KIND_OPTIONS.find((option) => option.value === source.type);
+    const apiType = toApiAddressType(source.type);
+    const kind = ADDRESS_KIND_OPTIONS.find((option) => option.value === apiType);
     setTypeLabel(kind?.label ?? 'Warehouse');
     setLabel(source.label ?? '');
     setLine1(source.line1 ?? '');

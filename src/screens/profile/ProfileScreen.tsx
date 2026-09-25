@@ -48,6 +48,8 @@ export const ProfileScreen = memo(function ProfileScreen() {
           subtitle = `${profile.savedAddresses.length} saved ${profile.savedAddresses.length === 1 ? 'location' : 'locations'}`;
         } else if (item.subtitleKey === 'banks') {
           subtitle = `${profile.bankAccounts.length} Accounts Linked`;
+        } else if (item.subtitleKey === 'credit') {
+          subtitle = 'Request credit & track application';
         } else {
           subtitle = 'Forms 16A, 26AS';
         }
@@ -56,6 +58,7 @@ export const ProfileScreen = memo(function ProfileScreen() {
           'saved-addresses': ROUTES.CUSTOMER.PROFILE_SAVED_ADDRESSES,
           'bank-accounts': ROUTES.CUSTOMER.PROFILE_BANK_ACCOUNTS,
           'tax-documents': ROUTES.CUSTOMER.PROFILE_TAX_DOCUMENTS,
+          'trading-credit': ROUTES.CUSTOMER.CREDIT_FACILITY,
         };
 
         return {
@@ -83,6 +86,10 @@ export const ProfileScreen = memo(function ProfileScreen() {
 
   const handleNotifications = useCallback(() => {
     router.push(ROUTES.CUSTOMER.NOTIFICATIONS as Href);
+  }, [router]);
+
+  const handleHelpSupport = useCallback(() => {
+    router.push(ROUTES.CUSTOMER.SUPPORT as Href);
   }, [router]);
 
   const handleDocuments = useCallback(
@@ -139,7 +146,11 @@ export const ProfileScreen = memo(function ProfileScreen() {
 
         <LogisticsFinanceCard items={logisticsItems} />
 
-        <SettingsMenu onLogout={() => void handleLogout()} onNotifications={handleNotifications} />
+        <SettingsMenu
+          onLogout={() => void handleLogout()}
+          onNotifications={handleNotifications}
+          onHelpSupport={handleHelpSupport}
+        />
 
         <CustomQuoteCard />
 

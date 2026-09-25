@@ -61,8 +61,11 @@ export const DocumentDownloads = memo(function DocumentDownloads({
       setLoadingId(doc.id);
       try {
         const { url } = await fetchProductDocumentUrl(pid, doc.id);
-        const canOpen = await Linking.canOpenURL(url);
-        if (!canOpen) throw new Error('Unable to open document URL');
+        if (!url || typeof url !== 'string') {
+          throw new Error('Document URL unavailable');
+        }
+        // Skip canOpenURL for https signed URLs — iOS often returns false for
+        // query-heavy R2/S3 links even though openURL succeeds.
         await Linking.openURL(url);
         Toast.show({
           type: 'success',

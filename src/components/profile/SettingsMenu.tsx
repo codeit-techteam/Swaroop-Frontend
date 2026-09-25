@@ -16,6 +16,7 @@ import { cn } from '@/utils/cn';
 type SettingsMenuProps = {
   onLogout: () => void;
   onNotifications?: () => void;
+  onHelpSupport?: () => void;
   className?: string;
 };
 
@@ -29,6 +30,7 @@ const MENU_ICONS = {
 export const SettingsMenu = memo(function SettingsMenu({
   onLogout,
   onNotifications,
+  onHelpSupport,
   className,
 }: SettingsMenuProps) {
   const showComingSoon = useCallback((title: string) => {
@@ -63,9 +65,14 @@ export const SettingsMenu = memo(function SettingsMenu({
         return;
       }
 
+      if (id === 'help' && onHelpSupport) {
+        onHelpSupport();
+        return;
+      }
+
       showComingSoon(title);
     },
-    [handleLogoutPress, onNotifications, showComingSoon],
+    [handleLogoutPress, onHelpSupport, onNotifications, showComingSoon],
   );
 
   return (

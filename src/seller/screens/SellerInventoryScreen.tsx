@@ -47,8 +47,8 @@ export const SellerInventoryScreen = memo(function SellerInventoryScreen() {
   const summary = useInventoryStore((state) => state.inventorySummary);
   const warehouses = useInventoryStore((state) => state.warehouses);
   const selectProduct = useInventoryStore((state) => state.selectProduct);
-  const refreshInventoryCatalog = useInventoryStore((state) => state.refreshInventoryCatalog);
-  const hydrateInventoryState = useInventoryStore((state) => state.hydrateInventoryState);
+  const hydrateFromApi = useInventoryStore((state) => state.hydrateFromApi);
+  const refreshFromApi = useInventoryStore((state) => state.refreshFromApi);
   const isHydrated = useInventoryStore((state) => state.isHydrated);
   const updateStock = useInventoryStore((state) => state.updateStock);
 
@@ -65,14 +65,12 @@ export const SellerInventoryScreen = memo(function SellerInventoryScreen() {
 
   useEffect(() => {
     if (!isHydrated) {
-      hydrateInventoryState();
-      return;
+      void hydrateFromApi();
     }
-    refreshInventoryCatalog();
-  }, [hydrateInventoryState, isHydrated, refreshInventoryCatalog]);
+  }, [hydrateFromApi, isHydrated]);
 
   const { isRefreshing, refresh } = usePullToRefresh(async () => {
-    refreshInventoryCatalog();
+    await refreshFromApi();
   });
 
   const filteredProducts = useMemo(() => {

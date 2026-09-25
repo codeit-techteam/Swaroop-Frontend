@@ -33,10 +33,12 @@ export const OfferReviewStatusScreen = memo(function OfferReviewStatusScreen() {
       return;
     }
     const timer = setTimeout(() => {
-      const refreshed = refreshReviewStatus(offerId);
-      if (refreshed?.status === 'active') {
-        router.replace(`${ROUTES.SELLER.OFFER_APPROVED}?offerId=${offerId}` as Href);
-      }
+      void (async () => {
+        const refreshed = await refreshReviewStatus(offerId);
+        if (refreshed?.status === 'active') {
+          router.replace(`${ROUTES.SELLER.OFFER_APPROVED}?offerId=${offerId}` as Href);
+        }
+      })();
     }, 2500);
     return () => clearTimeout(timer);
   }, [offerId, refreshReviewStatus, router]);
@@ -49,8 +51,8 @@ export const OfferReviewStatusScreen = memo(function OfferReviewStatusScreen() {
     );
   }
 
-  const handleRefresh = () => {
-    const refreshed = refreshReviewStatus(offer.id);
+  const handleRefresh = async () => {
+    const refreshed = await refreshReviewStatus(offer.id);
     if (refreshed?.status === 'active') {
       router.replace(`${ROUTES.SELLER.OFFER_APPROVED}?offerId=${offer.id}` as Href);
     }

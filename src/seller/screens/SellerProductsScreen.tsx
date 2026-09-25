@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo, useState } from 'react';
 
-import { Modal, Pressable, ScrollView, View } from 'react-native';
+import { Modal, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
 import { type Href, useRouter } from 'expo-router';
 
@@ -31,6 +31,7 @@ import {
   SellerListingCard,
   SellerMaterialTile,
 } from '@/seller/components/SellerCatalogComponents';
+import { usePullToRefresh } from '@/seller/hooks/usePullToRefresh';
 import { navigateSellerBottomTab } from '@/seller/navigation/useSellerBottomNavigation';
 import { useSellerProductStore } from '@/seller/store/sellerProductStore';
 import type { SellerProduct, SellerProductStatus } from '@/seller/types';
@@ -61,6 +62,9 @@ export const SellerProductsScreen = memo(function SellerProductsScreen() {
   const deactivateProduct = useSellerProductStore((state) => state.deactivateProduct);
   const deleteProduct = useSellerProductStore((state) => state.deleteProduct);
   const clearSelection = useSellerProductStore((state) => state.clearSelection);
+  const hydrateFromApi = useSellerProductStore((state) => state.hydrateFromApi);
+  const refreshFromApi = useSellerProductStore((state) => state.refreshFromApi);
+  const productsHydrated = useSellerProductStore((state) => state.isHydrated);
 
   const [workspace, setWorkspace] = useState<WorkspaceTab>('catalog');
   const [query, setQuery] = useState('');
@@ -95,6 +99,17 @@ export const SellerProductsScreen = memo(function SellerProductsScreen() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!productsHydrated) {
+      void hydrateFromApi();
+    }
+  }, [hydrateFromApi, productsHydrated]);
+
+  const { isRefreshing, refresh } = usePullToRefresh(async () => {
+    await refreshFromApi();
+  });
+
   const [listingTab, setListingTab] = useState<SellerProductStatus>('published');
   const [pendingDelete, setPendingDelete] = useState<SellerProduct | null>(null);
 
@@ -192,6 +207,9 @@ export const SellerProductsScreen = memo(function SellerProductsScreen() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={{ paddingTop: 16, paddingBottom: insets.bottom + 120 }}
+            refreshControl={
+              <RefreshControl refreshing={isRefreshing} onRefresh={() => void refresh()} />
+            }
           >
             <View className="flex-row rounded-2xl bg-brand-white p-xs">
               {(

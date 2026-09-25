@@ -68,6 +68,16 @@ export async function refreshDocuments(): Promise<void> {
   documentsCache = await fetchSellerDocuments();
 }
 
+export async function openSellerDocument(documentId: string, mode: 'download' | 'preview' = 'preview') {
+  const {
+    resolveSellerDocumentDownloadUri,
+    resolveSellerDocumentPreviewUri,
+  } = await import('@/services/seller-operations');
+  return mode === 'download'
+    ? resolveSellerDocumentDownloadUri(documentId)
+    : resolveSellerDocumentPreviewUri(documentId);
+}
+
 export function getDocumentById(documentId: string): SellerDocumentItem | undefined {
   return documentsCache.find((doc) => doc.id === documentId);
 }

@@ -292,15 +292,36 @@ const buildSpotPrice = (pricePerMt: number): SpotPriceInfo => {
   };
 };
 
-const buildBulkPricing = (spotPricePerMt: number): PricingTier[] => {
+const formatTierTotal = (price: number, mt: number, suffix = ''): string => {
+  const total = Math.round(price * mt);
+  return `₹${total.toLocaleString('en-IN')}${suffix}`;
+};
+
+/** Prefer seller-configured tiers from the offer; fall back to synthetic bands. */
+const buildBulkPricing = (
+  spotPricePerMt: number,
+  configured?: MarketProduct['bulkPricing'],
+): PricingTier[] => {
+  if (configured && configured.length > 0) {
+    return configured.map((tier) => {
+      const estimateMt = tier.minMt > 0 ? tier.minMt : 1;
+      const openEnded = tier.maxMt == null;
+      return {
+        id: tier.id,
+        quantityLabel: tier.quantityLabel,
+        unitPrice: pricePerKgFromMarket(tier.pricePerMt),
+        pricePerMt: tier.pricePerMt,
+        totalEstimate: `${formatTierTotal(tier.pricePerMt, estimateMt)}${openEnded ? '+' : ''}`,
+        rateLabel: 'Volume Rate',
+        minMt: tier.minMt,
+        maxMt: tier.maxMt,
+      };
+    });
+  }
+
   const tier1 = spotPricePerMt;
   const tier2 = Math.round(spotPricePerMt * 0.987);
   const tier3 = Math.round(spotPricePerMt * 0.972);
-
-  const formatTotal = (price: number, mt: number, suffix = ''): string => {
-    const total = Math.round(price * mt);
-    return `₹${total.toLocaleString('en-IN')}${suffix}`;
-  };
 
   return [
     {
@@ -308,7 +329,7 @@ const buildBulkPricing = (spotPricePerMt: number): PricingTier[] => {
       quantityLabel: '25 - 99 MT',
       unitPrice: pricePerKgFromMarket(tier1),
       pricePerMt: tier1,
-      totalEstimate: formatTotal(tier1, 25),
+      totalEstimate: formatTierTotal(tier1, 25),
       rateLabel: 'Spot Rate',
       minMt: 25,
       maxMt: 99,
@@ -318,7 +339,7 @@ const buildBulkPricing = (spotPricePerMt: number): PricingTier[] => {
       quantityLabel: '100 - 199 MT',
       unitPrice: pricePerKgFromMarket(tier2),
       pricePerMt: tier2,
-      totalEstimate: `${formatTotal(tier2, 100)}+`,
+      totalEstimate: `${formatTierTotal(tier2, 100)}+`,
       rateLabel: 'Volume Discount',
       savingsLabel: 'Save 1.3%',
       minMt: 100,
@@ -329,7 +350,7 @@ const buildBulkPricing = (spotPricePerMt: number): PricingTier[] => {
       quantityLabel: '200+ MT',
       unitPrice: pricePerKgFromMarket(tier3),
       pricePerMt: tier3,
-      totalEstimate: `${formatTotal(tier3, 200)}+`,
+      totalEstimate: `${formatTierTotal(tier3, 200)}+`,
       rateLabel: 'Enterprise Rate',
       savingsLabel: 'Save 2.8%',
       minMt: 200,
@@ -498,7 +519,8 @@ export const buildProductDetails = (
     specs,
     applications,
     applicationNote: overrides.applicationNote ?? description,
-    pricingTiers: overrides.pricingTiers ?? buildBulkPricing(market.price),
+    pricingTiers:
+      overrides.pricingTiers ?? buildBulkPricing(market.price, market.bulkPricing),
     procurementTerms: overrides.procurementTerms ?? DEFAULT_PROCUREMENT_TERMS,
     trustTitle: overrides.trustTitle ?? 'Platform Assurance',
     trustDescription:
@@ -561,12 +583,18 @@ export const formatPricePerMt = (amount: number): string => `${formatInr(amount)
 
 export const formatUnitPrice = (price: number): string => formatPricePerKg(price);
 
+const tierMatchesQuantity = (tier: PricingTier, quantityMt: number): boolean => {
+  if (quantityMt < tier.minMt) return false;
+  if (tier.maxMt == null) return true;
+  return quantityMt <= tier.maxMt;
+};
+
 export const getTierForQuantity = (tiers: PricingTier[], quantityMt: number): PricingTier => {
-  const match = [...tiers].reverse().find((tier) => quantityMt >= tier.minMt);
+  const match = tiers.find((tier) => tierMatchesQuantity(tier, quantityMt));
   return match ?? tiers[0];
 };
 
 export const priceForQuantity = (tiers: PricingTier[], quantityMt: number): number | undefined => {
-  const match = [...tiers].reverse().find((tier) => quantityMt >= tier.minMt);
+  const match = tiers.find((tier) => tierMatchesQuantity(tier, quantityMt));
   return match?.pricePerMt;
 };

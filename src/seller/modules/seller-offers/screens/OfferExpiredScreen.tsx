@@ -23,11 +23,11 @@ export const OfferExpiredScreen = memo(function OfferExpiredScreen() {
 
   const offer = offerId ? getOffer(offerId) : undefined;
 
-  const handleDuplicate = () => {
+  const handleDuplicate = async () => {
     if (!offer) {
       return;
     }
-    const duplicated = duplicateOffer(offer.id);
+    const duplicated = await duplicateOffer(offer.id);
     if (duplicated) {
       loadEditorFromOffer(duplicated.id);
       router.push(ROUTES.SELLER.CREATE_OFFER as Href);

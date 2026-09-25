@@ -14,6 +14,11 @@ import type {
   DispatchSummary,
   DispatchVehicle,
 } from '@/seller/modules/dispatch/types/dispatch';
+import {
+  fetchSellerDispatchesPage,
+  type SellerDispatchRecord,
+} from '@/services/seller-dispatches';
+import { logger } from '@/utils/logger';
 
 type DispatchSeed = {
   orders: DispatchOrder[];
@@ -223,7 +228,9 @@ const buildHistoryForOrder = (order: DispatchOrder): DispatchHistoryEntry[] => {
   return entries.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
 };
 
-export const normalizeDispatchOrder = (order: DispatchOrder): DispatchOrder => {
+export const normalizeDispatchOrder = (
+  order: DispatchOrder & { customerName?: string },
+): DispatchOrder => {
   let stage = order.stage;
   if (order.delayed) {
     stage = 'delayed';
@@ -241,11 +248,104 @@ export const normalizeDispatchOrder = (order: DispatchOrder): DispatchOrder => {
     stage = 'invoice_generated';
   }
 
+  const { customerName, ...rest } = order;
   return {
-    ...order,
+    ...rest,
+    buyerLabel: order.buyerLabel || customerName || 'Anonymous Buyer',
     stage,
     progress: stageProgressMap[stage],
   };
+};
+
+const mapBackendStatusToStage = (status: string): DispatchStage => {
+  switch (status.toUpperCase()) {
+    case 'DISPATCHED':
+      return 'dispatched';
+    case 'LOADING':
+    case 'LOADED':
+      return 'loading';
+    case 'READY_FOR_DISPATCH':
+      return 'dispatch_ready';
+    case 'VEHICLE_ASSIGNED':
+      return 'vehicle_assigned';
+    case 'AWAITING_EWAY_BILL':
+    case 'PLANNED':
+      return 'invoice_generated';
+    case 'CANCELLED':
+      return 'delayed';
+    default:
+      return 'ready_to_dispatch';
+  }
+};
+
+export const mapSellerDispatchRecordToOrder = (
+  record: SellerDispatchRecord,
+): DispatchOrder => {
+  const stage = mapBackendStatusToStage(record.status);
+  const timestamp = record.updatedAt || record.createdAt;
+  return normalizeDispatchOrder({
+    id: record.dispatchNumber || record.id,
+    buyerLabel: record.buyer?.displayName || 'Anonymous Buyer',
+    material: record.gradeName || 'Material',
+    quantityMt: record.quantity,
+    eta: record.plannedDispatchDate
+      ? new Date(record.plannedDispatchDate).toLocaleString('en-IN', {
+          month: 'short',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : 'Pending scheduling',
+    orderDateTime: new Date(timestamp).toLocaleString('en-IN', {
+      month: 'short',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    }),
+    amount: 0,
+    gstAmount: 0,
+    destination: record.destinationRegion || 'Assigned destination',
+    loadingPoint: record.warehouseName || record.loadingLocation || 'Assigned hub',
+    vehicleNumber: record.vehicleNumber,
+    vehicleType: record.vehicleType,
+    driverName: record.driverName,
+    driverPhone: record.driverPhone,
+    driverId: record.driverId,
+    vehicleId: record.vehicleId,
+    vehicleCapacity: null,
+    paymentStatus: 'pending',
+    vehicleStatus: record.vehicleNumber ? 'assigned' : 'not_assigned',
+    stage,
+    progress: stageProgressMap[stage],
+    invoiceNumber: null,
+    invoiceGeneratedAt: null,
+    loadingCompletedAt: record.loadingCompletedAt,
+    dispatchReadyAt: null,
+    dispatchStartedAt: record.actualDispatchDate,
+    deliveredAt: null,
+    qualityApproved: true,
+    eWayBillReady: Boolean(record.ewayBillNumber),
+    dispatchApproved: stage === 'dispatched' || stage === 'in_transit',
+    loadingProofAvailable: Boolean(record.loadingCompletedAt),
+    delayed: false,
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
+  });
+};
+
+export const fetchSellerDispatchesSnapshot = async (): Promise<DispatchSnapshot> => {
+  const pages: SellerDispatchRecord[] = [];
+  let page = 1;
+  let totalPages = 1;
+  do {
+    const result = await fetchSellerDispatchesPage({ page, limit: 50 });
+    pages.push(...result.items);
+    totalPages = result.pagination.totalPages;
+    page += 1;
+  } while (page <= totalPages && page <= 10);
+
+  const orders = pages.map(mapSellerDispatchRecordToOrder);
+  return buildSnapshotFromOrders(orders, orders[0]?.id ?? null);
 };
 
 const buildSnapshotFromOrders = (
@@ -657,7 +757,7 @@ export const createDispatchOrderFromSellerAcceptance = (
   const gstAmount = Math.round(input.value * 0.18);
   const dispatchOrder: DispatchOrder = {
     id: dispatchId,
-    customerName: input.buyerName,
+    buyerLabel: 'Anonymous Buyer',
     material: input.material,
     quantityMt: input.quantity,
     eta: 'Pending scheduling',

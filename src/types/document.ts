@@ -1,4 +1,15 @@
-export type DocumentId = 'pan' | 'gst' | 'aadhaar' | 'cancelled_cheque';
+export type KycDocumentId = 'pan' | 'gst' | 'aadhaar' | 'cancelled_cheque';
+
+export type CreditDocumentId =
+  | 'gst_registration'
+  | 'gst_returns'
+  | 'bank_statement'
+  | 'itr_financials'
+  | 'cancelled_cheque'
+  | 'business_registration'
+  | 'other';
+
+export type DocumentId = KycDocumentId | CreditDocumentId;
 
 export type DocumentStatus =
   | 'idle'

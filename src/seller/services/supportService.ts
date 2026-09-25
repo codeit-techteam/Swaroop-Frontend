@@ -1,37 +1,114 @@
-import { STORAGE_KEYS } from '@/constants';
+import { apiClient } from '@/api/client';
 import {
   MOCK_FAQS,
   MOCK_SUPPORT_CONTACTS,
-  MOCK_SUPPORT_TICKETS,
   TICKET_CATEGORY_OPTIONS,
 } from '@/seller/mock/support';
 import type {
   RaiseTicketInput,
   SupportSnapshot,
   SupportTicket,
+  TicketCategory,
   TicketFilterTab,
+  TicketPriority,
+  TicketStatus,
 } from '@/seller/types/support';
-import { getStorageItem, setStorageItem } from '@/utils/storage';
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+type Envelope<T> = {
+  success: boolean;
+  message?: string;
+  data: T;
+};
+
+type BackendTicket = {
+  id: string;
+  ticketNumber: string;
+  category: string;
+  categoryLabel?: string;
+  priority: string;
+  status: string;
+  subject: string;
+  description: string;
+  attachmentName?: string | null;
+  createdAt: string;
+};
+
+const CATEGORY_TO_API: Record<TicketCategory, string> = {
+  order_issue: 'ORDERS',
+  payment: 'PAYMENT',
+  dispatch: 'DISPATCH',
+  inventory: 'INVENTORY',
+  compliance: 'COMPLIANCE',
+  account: 'ACCOUNT',
+  other: 'OTHERS',
+};
+
+const PRIORITY_TO_API: Record<TicketPriority, string> = {
+  low: 'LOW',
+  medium: 'MEDIUM',
+  high: 'HIGH',
+  urgent: 'CRITICAL',
+};
+
+const STATUS_FROM_API: Record<string, TicketStatus> = {
+  OPEN: 'open',
+  IN_PROGRESS: 'in_progress',
+  WAITING_CUSTOMER: 'in_progress',
+  RESOLVED: 'resolved',
+  CLOSED: 'closed',
+};
+
+const CATEGORY_FROM_API: Record<string, TicketCategory> = {
+  ORDERS: 'order_issue',
+  PAYMENT: 'payment',
+  DISPATCH: 'dispatch',
+  INVENTORY: 'inventory',
+  COMPLIANCE: 'compliance',
+  ACCOUNT: 'account',
+  TECHNICAL: 'other',
+  OTHERS: 'other',
+  SHIPMENT: 'dispatch',
+};
+
+const PRIORITY_FROM_API: Record<string, TicketPriority> = {
+  LOW: 'low',
+  MEDIUM: 'medium',
+  HIGH: 'high',
+  CRITICAL: 'urgent',
+};
+
+function formatCreatedDate(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return date.toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
 }
 
-function loadTickets(): SupportTicket[] {
-  const raw = getStorageItem(STORAGE_KEYS.SELLER_SUPPORT_TICKETS);
-  if (!raw) return [...MOCK_SUPPORT_TICKETS];
-  try {
-    return JSON.parse(raw) as SupportTicket[];
-  } catch {
-    return [...MOCK_SUPPORT_TICKETS];
-  }
+function mapTicket(row: BackendTicket): SupportTicket {
+  const category = CATEGORY_FROM_API[row.category] ?? 'other';
+  const categoryLabel =
+    row.categoryLabel ??
+    TICKET_CATEGORY_OPTIONS.find((o) => o.value === category)?.label ??
+    'Other';
+
+  return {
+    id: row.id,
+    ticketId: row.ticketNumber,
+    category,
+    categoryLabel,
+    priority: PRIORITY_FROM_API[row.priority] ?? 'medium',
+    status: STATUS_FROM_API[row.status] ?? 'open',
+    subject: row.subject,
+    description: row.description,
+    createdDate: formatCreatedDate(row.createdAt),
+    attachmentName: row.attachmentName ?? undefined,
+  };
 }
 
-function persistTickets(tickets: SupportTicket[]): void {
-  setStorageItem(STORAGE_KEYS.SELLER_SUPPORT_TICKETS, JSON.stringify(tickets));
-}
-
-let ticketsCache = loadTickets();
+let ticketsCache: SupportTicket[] = [];
 
 export function getSupportSnapshot(): SupportSnapshot {
   return {
@@ -41,7 +118,10 @@ export function getSupportSnapshot(): SupportSnapshot {
   };
 }
 
-export function filterTicketsByTab(tickets: SupportTicket[], tab: TicketFilterTab): SupportTicket[] {
+export function filterTicketsByTab(
+  tickets: SupportTicket[],
+  tab: TicketFilterTab,
+): SupportTicket[] {
   if (tab === 'open') {
     return tickets.filter((t) => t.status === 'open' || t.status === 'in_progress');
   }
@@ -52,35 +132,31 @@ export function filterTicketsByTab(tickets: SupportTicket[], tab: TicketFilterTa
 }
 
 export async function refreshSupportTickets(): Promise<SupportSnapshot> {
-  await delay(1500);
-  ticketsCache = loadTickets();
+  const payload = await apiClient.get<Envelope<BackendTicket[]>>(
+    '/seller/support/tickets?limit=100',
+  );
+  ticketsCache = (payload.data.data ?? []).map(mapTicket);
   return getSupportSnapshot();
 }
 
-export async function createSupportTicket(input: RaiseTicketInput): Promise<SupportTicket> {
-  await delay(1200);
-  const categoryLabel =
-    TICKET_CATEGORY_OPTIONS.find((opt) => opt.value === input.category)?.label ?? 'Other';
-
-  const ticket: SupportTicket = {
-    id: `tkt-${Date.now()}`,
-    ticketId: `PT-2026-${String(Math.floor(Math.random() * 9000) + 1000)}`,
-    category: input.category,
-    categoryLabel,
-    priority: input.priority,
-    status: 'open',
-    subject: input.subject,
-    description: input.description,
-    createdDate: new Date().toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    }),
-    attachmentName: input.attachmentName,
-  };
-
-  ticketsCache = [ticket, ...ticketsCache];
-  persistTickets(ticketsCache);
+export async function createSupportTicket(
+  input: RaiseTicketInput,
+): Promise<SupportTicket> {
+  const payload = await apiClient.post<Envelope<BackendTicket>>(
+    '/seller/support/tickets',
+    {
+      category: CATEGORY_TO_API[input.category],
+      priority: PRIORITY_TO_API[input.priority],
+      subject: input.subject.trim(),
+      description: input.description.trim(),
+      attachmentName: input.attachmentName,
+    },
+  );
+  if (!payload.data.data) {
+    throw new Error(payload.data.message || 'Failed to create support ticket');
+  }
+  const ticket = mapTicket(payload.data.data);
+  ticketsCache = [ticket, ...ticketsCache.filter((t) => t.id !== ticket.id)];
   return ticket;
 }
 

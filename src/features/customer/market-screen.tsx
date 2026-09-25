@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { FlatList, Keyboard, View, type TextInput } from 'react-native';
 
-import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
+import { type Href, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -81,19 +81,21 @@ export const CustomerMarketScreen = () => {
     router.push(ROUTES.CUSTOMER.CART as Href);
   }, [router]);
 
-  useEffect(() => {
-    let cancelled = false;
-    void fetchCustomerMarketplaceBanners()
-      .then((items) => {
-        if (!cancelled) setPromoBanners(items);
-      })
-      .catch(() => {
-        if (!cancelled) setPromoBanners([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      void fetchCustomerMarketplaceBanners()
+        .then((items) => {
+          if (!cancelled) setPromoBanners(items);
+        })
+        .catch(() => {
+          if (!cancelled) setPromoBanners([]);
+        });
+      return () => {
+        cancelled = true;
+      };
+    }, []),
+  );
 
   const handlePromoAction = useCallback(
     (banner: HomeBanner) => {

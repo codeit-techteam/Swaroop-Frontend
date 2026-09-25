@@ -21,9 +21,13 @@ import {
   OFFER_VALIDITY_OPTIONS,
 } from '@/seller/modules/seller-offers/services/sellerOffersService';
 import { useSellerOffersStore } from '@/seller/modules/seller-offers/store/sellerOffersStore';
+import { useSellerProductStore } from '@/seller/store/sellerProductStore';
 import { SellerHeader } from '@/seller/components';
 import { brandColors } from '@/theme/colors';
 import { cn } from '@/utils/cn';
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const PRODUCT_MAP: Record<string, { product: string; grade: string; category: string }> = {
   'HDPE PE100': {
@@ -96,18 +100,39 @@ export const CreateOfferScreen = memo(function CreateOfferScreen() {
       updateEditorField('grade', mapped.grade);
       updateEditorField('category', mapped.category);
     }
+
+    const products = useSellerProductStore.getState().products;
+    const needle = (mapped?.product ?? grade).toLowerCase();
+    const gradeNeedle = (mapped?.grade ?? '').toLowerCase();
+    const match = products.find((product) => {
+      const name = product.form.name.toLowerCase();
+      const code = product.form.grade.toLowerCase();
+      return (
+        name.includes(needle) ||
+        needle.includes(name) ||
+        (gradeNeedle && code === gradeNeedle)
+      );
+    });
+    if (match && UUID_RE.test(match.id)) {
+      updateEditorField('productId', match.id);
+    } else if (match && UUID_RE.test(match.form.catalogProductId)) {
+      updateEditorField('productId', match.form.catalogProductId);
+    } else {
+      updateEditorField('productId', undefined);
+    }
+
     setShowGradePicker(false);
   };
 
-  const handleSaveDraft = () => {
-    const draft = saveDraft();
+  const handleSaveDraft = async () => {
+    const draft = await saveDraft();
     if (draft) {
       selectOffer(draft.id);
     }
   };
 
-  const handleActivate = () => {
-    const submitted = activateOffer(offerId);
+  const handleActivate = async () => {
+    const submitted = await activateOffer(offerId);
     if (submitted) {
       selectOffer(submitted.id);
       router.push(`${ROUTES.SELLER.OFFER_REVIEW_STATUS}?offerId=${submitted.id}` as Href);
@@ -268,15 +293,23 @@ export const CreateOfferScreen = memo(function CreateOfferScreen() {
                 loadEditorFromOffer(offer.id);
                 router.push(`${ROUTES.SELLER.EDIT_OFFER}?offerId=${offer.id}` as Href);
               }}
-              onPause={() => pauseOffer(offer.id)}
-              onResume={() => resumeOffer(offer.id)}
-              onDuplicate={() => {
-                const duplicated = duplicateOffer(offer.id);
-                if (duplicated) {
-                  loadEditorFromOffer(duplicated.id);
-                }
+              onPause={() => {
+                void pauseOffer(offer.id);
               }}
-              onDelete={() => deleteOffer(offer.id)}
+              onResume={() => {
+                void resumeOffer(offer.id);
+              }}
+              onDuplicate={() => {
+                void (async () => {
+                  const duplicated = await duplicateOffer(offer.id);
+                  if (duplicated) {
+                    loadEditorFromOffer(duplicated.id);
+                  }
+                })();
+              }}
+              onDelete={() => {
+                void deleteOffer(offer.id);
+              }}
             />
           ))}
         </View>

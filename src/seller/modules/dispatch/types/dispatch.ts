@@ -44,7 +44,8 @@ export type DispatchSummary = {
 
 export type DispatchOrder = {
   id: string;
-  customerName: string;
+  /** Blind buyer label only — never company legal name. */
+  buyerLabel: string;
   material: string;
   quantityMt: number;
   eta: string;
@@ -137,6 +138,9 @@ export type DispatchStoreState = DispatchSnapshot & {
 export type DispatchStoreActions = {
   hydrateDispatchState: () => void;
   refreshDispatchState: () => void;
+  /** Prefer API hydrate; falls back to local mock/persisted snapshot. */
+  hydrateFromApi: () => Promise<void>;
+  refreshFromApi: () => Promise<void>;
   selectDispatch: (orderId: string | null) => void;
   assignVehicle: (orderId: string, vehicleId: string, driverId: string) => DispatchOrder | null;
   generateInvoice: (orderId: string) => DispatchOrder | null;

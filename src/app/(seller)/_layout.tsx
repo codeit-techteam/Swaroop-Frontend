@@ -39,6 +39,7 @@ export default function SellerLayout() {
       <Stack.Screen name="settlement-released" />
       <Stack.Screen name="settlement-history" />
       <Stack.Screen name="settlement-documents" />
+      <Stack.Screen name="payments" />
       <Stack.Screen name="warehouse" />
       <Stack.Screen name="dispatch" />
       <Stack.Screen name="dispatch-detail" />
@@ -72,6 +73,11 @@ export default function SellerLayout() {
       <Stack.Screen name="offer-approved" />
       <Stack.Screen name="offer-paused" />
       <Stack.Screen name="offer-expired" />
+      <Stack.Screen name="purchase-requests" />
+      <Stack.Screen name="purchase-request-detail" />
+      <Stack.Screen name="price-revisions" />
+      <Stack.Screen name="vehicle-slots" />
+      <Stack.Screen name="procurement-workbench" />
       <Stack.Screen name="search" />
       <Stack.Screen name="raise-ticket" />
     </Stack>

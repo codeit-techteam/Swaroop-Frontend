@@ -1,10 +1,12 @@
 import { create } from 'zustand';
 
 import {
+  applyApiProductsToSnapshot,
   createNextTier,
   deleteProduct,
   deactivateProduct,
   duplicateProduct,
+  fetchSellerProductsFromApi,
   getSellerProductSnapshot,
   loadProductIntoEditor,
   persistSellerProductSnapshot,
@@ -16,6 +18,7 @@ import {
 import type { SellerProductForm, SellerProductStore, SellerTechnicalSpecs } from '@/seller/types';
 import { buildEditorFromCatalogId } from '@/seller/utils/catalog';
 import { getLiveCatalogProduct } from '@/services/catalog';
+import { logger } from '@/utils/logger';
 
 const catalogHasSpec = (form: SellerProductForm, spec: 'mfi' | 'density'): boolean => {
   const catalog = form.catalogProductId ? getLiveCatalogProduct(form.catalogProductId) : undefined;
@@ -119,6 +122,32 @@ export const useSellerProductStore = create<SellerProductStore>((set, get) => ({
       isHydrated: true,
       formErrors: {},
     });
+  },
+
+  hydrateFromApi: async () => {
+    try {
+      const products = await fetchSellerProductsFromApi();
+      const next = applyApiProductsToSnapshot(get(), products);
+      set({
+        ...next,
+        isHydrated: true,
+        formErrors: {},
+      });
+      persist(get());
+    } catch (error) {
+      logger.warn('Seller product API hydrate failed; keeping local snapshot', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+      set({
+        ...getSellerProductSnapshot(),
+        isHydrated: true,
+        formErrors: {},
+      });
+    }
+  },
+
+  refreshFromApi: async () => {
+    await get().hydrateFromApi();
   },
 
   updateFormField: (field, value) => {

@@ -1,4 +1,5 @@
 import { apiClient } from '@/api/client';
+import { toApiAddressType } from '@/constants/locations';
 import { ensureDevBackendSession } from '@/services/backend-session';
 import type { AddressDraft, SavedAddressKind, SavedDeliveryAddress } from '@/types/address';
 
@@ -57,7 +58,7 @@ export async function fetchSavedAddresses(): Promise<SavedDeliveryAddress[]> {
 export async function createSavedAddress(draft: AddressDraft): Promise<SavedDeliveryAddress> {
   await ensureDevBackendSession('customer');
   const payload = await apiClient.post<Envelope<AddressApiRow>>('/customer/addresses', {
-    type: draft.type ?? 'SHIPPING',
+    type: toApiAddressType(draft.type),
     label: draft.label,
     line1: draft.line1,
     line2: draft.line2,
@@ -78,7 +79,11 @@ export async function updateSavedAddress(
   draft: Partial<AddressDraft>,
 ): Promise<SavedDeliveryAddress> {
   await ensureDevBackendSession('customer');
-  const payload = await apiClient.patch<Envelope<AddressApiRow>>(`/customer/addresses/${id}`, draft);
+  const body = {
+    ...draft,
+    ...(draft.type !== undefined ? { type: toApiAddressType(draft.type) } : {}),
+  };
+  const payload = await apiClient.patch<Envelope<AddressApiRow>>(`/customer/addresses/${id}`, body);
   return mapSavedAddress(payload.data.data);
 }
 

@@ -2,7 +2,7 @@
   "orders": [
     {
       "id": "PT-ORD-8842",
-      "customerName": "Apex Polymers",
+      "buyerLabel": "Anonymous Buyer",
       "material": "HDPE PE100",
       "quantityMt": 25,
       "eta": "Oct 28, 4:30 PM",
@@ -38,7 +38,7 @@
     },
     {
       "id": "PT-ORD-8850",
-      "customerName": "Metro Plast Industries",
+      "buyerLabel": "Anonymous Buyer",
       "material": "Polypropylene",
       "quantityMt": 40,
       "eta": "Oct 29, 10:00 AM",
@@ -74,7 +74,7 @@
     },
     {
       "id": "PT-ORD-8814",
-      "customerName": "Universal Resins",
+      "buyerLabel": "Anonymous Buyer",
       "material": "LLDPE Film Grade",
       "quantityMt": 18,
       "eta": "Today, 7:15 PM",
@@ -110,7 +110,7 @@
     },
     {
       "id": "PT-ORD-8768",
-      "customerName": "Northline Petrochem",
+      "buyerLabel": "Anonymous Buyer",
       "material": "PVC Resin K67",
       "quantityMt": 30,
       "eta": "Delivered",
@@ -146,7 +146,7 @@
     },
     {
       "id": "PT-ORD-8799",
-      "customerName": "Eastern Compounders",
+      "buyerLabel": "Anonymous Buyer",
       "material": "HDPE Blow Moulding",
       "quantityMt": 22,
       "eta": "Jul 30, 11:30 AM",

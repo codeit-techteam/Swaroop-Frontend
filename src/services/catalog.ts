@@ -14,6 +14,11 @@ type BlindListing = {
   moq?: number | string | null;
   quantityAvailable?: number | string | null;
   leadTime?: string | null;
+  priceTiers?: Array<{
+    minQty?: number | string | null;
+    maxQty?: number | string | null;
+    price?: number | string | null;
+  }>;
 };
 
 type BlindProductDocument = {
@@ -54,6 +59,26 @@ function num(value: unknown, fallback = 0) {
 export function mapBlindProduct(product: BlindProduct): MarketProduct {
   const specs = (product.technicalSpecs ?? {}) as Record<string, unknown>;
   const listing = product.listing;
+  const priceTiers = listing?.priceTiers ?? [];
+  const bulkPricing =
+    priceTiers.length > 0
+      ? priceTiers.map((tier, index) => {
+          const minMt = num(tier.minQty);
+          const maxMt =
+            tier.maxQty == null || tier.maxQty === ''
+              ? null
+              : num(tier.maxQty);
+          return {
+            id: `tier-${index}-${minMt}`,
+            minMt,
+            maxMt,
+            pricePerMt: num(tier.price),
+            quantityLabel:
+              maxMt == null ? `${minMt}+ MT` : `${minMt} - ${maxMt} MT`,
+          };
+        })
+      : undefined;
+
   return {
     id: product.id,
     name: product.name,
@@ -81,6 +106,7 @@ export function mapBlindProduct(product: BlindProduct): MarketProduct {
     },
     creditEligible: Boolean(specs.creditEligible),
     offerId: listing?.offerId,
+    bulkPricing,
     documents: product.documents ?? [],
   };
 }
@@ -102,6 +128,46 @@ export async function fetchCustomerMarketplaceProducts(): Promise<MarketProduct[
   const products = pages.map(mapBlindProduct);
   setLiveCatalogCache(products);
   return products;
+}
+
+export async function fetchCustomerMarketplaceProduct(id: string): Promise<MarketProduct> {
+  await ensureDevBackendSession('customer');
+  const payload = await apiClient.get<Envelope<BlindProduct>>(`/customer/products/${id}`);
+  const raw = payload.data.data;
+  if (!raw) {
+    throw new Error('Product not found');
+  }
+  const product = mapBlindProduct(raw);
+  const without = liveCatalogCache.filter(
+    (item) => item.id !== product.id && item.gradeCode !== product.gradeCode,
+  );
+  setLiveCatalogCache([product, ...without]);
+  return product;
+}
+
+type ProductDocumentUrl = {
+  id: string;
+  url: string;
+  expiresInSeconds?: number;
+  fileName?: string;
+  mimeType?: string | null;
+  title?: string;
+};
+
+/** Short-lived signed URL for a seller-uploaded product PDF (TDS/MSDS/etc.). */
+export async function fetchProductDocumentUrl(
+  productId: string,
+  documentId: string,
+): Promise<ProductDocumentUrl> {
+  await ensureDevBackendSession('customer');
+  const payload = await apiClient.get<Envelope<ProductDocumentUrl>>(
+    `/customer/products/${productId}/documents/${documentId}/url`,
+  );
+  const data = payload.data.data;
+  if (!data?.url) {
+    throw new Error('Document URL unavailable');
+  }
+  return data;
 }
 
 type SellerGrade = {

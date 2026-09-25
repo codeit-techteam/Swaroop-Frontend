@@ -13,6 +13,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
+    "test:seller-blind": "npx tsx --test src/services/__tests__/seller-blind-mappers.test.ts",
     "build:android:preview": "eas build -p android --profile preview"
   },
   "dependencies": {

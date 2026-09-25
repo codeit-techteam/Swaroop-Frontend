@@ -76,17 +76,35 @@ export function formatDeliveryLabel(input: {
 
 export const ADDRESS_KIND_OPTIONS = [
   { value: 'WAREHOUSE', label: 'Warehouse' },
-  { value: 'OFFICE', label: 'Office' },
-  { value: 'FACTORY', label: 'Factory' },
   { value: 'SHIPPING', label: 'Shipping' },
-  { value: 'OTHER', label: 'Other' },
+  { value: 'OTHER', label: 'Office / Other' },
+  { value: 'BILLING', label: 'Billing' },
+  { value: 'REGISTERED', label: 'Registered' },
 ] as const;
 
+/** Map UI / legacy kinds onto Prisma AddressType. */
+export function toApiAddressType(type?: string | null): string {
+  switch ((type ?? '').toUpperCase()) {
+    case 'OFFICE':
+    case 'FACTORY':
+      return 'OTHER';
+    case 'WAREHOUSE':
+    case 'SHIPPING':
+    case 'BILLING':
+    case 'REGISTERED':
+    case 'OTHER':
+      return (type ?? 'SHIPPING').toUpperCase();
+    default:
+      return 'SHIPPING';
+  }
+}
+
 export function addressKindLabel(type: string): string {
-  const match = ADDRESS_KIND_OPTIONS.find((option) => option.value === type);
+  const normalized = toApiAddressType(type);
+  const match = ADDRESS_KIND_OPTIONS.find((option) => option.value === normalized);
   if (match) return match.label;
-  if (type === 'REGISTERED') return 'Registered';
-  if (type === 'BILLING') return 'Billing';
+  if (type === 'OFFICE') return 'Office';
+  if (type === 'FACTORY') return 'Factory';
   return 'Address';
 }
 

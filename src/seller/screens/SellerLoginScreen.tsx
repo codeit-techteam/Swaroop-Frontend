@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 
 import { Pressable, View } from 'react-native';
 
@@ -15,13 +15,13 @@ import {
   ScreenWrapper,
   Typography,
 } from '@/components';
+import { DEMO_PHONE } from '@/config/development';
 import { useZodForm } from '@/lib/forms';
 import { ROUTES } from '@/navigation/routes';
 import { SellerPrimaryButton, SellerTextField } from '@/seller/components';
-import { SELLER_DEMO_MOBILE } from '@/seller/constants';
-import { requestSellerOtp } from '@/seller/mock/mockSellerService';
 import { getSellerInitialRoute } from '@/seller/navigation/getSellerInitialRoute';
 import { useSellerStore } from '@/seller/store/sellerStore';
+import { requestSellerOtpSend } from '@/services/seller-auth';
 import { phoneSchema } from '@/utils/validators';
 
 const sellerLoginSchema = z.object({
@@ -34,31 +34,47 @@ export const SellerLoginScreen = () => {
   const router = useRouter();
   const snapshot = useSellerStore((state) => state);
   const setMobile = useSellerStore((state) => state.setMobile);
+  const [isSending, setIsSending] = useState(false);
+  const [hint, setHint] = useState<string | undefined>();
   const {
     control,
     handleSubmit,
     formState: { isValid },
   } = useZodForm(sellerLoginSchema, {
-    defaultValues: { mobile: snapshot.mobile || SELLER_DEMO_MOBILE },
+    defaultValues: { mobile: snapshot.mobile || DEMO_PHONE },
     mode: 'onChange',
   });
 
   const handleGetOtp = useCallback(
-    (values: SellerLoginValues) => {
+    async (values: SellerLoginValues) => {
       setMobile(values.mobile);
-      const { requiresOtp } = requestSellerOtp(values.mobile);
+      setIsSending(true);
+      setHint(undefined);
+      try {
+        // Skip OTP for repeat demo sessions that already have dashboard access.
+        if (
+          values.mobile === DEMO_PHONE &&
+          snapshot.sellerLoggedIn &&
+          snapshot.dashboardAccess
+        ) {
+          router.replace(getSellerInitialRoute(useSellerStore.getState()) as Href);
+          return;
+        }
 
-      if (!requiresOtp) {
-        router.replace(getSellerInitialRoute(useSellerStore.getState()) as Href);
-        return;
+        const result = await requestSellerOtpSend(values.mobile);
+        if (result.message) {
+          setHint(result.message);
+        }
+
+        router.push({
+          pathname: ROUTES.SELLER.OTP,
+          params: { mobile: values.mobile },
+        } as unknown as Href);
+      } finally {
+        setIsSending(false);
       }
-
-      router.push({
-        pathname: ROUTES.SELLER.OTP,
-        params: { mobile: values.mobile },
-      } as unknown as Href);
     },
-    [router, setMobile],
+    [router, setMobile, snapshot.dashboardAccess, snapshot.sellerLoggedIn],
   );
 
   return (
@@ -92,17 +108,25 @@ export const SellerLoginScreen = () => {
           )}
         />
 
+        {hint ? (
+          <Typography variant="legal" className="mt-sm text-left text-brand-muted">
+            {hint}
+          </Typography>
+        ) : null}
+
         <SellerPrimaryButton
-          label="Get OTP"
+          label={isSending ? 'Sending…' : 'Get OTP'}
           showArrow
           className="mt-xl"
-          disabled={!isValid}
-          onPress={handleSubmit(handleGetOtp)}
+          disabled={!isValid || isSending}
+          onPress={handleSubmit((values) => {
+            void handleGetOtp(values);
+          })}
         />
 
         <View className="mt-xl rounded-2xl bg-brand-surface p-md">
           <Typography variant="legal" className="text-left">
-            Demo mobile: {SELLER_DEMO_MOBILE}
+            Demo mobile: {DEMO_PHONE}
           </Typography>
         </View>
 

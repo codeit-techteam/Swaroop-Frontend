@@ -1,5 +1,4 @@
 import { apiClient } from '@/api/client';
-import { HOME_BANNERS } from '@/constants/homeBanners';
 import type { HomeBanner } from '@/types/home';
 
 type Envelope<T> = {
@@ -14,6 +13,7 @@ type CmsBanner = {
   targetRoute?: string | null;
   mediaKey?: string | null;
   mediaUrl?: string | null;
+  mobileMediaUrl?: string | null;
   placement?: string;
   ctaText?: string | null;
   ctaAction?: string | null;
@@ -24,6 +24,8 @@ type CmsBanner = {
 };
 
 export function mapCmsBanner(row: CmsBanner): HomeBanner {
+  // Prefer mobile creative when Admin uploaded a separate mobile banner.
+  const imageUrl = row.mobileMediaUrl || row.mediaUrl || row.mediaKey || '';
   return {
     id: row.id,
     badge: row.badge || (row.placement === 'HOME_HERO' ? 'CAMPAIGN' : 'UPDATE'),
@@ -31,7 +33,7 @@ export function mapCmsBanner(row: CmsBanner): HomeBanner {
     subtitle: row.subtitle ?? '',
     description: row.description ?? row.subtitle ?? row.title,
     buttonLabel: row.ctaText || (row.targetRoute ? 'Open' : 'View'),
-    imageUrl: row.mediaUrl || row.mediaKey || '',
+    imageUrl,
     targetRoute: row.targetRoute,
     ctaAction: row.ctaAction,
     externalUrl: row.externalUrl,
@@ -50,12 +52,12 @@ export async function fetchCustomerBanners(
   return (payload.data.data ?? []).map(mapCmsBanner);
 }
 
+/** Home hero banners from Admin CMS (R2/DB). Empty CMS = no carousel (no Unsplash mask). */
 export async function fetchCustomerHomeBanners(): Promise<HomeBanner[]> {
   try {
-    const items = await fetchCustomerBanners('HOME_HERO');
-    return items.length ? items : HOME_BANNERS;
+    return await fetchCustomerBanners('HOME_HERO');
   } catch {
-    return HOME_BANNERS;
+    return [];
   }
 }
 

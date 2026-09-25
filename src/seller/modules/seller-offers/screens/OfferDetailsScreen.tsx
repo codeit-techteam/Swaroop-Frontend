@@ -58,17 +58,21 @@ export const OfferDetailsScreen = memo(function OfferDetailsScreen() {
     );
   }
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (confirmAction === 'pause') {
-      pauseOffer(offer.id);
-      router.push(`${ROUTES.SELLER.OFFER_PAUSED}?offerId=${offer.id}` as Href);
+      const paused = await pauseOffer(offer.id);
+      if (paused) {
+        router.push(`${ROUTES.SELLER.OFFER_PAUSED}?offerId=${offer.id}` as Href);
+      }
     }
     if (confirmAction === 'archive') {
-      deleteOffer(offer.id);
-      router.push(ROUTES.SELLER.OFFERS as Href);
+      const ok = await deleteOffer(offer.id);
+      if (ok) {
+        router.push(ROUTES.SELLER.OFFERS as Href);
+      }
     }
     if (confirmAction === 'duplicate') {
-      const duplicated = duplicateOffer(offer.id);
+      const duplicated = await duplicateOffer(offer.id);
       if (duplicated) {
         loadEditorFromOffer(duplicated.id);
         router.push(ROUTES.SELLER.CREATE_OFFER as Href);

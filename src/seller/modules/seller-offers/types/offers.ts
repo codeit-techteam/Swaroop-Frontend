@@ -57,6 +57,9 @@ export type SellerOffer = {
   analytics: OfferAnalytics;
   productId?: string;
   inventoryProductId?: string;
+  warehouseId?: string;
+  gradeId?: string;
+  version?: number;
   createdAt: string;
   updatedAt: string;
   expiresAt: string;
@@ -77,6 +80,11 @@ export type OfferEditorForm = {
   validity: OfferValidity;
   warehouse: string;
   warehouseLocation: string;
+  /** Backend seller product UUID when known. */
+  productId?: string;
+  warehouseId?: string;
+  inventoryId?: string;
+  quantity?: string;
   tiers: OfferPricingTier[];
 };
 
@@ -112,6 +120,7 @@ export type SellerOffersSnapshot = {
   filters: OfferTabFilter;
   search: string;
   stats: OfferStats;
+  loadError: string | null;
 };
 
 export type CreateOfferInput = Omit<
@@ -123,8 +132,8 @@ export type CreateOfferInput = Omit<
 
 export type SellerOffersStore = SellerOffersSnapshot & {
   isHydrated: boolean;
-  hydrateSellerOffersState: () => void;
-  refreshSellerOffersState: () => void;
+  hydrateSellerOffersState: () => Promise<void>;
+  refreshSellerOffersState: (searchOverride?: string) => Promise<void>;
   setFilter: (filter: OfferTabFilter) => void;
   setSearch: (query: string) => void;
   selectOffer: (offerId: string | null) => void;
@@ -137,18 +146,18 @@ export type SellerOffersStore = SellerOffersSnapshot & {
   getFilteredOffers: () => SellerOffer[];
   searchOffers: (query: string, tab?: OfferTabFilter) => SellerOffer[];
   getOffer: (offerId: string) => SellerOffer | undefined;
-  createOffer: (input: Partial<CreateOfferInput>) => SellerOffer;
-  updateOffer: (offerId: string, input: Partial<SellerOffer>) => SellerOffer | null;
-  saveDraft: () => SellerOffer | null;
-  activateOffer: (offerId?: string) => SellerOffer | null;
-  pauseOffer: (offerId: string) => SellerOffer | null;
-  resumeOffer: (offerId: string) => SellerOffer | null;
-  duplicateOffer: (offerId: string) => SellerOffer | null;
-  deleteOffer: (offerId: string) => boolean;
-  approveOffer: (offerId: string) => SellerOffer | null;
-  rejectOffer: (offerId: string, comments?: string) => SellerOffer | null;
-  expireOffer: (offerId: string) => SellerOffer | null;
-  refreshReviewStatus: (offerId: string) => SellerOffer | null;
+  createOffer: (input?: Partial<CreateOfferInput>) => Promise<SellerOffer>;
+  updateOffer: (offerId: string, input?: Partial<SellerOffer>) => Promise<SellerOffer | null>;
+  saveDraft: () => Promise<SellerOffer | null>;
+  activateOffer: (offerId?: string) => Promise<SellerOffer | null>;
+  pauseOffer: (offerId: string) => Promise<SellerOffer | null>;
+  resumeOffer: (offerId: string) => Promise<SellerOffer | null>;
+  duplicateOffer: (offerId: string) => Promise<SellerOffer | null>;
+  deleteOffer: (offerId: string) => Promise<boolean>;
+  approveOffer: (offerId: string) => Promise<SellerOffer | null>;
+  rejectOffer: (offerId: string, comments?: string) => Promise<SellerOffer | null>;
+  expireOffer: (offerId: string) => Promise<SellerOffer | null>;
+  refreshReviewStatus: (offerId: string) => Promise<SellerOffer | null>;
   syncInventoryFromCatalog: () => void;
   syncDashboardStats: () => void;
   syncMarketplaceListings: () => void;

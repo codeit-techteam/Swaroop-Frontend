@@ -23,6 +23,7 @@ import {
   SettlementSummaryCard,
 } from '@/seller/components';
 import { usePullToRefresh } from '@/seller/hooks/usePullToRefresh';
+import { useSellerDashboardSummary } from '@/seller/hooks/useSellerDashboardSummary';
 import { useSellerShipments } from '@/seller/hooks/useSellerShipments';
 import { useSkeletonLoading } from '@/seller/hooks/useSkeletonLoading';
 import { useSellerOffersStore } from '@/seller/modules/seller-offers/store/sellerOffersStore';
@@ -31,12 +32,10 @@ import { formatSettlementAmount } from '@/seller/modules/settlement-payout/servi
 import { useSettlementStore } from '@/seller/modules/settlement-payout/store/settlementStore';
 import { navigateSellerBottomTab } from '@/seller/navigation/useSellerBottomNavigation';
 import { getRevenueSeries, getSellerAnalytics } from '@/seller/services/analyticsService';
-import {
-  getActiveShipmentCount,
-  getSellerNotificationsSnapshot,
-} from '@/seller/services/sellerMockService';
+import { getSellerNotificationsSnapshot } from '@/seller/services/sellerMockService';
 import { useSellerProductStore } from '@/seller/store/sellerProductStore';
 import { useSellerStore } from '@/seller/store/sellerStore';
+import { useSellerLocationStore } from '@/seller/store/sellerLocationStore';
 import type { SellerShipment } from '@/seller/types';
 
 const AnimatedSection = Animated.View;
@@ -47,7 +46,14 @@ export const SellerDashboardScreen = memo(function SellerDashboardScreen() {
   const settlementHydrated = useSettlementStore((state) => state.isHydrated);
   const ordersHydrated = useSellerOrdersStore((state) => state.isHydrated);
   const offersHydrated = useSellerOffersStore((state) => state.isHydrated);
-  const isLoading = useSkeletonLoading(settlementHydrated && ordersHydrated && offersHydrated);
+  const {
+    summary: dashboardSummary,
+    isHydrated: dashboardHydrated,
+    refresh: refreshDashboard,
+  } = useSellerDashboardSummary();
+  const isLoading = useSkeletonLoading(
+    settlementHydrated && ordersHydrated && offersHydrated && dashboardHydrated,
+  );
   const refreshSellerOrdersState = useSellerOrdersStore((state) => state.refreshSellerOrdersState);
   const refreshSellerOffersState = useSellerOffersStore((state) => state.refreshSellerOffersState);
   const hydrateSettlementState = useSettlementStore((state) => state.hydrateSettlementState);
@@ -56,12 +62,12 @@ export const SellerDashboardScreen = memo(function SellerDashboardScreen() {
   const { isRefreshing, refresh } = usePullToRefresh(async () => {
     refreshSellerOffersState();
     refreshSellerOrdersState();
+    await refreshDashboard();
   });
   const sellerName = useSellerStore(
     (state) => state.company.companyName || state.profile.ownerName,
   );
   const initials = useSellerStore((state) => state.profile.companyInitials || 'PT');
-  const stats = useSellerProductStore((state) => state.dashboardStats);
   const orderSummary = useSellerOrdersStore((state) => state.summary);
   const offerStats = useSellerOffersStore((state) => state.stats);
   const { dashboardPreviews } = useSellerShipments();
@@ -91,6 +97,10 @@ export const SellerDashboardScreen = memo(function SellerDashboardScreen() {
     settlementHydrated,
   ]);
 
+  useEffect(() => {
+    void useSellerLocationStore.getState().hydrate();
+  }, []);
+
   const goToAddProduct = () => {
     clearSelection();
     router.push(ROUTES.SELLER.ADD_PRODUCT as Href);
@@ -106,20 +116,36 @@ export const SellerDashboardScreen = memo(function SellerDashboardScreen() {
   const sparklineValues = useMemo(() => getRevenueSeries('7d'), []);
 
   const dashboardStats = useMemo(
-    () =>
-      stats.map((stat) => {
-        if (stat.id === 'new-orders') {
-          return { ...stat, value: orderSummary.pending };
-        }
-        if (stat.id === 'active-offers') {
-          return { ...stat, value: offerStats.active };
-        }
-        if (stat.id === 'dispatched') {
-          return { ...stat, value: getActiveShipmentCount() };
-        }
-        return stat;
-      }),
-    [offerStats.active, orderSummary.pending, stats],
+    () => [
+      {
+        id: 'new-orders',
+        label: 'Pending PRs',
+        value: dashboardSummary.pendingPurchaseRequests || orderSummary.pending,
+      },
+      {
+        id: 'pending-accept',
+        label: 'My Products',
+        value: dashboardSummary.products.active,
+      },
+      {
+        id: 'active-offers',
+        label: 'Active Offers',
+        value: dashboardSummary.activeOffers || offerStats.active,
+      },
+      {
+        id: 'dispatched',
+        label: 'Low Stock',
+        value: dashboardSummary.inventory.lowStockItems,
+      },
+    ],
+    [
+      dashboardSummary.activeOffers,
+      dashboardSummary.inventory.lowStockItems,
+      dashboardSummary.pendingPurchaseRequests,
+      dashboardSummary.products.active,
+      offerStats.active,
+      orderSummary.pending,
+    ],
   );
 
   const dashboardShipments = useMemo<SellerShipment[]>(
@@ -156,10 +182,14 @@ export const SellerDashboardScreen = memo(function SellerDashboardScreen() {
       return;
     }
     if (statId === 'dispatched') {
-      router.push(ROUTES.SELLER.DISPATCH as Href);
+      router.push(ROUTES.SELLER.INVENTORY as Href);
       return;
     }
-    router.push(ROUTES.SELLER.ORDERS as Href);
+    if (statId === 'pending-accept') {
+      router.push(ROUTES.SELLER.PURCHASE_REQUESTS as Href);
+      return;
+    }
+    router.push(ROUTES.SELLER.PURCHASE_REQUESTS as Href);
   };
 
   return (

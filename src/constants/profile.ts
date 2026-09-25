@@ -122,6 +122,12 @@ export const LOGISTICS_MENU_ITEMS = [
     subtitleKey: 'tax' as const,
     route: 'tax-documents',
   },
+  {
+    id: 'trading-credit',
+    title: 'Trading Credit',
+    subtitleKey: 'credit' as const,
+    route: 'credit-facility',
+  },
 ] as const;
 
 export const SETTINGS_MENU_ITEMS = [

@@ -19,12 +19,14 @@ export const OfferPausedScreen = memo(function OfferPausedScreen() {
 
   const offer = offerId ? getOffer(offerId) : undefined;
 
-  const handleResume = () => {
+  const handleResume = async () => {
     if (!offer) {
       return;
     }
-    resumeOffer(offer.id);
-    router.push(ROUTES.SELLER.OFFERS as Href);
+    const resumed = await resumeOffer(offer.id);
+    if (resumed) {
+      router.push(ROUTES.SELLER.OFFERS as Href);
+    }
   };
 
   return (

@@ -12,17 +12,21 @@ import type { RaiseTicketInput, TicketFilterTab } from '@/seller/types/support';
 export function useSellerSupport() {
   const [snapshot, setSnapshot] = useState(() => getSupportSnapshot());
   const [activeTab, setActiveTab] = useState<TicketFilterTab>('open');
-  // Local snapshot is available synchronously.
-  const isLoading = false;
+  const [isLoading, setIsLoading] = useState(true);
 
   const filteredTickets = useMemo(
     () => filterTicketsByTab(snapshot.tickets, activeTab),
     [snapshot.tickets, activeTab],
   );
 
-  const { isRefreshing, refresh } = usePullToRefresh(async () => {
+  const load = useCallback(async () => {
     const next = await refreshSupportTickets();
     setSnapshot(next);
+    setIsLoading(false);
+  }, []);
+
+  const { isRefreshing, refresh } = usePullToRefresh(async () => {
+    await load();
   });
 
   const submitTicket = useCallback(async (input: RaiseTicketInput) => {
@@ -31,6 +35,15 @@ export function useSellerSupport() {
     return ticket;
   }, []);
 
+  const initialLoad = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      await load();
+    } catch {
+      setIsLoading(false);
+    }
+  }, [load]);
+
   return {
     snapshot,
     filteredTickets,
@@ -38,7 +51,8 @@ export function useSellerSupport() {
     setActiveTab,
     isLoading,
     isRefreshing,
-    refresh,
+    refresh: initialLoad,
+    pullRefresh: refresh,
     submitTicket,
   };
 }

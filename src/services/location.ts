@@ -43,6 +43,21 @@ const firstNonEmpty = (...values: Array<string | null | undefined>): string => {
   return '';
 };
 
+/** True when the string is mostly Latin letters/digits (English place names). */
+const isLatinPlaceName = (value?: string | null): boolean => {
+  const trimmed = value?.trim();
+  if (!trimmed) return false;
+  return /^[\p{Script=Latin}\d\s.'’\-()/]+$/u.test(trimmed);
+};
+
+const preferEnglishName = (primary?: string | null, fallback?: string | null): string => {
+  const a = primary?.trim() ?? '';
+  const b = fallback?.trim() ?? '';
+  if (a && isLatinPlaceName(a)) return a;
+  if (b && isLatinPlaceName(b)) return b;
+  return a || b;
+};
+
 const buildFormatted = (parts: {
   line1: string;
   city: string;
@@ -67,7 +82,7 @@ async function reverseGeocodeGoogle(
   }
 
   try {
-    const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${encodeURIComponent(key)}`;
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&language=en&key=${encodeURIComponent(key)}`;
     const response = await withTimeout(fetch(url), GEOCODER_TIMEOUT_MS, 'TIMEOUT');
     if (!response.ok) return null;
     const payload = (await response.json()) as {
@@ -261,6 +276,30 @@ export async function reverseGeocodeCoords(
   }
 
   if (PINCODE_REGEX.test(resolved.postalCode)) {
+    const fromPin = await resolvePincodeAddress(resolved.postalCode);
+    if (fromPin) {
+      // Pincode API returns English; prefer it when device geocode used a local script
+      // (e.g. "কল্যাণী" → "Kalyani").
+      const city = preferEnglishName(resolved.city, fromPin.city);
+      const state = preferEnglishName(resolved.state, fromPin.state);
+      const line1 = preferEnglishName(resolved.line1, fromPin.line1);
+      const area = preferEnglishName(resolved.area, fromPin.area);
+      return {
+        ...resolved,
+        city,
+        state,
+        line1,
+        area,
+        postalCode: resolved.postalCode || fromPin.postalCode,
+        formatted: buildFormatted({
+          line1,
+          city,
+          state,
+          postalCode: resolved.postalCode || fromPin.postalCode,
+          area,
+        }),
+      };
+    }
     return resolved;
   }
 

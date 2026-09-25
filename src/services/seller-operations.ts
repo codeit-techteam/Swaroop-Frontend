@@ -7,6 +7,7 @@ import type {
   SellerDocumentItem,
 } from '@/seller/types/documents';
 import type { SellerNotification, SellerNotificationsSnapshot } from '@/seller/types/notifications';
+import { mapBlindSellerOrderBuyer } from '@/services/seller-blind-mappers';
 
 type Envelope<T> = {
   success: boolean;
@@ -29,42 +30,68 @@ function mapPaymentMethod(value?: string | null): SellerOrderPaymentMethod {
 }
 
 function mapSellerStatus(status: string): SellerOrderStatus {
-  const key = status.toUpperCase();
+  const key = status.toUpperCase().replaceAll('-', '_');
   if (key.includes('REJECT') || key.includes('CANCEL')) return 'rejected';
-  if (key.includes('DELIVER')) return 'delivered';
-  if (key.includes('DISPATCH') || key.includes('TRANSIT')) return 'dispatch_pending';
-  if (key.includes('ACCEPT') || key.includes('CONFIRM') || key.includes('READY')) return 'accepted';
+  if (key === 'DELIVERED' || key === 'COMPLETED' || key.includes('DELIVER')) {
+    return 'delivered';
+  }
+  if (
+    key === 'DISPATCHED' ||
+    key === 'IN_TRANSIT' ||
+    key === 'READY_FOR_DISPATCH' ||
+    key.includes('DISPATCH') ||
+    key.includes('TRANSIT')
+  ) {
+    return 'dispatch_pending';
+  }
+  if (
+    key === 'CONFIRMED' ||
+    key === 'PROCESSING' ||
+    key.includes('ACCEPT') ||
+    key.includes('CONFIRM') ||
+    key.includes('READY')
+  ) {
+    return 'accepted';
+  }
   return 'pending';
 }
 
 export function mapSellerPurchaseOrder(row: {
   id: string;
+  poNumber?: string;
   referenceNumber?: string;
   orderNumber?: string;
   status: string;
   paymentMethod?: string | null;
+  orderValue?: string | number | null;
   totalAmount?: string | number | null;
   orderedQuantity?: string | number | null;
   quantity?: number;
   productName?: string;
   gradeName?: string;
+  deliveryRegion?: string | null;
   paymentStatus?: string | null;
   dispatchStatus?: string | null;
   shipmentStatus?: string | null;
+  buyer?: { displayName?: string; reference?: string };
+  product?: { name?: string } | null;
+  grade?: { name?: string } | null;
   createdAt?: string;
   updatedAt?: string;
 }): SellerOrder {
-  const value = num(row.totalAmount);
+  const value = num(row.orderValue ?? row.totalAmount);
   const quantity = num(row.quantity ?? row.orderedQuantity);
-  const orderId = row.orderNumber ?? row.referenceNumber ?? row.id;
+  const orderId =
+    row.poNumber ?? row.orderNumber ?? row.referenceNumber ?? row.id;
   const payKey = (row.paymentStatus ?? '').toUpperCase();
+  const blindBuyer = mapBlindSellerOrderBuyer(row.buyer);
   return {
     id: row.id,
     orderId,
-    material: row.productName ?? orderId,
-    grade: row.gradeName ?? '—',
+    material: row.product?.name ?? row.productName ?? orderId,
+    grade: row.grade?.name ?? row.gradeName ?? '—',
     quantity,
-    destination: 'Assigned destination',
+    destination: row.deliveryRegion ?? 'Assigned Destination',
     warehouse: 'Assigned hub',
     port: '—',
     city: '—',
@@ -75,12 +102,10 @@ export function mapSellerPurchaseOrder(row: {
       payKey === 'VERIFIED' || payKey === 'PAID' || payKey === 'AUTHORIZED'
         ? 'completed'
         : 'pending',
-    orderStatus: mapSellerStatus(
-      row.shipmentStatus ?? row.dispatchStatus ?? row.status,
-    ),
+    orderStatus: mapSellerStatus(row.status),
     buyerCreditEligible: false,
-    buyerId: '',
-    buyerName: 'Assigned buyer',
+    buyerId: blindBuyer.buyerId,
+    buyerName: blindBuyer.buyerName,
     buyerScore: 0,
     insuranceStatus: 'inactive',
     creditLimit: 0,
@@ -109,7 +134,7 @@ export async function fetchSellerPurchaseOrders(): Promise<SellerOrder[]> {
     let totalPages = 1;
     do {
       const payload = await apiClient.get<Envelope<Parameters<typeof mapSellerPurchaseOrder>[0][]>>(
-        `/seller/purchase-orders?page=${page}&limit=50`,
+        `/seller/orders?page=${page}&limit=50&sortBy=createdAt&sortOrder=desc`,
       );
       pages.push(...(payload.data.data ?? []).map(mapSellerPurchaseOrder));
       totalPages = payload.data.meta?.totalPages ?? 1;
@@ -172,6 +197,18 @@ export async function fetchSellerDocuments(): Promise<SellerDocumentItem[]> {
     previewUri: '',
     downloadUri: '',
   }));
+}
+
+export async function resolveSellerDocumentDownloadUri(id: string): Promise<string> {
+  const { fetchSellerDocumentDownload } = await import('@/services/seller-documents');
+  const result = await fetchSellerDocumentDownload(id);
+  return result.url;
+}
+
+export async function resolveSellerDocumentPreviewUri(id: string): Promise<string> {
+  const { fetchSellerDocumentPreview } = await import('@/services/seller-documents');
+  const result = await fetchSellerDocumentPreview(id);
+  return result.url;
 }
 
 export async function fetchSellerNotifications(): Promise<SellerNotificationsSnapshot> {

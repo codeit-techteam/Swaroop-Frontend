@@ -6,7 +6,13 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { ProfileSectionHeader } from '@/components/profile/ProfileSectionHeader';
 import { Typography } from '@/components/ui/typography';
-import { BankIcon, ChevronRightIcon, DocumentFileIcon, LocationPinIcon } from '@/icons';
+import {
+  BankIcon,
+  ChevronRightIcon,
+  DocumentFileIcon,
+  LocationPinIcon,
+  WalletIcon,
+} from '@/icons';
 import { brandColors } from '@/theme/colors';
 import { cn } from '@/utils/cn';
 
@@ -26,6 +32,7 @@ const ROW_ICONS = {
   'saved-addresses': LocationPinIcon,
   'bank-accounts': BankIcon,
   'tax-documents': DocumentFileIcon,
+  'trading-credit': WalletIcon,
 } as const;
 
 export const LogisticsFinanceCard = memo(function LogisticsFinanceCard({

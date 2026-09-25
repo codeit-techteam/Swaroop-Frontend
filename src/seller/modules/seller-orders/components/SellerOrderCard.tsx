@@ -2,7 +2,7 @@ import { memo } from 'react';
 
 import { Pressable, View } from 'react-native';
 
-import { PrimaryButton, SecondaryButton, Typography } from '@/components';
+import { PrimaryButton, Typography } from '@/components';
 import { ShieldCheckIcon } from '@/icons';
 import { brandColors } from '@/theme/colors';
 import { OrderStatusBadge } from '@/seller/modules/seller-orders/components/OrderStatusBadge';
@@ -18,28 +18,29 @@ const formatAmount = (value: number): string =>
 
 export const SellerOrderCard = memo(function SellerOrderCard({
   order,
-  onAccept,
-  onReject,
   onViewDetails,
   onUploadLorryReceipt,
 }: {
   order: SellerOrder;
-  onAccept: (order: SellerOrder) => void;
-  onReject: (order: SellerOrder) => void;
+  onAccept?: (order: SellerOrder) => void;
+  onReject?: (order: SellerOrder) => void;
   onViewDetails: (order: SellerOrder) => void;
   onUploadLorryReceipt: (order: SellerOrder) => void;
 }) {
   const renderActions = () => {
     switch (order.orderStatus) {
       case 'pending':
+        // Accept/Reject belong on Purchase Requests — POs are status-only here.
         return (
-          <View className="mt-md flex-row gap-sm">
-            <View className="flex-1">
-              <PrimaryButton label="Accept Order" onPress={() => onAccept(order)} />
-            </View>
-            <View className="flex-1">
-              <SecondaryButton label="Reject" variant="outline" onPress={() => onReject(order)} />
-            </View>
+          <View className="mt-md flex-row items-center justify-between rounded-xl bg-brand-surface px-md py-md">
+            <Typography variant="legal" className="text-brand-body">
+              Awaiting confirmation
+            </Typography>
+            <Pressable onPress={() => onViewDetails(order)}>
+              <Typography variant="badge" className="text-brand-primary">
+                View Details
+              </Typography>
+            </Pressable>
           </View>
         );
       case 'accepted':

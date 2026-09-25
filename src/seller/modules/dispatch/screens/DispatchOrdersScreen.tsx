@@ -66,7 +66,7 @@ export const DispatchOrdersScreen = memo(function DispatchOrdersScreen() {
       const matchesSearch =
         normalizedQuery.length === 0 ||
         order.id.toLowerCase().includes(normalizedQuery) ||
-        order.customerName.toLowerCase().includes(normalizedQuery) ||
+        order.buyerLabel.toLowerCase().includes(normalizedQuery) ||
         order.material.toLowerCase().includes(normalizedQuery) ||
         (order.vehicleNumber ?? '').toLowerCase().includes(normalizedQuery);
       return matchesSearch && matchesFilter(order, filter);

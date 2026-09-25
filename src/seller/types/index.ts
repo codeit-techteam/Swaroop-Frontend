@@ -193,6 +193,9 @@ export type SellerProductStoreState = SellerProductSnapshot & {
 
 export type SellerProductStoreActions = {
   hydrateProductState: () => void;
+  /** Replace products from production seller API (keeps editor/dashboard fields). */
+  hydrateFromApi: () => Promise<void>;
+  refreshFromApi: () => Promise<void>;
   updateFormField: <K extends keyof SellerProductForm>(field: K, value: SellerProductForm[K]) => void;
   updatePricingField: <K extends keyof SellerPaymentPricing>(
     field: K,
@@ -300,6 +303,9 @@ export type InventoryUpdateInput = {
 
 export type InventoryStoreActions = {
   hydrateInventoryState: () => void;
+  /** Replace inventory products from production seller API. */
+  hydrateFromApi: () => Promise<void>;
+  refreshFromApi: () => Promise<void>;
   selectProduct: (productId: string | null) => void;
   refreshInventoryCatalog: () => void;
   updateStock: (input: InventoryUpdateInput) => StockHistoryEntry | null;

@@ -5,18 +5,15 @@ import { Pressable, View } from 'react-native';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 
 import { AuthCard, FooterLinks, OtpInput, ScreenWrapper, Typography } from '@/components';
-import { isOfflineBackendFallbackEnabled } from '@/config/development';
-import { loginDevBackend } from '@/services/backend-session';
-import { SellerHeader, SellerPrimaryButton } from '@/seller/components';
-import {
-  SELLER_DEMO_NAME,
-  SELLER_DEMO_OTP,
-  SELLER_RESEND_SECONDS,
-} from '@/seller/constants';
-import { verifySellerOtp } from '@/seller/mock/mockSellerService';
+import { DEMO_OTP, DEMO_USER_NAME, isOfflineBackendFallbackEnabled } from '@/config/development';
+import { SELLER_RESEND_SECONDS } from '@/seller/constants';
 import { getSellerInitialRoute } from '@/seller/navigation/getSellerInitialRoute';
 import { useSellerStore } from '@/seller/store/sellerStore';
-import { logger } from '@/utils/logger';
+import {
+  authenticateSellerFromOtp,
+  requestSellerOtpSend,
+} from '@/services/seller-auth';
+import { SellerHeader, SellerPrimaryButton } from '@/seller/components';
 
 const formatTimer = (seconds: number): string => `00:${seconds.toString().padStart(2, '0')}`;
 
@@ -27,6 +24,7 @@ export const SellerOtpScreen = () => {
   const [otpError, setOtpError] = useState<string | undefined>();
   const [secondsLeft, setSecondsLeft] = useState(SELLER_RESEND_SECONDS);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const setMobile = useSellerStore((state) => state.setMobile);
   const markOtpVerified = useSellerStore((state) => state.markOtpVerified);
 
@@ -43,31 +41,43 @@ export const SellerOtpScreen = () => {
 
   const handleVerify = useCallback(async () => {
     const mobile = params.mobile ?? '';
-    if (!verifySellerOtp(mobile, otp)) {
-      setOtpError(`Use ${SELLER_DEMO_OTP} for the frontend demo.`);
-      return;
-    }
-
     setIsVerifying(true);
+    setOtpError(undefined);
     try {
-      await loginDevBackend('seller');
-    } catch (error) {
-      logger.error('Seller OTP backend login failed', {
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
-      if (!isOfflineBackendFallbackEnabled()) {
-        setOtpError('Unable to authenticate against the catalog backend.');
-        setIsVerifying(false);
-        return;
+      const result = await authenticateSellerFromOtp(mobile, otp);
+      if (!result.ok) {
+        if (!isOfflineBackendFallbackEnabled()) {
+          setOtpError(result.message);
+          return;
+        }
+        // Offline DEV fallback: still mark local session so UI remains usable.
+        if (otp !== DEMO_OTP) {
+          setOtpError(result.message);
+          return;
+        }
       }
+
+      setMobile(mobile);
+      markOtpVerified();
+      router.replace(getSellerInitialRoute(useSellerStore.getState()) as Href);
     } finally {
       setIsVerifying(false);
     }
-
-    setMobile(mobile);
-    markOtpVerified();
-    router.replace(getSellerInitialRoute(useSellerStore.getState()) as Href);
   }, [markOtpVerified, otp, params.mobile, router, setMobile]);
+
+  const handleResend = useCallback(async () => {
+    if (secondsLeft > 0 || isResending) return;
+    const mobile = params.mobile ?? '';
+    setIsResending(true);
+    try {
+      await requestSellerOtpSend(mobile);
+      setOtp('');
+      setOtpError(undefined);
+      setSecondsLeft(SELLER_RESEND_SECONDS);
+    } finally {
+      setIsResending(false);
+    }
+  }, [isResending, params.mobile, secondsLeft]);
 
   return (
     <ScreenWrapper scrollable className="bg-brand-background">
@@ -85,7 +95,7 @@ export const SellerOtpScreen = () => {
           Enter the 6-digit OTP sent to +91 {params.mobile ?? ''}.
         </Typography>
         <Typography variant="legal" className="mt-sm text-left">
-          Dev login: {SELLER_DEMO_NAME} · OTP {SELLER_DEMO_OTP}
+          Dev login: {DEMO_USER_NAME} · OTP {DEMO_OTP}
         </Typography>
 
         <OtpInput
@@ -103,19 +113,16 @@ export const SellerOtpScreen = () => {
         </Typography>
         <Pressable
           onPress={() => {
-            if (secondsLeft === 0) {
-              setOtp('');
-              setOtpError(undefined);
-              setSecondsLeft(SELLER_RESEND_SECONDS);
-            }
+            void handleResend();
           }}
           className="mt-sm self-center"
+          disabled={secondsLeft > 0 || isResending}
         >
           <Typography
             variant="link"
             className={secondsLeft === 0 ? 'text-brand-primary' : 'text-brand-muted'}
           >
-            Resend OTP
+            {isResending ? 'Sending…' : 'Resend OTP'}
           </Typography>
         </Pressable>
 
@@ -130,7 +137,7 @@ export const SellerOtpScreen = () => {
 
         <View className="mt-lg rounded-2xl bg-brand-surface p-md">
           <Typography variant="legal" className="text-left">
-            Static OTP for demo: {SELLER_DEMO_OTP}
+            Demo OTP: {DEMO_OTP} (same as Seller Web)
           </Typography>
         </View>
       </AuthCard>

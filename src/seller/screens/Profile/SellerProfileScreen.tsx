@@ -11,6 +11,7 @@ import {
   BankIcon,
   BellIcon,
   BuildingIcon,
+  ClipboardCheckIcon,
   DocumentFileIcon,
   HeadsetIcon,
   LocationPinIcon,
@@ -39,6 +40,11 @@ const PROFILE_ROUTE_MAP = {
   'gst-information': ROUTES.SELLER.PROFILE_GST,
   'my-offers': ROUTES.SELLER.OFFERS,
   'my-shipments': ROUTES.SELLER.SHIPMENTS,
+  'purchase-requests': ROUTES.SELLER.PURCHASE_REQUESTS,
+  'price-revisions': ROUTES.SELLER.PRICE_REVISIONS,
+  'vehicle-slots': ROUTES.SELLER.VEHICLE_SLOTS,
+  'procurement-workbench': ROUTES.SELLER.PROCUREMENT_WORKBENCH,
+  payments: ROUTES.SELLER.PAYMENTS,
   'bank-details': ROUTES.SELLER.PROFILE_BANK,
   'kyc-documents': ROUTES.SELLER.PROFILE_KYC,
   'trade-licenses': ROUTES.SELLER.PROFILE_TRADE_LICENSES,
@@ -143,6 +149,36 @@ export const SellerProfileScreen = memo(function SellerProfileScreen() {
               title="My Shipments"
               subtitle="Track active deliveries"
               onPress={() => navigateProfileRoute('my-shipments')}
+            />
+            <ProfileMenuItem
+              icon={<StoreIcon size={18} color={brandColors.primaryDark} />}
+              title="Purchase Requests"
+              subtitle="Accept, reject, or counter"
+              onPress={() => navigateProfileRoute('purchase-requests')}
+            />
+            <ProfileMenuItem
+              icon={<DocumentFileIcon size={18} color={brandColors.primaryDark} />}
+              title="Price Revisions"
+              subtitle="Buyer price negotiations"
+              onPress={() => navigateProfileRoute('price-revisions')}
+            />
+            <ProfileMenuItem
+              icon={<TruckIcon size={18} color={brandColors.primaryDark} />}
+              title="Vehicle Slots"
+              subtitle="Loading bay bookings"
+              onPress={() => navigateProfileRoute('vehicle-slots')}
+            />
+            <ProfileMenuItem
+              icon={<ClipboardCheckIcon size={18} color={brandColors.primaryDark} />}
+              title="Procurement Workbench"
+              subtitle="End-to-end deal pipeline"
+              onPress={() => navigateProfileRoute('procurement-workbench')}
+            />
+            <ProfileMenuItem
+              icon={<BankIcon size={18} color={brandColors.primaryDark} />}
+              title="Payments & PI"
+              subtitle="Payments and proforma invoices"
+              onPress={() => navigateProfileRoute('payments')}
               isLast
             />
           </ProfileInfoCard>
