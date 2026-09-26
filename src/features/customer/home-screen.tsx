@@ -29,7 +29,8 @@ import { useNotificationBadge } from '@/hooks/use-notifications';
 import { ROUTES } from '@/navigation/routes';
 import { fetchCustomerMarketplaceProducts } from '@/services/catalog';
 import { fetchCustomerHomeBanners, trackCmsBannerEvent } from '@/services/cms';
-import { openCustomerBanner } from '@/lib/cms-banner';
+import { openCustomerBanner, openCustomerBannerSecondary } from '@/lib/cms-banner';
+import { DEFAULT_HOME_HERO_BANNER } from '@/constants/homeBanners';
 import { fetchCustomerFinanceSummary } from '@/services/orders';
 import {
   selectActiveOrder,
@@ -130,10 +131,12 @@ export const CustomerHomeScreen = () => {
       let cancelled = false;
       void fetchCustomerHomeBanners()
         .then((items) => {
-          if (!cancelled) setBanners(items);
+          if (!cancelled) {
+            setBanners(items.length > 0 ? items : [DEFAULT_HOME_HERO_BANNER]);
+          }
         })
         .catch(() => {
-          if (!cancelled) setBanners([]);
+          if (!cancelled) setBanners([DEFAULT_HOME_HERO_BANNER]);
         });
       return () => {
         cancelled = true;
@@ -231,7 +234,17 @@ export const CustomerHomeScreen = () => {
     (banner: HomeBanner) => {
       trackCmsBannerEvent(banner.id, 'CLICK');
       if (!openCustomerBanner(router, banner)) {
-        showInfoToast(banner.title, banner.description);
+        showInfoToast(banner.title, banner.description || banner.subtitle);
+      }
+    },
+    [router, showInfoToast],
+  );
+
+  const handleBannerSecondary = useCallback(
+    (banner: HomeBanner) => {
+      trackCmsBannerEvent(banner.id, 'CLICK');
+      if (!openCustomerBannerSecondary(router, banner)) {
+        showInfoToast(banner.title, banner.secondaryButtonLabel || 'Opening…');
       }
     },
     [router, showInfoToast],
@@ -296,6 +309,7 @@ export const CustomerHomeScreen = () => {
             <HeroCarousel
               banners={banners}
               onActionPress={handleBannerAction}
+              onSecondaryPress={handleBannerSecondary}
               onImpression={handleBannerImpression}
             />
           ) : null}

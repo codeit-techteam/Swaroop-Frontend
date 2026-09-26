@@ -10,6 +10,8 @@ export const images = {
   splashIcon: require('./images/splash-icon.png'),
   favicon: require('./images/favicon.png'),
   notificationIcon: require('./images/notification-icon.png'),
+  /** Default Customer Home hero creative (CMS / R2 overrides when uploaded). */
+  homeHeroBanner: require('./images/home-hero-banner.png'),
 } as const;
 
 export const assetPaths = {

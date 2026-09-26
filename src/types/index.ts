@@ -52,6 +52,7 @@ export type {
 export type { CompanyType, BusinessInformation, KycState, KycActions, KycStore } from '@/types/kyc';
 export type {
   HomeBanner,
+  HomeBannerLayoutVariant,
   PriceTrend,
   WatchlistItem,
   TrendingProduct,

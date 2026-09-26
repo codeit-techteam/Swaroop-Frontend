@@ -11,7 +11,11 @@ import Animated, { useAnimatedScrollHandler, useSharedValue } from 'react-native
 
 import { BannerIndicator } from '@/components/home/banner-indicator';
 import { HeroBanner } from '@/components/home/hero-banner';
-import { HERO_AUTO_SLIDE_MS } from '@/constants/homeBanners';
+import {
+  HERO_AUTO_SLIDE_MS,
+  HERO_BANNER_HEIGHT,
+  HERO_BANNER_NAVY_HEIGHT,
+} from '@/constants/homeBanners';
 import { spacing } from '@/theme/spacing';
 import type { HomeBanner } from '@/types/home';
 import { cn } from '@/utils/cn';
@@ -19,13 +23,22 @@ import { cn } from '@/utils/cn';
 type HeroCarouselProps = {
   banners?: HomeBanner[];
   onActionPress?: (banner: HomeBanner) => void;
+  onSecondaryPress?: (banner: HomeBanner) => void;
   onImpression?: (banner: HomeBanner) => void;
   className?: string;
 };
 
+function bannerHeight(banner: HomeBanner | undefined): number {
+  if (!banner) return HERO_BANNER_HEIGHT;
+  if (banner.layoutVariant === 'NAVY_GRID') return HERO_BANNER_NAVY_HEIGHT;
+  if (banner.layoutVariant === 'IMAGE_OVERLAY') return HERO_BANNER_HEIGHT;
+  return banner.imageUrl ? HERO_BANNER_HEIGHT : HERO_BANNER_NAVY_HEIGHT;
+}
+
 export const HeroCarousel = memo(function HeroCarousel({
   banners = [],
   onActionPress,
+  onSecondaryPress,
   onImpression,
   className,
 }: HeroCarouselProps) {
@@ -37,6 +50,8 @@ export const HeroCarousel = memo(function HeroCarousel({
   const activeIndexRef = useRef(0);
   const scrollX = useSharedValue(0);
   const isInteracting = useRef(false);
+  const activeBanner = banners[activeIndex];
+  const trackHeight = bannerHeight(activeBanner);
 
   const scrollToIndex = useCallback(
     (index: number, animated = true) => {
@@ -92,17 +107,24 @@ export const HeroCarousel = memo(function HeroCarousel({
 
   const renderItem = useCallback(
     ({ item }: { item: HomeBanner }) => (
-      <View style={{ width: screenWidth }} className="items-center">
-        <HeroBanner banner={item} width={bannerWidth} onActionPress={onActionPress} />
+      <View style={{ width: screenWidth }} className="items-center px-0">
+        <HeroBanner
+          banner={item}
+          width={bannerWidth}
+          onActionPress={onActionPress}
+          onSecondaryPress={onSecondaryPress}
+        />
       </View>
     ),
-    [bannerWidth, onActionPress, screenWidth],
+    [bannerWidth, onActionPress, onSecondaryPress, screenWidth],
   );
 
   const keyExtractor = useCallback((item: HomeBanner) => item.id, []);
 
+  if (!banners.length) return null;
+
   return (
-    <View className={cn('mt-md', className)}>
+    <View className={cn('mt-md', className)} style={{ minHeight: trackHeight }}>
       <Animated.FlatList
         ref={listRef}
         data={banners}
@@ -126,9 +148,14 @@ export const HeroCarousel = memo(function HeroCarousel({
         })}
       />
 
-      <View className="absolute bottom-md right-2xl">
-        <BannerIndicator total={banners.length} activeIndex={activeIndex} />
-      </View>
+      {banners.length > 1 ? (
+        <View
+          className="absolute bottom-3 right-7 rounded-full bg-black/25 px-2 py-1.5"
+          pointerEvents="none"
+        >
+          <BannerIndicator total={banners.length} activeIndex={activeIndex} />
+        </View>
+      ) : null}
     </View>
   );
 });

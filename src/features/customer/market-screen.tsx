@@ -27,7 +27,7 @@ import { useMarketSearch } from '@/hooks/use-market-search';
 import { useMarketplaceCatalogQuery } from '@/hooks/use-marketplace-catalog';
 import { ROUTES } from '@/navigation/routes';
 import { fetchCustomerMarketplaceBanners, trackCmsBannerEvent } from '@/services/cms';
-import { openCustomerBanner } from '@/lib/cms-banner';
+import { openCustomerBanner, openCustomerBannerSecondary } from '@/lib/cms-banner';
 import type { HomeBanner } from '@/types/home';
 import type { MarketProduct } from '@/types/market';
 
@@ -101,6 +101,14 @@ export const CustomerMarketScreen = () => {
     (banner: HomeBanner) => {
       trackCmsBannerEvent(banner.id, 'CLICK');
       openCustomerBanner(router, banner);
+    },
+    [router],
+  );
+
+  const handlePromoSecondary = useCallback(
+    (banner: HomeBanner) => {
+      trackCmsBannerEvent(banner.id, 'CLICK');
+      openCustomerBannerSecondary(router, banner);
     },
     [router],
   );
@@ -302,6 +310,7 @@ export const CustomerMarketScreen = () => {
             <HeroCarousel
               banners={promoBanners}
               onActionPress={handlePromoAction}
+              onSecondaryPress={handlePromoSecondary}
               onImpression={handlePromoImpression}
             />
           ) : null}

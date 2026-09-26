@@ -5,71 +5,103 @@ import { type Href, type Router } from 'expo-router';
 import { ROUTES } from '@/navigation/routes';
 import type { HomeBanner } from '@/types/home';
 
-export function openCustomerBanner(
-  router: Router,
-  banner: HomeBanner,
-): boolean {
-  const action = banner.ctaAction || 'NO_ACTION';
-  const targetId = banner.targetId?.trim();
-  const targetRoute = banner.targetRoute?.trim();
-  const externalUrl = banner.externalUrl?.trim();
+function resolveAction(options: {
+  action?: string | null;
+  targetId?: string | null;
+  targetRoute?: string | null;
+  externalUrl?: string | null;
+}): { type: 'route'; href: Href } | { type: 'url'; url: string } | null {
+  const action = options.action || 'NO_ACTION';
+  const targetId = options.targetId?.trim();
+  const targetRoute = options.targetRoute?.trim();
+  const externalUrl = options.externalUrl?.trim();
 
   if (action === 'OPEN_EXTERNAL_URL' && externalUrl) {
-    void Linking.openURL(externalUrl);
-    return true;
+    return { type: 'url', url: externalUrl };
   }
-  if (action === 'OPEN_MARKETPLACE') {
-    router.push(ROUTES.CUSTOMER.MARKET as Href);
-    return true;
-  }
-  if (action === 'OPEN_PURCHASE_REQUEST') {
-    // Customer app procurement starts on marketplace (no dedicated PR list route).
-    router.push(ROUTES.CUSTOMER.MARKET as Href);
-    return true;
+  if (action === 'OPEN_MARKETPLACE' || action === 'OPEN_PURCHASE_REQUEST' || action === 'OPEN_OFFER') {
+    return { type: 'route', href: ROUTES.CUSTOMER.MARKET as Href };
   }
   if (action === 'OPEN_ORDERS') {
-    router.push(ROUTES.CUSTOMER.ORDERS as Href);
-    return true;
+    return { type: 'route', href: ROUTES.CUSTOMER.ORDERS as Href };
   }
   if (action === 'OPEN_PRODUCT' && targetId) {
-    router.push({
-      pathname: ROUTES.CUSTOMER.PRODUCT_DETAILS,
-      params: { id: targetId },
-    } as unknown as Href);
-    return true;
-  }
-  if (action === 'OPEN_OFFER') {
-    router.push(ROUTES.CUSTOMER.MARKET as Href);
-    return true;
+    return {
+      type: 'route',
+      href: {
+        pathname: ROUTES.CUSTOMER.PRODUCT_DETAILS,
+        params: { id: targetId },
+      } as unknown as Href,
+    };
   }
 
   if (targetRoute) {
     if (/^https?:\/\//i.test(targetRoute)) {
-      void Linking.openURL(targetRoute);
-      return true;
+      return { type: 'url', url: targetRoute };
     }
     if (targetRoute.includes('product')) {
       const id = targetId || targetRoute.split('/').filter(Boolean).pop();
       if (id) {
-        router.push({
-          pathname: ROUTES.CUSTOMER.PRODUCT_DETAILS,
-          params: { id },
-        } as unknown as Href);
-        return true;
+        return {
+          type: 'route',
+          href: {
+            pathname: ROUTES.CUSTOMER.PRODUCT_DETAILS,
+            params: { id },
+          } as unknown as Href,
+        };
       }
     }
     if (targetRoute.includes('order')) {
-      router.push(ROUTES.CUSTOMER.ORDERS as Href);
-      return true;
+      return { type: 'route', href: ROUTES.CUSTOMER.ORDERS as Href };
     }
-    router.push(ROUTES.CUSTOMER.MARKET as Href);
-    return true;
+    return { type: 'route', href: ROUTES.CUSTOMER.MARKET as Href };
   }
 
   if (externalUrl) {
-    void Linking.openURL(externalUrl);
-    return true;
+    return { type: 'url', url: externalUrl };
   }
 
-  return false;
+  return null;
+}
+
+function applyNav(
+  router: Router,
+  target: { type: 'route'; href: Href } | { type: 'url'; url: string } | null,
+): boolean {
+  if (!target) return false;
+  if (target.type === 'url') {
+    void Linking.openURL(target.url);
+    return true;
+  }
+  router.push(target.href);
+  return true;
+}
+
+export function openCustomerBanner(
+  router: Router,
+  banner: HomeBanner,
+): boolean {
+  return applyNav(
+    router,
+    resolveAction({
+      action: banner.ctaAction,
+      targetId: banner.targetId,
+      targetRoute: banner.targetRoute,
+      externalUrl: banner.externalUrl,
+    }),
+  );
+}
+
+export function openCustomerBannerSecondary(
+  router: Router,
+  banner: HomeBanner,
+): boolean {
+  return applyNav(
+    router,
+    resolveAction({
+      action: banner.secondaryCtaAction,
+      targetId: banner.secondaryTargetId,
+      externalUrl: banner.secondaryExternalUrl,
+    }),
+  );
 }

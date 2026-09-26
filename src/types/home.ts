@@ -1,3 +1,5 @@
+export type HomeBannerLayoutVariant = 'IMAGE_OVERLAY' | 'NAVY_GRID';
+
 export type HomeBanner = {
   id: string;
   badge: string;
@@ -5,11 +7,20 @@ export type HomeBanner = {
   subtitle: string;
   description: string;
   buttonLabel: string;
+  /** Remote CMS/R2 creative URL (preferred when present). */
   imageUrl: string;
+  /** Optional bundled require() asset for offline / default heroes. */
+  imageSource?: number;
   targetRoute?: string | null;
   ctaAction?: string | null;
   externalUrl?: string | null;
   targetId?: string | null;
+  /** NAVY_GRID = structured CMS hero; IMAGE_OVERLAY = photo creative. */
+  layoutVariant?: HomeBannerLayoutVariant | null;
+  secondaryButtonLabel?: string | null;
+  secondaryCtaAction?: string | null;
+  secondaryExternalUrl?: string | null;
+  secondaryTargetId?: string | null;
 };
 
 export type PriceTrend = 'up' | 'down' | 'stable';
