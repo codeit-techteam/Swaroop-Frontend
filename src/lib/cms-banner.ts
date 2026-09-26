@@ -22,6 +22,11 @@ export function openCustomerBanner(
     router.push(ROUTES.CUSTOMER.MARKET as Href);
     return true;
   }
+  if (action === 'OPEN_PURCHASE_REQUEST') {
+    // Customer app procurement starts on marketplace (no dedicated PR list route).
+    router.push(ROUTES.CUSTOMER.MARKET as Href);
+    return true;
+  }
   if (action === 'OPEN_ORDERS') {
     router.push(ROUTES.CUSTOMER.ORDERS as Href);
     return true;
