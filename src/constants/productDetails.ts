@@ -297,66 +297,27 @@ const formatTierTotal = (price: number, mt: number, suffix = ''): string => {
   return `₹${total.toLocaleString('en-IN')}${suffix}`;
 };
 
-/** Prefer seller-configured tiers from the offer; fall back to synthetic bands. */
+/** Prefer seller-configured tiers from the offer; never invent fake discounts. */
 const buildBulkPricing = (
-  spotPricePerMt: number,
+  _spotPricePerMt: number,
   configured?: MarketProduct['bulkPricing'],
 ): PricingTier[] => {
-  if (configured && configured.length > 0) {
-    return configured.map((tier) => {
-      const estimateMt = tier.minMt > 0 ? tier.minMt : 1;
-      const openEnded = tier.maxMt == null;
-      return {
-        id: tier.id,
-        quantityLabel: tier.quantityLabel,
-        unitPrice: pricePerKgFromMarket(tier.pricePerMt),
-        pricePerMt: tier.pricePerMt,
-        totalEstimate: `${formatTierTotal(tier.pricePerMt, estimateMt)}${openEnded ? '+' : ''}`,
-        rateLabel: 'Volume Rate',
-        minMt: tier.minMt,
-        maxMt: tier.maxMt,
-      };
-    });
-  }
+  if (!configured || configured.length === 0) return [];
 
-  const tier1 = spotPricePerMt;
-  const tier2 = Math.round(spotPricePerMt * 0.987);
-  const tier3 = Math.round(spotPricePerMt * 0.972);
-
-  return [
-    {
-      id: 'tier-25-99',
-      quantityLabel: '25 - 99 MT',
-      unitPrice: pricePerKgFromMarket(tier1),
-      pricePerMt: tier1,
-      totalEstimate: formatTierTotal(tier1, 25),
-      rateLabel: 'Spot Rate',
-      minMt: 25,
-      maxMt: 99,
-    },
-    {
-      id: 'tier-100-199',
-      quantityLabel: '100 - 199 MT',
-      unitPrice: pricePerKgFromMarket(tier2),
-      pricePerMt: tier2,
-      totalEstimate: `${formatTierTotal(tier2, 100)}+`,
-      rateLabel: 'Volume Discount',
-      savingsLabel: 'Save 1.3%',
-      minMt: 100,
-      maxMt: 199,
-    },
-    {
-      id: 'tier-200-plus',
-      quantityLabel: '200+ MT',
-      unitPrice: pricePerKgFromMarket(tier3),
-      pricePerMt: tier3,
-      totalEstimate: `${formatTierTotal(tier3, 200)}+`,
-      rateLabel: 'Enterprise Rate',
-      savingsLabel: 'Save 2.8%',
-      minMt: 200,
-      maxMt: null,
-    },
-  ];
+  return configured.map((tier) => {
+    const estimateMt = tier.minMt > 0 ? tier.minMt : 1;
+    const openEnded = tier.maxMt == null;
+    return {
+      id: tier.id,
+      quantityLabel: tier.quantityLabel,
+      unitPrice: pricePerKgFromMarket(tier.pricePerMt),
+      pricePerMt: tier.pricePerMt,
+      totalEstimate: `${formatTierTotal(tier.pricePerMt, estimateMt)}${openEnded ? '+' : ''}`,
+      rateLabel: 'Volume Rate',
+      minMt: tier.minMt,
+      maxMt: tier.maxMt,
+    };
+  });
 };
 
 const buildPaymentOptions = (creditEligible: boolean): ProductPaymentOption[] => [
@@ -589,9 +550,13 @@ const tierMatchesQuantity = (tier: PricingTier, quantityMt: number): boolean => 
   return quantityMt <= tier.maxMt;
 };
 
-export const getTierForQuantity = (tiers: PricingTier[], quantityMt: number): PricingTier => {
+export const getTierForQuantity = (
+  tiers: PricingTier[],
+  quantityMt: number,
+): PricingTier | null => {
+  if (!tiers.length) return null;
   const match = tiers.find((tier) => tierMatchesQuantity(tier, quantityMt));
-  return match ?? tiers[0];
+  return match ?? tiers[0] ?? null;
 };
 
 export const priceForQuantity = (tiers: PricingTier[], quantityMt: number): number | undefined => {

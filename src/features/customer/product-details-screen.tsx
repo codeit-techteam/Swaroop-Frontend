@@ -157,7 +157,7 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
 
     setQuantityMt(product.moq);
     const initialTier = getTierForQuantity(product.pricingTiers, product.moq);
-    setSelectedTierId(initialTier.id);
+    setSelectedTierId(initialTier?.id ?? '');
   }, [product]);
 
   const selectedTier = useMemo(() => {
@@ -258,7 +258,7 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
       const maxQty = product.stock > 0 ? Math.max(product.stock, product.moq) : product.moq;
       const next = Math.min(maxQty, current + product.quantityIncrement);
       const tier = getTierForQuantity(product.pricingTiers, next);
-      setSelectedTierId(tier.id);
+      setSelectedTierId(tier?.id ?? '');
       return next;
     });
   }, [product]);
@@ -270,7 +270,7 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
     setQuantityMt((current) => {
       const next = Math.max(product.moq, current - product.quantityIncrement);
       const tier = getTierForQuantity(product.pricingTiers, next);
-      setSelectedTierId(tier.id);
+      setSelectedTierId(tier?.id ?? '');
       return next;
     });
   }, [product]);
@@ -570,11 +570,13 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
               productId={product.id}
             />
             {displaySpotPrice ? <SpotPriceCard spotPrice={displaySpotPrice} /> : null}
-            <PricingTiersCard
-              tiers={product.pricingTiers}
-              selectedTierId={selectedTierId}
-              onSelectTier={handleSelectTier}
-            />
+            {product.pricingTiers.length > 0 ? (
+              <PricingTiersCard
+                tiers={product.pricingTiers}
+                selectedTierId={selectedTierId}
+                onSelectTier={handleSelectTier}
+              />
+            ) : null}
             <PaymentOptionsCard
               options={paymentOptions}
               selectedId={paymentId}
