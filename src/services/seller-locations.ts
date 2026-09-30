@@ -76,9 +76,7 @@ function mapLocation(row: BackendLocation): SellerLocation {
 function locationsApiError(error: unknown, fallback: string): Error {
   if (isAxiosError<{ message?: string | string[] }>(error)) {
     if (!error.response) {
-      return new Error(
-        'Unable to reach PetroTrade API. Confirm the backend is running.',
-      );
+      return new Error('Unable to reach PetroTrade API. Confirm the backend is running.');
     }
     const message = error.response.data?.message;
     if (typeof message === 'string' && message.trim()) {
@@ -98,9 +96,7 @@ function locationsApiError(error: unknown, fallback: string): Error {
 export async function fetchSellerLocations(): Promise<SellerLocation[]> {
   return withSellerSession(async () => {
     try {
-      const response = await apiClient.get<Envelope<BackendLocation[]>>(
-        '/seller/locations',
-      );
+      const response = await apiClient.get<Envelope<BackendLocation[]>>('/seller/locations');
       const rows = Array.isArray(response.data.data) ? response.data.data : [];
       return rows.map(mapLocation);
     } catch (error) {
@@ -121,9 +117,7 @@ export async function fetchCurrentSellerLocation(): Promise<{
       );
       const payload = response.data.data;
       const locations = (payload?.locations ?? []).map(mapLocation);
-      const current = payload?.current
-        ? mapLocation(payload.current)
-        : locations[0] ?? null;
+      const current = payload?.current ? mapLocation(payload.current) : (locations[0] ?? null);
       return { current, locations, source: payload?.source };
     } catch (error) {
       try {
@@ -136,6 +130,71 @@ export async function fetchCurrentSellerLocation(): Promise<{
       } catch {
         throw locationsApiError(error, 'Unable to load current location.');
       }
+    }
+  });
+}
+
+export type SaveSellerGeoLocationInput = {
+  latitude: number;
+  longitude: number;
+  name?: string;
+  addressLine?: string;
+  addressLine2?: string;
+  landmark?: string;
+  locality?: string;
+  city?: string;
+  district?: string;
+  state?: string;
+  pincode?: string;
+  country?: string;
+  placeId?: string | null;
+  formattedAddress?: string;
+  accuracyMeters?: number | null;
+  source?: 'AUTOCOMPLETE' | 'GPS' | 'MAP_PIN' | 'MANUAL';
+};
+
+const GEO_TEXT_LIMITS: [keyof SaveSellerGeoLocationInput, number][] = [
+  ['name', 120],
+  ['addressLine', 200],
+  ['addressLine2', 200],
+  ['landmark', 120],
+  ['locality', 120],
+  ['city', 80],
+  ['district', 120],
+  ['state', 80],
+  ['pincode', 12],
+  ['country', 2],
+  ['placeId', 300],
+  ['formattedAddress', 500],
+  ['source', 20],
+];
+
+/** Save a confirmed operating / pickup location (deduped server-side). */
+export async function saveSellerLocationFromGeo(input: SaveSellerGeoLocationInput) {
+  return withSellerSession(async () => {
+    const body: Record<string, string | number> = {
+      latitude: input.latitude,
+      longitude: input.longitude,
+    };
+    for (const [key, max] of GEO_TEXT_LIMITS) {
+      const value = input[key];
+      if (typeof value === 'string' && value.trim()) body[key] = value.trim().slice(0, max);
+    }
+    if (input.accuracyMeters != null && Number.isFinite(input.accuracyMeters)) {
+      body.accuracyMeters = Math.min(100_000, Math.max(0, Math.round(input.accuracyMeters)));
+    }
+    try {
+      const response = await apiClient.post<Envelope<CurrentLocationPayload>>(
+        '/seller/locations/from-geo',
+        body,
+      );
+      const payload = response.data.data;
+      return {
+        current: payload?.current ? mapLocation(payload.current) : null,
+        locations: (payload?.locations ?? []).map(mapLocation),
+      };
+    } catch (error) {
+      throw locationsApiError(error, 'Unable to save this location.');
     }
   });
 }

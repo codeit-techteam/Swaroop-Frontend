@@ -22,8 +22,26 @@ type AddressApiRow = {
   landmark: string | null;
   latitude?: number | string | null;
   longitude?: number | string | null;
+  locality?: string | null;
+  district?: string | null;
+  placeId?: string | null;
+  formattedAddress?: string | null;
+  accuracyMeters?: number | null;
+  source?: string | null;
   isDefault: boolean;
 };
+
+/** Geo metadata forwarded to the address book; empty values are omitted. */
+const geoFields = (draft: Partial<AddressDraft>) => ({
+  ...(draft.locality ? { locality: draft.locality.slice(0, 120) } : {}),
+  ...(draft.district ? { district: draft.district.slice(0, 120) } : {}),
+  ...(draft.placeId ? { placeId: draft.placeId } : {}),
+  ...(draft.formattedAddress ? { formattedAddress: draft.formattedAddress.slice(0, 500) } : {}),
+  ...(draft.accuracyMeters != null && Number.isFinite(draft.accuracyMeters)
+    ? { accuracyMeters: Math.min(100_000, Math.max(0, Math.round(draft.accuracyMeters))) }
+    : {}),
+  ...(draft.source ? { source: draft.source } : {}),
+});
 
 const toNumber = (value: number | string | null | undefined): number | null => {
   if (value == null || value === '') return null;
@@ -45,6 +63,12 @@ export function mapSavedAddress(row: AddressApiRow): SavedDeliveryAddress {
     landmark: row.landmark,
     latitude: toNumber(row.latitude),
     longitude: toNumber(row.longitude),
+    locality: row.locality ?? null,
+    district: row.district ?? null,
+    placeId: row.placeId ?? null,
+    formattedAddress: row.formattedAddress ?? null,
+    accuracyMeters: row.accuracyMeters ?? null,
+    source: row.source ?? null,
     isDefault: row.isDefault,
   };
 }
@@ -69,6 +93,7 @@ export async function createSavedAddress(draft: AddressDraft): Promise<SavedDeli
     landmark: draft.landmark,
     latitude: draft.latitude ?? undefined,
     longitude: draft.longitude ?? undefined,
+    ...geoFields(draft),
     isDefault: draft.isDefault ?? false,
   });
   return mapSavedAddress(payload.data.data);
@@ -79,8 +104,18 @@ export async function updateSavedAddress(
   draft: Partial<AddressDraft>,
 ): Promise<SavedDeliveryAddress> {
   await ensureDevBackendSession('customer');
+  const {
+    locality: _locality,
+    district: _district,
+    placeId: _placeId,
+    formattedAddress: _formattedAddress,
+    accuracyMeters: _accuracyMeters,
+    source: _source,
+    ...rest
+  } = draft;
   const body = {
-    ...draft,
+    ...rest,
+    ...geoFields(draft),
     ...(draft.type !== undefined ? { type: toApiAddressType(draft.type) } : {}),
   };
   const payload = await apiClient.patch<Envelope<AddressApiRow>>(`/customer/addresses/${id}`, body);
@@ -89,7 +124,9 @@ export async function updateSavedAddress(
 
 export async function setDefaultSavedAddress(id: string): Promise<SavedDeliveryAddress> {
   await ensureDevBackendSession('customer');
-  const payload = await apiClient.post<Envelope<AddressApiRow>>(`/customer/addresses/${id}/default`);
+  const payload = await apiClient.post<Envelope<AddressApiRow>>(
+    `/customer/addresses/${id}/default`,
+  );
   return mapSavedAddress(payload.data.data);
 }
 

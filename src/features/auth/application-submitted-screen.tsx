@@ -13,18 +13,20 @@ import {
   TimelineCard,
   Typography,
 } from '@/components';
+import { KycStatusBanner } from '@/components/kyc/kyc-status-banner';
 import {
   buildSubmissionTimeline,
   generateKycReferenceId,
   SUPPORT_PHONE,
 } from '@/constants/documents';
+import { useCustomerKycStatus } from '@/hooks/use-customer-kyc-status';
 import { SuccessShield } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
-import { getKYC } from '@/services/storage';
 import {
   getVerificationRemainingMs,
   isVerificationPeriodComplete,
 } from '@/services/kyc-verification';
+import { getKYC } from '@/services/storage';
 import { useAuthStore } from '@/store/auth-store';
 import { useKycStore } from '@/store/kyc-store';
 import { wp } from '@/utils/responsive';
@@ -46,6 +48,7 @@ export const ApplicationSubmittedScreen = () => {
   const setReviewSubmitted = useAuthStore((state) => state.setReviewSubmitted);
   const resolvePendingKycApproval = useAuthStore((state) => state.resolvePendingKycApproval);
   const kycApproved = useAuthStore((state) => state.kycApproved);
+  const { overview: kycOverview } = useCustomerKycStatus();
 
   const referenceId = useMemo(
     () => params.referenceId ?? storedReferenceId ?? generateKycReferenceId(),
@@ -105,6 +108,14 @@ export const ApplicationSubmittedScreen = () => {
           Your KYC documents for {companyName} have been successfully submitted for review.
         </Typography>
       </View>
+
+      <KycStatusBanner
+        overview={kycOverview}
+        showReviewStates
+        actionLabel="Update documents"
+        onAction={() => router.push(ROUTES.AUTH.KYC_DOCUMENTS as Href)}
+        className="mt-2xl"
+      />
 
       <ReferenceCard referenceId={referenceId} className="mt-2xl" />
 

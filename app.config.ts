@@ -3,7 +3,7 @@ import { ExpoConfig, ConfigContext } from 'expo/config';
 const APP_ENV = process.env.EXPO_PUBLIC_APP_ENV ?? 'development';
 const APP_VERSION = process.env.EXPO_PUBLIC_APP_VERSION ?? '1.0.0';
 const EAS_PROJECT_ID =
-  process.env.EAS_PROJECT_ID ?? '3771775e-6e10-45f2-9752-72d51ce2f55f';
+  process.env.EAS_PROJECT_ID ?? '8fa5420d-cb2b-4656-bc7a-411b977c9d7b';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,

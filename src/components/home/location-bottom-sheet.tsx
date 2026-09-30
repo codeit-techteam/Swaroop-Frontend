@@ -9,23 +9,25 @@ import {
   BottomSheetTextInput,
   type BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
-import Toast from 'react-native-toast-message';
 
+import { LocationSuggestionList } from '@/components/location/location-suggestion-list';
 import { Typography } from '@/components/ui/typography';
 import { DELIVERY_LOCATIONS } from '@/constants/dashboard';
-import {
-  addressKindLabel,
-  formatDeliveryLabel,
-  GPS_LOCATION_ID,
-  PINCODE_REGEX,
-} from '@/constants/locations';
+import { addressKindLabel, formatDeliveryLabel, GPS_LOCATION_ID } from '@/constants/locations';
+import { useAddressAutocomplete } from '@/hooks/use-address-autocomplete';
 import { LocationPinIcon, SearchIcon } from '@/icons';
 import {
   fetchCurrentDeliveryAddress,
   lookupPincode,
+  normalizedToResolved,
   openLocationSettings,
   resolvePincodeAddress,
 } from '@/services/location';
+import {
+  isLocationServiceDown,
+  LOW_ACCURACY_THRESHOLD_METERS,
+  type LocationSuggestion,
+} from '@/services/location-search';
 import {
   applyDeliveryLocation,
   resolvedToDeliveryLocation,
@@ -50,8 +52,12 @@ type DetectedState = {
   address?: ResolvedGeoAddress;
   error?: string;
   needsSettings?: boolean;
-  saving?: boolean;
 };
+
+const isLowAccuracy = (address?: ResolvedGeoAddress) =>
+  address?.captureSource === 'GPS' &&
+  address.accuracyMeters != null &&
+  address.accuracyMeters > LOW_ACCURACY_THRESHOLD_METERS;
 
 const LocationRow = memo(function LocationRow({
   title,
@@ -123,8 +129,16 @@ export const LocationBottomSheet = memo(
   ) {
     const snapPoints = useMemo(() => ['72%', '92%'], []);
     const addresses = useAddressStore(selectSavedAddresses);
-    const [query, setQuery] = useState('');
     const [detected, setDetected] = useState<DetectedState>({ status: 'idle' });
+    const [picked, setPicked] = useState<ResolvedGeoAddress | null>(null);
+    const near =
+      detected.address && detected.address.latitude && detected.address.longitude
+        ? { latitude: detected.address.latitude, longitude: detected.address.longitude }
+        : null;
+    const autocomplete = useAddressAutocomplete({ near });
+    const { query, setQuery } = autocomplete;
+    const searchError =
+      autocomplete.error && !isLocationServiceDown(autocomplete.error) ? autocomplete.error : null;
     const [pincodeHits, setPincodeHits] = useState<DeliveryLocation[]>([]);
     const [searchingPin, setSearchingPin] = useState(false);
 
@@ -163,7 +177,8 @@ export const LocationBottomSheet = memo(
           error:
             access?.message ??
             'Unable to fetch current location. Search a pincode or pick a saved address.',
-          needsSettings: access?.code === 'PERMISSION_DENIED' || access?.code === 'SERVICES_DISABLED',
+          needsSettings:
+            access?.code === 'PERMISSION_DENIED' || access?.code === 'SERVICES_DISABLED',
         });
       }
     }, []);
@@ -173,70 +188,68 @@ export const LocationBottomSheet = memo(
       commit(resolvedToDeliveryLocation(detected.address));
     }, [commit, detected.address]);
 
-    const handleSaveCurrent = useCallback(async () => {
-      if (!detected.address) return;
-      if (!PINCODE_REGEX.test(detected.address.postalCode)) {
-        onAddAddress?.(detected.address);
+    /** Saving always goes through the address form so the user confirms it first. */
+    const handleSaveResolved = useCallback(
+      (address: ResolvedGeoAddress) => {
+        onAddAddress?.(address);
         dismiss();
-        return;
-      }
-      setDetected((current) => ({ ...current, saving: true }));
-      try {
-        await useAddressStore.getState().applyResolvedLocation(detected.address, true);
-        onSelect?.(resolvedToDeliveryLocation(detected.address));
-        Toast.show({
-          type: 'success',
-          text1: 'Delivery address saved',
-          text2: detected.address.formatted,
-        });
-        dismiss();
-      } catch (error) {
-        Toast.show({
-          type: 'error',
-          text1: 'Could not save address',
-          text2: error instanceof Error ? error.message : 'Try adding it manually.',
-        });
-        onAddAddress?.(detected.address);
-        dismiss();
-      } finally {
-        setDetected((current) => ({ ...current, saving: false }));
-      }
-    }, [detected.address, dismiss, onAddAddress, onSelect]);
+      },
+      [dismiss, onAddAddress],
+    );
 
-    const handleSearchChange = useCallback(async (value: string) => {
-      setQuery(value);
-      const pin = value.replace(/\D/g, '').slice(0, 6);
-      if (pin.length !== 6) {
-        setPincodeHits([]);
-        return;
-      }
-      setSearchingPin(true);
-      try {
-        const hits = await lookupPincode(pin);
-        setPincodeHits(
-          hits.slice(0, 8).map((hit, index) => ({
-            id: `pin-${hit.pincode}-${index}`,
-            city: hit.city,
-            state: hit.state,
-            pincode: hit.pincode,
-            label: formatDeliveryLabel({
+    const handlePickSuggestion = useCallback(
+      async (suggestion: LocationSuggestion) => {
+        try {
+          const location = await autocomplete.selectSuggestion(suggestion);
+          setPicked(normalizedToResolved(location));
+          setPincodeHits([]);
+          autocomplete.reset();
+          Keyboard.dismiss();
+        } catch {
+          // The suggestion list renders the error.
+        }
+      },
+      [autocomplete],
+    );
+
+    const handleSearchChange = useCallback(
+      async (value: string) => {
+        setQuery(value);
+        if (value.trim()) setPicked(null);
+        const pin = value.replace(/\D/g, '').slice(0, 6);
+        if (pin.length !== 6) {
+          setPincodeHits([]);
+          return;
+        }
+        setSearchingPin(true);
+        try {
+          const hits = await lookupPincode(pin);
+          setPincodeHits(
+            hits.slice(0, 8).map((hit, index) => ({
+              id: `pin-${hit.pincode}-${index}`,
               city: hit.city,
               state: hit.state,
               pincode: hit.pincode,
-              area: hit.name,
-            }),
-            source: 'pincode' as const,
-            line1: hit.name,
-            landmark: hit.name,
-          })),
-        );
-      } catch {
-        const fallback = await resolvePincodeAddress(pin);
-        setPincodeHits(fallback ? [resolvedToDeliveryLocation(fallback)] : []);
-      } finally {
-        setSearchingPin(false);
-      }
-    }, []);
+              label: formatDeliveryLabel({
+                city: hit.city,
+                state: hit.state,
+                pincode: hit.pincode,
+                area: hit.name,
+              }),
+              source: 'pincode' as const,
+              line1: hit.name,
+              landmark: hit.name,
+            })),
+          );
+        } catch {
+          const fallback = await resolvePincodeAddress(pin);
+          setPincodeHits(fallback ? [resolvedToDeliveryLocation(fallback)] : []);
+        } finally {
+          setSearchingPin(false);
+        }
+      },
+      [setQuery],
+    );
 
     const filteredSaved = useMemo(() => {
       const needle = query.trim().toLowerCase();
@@ -273,7 +286,8 @@ export const LocationBottomSheet = memo(
         handleIndicatorStyle={{ backgroundColor: brandColors.indicatorInactive }}
         backgroundStyle={{ backgroundColor: brandColors.white }}
         onDismiss={() => {
-          setQuery('');
+          autocomplete.reset();
+          setPicked(null);
           setPincodeHits([]);
         }}
       >
@@ -293,7 +307,7 @@ export const LocationBottomSheet = memo(
               onChangeText={(value) => {
                 void handleSearchChange(value);
               }}
-              placeholder="Search pincode, area or city"
+              placeholder="Search area, street, landmark or pincode"
               placeholderTextColor={brandColors.footer}
               keyboardType="default"
               returnKeyType="search"
@@ -301,6 +315,61 @@ export const LocationBottomSheet = memo(
             />
             {searchingPin ? <ActivityIndicator size="small" color={brandColors.primary} /> : null}
           </View>
+
+          <LocationSuggestionList
+            suggestions={autocomplete.suggestions}
+            status={autocomplete.status === 'error' && !searchError ? 'idle' : autocomplete.status}
+            error={searchError}
+            resolvingPlaceId={autocomplete.resolvingPlaceId}
+            onSelect={(suggestion) => {
+              void handlePickSuggestion(suggestion);
+            }}
+          />
+
+          {picked ? (
+            <View className="mb-sm rounded-xl border border-brand-primary bg-brand-primary-light px-md py-md">
+              <View className="flex-row items-start">
+                <LocationPinIcon color={brandColors.primary} />
+                <View className="ml-md flex-1">
+                  <Typography
+                    variant="roleTitle"
+                    className="text-[15px] text-brand-heading"
+                    numberOfLines={1}
+                  >
+                    {picked.name || picked.area || picked.city}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    className="mt-0.5 font-sans text-[12px] normal-case tracking-normal text-brand-muted"
+                  >
+                    {picked.formattedAddress || picked.formatted}
+                  </Typography>
+                </View>
+              </View>
+              <View className="mt-md flex-row gap-sm">
+                <Pressable
+                  onPress={() => commit(resolvedToDeliveryLocation(picked))}
+                  className="flex-1 items-center rounded-lg bg-brand-heading py-sm"
+                  accessibilityRole="button"
+                  accessibilityLabel="Deliver here"
+                >
+                  <Typography variant="roleTitle" className="text-[13px] text-brand-white">
+                    Deliver here
+                  </Typography>
+                </Pressable>
+                <Pressable
+                  onPress={() => handleSaveResolved(picked)}
+                  className="flex-1 items-center rounded-lg border border-brand-primary py-sm"
+                  accessibilityRole="button"
+                  accessibilityLabel="Confirm and save address"
+                >
+                  <Typography variant="roleTitle" className="text-[13px] text-brand-primary">
+                    Save address
+                  </Typography>
+                </Pressable>
+              </View>
+            </View>
+          ) : null}
 
           <Pressable
             onPress={() => {
@@ -321,21 +390,24 @@ export const LocationBottomSheet = memo(
                 color={detected.status === 'ready' ? brandColors.primary : brandColors.muted}
               />
               <View className="ml-md flex-1">
-                <Typography
-                  variant="roleTitle"
-                  className="text-[15px] text-brand-heading"
-                >
+                <Typography variant="roleTitle" className="text-[15px] text-brand-heading">
                   Use current location
                 </Typography>
                 {detected.status === 'idle' ? (
-                  <Typography variant="caption" className="mt-0.5 font-sans text-[12px] normal-case tracking-normal text-brand-muted">
-                    Fetch GPS and save as your delivery address
+                  <Typography
+                    variant="caption"
+                    className="mt-0.5 font-sans text-[12px] normal-case tracking-normal text-brand-muted"
+                  >
+                    Detect via GPS, then confirm before saving
                   </Typography>
                 ) : null}
                 {detected.status === 'loading' ? (
                   <View className="mt-xs flex-row items-center">
                     <ActivityIndicator size="small" color={brandColors.primary} />
-                    <Typography variant="caption" className="ml-sm font-sans text-[12px] normal-case tracking-normal text-brand-muted">
+                    <Typography
+                      variant="caption"
+                      className="ml-sm font-sans text-[12px] normal-case tracking-normal text-brand-muted"
+                    >
                       Detecting pincode and area…
                     </Typography>
                   </View>
@@ -349,8 +421,21 @@ export const LocationBottomSheet = memo(
                     {detected.address.line1 ? ` · ${detected.address.line1}` : ''}
                   </Typography>
                 ) : null}
+                {detected.status === 'ready' && isLowAccuracy(detected.address) ? (
+                  <Typography
+                    variant="caption"
+                    className="mt-xs font-sans text-[12px] normal-case tracking-normal text-brand-error"
+                  >
+                    {`Location accurate to only ~${Math.round(
+                      detected.address?.accuracyMeters ?? 0,
+                    )} m. Check the address before saving, or search for it.`}
+                  </Typography>
+                ) : null}
                 {detected.status === 'error' ? (
-                  <Typography variant="caption" className="mt-0.5 font-sans text-[12px] normal-case tracking-normal text-brand-error">
+                  <Typography
+                    variant="caption"
+                    className="mt-0.5 font-sans text-[12px] normal-case tracking-normal text-brand-error"
+                  >
                     {detected.error}
                   </Typography>
                 ) : null}
@@ -374,20 +459,15 @@ export const LocationBottomSheet = memo(
                 </Pressable>
                 <Pressable
                   onPress={() => {
-                    void handleSaveCurrent();
+                    if (detected.address) handleSaveResolved(detected.address);
                   }}
-                  disabled={detected.saving}
                   className="flex-1 items-center rounded-lg border border-brand-primary py-sm"
                   accessibilityRole="button"
-                  accessibilityLabel="Save as delivery address"
+                  accessibilityLabel="Confirm and save address"
                 >
-                  {detected.saving ? (
-                    <ActivityIndicator size="small" color={brandColors.primary} />
-                  ) : (
-                    <Typography variant="roleTitle" className="text-[13px] text-brand-primary">
-                      Save address
-                    </Typography>
-                  )}
+                  <Typography variant="roleTitle" className="text-[13px] text-brand-primary">
+                    Save address
+                  </Typography>
                 </Pressable>
               </View>
             ) : null}
@@ -409,7 +489,10 @@ export const LocationBottomSheet = memo(
 
           {pincodeHits.length > 0 ? (
             <View className="mb-md">
-              <Typography variant="fieldLabel" className="mb-sm text-[11px] tracking-[0.8px] text-brand-muted">
+              <Typography
+                variant="fieldLabel"
+                className="mb-sm text-[11px] tracking-[0.8px] text-brand-muted"
+              >
                 PINCODE MATCHES
               </Typography>
               {pincodeHits.map((location) => (
@@ -425,7 +508,10 @@ export const LocationBottomSheet = memo(
           ) : null}
 
           <View className="mb-sm flex-row items-center justify-between">
-            <Typography variant="fieldLabel" className="text-[11px] tracking-[0.8px] text-brand-muted">
+            <Typography
+              variant="fieldLabel"
+              className="text-[11px] tracking-[0.8px] text-brand-muted"
+            >
               SAVED ADDRESSES
             </Typography>
             <Pressable
@@ -443,7 +529,10 @@ export const LocationBottomSheet = memo(
           </View>
 
           {filteredSaved.length === 0 ? (
-            <Typography variant="caption" className="mb-md font-sans text-[12px] normal-case tracking-normal text-brand-muted">
+            <Typography
+              variant="caption"
+              className="mb-md font-sans text-[12px] normal-case tracking-normal text-brand-muted"
+            >
               No saved warehouses yet. Use current location or add a delivery address.
             </Typography>
           ) : (
@@ -465,7 +554,10 @@ export const LocationBottomSheet = memo(
             ))
           )}
 
-          <Typography variant="fieldLabel" className="mb-sm mt-sm text-[11px] tracking-[0.8px] text-brand-muted">
+          <Typography
+            variant="fieldLabel"
+            className="mb-sm mt-sm text-[11px] tracking-[0.8px] text-brand-muted"
+          >
             POPULAR CITIES
           </Typography>
           {popular.map((location) => (

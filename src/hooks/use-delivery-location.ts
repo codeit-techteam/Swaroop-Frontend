@@ -2,10 +2,7 @@ import { useCallback, useEffect } from 'react';
 
 import { type Href, useRouter } from 'expo-router';
 
-import {
-  FALLBACK_DELIVERY_LOCATION,
-  isPersistedAddressId,
-} from '@/constants/locations';
+import { FALLBACK_DELIVERY_LOCATION, isPersistedAddressId } from '@/constants/locations';
 import { ROUTES } from '@/navigation/routes';
 import {
   applyDeliveryLocation,
@@ -29,7 +26,7 @@ export function pushAddressForm(
       ...(id ? { id } : {}),
       ...(prefill
         ? {
-            label: prefill.area || 'Current location',
+            label: prefill.name || prefill.area || 'Current location',
             type: 'SHIPPING',
             line1: prefill.line1,
             line2: prefill.line2 ?? '',
@@ -39,6 +36,12 @@ export function pushAddressForm(
             landmark: prefill.area ?? '',
             latitude: prefill.latitude ? String(prefill.latitude) : '',
             longitude: prefill.longitude ? String(prefill.longitude) : '',
+            district: prefill.district ?? '',
+            locality: prefill.area ?? '',
+            placeId: prefill.placeId ?? '',
+            formattedAddress: prefill.formattedAddress ?? '',
+            accuracyMeters: prefill.accuracyMeters != null ? String(prefill.accuracyMeters) : '',
+            source: prefill.captureSource ?? '',
           }
         : {}),
     },

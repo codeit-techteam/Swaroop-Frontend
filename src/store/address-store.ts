@@ -1,6 +1,13 @@
 import { create } from 'zustand';
 
-import { FALLBACK_DELIVERY_LOCATION, formatDeliveryLabel, GPS_LOCATION_ID, isPersistedAddressId, PINCODE_REGEX } from '@/constants/locations';
+import { STORAGE_KEYS } from '@/constants';
+import {
+  FALLBACK_DELIVERY_LOCATION,
+  formatDeliveryLabel,
+  GPS_LOCATION_ID,
+  isPersistedAddressId,
+  PINCODE_REGEX,
+} from '@/constants/locations';
 import {
   createSavedAddress,
   deleteSavedAddress,
@@ -10,7 +17,6 @@ import {
 } from '@/services/addresses';
 import { selectLocation, useAuthStore } from '@/store/auth-store';
 import { useCartStore } from '@/store/cart-store';
-import { STORAGE_KEYS } from '@/constants';
 import type { AddressDraft, ResolvedGeoAddress, SavedDeliveryAddress } from '@/types/address';
 import type { DeliveryLocation } from '@/types/home';
 import type { CartDeliveryLocation } from '@/types/product';
@@ -35,7 +41,10 @@ type AddressActions = {
   removeAddress: (id: string) => Promise<void>;
   makeDefault: (id: string) => Promise<void>;
   selectAddress: (address: SavedDeliveryAddress | DeliveryLocation) => void;
-  applyResolvedLocation: (resolved: ResolvedGeoAddress, persist?: boolean) => Promise<DeliveryLocation>;
+  applyResolvedLocation: (
+    resolved: ResolvedGeoAddress,
+    persist?: boolean,
+  ) => Promise<DeliveryLocation>;
   getSelectedLocation: () => DeliveryLocation;
 };
 
@@ -50,7 +59,8 @@ const readPersisted = (): PersistedAddressState => {
     const parsed = JSON.parse(raw) as Partial<PersistedAddressState>;
     return {
       addresses: Array.isArray(parsed.addresses) ? parsed.addresses : [],
-      selectedAddressId: typeof parsed.selectedAddressId === 'string' ? parsed.selectedAddressId : null,
+      selectedAddressId:
+        typeof parsed.selectedAddressId === 'string' ? parsed.selectedAddressId : null,
     };
   } catch {
     return { addresses: [], selectedAddressId: null };
@@ -182,9 +192,9 @@ export const useAddressStore = create<AddressStore>((set, get) => ({
     const created = await createSavedAddress(draft);
     const addresses = [
       created,
-      ...get().addresses.filter((row) => row.id !== created.id).map((row) =>
-        created.isDefault ? { ...row, isDefault: false } : row,
-      ),
+      ...get()
+        .addresses.filter((row) => row.id !== created.id)
+        .map((row) => (created.isDefault ? { ...row, isDefault: false } : row)),
     ];
     set({ addresses, selectedAddressId: created.id, lastError: null });
     persist({ addresses, selectedAddressId: created.id });
@@ -249,6 +259,13 @@ export const useAddressStore = create<AddressStore>((set, get) => ({
         landmark: resolved.area,
         latitude: resolved.latitude || null,
         longitude: resolved.longitude || null,
+        locality: resolved.area,
+        district: resolved.district,
+        placeId: resolved.placeId,
+        formattedAddress: resolved.formattedAddress,
+        accuracyMeters: resolved.accuracyMeters,
+        source:
+          resolved.latitude && resolved.longitude ? (resolved.captureSource ?? 'GPS') : 'MANUAL',
         isDefault: get().addresses.length === 0,
       });
       return toDeliveryLocation(saved);

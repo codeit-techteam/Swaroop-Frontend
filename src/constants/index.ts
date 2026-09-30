@@ -17,6 +17,7 @@ export const STORAGE_KEYS = {
   PAYMENT_KEY: 'swaroop_payment',
   CHECKOUT_KEY: 'swaroop_checkout',
   ORDER_KEY: 'swaroop_order_v2',
+  SELLER_ACCESS: 'swaroop_seller_access',
   SELLER_ROLE: 'swaroop_seller_role',
   SELLER_LOGGED_IN: 'swaroop_seller_logged_in',
   SELLER_PROFILE_COMPLETED: 'swaroop_seller_profile_completed',

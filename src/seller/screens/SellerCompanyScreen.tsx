@@ -7,7 +7,7 @@ import { type Href, useRouter } from 'expo-router';
 import { Controller } from 'react-hook-form';
 import { z } from 'zod';
 
-import { CountryPicker, DropdownField, ScreenWrapper } from '@/components';
+import { CountryPicker, DropdownField, ScreenWrapper, Typography } from '@/components';
 import { useZodForm } from '@/lib/forms';
 import { ROUTES } from '@/navigation/routes';
 import {
@@ -26,6 +26,10 @@ import {
 } from '@/seller/constants';
 import { useSellerStore } from '@/seller/store/sellerStore';
 import { type GstParseResult, parseGstin } from '@/seller/utils/gst';
+import {
+  saveSellerOnboardingDraft,
+  sellerOnboardingErrorMessage,
+} from '@/services/seller-onboarding';
 import {
   emailSchema,
   gstSchema,
@@ -47,6 +51,16 @@ const sellerCompanySchema = z.object({
   city: requiredString('City'),
   pincode: pincodeSchema,
   natureOfBusiness: requiredString('Nature of business'),
+  accountHolderName: requiredString('Account holder name'),
+  bankName: requiredString('Bank name'),
+  accountNumber: z
+    .string()
+    .trim()
+    .regex(/^\d{9,18}$/, 'Enter a valid 9–18 digit account number'),
+  ifscCode: z
+    .string()
+    .trim()
+    .regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, 'Enter a valid 11-character IFSC code'),
 });
 
 type SellerCompanyForm = z.infer<typeof sellerCompanySchema>;
@@ -69,6 +83,8 @@ export const SellerCompanyScreen = () => {
   const [gstResult, setGstResult] = useState<GstParseResult | null>(() =>
     company.gstVerified ? parseGstin(company.gst) : null,
   );
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const stateValue = watch('state');
   const gstValue = watch('gst');
@@ -89,17 +105,27 @@ export const SellerCompanyScreen = () => {
     clearErrors(['gst', 'pan']);
   };
 
-  const handleContinue = (values: SellerCompanyForm) => {
+  const handleContinue = async (values: SellerCompanyForm) => {
     if (!gstVerified || !gstResult?.isValid) {
       return;
     }
-    saveCompany({
+    const nextCompany = {
       ...values,
       gstVerified: true,
       gstStateCode: gstResult.stateCode,
       gstState: gstResult.state,
-    });
-    router.push(ROUTES.SELLER.VERIFICATION as Href);
+    };
+    saveCompany(nextCompany);
+    setSaving(true);
+    setSaveError(null);
+    try {
+      await saveSellerOnboardingDraft(nextCompany, 'documents');
+      router.push(ROUTES.SELLER.VERIFICATION as Href);
+    } catch (error) {
+      setSaveError(sellerOnboardingErrorMessage(error, 'Could not save business details.'));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -312,10 +338,85 @@ export const SellerCompanyScreen = () => {
         </View>
       </SellerCard>
 
+      <SellerCard title="Bank Details" className="mt-lg">
+        <View className="gap-lg">
+          <Controller
+            control={control}
+            name="accountHolderName"
+            render={({ field: { value, onChange, onBlur } }) => (
+              <SellerTextField
+                label="Account Holder Name"
+                placeholder="As printed on the cheque"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                error={errors.accountHolderName?.message}
+              />
+            )}
+          />
+
+          <Controller
+            control={control}
+            name="bankName"
+            render={({ field: { value, onChange, onBlur } }) => (
+              <SellerTextField
+                label="Bank Name"
+                placeholder="HDFC Bank"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                error={errors.bankName?.message}
+              />
+            )}
+          />
+
+          <Controller
+            control={control}
+            name="accountNumber"
+            render={({ field: { value, onChange, onBlur } }) => (
+              <SellerTextField
+                label="Account Number"
+                placeholder="Bank account number"
+                keyboardType="number-pad"
+                maxLength={18}
+                value={value}
+                onChangeText={(text) => onChange(text.replace(/\D/g, ''))}
+                onBlur={onBlur}
+                error={errors.accountNumber?.message}
+              />
+            )}
+          />
+
+          <Controller
+            control={control}
+            name="ifscCode"
+            render={({ field: { value, onChange, onBlur } }) => (
+              <SellerTextField
+                label="IFSC Code"
+                placeholder="HDFC0001234"
+                autoCapitalize="characters"
+                maxLength={11}
+                value={value}
+                onChangeText={(text) => onChange(text.toUpperCase())}
+                onBlur={onBlur}
+                error={errors.ifscCode?.message}
+              />
+            )}
+          />
+        </View>
+      </SellerCard>
+
+      {saveError ? (
+        <Typography variant="error" className="mt-md text-left">
+          {saveError}
+        </Typography>
+      ) : null}
+
       <View className="mt-lg">
         <SellerPrimaryButton
-          label="Submit for Verification"
+          label="Save & Continue"
           showArrow
+          loading={saving}
           disabled={!isValid || !gstVerified}
           onPress={handleSubmit(handleContinue)}
         />

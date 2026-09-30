@@ -22,6 +22,7 @@ import {
   WalletIcon,
 } from '@/icons';
 import type { SellerBottomNavTarget } from '@/seller/navigation/useSellerBottomNavigation';
+import { readSellerAccess } from '@/services/seller-auth';
 import type {
   SellerPaymentPricing,
   SellerPricingTier,
@@ -600,37 +601,48 @@ export const SellerBottomNavigation = memo(function SellerBottomNavigation({
   active: SellerBottomNavTarget;
   onNavigate: (target: SellerBottomNavTarget) => void;
 }) {
+  const access = readSellerAccess();
+  const allowed = (permission: string) =>
+    !access?.permissions?.length || access.role !== 'SELLER_MANAGER'
+      ? true
+      : access.permissions.includes(permission);
   const items: {
     id: SellerBottomNavTarget;
     label: string;
+    permission: string;
     renderIcon: (color: string) => ReactNode;
   }[] = [
     {
       id: 'dashboard',
       label: 'Dashboard',
+      permission: 'dashboard.view',
       renderIcon: (color) => <HomeTabIcon size={iconSizes.md} color={color} />,
     },
     {
       id: 'orders',
       label: 'Orders',
+      permission: 'orders.view',
       renderIcon: (color) => <OrdersTabIcon size={iconSizes.md} color={color} />,
     },
     {
       id: 'products',
       label: 'Products',
+      permission: 'catalog.view',
       renderIcon: (color) => <StoreIcon size={iconSizes.md} color={color} />,
     },
     {
       id: 'payouts',
       label: 'Payouts',
+      permission: 'finance.view',
       renderIcon: (color) => <WalletIcon size={iconSizes.md} color={color} />,
     },
     {
       id: 'profile',
       label: 'Profile',
+      permission: 'profile.view',
       renderIcon: (color) => <ProfileIcon size={iconSizes.md} color={color} />,
     },
-  ];
+  ].filter((item) => allowed(item.permission));
 
   return (
     <View

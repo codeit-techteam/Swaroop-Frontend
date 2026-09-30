@@ -55,6 +55,10 @@ export const EMPTY_SELLER_COMPANY: SellerCompany = {
   city: '',
   pincode: '',
   natureOfBusiness: '',
+  accountHolderName: '',
+  bankName: '',
+  accountNumber: '',
+  ifscCode: '',
 };
 
 export const SELLER_INITIAL_DOCUMENTS: SellerDocument[] = [

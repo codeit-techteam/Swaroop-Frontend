@@ -3,12 +3,12 @@ import { Linking } from 'react-native';
 import * as Location from 'expo-location';
 
 import { formatDeliveryLabel, PINCODE_REGEX, stateCodeFromName } from '@/constants/locations';
-import { appConfig } from '@/config/env';
-import type {
-  LocationAccessCode,
-  PincodeLocality,
-  ResolvedGeoAddress,
-} from '@/types/address';
+import {
+  LOCATION_ERROR_MESSAGES,
+  reverseGeocodeLocation,
+  type NormalizedLocation,
+} from '@/services/location-search';
+import type { LocationAccessCode, PincodeLocality, ResolvedGeoAddress } from '@/types/address';
 import { LocationAccessError } from '@/types/address';
 import { logger } from '@/utils/logger';
 
@@ -16,17 +16,18 @@ const GPS_TIMEOUT_MS = 12_000;
 const LAST_KNOWN_MAX_AGE_MS = 5 * 60 * 1000;
 const GEOCODER_TIMEOUT_MS = 8_000;
 
-const isPlaceholderMapsKey = (key: string): boolean =>
-  !key || key.includes('placeholder') || key === 'preview-placeholder';
-
-const withTimeout = async <T>(promise: Promise<T>, ms: number, code: LocationAccessCode): Promise<T> => {
+const withTimeout = async <T>(
+  promise: Promise<T>,
+  ms: number,
+  code: LocationAccessCode,
+): Promise<T> => {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
       promise,
       new Promise<T>((_, reject) => {
         timer = setTimeout(() => {
-          reject(new LocationAccessError(code, 'Taking longer than expected to find your location.'));
+          reject(new LocationAccessError(code, LOCATION_ERROR_MESSAGES.LOCATION_TIMEOUT));
         }, ms);
       }),
     ]);
@@ -35,7 +36,7 @@ const withTimeout = async <T>(promise: Promise<T>, ms: number, code: LocationAcc
   }
 };
 
-const firstNonEmpty = (...values: Array<string | null | undefined>): string => {
+const firstNonEmpty = (...values: (string | null | undefined)[]): string => {
   for (const value of values) {
     const trimmed = value?.trim();
     if (trimmed) return trimmed;
@@ -72,68 +73,60 @@ const buildFormatted = (parts: {
     area: parts.area,
   });
 
-async function reverseGeocodeGoogle(
+/** Map the shared backend location shape onto the app's address shape. */
+export function normalizedToResolved(
+  location: NormalizedLocation,
+  accuracyMeters: number | null = null,
+): ResolvedGeoAddress {
+  const area = location.locality || location.addressLine2;
+  const line1 = location.addressLine1 || location.name || area || location.city;
+  return {
+    line1,
+    line2: location.addressLine2 || undefined,
+    city: location.city,
+    state: location.state,
+    stateCode: location.stateCode || stateCodeFromName(location.state),
+    postalCode: location.postalCode,
+    country: location.countryCode || 'IN',
+    landmark: location.landmark || undefined,
+    area: area || undefined,
+    latitude: location.latitude,
+    longitude: location.longitude,
+    formatted: buildFormatted({
+      line1,
+      city: location.city,
+      state: location.state,
+      postalCode: location.postalCode,
+      area,
+    }),
+    source: 'google',
+    name: location.name || undefined,
+    district: location.district || undefined,
+    placeId: location.placeId,
+    formattedAddress: location.formattedAddress || undefined,
+    accuracyMeters,
+    captureSource: location.source,
+  };
+}
+
+/** Google reverse geocoding through the backend proxy (server-side key). */
+async function reverseGeocodeBackend(
   latitude: number,
   longitude: number,
+  source: 'GPS' | 'MAP_PIN',
 ): Promise<ResolvedGeoAddress | null> {
-  const key = appConfig.googleMapsApiKey;
-  if (isPlaceholderMapsKey(key)) {
-    return null;
-  }
-
   try {
-    const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&language=en&key=${encodeURIComponent(key)}`;
-    const response = await withTimeout(fetch(url), GEOCODER_TIMEOUT_MS, 'TIMEOUT');
-    if (!response.ok) return null;
-    const payload = (await response.json()) as {
-      status?: string;
-      results?: Array<{
-        formatted_address?: string;
-        address_components?: Array<{ long_name: string; short_name: string; types: string[] }>;
-      }>;
-    };
-    const result = payload.results?.[0];
-    if (!result) return null;
-
-    const pick = (type: string, short = false) => {
-      const component = result.address_components?.find((entry) => entry.types.includes(type));
-      return short ? component?.short_name : component?.long_name;
-    };
-
-    const city = firstNonEmpty(
-      pick('locality'),
-      pick('administrative_area_level_2'),
-      pick('sublocality_level_1'),
+    const location = await withTimeout(
+      reverseGeocodeLocation(latitude, longitude, source),
+      GEOCODER_TIMEOUT_MS,
+      'TIMEOUT',
     );
-    const state = firstNonEmpty(pick('administrative_area_level_1'));
-    const postalCode = firstNonEmpty(pick('postal_code'));
-    const area = firstNonEmpty(pick('sublocality_level_1'), pick('neighborhood'), pick('sublocality'));
-    const line1 = firstNonEmpty(
-      [pick('street_number'), pick('route')].filter(Boolean).join(' '),
-      pick('premise'),
-      result.formatted_address?.split(',')[0],
-      area,
-      city,
-    );
-
-    if (!city && !postalCode) return null;
-
-    return {
-      line1,
-      line2: area && area !== city ? area : undefined,
-      city: city || 'India',
-      state: state || '',
-      stateCode: pick('administrative_area_level_1', true) ?? stateCodeFromName(state),
-      postalCode,
-      country: pick('country', true) ?? 'IN',
-      area,
-      latitude,
-      longitude,
-      formatted: buildFormatted({ line1, city: city || 'India', state, postalCode, area }),
-      source: 'google',
-    };
+    if (!location.city && !location.postalCode) return null;
+    return normalizedToResolved(location);
   } catch (error) {
-    logger.warn('Google reverse geocode failed', error);
+    logger.warn('Backend reverse geocode failed', {
+      message: error instanceof Error ? error.message : 'unknown',
+    });
     return null;
   }
 }
@@ -196,16 +189,16 @@ export async function lookupPincode(pincode: string): Promise<PincodeLocality[]>
       'TIMEOUT',
     );
     if (!response.ok) return [];
-    const payload = (await response.json()) as Array<{
+    const payload = (await response.json()) as {
       Status?: string;
-      PostOffice?: Array<{
+      PostOffice?: {
         Name?: string;
         District?: string;
         State?: string;
         Pincode?: string;
         Block?: string;
-      }>;
-    }>;
+      }[];
+    }[];
     const offices = payload[0]?.PostOffice ?? [];
     return offices
       .map((office) => ({
@@ -244,6 +237,8 @@ export async function resolvePincodeAddress(pincode: string): Promise<ResolvedGe
       area: first.name,
     }),
     source: 'pincode',
+    district: first.district,
+    captureSource: 'PINCODE',
   };
 }
 
@@ -263,17 +258,19 @@ export async function openLocationSettings(): Promise<void> {
 export async function reverseGeocodeCoords(
   latitude: number,
   longitude: number,
+  source: 'GPS' | 'MAP_PIN' = 'GPS',
 ): Promise<ResolvedGeoAddress> {
-  const resolved =
-    (await reverseGeocodeDevice(latitude, longitude)) ??
-    (await reverseGeocodeGoogle(latitude, longitude));
+  const fromBackend = await reverseGeocodeBackend(latitude, longitude, source);
+  if (fromBackend) return { ...fromBackend, latitude, longitude };
 
-  if (!resolved) {
+  const geocoded = await reverseGeocodeDevice(latitude, longitude);
+  if (!geocoded) {
     throw new LocationAccessError(
       'GEOCODE_FAILED',
-      'Found your GPS point but could not resolve a delivery address. Enter a pincode instead.',
+      "We found your location but couldn't resolve an address. Search for your address or enter a pincode.",
     );
   }
+  const resolved: ResolvedGeoAddress = { ...geocoded, captureSource: source };
 
   if (PINCODE_REGEX.test(resolved.postalCode)) {
     const fromPin = await resolvePincodeAddress(resolved.postalCode);
@@ -311,26 +308,31 @@ export async function reverseGeocodeCoords(
       latitude,
       longitude,
       source: resolved.source,
+      captureSource: source,
     };
   }
 
   return resolved;
 }
 
-export async function fetchCurrentDeliveryAddress(): Promise<ResolvedGeoAddress> {
+export type DevicePosition = {
+  latitude: number;
+  longitude: number;
+  accuracyMeters: number | null;
+};
+
+/** One fresh high-accuracy fix, falling back to a recent last-known position. */
+export async function getCurrentDevicePosition(): Promise<DevicePosition> {
   const servicesEnabled = await Location.hasServicesEnabledAsync();
   if (!servicesEnabled) {
-    throw new LocationAccessError(
-      'SERVICES_DISABLED',
-      'Turn on Location Services to detect your delivery pincode.',
-    );
+    throw new LocationAccessError('SERVICES_DISABLED', LOCATION_ERROR_MESSAGES.GPS_DISABLED);
   }
 
   const permission = await requestLocationPermission();
   if (permission !== 'granted') {
     throw new LocationAccessError(
       'PERMISSION_DENIED',
-      'Allow location access to auto-detect your delivery address.',
+      LOCATION_ERROR_MESSAGES.LOCATION_PERMISSION_DENIED,
     );
   }
 
@@ -341,23 +343,33 @@ export async function fetchCurrentDeliveryAddress(): Promise<ResolvedGeoAddress>
 
   const current = await withTimeout(
     Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.Balanced,
+      accuracy: Location.Accuracy.High,
     }),
     GPS_TIMEOUT_MS,
     'TIMEOUT',
   ).catch(async (error) => {
     if (lastKnown) return lastKnown;
     if (error instanceof LocationAccessError) throw error;
-    throw new LocationAccessError(
-      'UNAVAILABLE',
-      'Unable to read GPS right now. Search a pincode or pick a saved address.',
-    );
+    throw new LocationAccessError('UNAVAILABLE', LOCATION_ERROR_MESSAGES.LOCATION_UNAVAILABLE);
   });
 
-  const { latitude, longitude } = current.coords;
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-    throw new LocationAccessError('UNAVAILABLE', 'GPS coordinates were invalid.');
+  const { latitude, longitude, accuracy } = current.coords;
+  if (
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    (latitude === 0 && longitude === 0)
+  ) {
+    throw new LocationAccessError('UNAVAILABLE', LOCATION_ERROR_MESSAGES.LOCATION_UNAVAILABLE);
   }
+  return {
+    latitude,
+    longitude,
+    accuracyMeters: accuracy != null && Number.isFinite(accuracy) ? Math.round(accuracy) : null,
+  };
+}
 
-  return reverseGeocodeCoords(latitude, longitude);
+export async function fetchCurrentDeliveryAddress(): Promise<ResolvedGeoAddress> {
+  const position = await getCurrentDevicePosition();
+  const resolved = await reverseGeocodeCoords(position.latitude, position.longitude, 'GPS');
+  return { ...resolved, accuracyMeters: position.accuracyMeters, captureSource: 'GPS' };
 }

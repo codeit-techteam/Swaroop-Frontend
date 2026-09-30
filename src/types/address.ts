@@ -1,11 +1,5 @@
 export type SavedAddressKind =
-  | 'WAREHOUSE'
-  | 'OFFICE'
-  | 'FACTORY'
-  | 'SHIPPING'
-  | 'BILLING'
-  | 'REGISTERED'
-  | 'OTHER';
+  'WAREHOUSE' | 'OFFICE' | 'FACTORY' | 'SHIPPING' | 'BILLING' | 'REGISTERED' | 'OTHER';
 
 export type AddressSource = 'saved' | 'gps' | 'pincode' | 'preset' | 'manual';
 
@@ -22,9 +16,17 @@ export type SavedDeliveryAddress = {
   landmark: string | null;
   latitude: number | null;
   longitude: number | null;
+  locality?: string | null;
+  district?: string | null;
+  placeId?: string | null;
+  formattedAddress?: string | null;
+  accuracyMeters?: number | null;
+  source?: string | null;
   isDefault: boolean;
   localOnly?: boolean;
 };
+
+export type AddressCaptureSource = 'AUTOCOMPLETE' | 'GPS' | 'MAP_PIN' | 'PINCODE' | 'MANUAL';
 
 export type AddressDraft = {
   type?: SavedAddressKind;
@@ -38,6 +40,12 @@ export type AddressDraft = {
   landmark?: string;
   latitude?: number | null;
   longitude?: number | null;
+  locality?: string;
+  district?: string;
+  placeId?: string | null;
+  formattedAddress?: string;
+  accuracyMeters?: number | null;
+  source?: AddressCaptureSource;
   isDefault?: boolean;
 };
 
@@ -55,6 +63,14 @@ export type ResolvedGeoAddress = {
   longitude: number;
   formatted: string;
   source: 'device' | 'google' | 'pincode' | 'nominatim';
+  /** Place / location name (e.g. the picked suggestion's primary text). */
+  name?: string;
+  district?: string;
+  placeId?: string | null;
+  formattedAddress?: string;
+  /** Device-reported GPS accuracy radius in metres. */
+  accuracyMeters?: number | null;
+  captureSource?: AddressCaptureSource;
 };
 
 export type PincodeLocality = {
@@ -66,11 +82,7 @@ export type PincodeLocality = {
 };
 
 export type LocationAccessCode =
-  | 'PERMISSION_DENIED'
-  | 'SERVICES_DISABLED'
-  | 'UNAVAILABLE'
-  | 'TIMEOUT'
-  | 'GEOCODE_FAILED';
+  'PERMISSION_DENIED' | 'SERVICES_DISABLED' | 'UNAVAILABLE' | 'TIMEOUT' | 'GEOCODE_FAILED';
 
 export class LocationAccessError extends Error {
   readonly code: LocationAccessCode;

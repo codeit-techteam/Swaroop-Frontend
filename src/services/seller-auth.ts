@@ -11,7 +11,7 @@ import {
 import { STORAGE_KEYS } from '@/constants';
 import { useAuthStore } from '@/store/auth-store';
 import type { ApiRequestConfig } from '@/types/api';
-import { setStorageItem } from '@/utils/storage';
+import { getStorageItem, removeStorageItem, setStorageItem } from '@/utils/storage';
 
 type Envelope<T> = {
   success?: boolean;
@@ -24,7 +24,22 @@ export type SellerAuthUser = {
   phone?: string | null;
   firstName?: string | null;
   lastName?: string | null;
+  displayName?: string | null;
   roles?: string[];
+  loginId?: string | null;
+  sellerId?: string | null;
+  sellerName?: string | null;
+  permissions?: string[];
+  mustChangePassword?: boolean;
+};
+
+export type SellerAccess = {
+  role: string;
+  sellerId?: string | null;
+  sellerName?: string | null;
+  permissions: string[];
+  loginId?: string | null;
+  name?: string;
 };
 
 export type SellerAuthSession = {
@@ -78,7 +93,37 @@ export function persistSellerAuthSession(session: SellerAuthSession): void {
   if (session.refreshToken) {
     setStorageItem(STORAGE_KEYS.REFRESH_TOKEN, session.refreshToken);
   }
+  saveSellerAccess(session.user);
   useAuthStore.getState().setTokens(session.accessToken, session.refreshToken ?? '');
+}
+
+export function saveSellerAccess(user?: SellerAuthUser) {
+  if (!user) return;
+  const access: SellerAccess = {
+    role: user.roles?.includes('SELLER_MANAGER') ? 'SELLER_MANAGER' : 'SELLER',
+    sellerId: user.sellerId,
+    sellerName: user.sellerName,
+    permissions: user.permissions ?? [],
+    loginId: user.loginId,
+    name: user.displayName || [user.firstName, user.lastName].filter(Boolean).join(' '),
+  };
+  setStorageItem(STORAGE_KEYS.SELLER_ACCESS, JSON.stringify(access));
+}
+
+export function readSellerAccess(): SellerAccess | null {
+  const raw = getStorageItem(STORAGE_KEYS.SELLER_ACCESS);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as SellerAccess;
+  } catch {
+    return null;
+  }
+}
+
+export function clearSellerAccess() {
+  removeStorageItem(STORAGE_KEYS.SELLER_ACCESS);
+  removeStorageItem(STORAGE_KEYS.ACCESS_TOKEN);
+  removeStorageItem(STORAGE_KEYS.REFRESH_TOKEN);
 }
 
 export async function sendSellerOtp(mobile: string): Promise<{ sent: true; demoOtp?: string }> {
@@ -116,9 +161,12 @@ export async function loginSellerWithPassword(
   password: string,
 ): Promise<SellerAuthSession> {
   const trimmed = identifier.trim();
+  const digits = trimmed.replace(/\D/g, '');
   const body = trimmed.includes('@')
     ? { email: trimmed.toLowerCase(), password }
-    : { phone: toE164IndianPhone(trimmed), password };
+    : digits.length >= 10
+      ? { phone: toE164IndianPhone(trimmed), password }
+      : { identifier: trimmed, password };
   const response = await apiClient.post('/auth/login', body, {
     skipAuth: true,
     skipRefresh: true,

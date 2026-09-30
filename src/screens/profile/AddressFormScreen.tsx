@@ -7,15 +7,67 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import Toast from 'react-native-toast-message';
 
-import { AppHeader, DropdownField, InputField, PrimaryButton, ScreenWrapper, Typography } from '@/components';
+import {
+  AppHeader,
+  DropdownField,
+  InputField,
+  PrimaryButton,
+  ScreenWrapper,
+  Typography,
+} from '@/components';
+import { LocationSuggestionList } from '@/components/location/location-suggestion-list';
 import { ADDRESS_KIND_OPTIONS, PINCODE_REGEX, toApiAddressType } from '@/constants/locations';
-import { fetchCurrentDeliveryAddress, lookupPincode } from '@/services/location';
+import { useAddressAutocomplete } from '@/hooks/use-address-autocomplete';
+import { SearchIcon } from '@/icons';
+import {
+  fetchCurrentDeliveryAddress,
+  lookupPincode,
+  normalizedToResolved,
+} from '@/services/location';
+import {
+  isLocationServiceDown,
+  LOW_ACCURACY_THRESHOLD_METERS,
+  type LocationSuggestion,
+} from '@/services/location-search';
 import { useAddressStore } from '@/store/address-store';
 import { brandColors } from '@/theme/colors';
-import type { SavedAddressKind } from '@/types/address';
+import { iconSizes } from '@/theme/icons';
+import type { AddressCaptureSource, ResolvedGeoAddress, SavedAddressKind } from '@/types/address';
 import { LocationAccessError } from '@/types/address';
 
 const KIND_LABELS = ADDRESS_KIND_OPTIONS.map((option) => option.label);
+/** GPS fixes this coarse are never stored as the address coordinates. */
+const UNUSABLE_ACCURACY_METERS = 1000;
+const CAPTURE_SOURCES: AddressCaptureSource[] = [
+  'AUTOCOMPLETE',
+  'GPS',
+  'MAP_PIN',
+  'PINCODE',
+  'MANUAL',
+];
+
+type GeoMeta = {
+  locality: string;
+  district: string;
+  placeId: string | null;
+  formattedAddress: string;
+  accuracyMeters: number | null;
+  source: AddressCaptureSource;
+};
+
+const EMPTY_GEO: GeoMeta = {
+  locality: '',
+  district: '',
+  placeId: null,
+  formattedAddress: '',
+  accuracyMeters: null,
+  source: 'MANUAL',
+};
+
+const toCaptureSource = (value?: string | null): AddressCaptureSource => {
+  const upper = (value ?? '').toUpperCase() as AddressCaptureSource;
+  return CAPTURE_SOURCES.includes(upper) ? upper : 'MANUAL';
+};
 
 export const AddressFormScreen = memo(function AddressFormScreen() {
   const router = useRouter();
@@ -31,6 +83,12 @@ export const AddressFormScreen = memo(function AddressFormScreen() {
     landmark?: string;
     latitude?: string;
     longitude?: string;
+    district?: string;
+    locality?: string;
+    placeId?: string;
+    formattedAddress?: string;
+    accuracyMeters?: string;
+    source?: string;
   }>();
 
   const addresses = useAddressStore((state) => state.addresses);
@@ -54,6 +112,12 @@ export const AddressFormScreen = memo(function AddressFormScreen() {
   const [saving, setSaving] = useState(false);
   const [detecting, setDetecting] = useState(false);
   const [lookingUpPin, setLookingUpPin] = useState(false);
+  const [geo, setGeo] = useState<GeoMeta>(EMPTY_GEO);
+  const autocomplete = useAddressAutocomplete({
+    near: latitude != null && longitude != null ? { latitude, longitude } : null,
+  });
+  const searchError =
+    autocomplete.error && !isLocationServiceDown(autocomplete.error) ? autocomplete.error : null;
 
   const seedKey = [
     params.id,
@@ -91,11 +155,27 @@ export const AddressFormScreen = memo(function AddressFormScreen() {
     setStateName(source.state ?? '');
     setPostalCode(source.postalCode ?? '');
     setLandmark(source.landmark ?? '');
-    setLatitude(typeof source.latitude === 'number' && Number.isFinite(source.latitude) ? source.latitude : null);
+    setLatitude(
+      typeof source.latitude === 'number' && Number.isFinite(source.latitude)
+        ? source.latitude
+        : null,
+    );
     setLongitude(
-      typeof source.longitude === 'number' && Number.isFinite(source.longitude) ? source.longitude : null,
+      typeof source.longitude === 'number' && Number.isFinite(source.longitude)
+        ? source.longitude
+        : null,
     );
     setIsDefault(Boolean(editing?.isDefault) || addresses.length === 0);
+    const accuracy =
+      editing?.accuracyMeters ?? (params.accuracyMeters ? Number(params.accuracyMeters) : null);
+    setGeo({
+      locality: editing?.locality ?? params.locality ?? '',
+      district: editing?.district ?? params.district ?? '',
+      placeId: editing?.placeId ?? (params.placeId || null),
+      formattedAddress: editing?.formattedAddress ?? params.formattedAddress ?? '',
+      accuracyMeters: accuracy != null && Number.isFinite(accuracy) ? accuracy : null,
+      source: toCaptureSource(editing?.source ?? params.source),
+    });
     // Seed once per navigation payload so typing is not reset.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seedKey]);
@@ -129,32 +209,61 @@ export const AddressFormScreen = memo(function AddressFormScreen() {
     }
   }, []);
 
+  const applyResolved = useCallback((resolved: ResolvedGeoAddress) => {
+    setLine1(resolved.line1);
+    setLine2(resolved.line2 ?? '');
+    setCity(resolved.city);
+    setStateName(resolved.state);
+    setPostalCode(resolved.postalCode.replace(/\D/g, '').slice(0, 6));
+    setLandmark(resolved.landmark ?? '');
+    setLatitude(resolved.latitude || null);
+    setLongitude(resolved.longitude || null);
+    setLabel((current) => current || resolved.name || resolved.area || resolved.city);
+    setGeo({
+      locality: resolved.area ?? '',
+      district: resolved.district ?? '',
+      placeId: resolved.placeId ?? null,
+      formattedAddress: resolved.formattedAddress ?? resolved.formatted ?? '',
+      accuracyMeters: resolved.accuracyMeters ?? null,
+      source: resolved.captureSource ?? 'GPS',
+    });
+  }, []);
+
+  const handlePickSuggestion = useCallback(
+    async (suggestion: LocationSuggestion) => {
+      setError(null);
+      try {
+        const location = await autocomplete.selectSuggestion(suggestion);
+        applyResolved(normalizedToResolved(location));
+        autocomplete.reset();
+      } catch {
+        // The suggestion list renders the error.
+      }
+    },
+    [applyResolved, autocomplete],
+  );
+
   const handleUseGps = useCallback(async () => {
     setDetecting(true);
     setError(null);
     try {
-      const resolved = await fetchCurrentDeliveryAddress();
-      setLine1((current) => current || resolved.line1);
-      setLine2((current) => current || resolved.line2 || '');
-      setCity(resolved.city);
-      setStateName(resolved.state);
-      setPostalCode(resolved.postalCode);
-      setLandmark((current) => current || resolved.area || '');
-      setLatitude(resolved.latitude || null);
-      setLongitude(resolved.longitude || null);
-      if (!label.trim()) {
-        setLabel(resolved.area || 'Current location');
-      }
+      applyResolved(await fetchCurrentDeliveryAddress());
     } catch (cause) {
       setError(
         cause instanceof LocationAccessError
           ? cause.message
-          : 'Unable to fetch current location. Enter the address manually.',
+          : 'Unable to fetch current location. Search for your address instead.',
       );
     } finally {
       setDetecting(false);
     }
-  }, [label]);
+  }, [applyResolved]);
+
+  const lowAccuracy =
+    geo.source === 'GPS' &&
+    geo.accuracyMeters != null &&
+    geo.accuracyMeters > LOW_ACCURACY_THRESHOLD_METERS;
+  const coordsUnusable = lowAccuracy && (geo.accuracyMeters ?? 0) > UNUSABLE_ACCURACY_METERS;
 
   const onSave = useCallback(async () => {
     if (line1.trim().length < 3) {
@@ -173,6 +282,7 @@ export const AddressFormScreen = memo(function AddressFormScreen() {
     setSaving(true);
     setError(null);
     try {
+      const keepCoords = latitude != null && longitude != null && !coordsUnusable;
       const payload = {
         type: kindValue,
         label: label.trim() || city.trim(),
@@ -182,8 +292,14 @@ export const AddressFormScreen = memo(function AddressFormScreen() {
         state: stateName.trim(),
         postalCode,
         landmark: landmark.trim() || undefined,
-        latitude,
-        longitude,
+        latitude: keepCoords ? latitude : null,
+        longitude: keepCoords ? longitude : null,
+        locality: geo.locality || undefined,
+        district: geo.district || undefined,
+        placeId: keepCoords ? geo.placeId : undefined,
+        formattedAddress: geo.formattedAddress || undefined,
+        accuracyMeters: keepCoords ? geo.accuracyMeters : undefined,
+        source: keepCoords ? geo.source : ('MANUAL' as const),
         isDefault,
       };
       if (editing) {
@@ -201,8 +317,10 @@ export const AddressFormScreen = memo(function AddressFormScreen() {
     }
   }, [
     city,
+    coordsUnusable,
     createAddress,
     editing,
+    geo,
     isDefault,
     kindValue,
     label,
@@ -229,6 +347,30 @@ export const AddressFormScreen = memo(function AddressFormScreen() {
         contentContainerClassName="px-xl pb-xl"
         keyboardShouldPersistTaps="handled"
       >
+        <InputField
+          label="SEARCH ADDRESS"
+          value={autocomplete.query}
+          onChangeText={autocomplete.setQuery}
+          placeholder="Search area, street, landmark or pincode"
+          autoCorrect={false}
+          returnKeyType="search"
+          leftSlot={
+            <View className="mr-sm">
+              <SearchIcon size={iconSizes.sm} color={brandColors.muted} />
+            </View>
+          }
+          containerClassName="mb-sm"
+        />
+        <LocationSuggestionList
+          suggestions={autocomplete.suggestions}
+          status={autocomplete.status === 'error' && !searchError ? 'idle' : autocomplete.status}
+          error={searchError}
+          resolvingPlaceId={autocomplete.resolvingPlaceId}
+          onSelect={(suggestion) => {
+            void handlePickSuggestion(suggestion);
+          }}
+        />
+
         <Pressable
           onPress={() => {
             void handleUseGps();
@@ -252,6 +394,16 @@ export const AddressFormScreen = memo(function AddressFormScreen() {
             Auto-fill from GPS like Amazon / Myntra
           </Typography>
         </Pressable>
+
+        {lowAccuracy ? (
+          <Typography variant="error" className="-mt-sm mb-md">
+            {`GPS accuracy is about ${Math.round(geo.accuracyMeters ?? 0)} m. Check every field below${
+              coordsUnusable
+                ? ' — this position is too imprecise to store, so only the typed address will be saved'
+                : ''
+            }, or search for the exact address.`}
+          </Typography>
+        ) : null}
 
         <DropdownField
           label="ADDRESS TYPE"
@@ -290,7 +442,9 @@ export const AddressFormScreen = memo(function AddressFormScreen() {
           keyboardType="number-pad"
           maxLength={6}
           placeholder="400001"
-          rightSlot={lookingUpPin ? <ActivityIndicator size="small" color={brandColors.primary} /> : null}
+          rightSlot={
+            lookingUpPin ? <ActivityIndicator size="small" color={brandColors.primary} /> : null
+          }
           containerClassName="mb-md"
         />
         <InputField
@@ -320,7 +474,10 @@ export const AddressFormScreen = memo(function AddressFormScreen() {
             <Typography variant="roleTitle" className="text-[14px] text-brand-heading">
               Set as primary
             </Typography>
-            <Typography variant="caption" className="mt-0.5 font-sans text-[12px] normal-case tracking-normal text-brand-muted">
+            <Typography
+              variant="caption"
+              className="mt-0.5 font-sans text-[12px] normal-case tracking-normal text-brand-muted"
+            >
               Used for checkout freight and home delivery
             </Typography>
           </View>

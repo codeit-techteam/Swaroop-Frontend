@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 
-import { View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import { type Href, useRouter } from 'expo-router';
 
@@ -14,20 +14,34 @@ import {
   Typography,
   VerificationBanner,
 } from '@/components';
+import { KycStatusBanner } from '@/components/kyc/kyc-status-banner';
 import { getKycStepperSteps } from '@/constants/documents';
 import { useDocumentUpload } from '@/hooks/use-document-upload';
 import { LockIcon, TrustIllustration } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
+import { toBackendKycSlot } from '@/services/customer-kyc';
 import { useKycStore } from '@/store/kyc-store';
 import { brandColors } from '@/theme/colors';
+import type { KycDocumentId } from '@/types/document';
+import { cn } from '@/utils/cn';
 import { wp } from '@/utils/responsive';
 
 export const KycDocumentsScreen = () => {
   const router = useRouter();
   const businessInfo = useKycStore((state) => state.businessInfo);
-  const { documents, pickDocument, mandatoryReady, isUploading } = useDocumentUpload();
+  const {
+    documents,
+    pickDocument,
+    mandatoryReady,
+    isUploading,
+    overview,
+    syncing,
+    syncError,
+    retrySync,
+  } = useDocumentUpload();
 
-  const canContinue = mandatoryReady && !isUploading;
+  const canContinue = mandatoryReady && !isUploading && !syncing;
+  const requestedSlots = new Set(overview?.changeRequest?.slots ?? []);
 
   const handleBack = useCallback(() => {
     router.back();
@@ -60,6 +74,8 @@ export const KycDocumentsScreen = () => {
 
       <ProgressStepper steps={getKycStepperSteps('documents')} className="mt-2xl" />
 
+      <KycStatusBanner overview={overview} className="mt-2xl" />
+
       <BusinessSummaryCard
         businessInfo={businessInfo}
         compact
@@ -74,13 +90,43 @@ export const KycDocumentsScreen = () => {
         <Typography variant="subheadingLeft" className="mt-xs">
           PAN, GST and Aadhaar are mandatory. Cancelled cheque is optional.
         </Typography>
-
       </View>
 
+      {syncing ? (
+        <View className="mt-lg flex-row items-center gap-sm">
+          <ActivityIndicator size="small" />
+          <Typography variant="legal" className="text-left">
+            Loading your uploaded documents…
+          </Typography>
+        </View>
+      ) : null}
+
+      {syncError ? (
+        <View className="mt-lg rounded-lg border border-brand-error bg-brand-error-light p-md">
+          <Typography variant="error" className="text-left">
+            {syncError}
+          </Typography>
+          <Pressable onPress={retrySync} className="mt-sm self-start" hitSlop={8}>
+            <Typography variant="link">Retry</Typography>
+          </Pressable>
+        </View>
+      ) : null}
+
       <View className="mt-lg gap-md">
-        {documents.map((document) => (
-          <DocumentUploadCard key={document.id} document={document} onUpload={pickDocument} />
-        ))}
+        {documents.map((document) => {
+          const highlighted =
+            requestedSlots.has(toBackendKycSlot(document.id as KycDocumentId)) &&
+            document.status !== 'uploaded' &&
+            document.status !== 'verified';
+          return (
+            <View
+              key={document.id}
+              className={cn(highlighted && 'rounded-lg border-2 border-amber-400')}
+            >
+              <DocumentUploadCard document={document} onUpload={pickDocument} />
+            </View>
+          );
+        })}
       </View>
 
       <VerificationBanner className="mt-xl" />

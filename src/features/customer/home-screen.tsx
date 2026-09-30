@@ -21,16 +21,18 @@ import {
   TrendingMaterialCard,
 } from '@/components/home';
 import { CurrentShipmentCard } from '@/components/home/current-shipment-card';
+import { KycStatusBanner } from '@/components/kyc/kyc-status-banner';
 import { HomeFeedSkeleton } from '@/components/ui/skeleton';
 import { QUICK_SUMMARY_ITEMS, TAB_BAR_HEIGHT } from '@/constants/dashboard';
+import { DEFAULT_HOME_HERO_BANNER } from '@/constants/homeBanners';
 import { getTrackRouteForOrder, inferOrderStatus } from '@/constants/orderWorkflow';
+import { useCustomerKycStatus } from '@/hooks/use-customer-kyc-status';
 import { useDeliveryLocation } from '@/hooks/use-delivery-location';
 import { useNotificationBadge } from '@/hooks/use-notifications';
+import { openCustomerBanner, openCustomerBannerSecondary } from '@/lib/cms-banner';
 import { ROUTES } from '@/navigation/routes';
 import { fetchCustomerMarketplaceProducts } from '@/services/catalog';
 import { fetchCustomerHomeBanners, trackCmsBannerEvent } from '@/services/cms';
-import { openCustomerBanner, openCustomerBannerSecondary } from '@/lib/cms-banner';
-import { DEFAULT_HOME_HERO_BANNER } from '@/constants/homeBanners';
 import { fetchCustomerFinanceSummary } from '@/services/orders';
 import {
   selectActiveOrder,
@@ -76,6 +78,7 @@ export const CustomerHomeScreen = () => {
   const locationSheetRef = useRef<BottomSheetModal>(null);
   const unreadCount = useNotificationBadge();
   const { selectedLocation, openAddressForm } = useDeliveryLocation();
+  const { overview: kycOverview } = useCustomerKycStatus();
 
   const orders = useOrderStore(selectOrders);
   const activeOrder = useOrderStore(selectActiveOrder);
@@ -304,6 +307,13 @@ export const CustomerHomeScreen = () => {
             <LocationSelector location={selectedLocation} onPress={openLocationSheet} />
             <SearchBar onPress={navigateToMarket} onFilterPress={navigateToMarket} />
           </View>
+
+          <KycStatusBanner
+            overview={kycOverview}
+            actionLabel="Update documents"
+            onAction={() => router.push(ROUTES.AUTH.KYC_DOCUMENTS as Href)}
+            className="mx-lg mt-md"
+          />
 
           {banners.length > 0 ? (
             <HeroCarousel

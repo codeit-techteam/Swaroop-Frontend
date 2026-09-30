@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useEffect, useState } from 'react';
 
 import { Pressable, ScrollView, View } from 'react-native';
 
@@ -6,6 +6,7 @@ import { type Href, useRouter } from 'expo-router';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { apiClient } from '@/api/client';
 import { ScreenWrapper, Typography } from '@/components';
 import {
   BankIcon,
@@ -117,6 +118,7 @@ export const SellerProfileScreen = memo(function SellerProfileScreen() {
             profile={profile}
             onEditProfile={() => router.push(ROUTES.SELLER.PROFILE_EDIT as Href)}
           />
+          <AccountManagerCard />
 
           <ProfileInfoCard title="Company Information">
             <ProfileMenuItem
@@ -258,5 +260,46 @@ export const SellerProfileScreen = memo(function SellerProfileScreen() {
         />
       </View>
     </ScreenWrapper>
+  );
+});
+
+const AccountManagerCard = memo(function AccountManagerCard() {
+  const [text, setText] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void apiClient
+      .get('/seller/profile')
+      .then((response) => {
+        const payload = response.data?.data ?? response.data;
+        const managers = Array.isArray(payload?.accountManagers)
+          ? payload.accountManagers
+          : [];
+        const manager =
+          managers.find((row: { isPrimary?: boolean }) => row.isPrimary) ?? managers[0];
+        if (!manager || cancelled) return;
+        const name = manager.name || 'Seller Manager';
+        const contact = [manager.phone, manager.email].filter(Boolean).join(' · ');
+        setText(contact ? `${name} · ${contact}` : name);
+      })
+      .catch(() => {
+        if (!cancelled) setText(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!text) return null;
+
+  return (
+    <View className="mb-md rounded-2xl bg-brand-white p-md">
+      <Typography variant="legal" className="text-brand-footer">
+        Account Manager
+      </Typography>
+      <Typography variant="body" className="mt-xs text-brand-heading">
+        {text}
+      </Typography>
+    </View>
   );
 });

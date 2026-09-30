@@ -3,7 +3,9 @@ import { create } from 'zustand';
 import {
   fetchSellerLocations,
   fetchCurrentSellerLocation,
+  saveSellerLocationFromGeo,
   setCurrentSellerLocation,
+  type SaveSellerGeoLocationInput,
   type SellerLocation,
 } from '@/services/seller-locations';
 import { logger } from '@/utils/logger';
@@ -16,6 +18,8 @@ type SellerLocationStore = {
   hydrate: () => Promise<void>;
   refresh: () => Promise<void>;
   selectLocation: (locationId: string) => Promise<void>;
+  /** Persist a confirmed operating location and make it current. */
+  saveGeoLocation: (input: SaveSellerGeoLocationInput) => Promise<SellerLocation | null>;
 };
 
 export const useSellerLocationStore = create<SellerLocationStore>((set, get) => ({
@@ -67,5 +71,17 @@ export const useSellerLocationStore = create<SellerLocationStore>((set, get) => 
       });
       throw error;
     }
+  },
+
+  saveGeoLocation: async (input) => {
+    const { current, locations } = await saveSellerLocationFromGeo(input);
+    const selected = current ?? locations[0] ?? null;
+    set({
+      locations: locations.length ? locations : get().locations,
+      currentLocationId: selected?.id ?? get().currentLocationId,
+      isHydrated: true,
+      error: null,
+    });
+    return selected;
   },
 }));

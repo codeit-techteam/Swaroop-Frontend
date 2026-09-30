@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 
+import { clearSellerAccess } from '@/services/seller-auth';
+
 import {
   buildDefaultSellerSnapshot,
   cloneDocumentsWithPatch,
@@ -74,6 +76,7 @@ export const useSellerStore = create<SellerStore>((set, get) => ({
   },
 
   logoutSeller: () => {
+    clearSellerAccess();
     resetSellerSession();
     set({
       ...buildDefaultSellerSnapshot(),

@@ -1,13 +1,15 @@
-import { memo, useEffect, useMemo } from 'react';
+import { memo, useEffect, useMemo, useRef } from 'react';
 
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
 import { type Href, useRouter } from 'expo-router';
 
+import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScreenWrapper, Typography } from '@/components';
+import { LocationPinIcon } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
 import {
   AnalyticsPreviewCard,
@@ -20,11 +22,14 @@ import {
   RevenueHeroCard,
   SellerBottomNavigation,
   SellerHomeHeader,
+  SellerVerificationStatusBanner,
   SettlementSummaryCard,
 } from '@/seller/components';
+import { SellerLocationSheet } from '@/seller/components/SellerLocationSheet';
 import { usePullToRefresh } from '@/seller/hooks/usePullToRefresh';
 import { useSellerDashboardSummary } from '@/seller/hooks/useSellerDashboardSummary';
 import { useSellerShipments } from '@/seller/hooks/useSellerShipments';
+import { useSellerVerificationStatus } from '@/seller/hooks/useSellerVerificationStatus';
 import { useSkeletonLoading } from '@/seller/hooks/useSkeletonLoading';
 import { useSellerOffersStore } from '@/seller/modules/seller-offers/store/sellerOffersStore';
 import { useSellerOrdersStore } from '@/seller/modules/seller-orders/store/sellerOrdersStore';
@@ -33,10 +38,11 @@ import { useSettlementStore } from '@/seller/modules/settlement-payout/store/set
 import { navigateSellerBottomTab } from '@/seller/navigation/useSellerBottomNavigation';
 import { getRevenueSeries, getSellerAnalytics } from '@/seller/services/analyticsService';
 import { getSellerNotificationsSnapshot } from '@/seller/services/sellerMockService';
+import { useSellerLocationStore } from '@/seller/store/sellerLocationStore';
 import { useSellerProductStore } from '@/seller/store/sellerProductStore';
 import { useSellerStore } from '@/seller/store/sellerStore';
-import { useSellerLocationStore } from '@/seller/store/sellerLocationStore';
 import type { SellerShipment } from '@/seller/types';
+import { brandColors } from '@/theme/colors';
 
 const AnimatedSection = Animated.View;
 
@@ -59,10 +65,12 @@ export const SellerDashboardScreen = memo(function SellerDashboardScreen() {
   const hydrateSettlementState = useSettlementStore((state) => state.hydrateSettlementState);
   const hydrateSellerOrdersState = useSellerOrdersStore((state) => state.hydrateSellerOrdersState);
   const hydrateSellerOffersState = useSellerOffersStore((state) => state.hydrateSellerOffersState);
+  const { status: verificationStatus, refresh: refreshVerification } =
+    useSellerVerificationStatus();
   const { isRefreshing, refresh } = usePullToRefresh(async () => {
     refreshSellerOffersState();
     refreshSellerOrdersState();
-    await refreshDashboard();
+    await Promise.all([refreshDashboard(), refreshVerification()]);
   });
   const sellerName = useSellerStore(
     (state) => state.company.companyName || state.profile.ownerName,
@@ -100,6 +108,12 @@ export const SellerDashboardScreen = memo(function SellerDashboardScreen() {
   useEffect(() => {
     void useSellerLocationStore.getState().hydrate();
   }, []);
+
+  const locationSheetRef = useRef<BottomSheetModal>(null);
+  const currentLocation = useSellerLocationStore((s) =>
+    s.locations.find((row) => row.id === s.currentLocationId),
+  );
+  const locationsHydrated = useSellerLocationStore((s) => s.isHydrated);
 
   const goToAddProduct = () => {
     clearSelection();
@@ -212,6 +226,37 @@ export const SellerDashboardScreen = memo(function SellerDashboardScreen() {
 
           <DashboardSearchButton onPress={() => router.push(ROUTES.SELLER.SEARCH as Href)} />
 
+          {locationsHydrated ? (
+            <Pressable
+              onPress={() => locationSheetRef.current?.present()}
+              accessibilityRole="button"
+              accessibilityLabel="Change operating location"
+              className="mt-sm flex-row items-center self-start"
+              hitSlop={6}
+            >
+              <LocationPinIcon color={brandColors.primary} />
+              <Typography
+                variant="caption"
+                className="ml-xs font-sans text-[12px] normal-case tracking-normal text-brand-heading"
+                numberOfLines={1}
+              >
+                {currentLocation
+                  ? `${currentLocation.city || currentLocation.name} · ${currentLocation.warehouse}`
+                  : 'Set operating location'}
+              </Typography>
+              <Typography variant="link" className="ml-xs font-semibold text-[12px]">
+                {currentLocation ? 'Change' : 'Add'}
+              </Typography>
+            </Pressable>
+          ) : null}
+
+          <SellerVerificationStatusBanner
+            status={verificationStatus}
+            actionLabel="Update & Resubmit"
+            onAction={() => router.push(ROUTES.SELLER.VERIFICATION as Href)}
+            className="mt-md"
+          />
+
           {isLoading ? (
             <View className="mt-lg">
               <DashboardSkeleton />
@@ -313,6 +358,7 @@ export const SellerDashboardScreen = memo(function SellerDashboardScreen() {
           onNavigate={(target) => navigateSellerBottomTab(router, target)}
         />
       </View>
+      <SellerLocationSheet ref={locationSheetRef} />
     </ScreenWrapper>
   );
 });

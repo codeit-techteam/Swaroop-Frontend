@@ -130,7 +130,7 @@ const responseErrorInterceptor = async (error: AxiosError<ApiErrorResponse>): Pr
     | (InternalAxiosRequestConfig & ApiRequestConfig & { _retry?: boolean })
     | undefined;
 
-  if (!originalRequest) {
+  if (!originalRequest || axios.isCancel(error)) {
     return Promise.reject(error);
   }
 

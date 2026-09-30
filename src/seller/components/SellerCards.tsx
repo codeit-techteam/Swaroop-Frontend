@@ -50,6 +50,13 @@ export const SellerUploadCard = memo(function SellerUploadCard({
 }: SellerUploadCardProps) {
   const uploaded = document.status === 'uploaded';
   const uploading = document.status === 'uploading';
+  const rejected = document.reviewStatus === 'rejected';
+  const badgeLabel =
+    document.reviewStatus === 'verified'
+      ? 'Verified'
+      : document.reviewStatus === 'pending_review'
+        ? 'Under Review'
+        : 'Uploaded';
 
   return (
     <SellerCard className={cn(uploaded && 'border border-brand-primary')}>
@@ -73,7 +80,7 @@ export const SellerUploadCard = memo(function SellerUploadCard({
             {uploaded ? (
               <View className="rounded-full bg-brand-uploaded px-sm py-xs">
                 <Typography variant="badge" className="text-brand-uploaded-text">
-                  Uploaded
+                  {badgeLabel}
                 </Typography>
               </View>
             ) : null}
@@ -102,7 +109,7 @@ export const SellerUploadCard = memo(function SellerUploadCard({
             >
               <UploadIcon />
               <Typography variant="button" className="ml-xs text-[12px]">
-                {uploaded ? 'Replace File' : 'Upload'}
+                {rejected ? 'Upload New File' : uploaded ? 'Replace File' : 'Upload'}
               </Typography>
             </Pressable>
           )}

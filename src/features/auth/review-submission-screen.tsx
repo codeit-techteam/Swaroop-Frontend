@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { View } from 'react-native';
 
@@ -16,6 +16,11 @@ import {
 import { generateKycReferenceId, getKycStepperSteps } from '@/constants/documents';
 import { TrustIllustration } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
+import {
+  customerKycErrorMessage,
+  fetchCustomerKyc,
+  submitCustomerKyc,
+} from '@/services/customer-kyc';
 import { useKycStore } from '@/store/kyc-store';
 import { wp } from '@/utils/responsive';
 
@@ -38,7 +43,6 @@ export const ReviewSubmissionScreen = () => {
     [documents],
   );
 
-
   const handleBack = useCallback(() => {
     router.back();
   }, [router]);
@@ -51,14 +55,31 @@ export const ReviewSubmissionScreen = () => {
     router.push(ROUTES.AUTH.KYC_DOCUMENTS as Href);
   }, [router]);
 
-  const handleSubmit = useCallback(() => {
-    const referenceId = generateKycReferenceId();
-    setReferenceId(referenceId);
-    router.push({
-      pathname: ROUTES.AUTH.APPLICATION_SUBMITTED,
-      params: { referenceId },
-    } as unknown as Href);
-  }, [router, setReferenceId]);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const handleSubmit = useCallback(async () => {
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const current = await fetchCustomerKyc();
+      if (current.status !== 'SUBMITTED' && current.status !== 'APPROVED') {
+        await submitCustomerKyc(businessInfo);
+      }
+      const referenceId = generateKycReferenceId();
+      setReferenceId(referenceId);
+      router.push({
+        pathname: ROUTES.AUTH.APPLICATION_SUBMITTED,
+        params: { referenceId },
+      } as unknown as Href);
+    } catch (error) {
+      setSubmitError(
+        customerKycErrorMessage(error, 'Could not submit your KYC. Please try again.'),
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }, [businessInfo, router, setReferenceId]);
 
   return (
     <ScreenWrapper scrollable className="bg-brand-white" contentClassName="pb-xl">
@@ -94,8 +115,19 @@ export const ReviewSubmissionScreen = () => {
         onEdit={handleEditDocuments}
       />
 
+      {submitError ? (
+        <Typography variant="error" className="mt-xl text-left">
+          {submitError}
+        </Typography>
+      ) : null}
 
-      <PrimaryButton label="Submit Application" className="mt-2xl" onPress={handleSubmit} />
+      <PrimaryButton
+        label="Submit Application"
+        className="mt-2xl"
+        loading={submitting}
+        disabled={submitting}
+        onPress={() => void handleSubmit()}
+      />
     </ScreenWrapper>
   );
 };

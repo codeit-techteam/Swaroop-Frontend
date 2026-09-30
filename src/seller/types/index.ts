@@ -6,6 +6,9 @@ export type SellerDocumentId = 'gst' | 'pan' | 'aadhaar' | 'cancelledCheque';
 
 export type SellerDocumentStatus = 'idle' | 'uploading' | 'uploaded' | 'error';
 
+/** Admin review state of a stored onboarding document. */
+export type SellerDocumentReviewStatus = 'pending_review' | 'verified' | 'rejected';
+
 export type SellerEntityType =
   'Proprietorship' | 'Partnership' | 'LLP' | 'Private Limited' | 'Public Limited';
 
@@ -24,7 +27,16 @@ export type SellerCompany = {
   city: string;
   pincode: string;
   natureOfBusiness: string;
+  accountHolderName: string;
+  bankName: string;
+  accountNumber: string;
+  ifscCode: string;
 };
+
+export type SellerBankDetails = Pick<
+  SellerCompany,
+  'accountHolderName' | 'bankName' | 'accountNumber' | 'ifscCode'
+>;
 
 export type SellerDocumentFile = {
   name: string;
@@ -42,6 +54,9 @@ export type SellerDocument = {
   progress: number;
   file?: SellerDocumentFile;
   errorMessage?: string;
+  /** Backend document id once the file is confirmed in R2. */
+  remoteId?: string;
+  reviewStatus?: SellerDocumentReviewStatus;
 };
 
 export type SellerMenuSection =

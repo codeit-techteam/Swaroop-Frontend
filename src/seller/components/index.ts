@@ -13,6 +13,7 @@ export {
   SellerSuccessBanner,
 } from '@/seller/components/SellerCards';
 export { SellerShell } from '@/seller/components/SellerShell';
+export { SellerVerificationStatusBanner } from '@/seller/components/SellerVerificationStatusBanner';
 export {
   SellerCatalogGradeRow,
   SellerCatalogSelectedBanner,

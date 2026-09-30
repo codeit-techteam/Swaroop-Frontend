@@ -5,7 +5,12 @@ import { type Href, useRouter } from 'expo-router';
 import { AppLogo, ScreenWrapper, Typography } from '@/components';
 import { CheckCircleIcon, SuccessShield } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
-import { SellerCard, SellerPrimaryButton } from '@/seller/components';
+import {
+  SellerCard,
+  SellerPrimaryButton,
+  SellerVerificationStatusBanner,
+} from '@/seller/components';
+import { useSellerVerificationStatus } from '@/seller/hooks/useSellerVerificationStatus';
 import { brandColors } from '@/theme/colors';
 
 const NEXT_STEPS = [
@@ -22,6 +27,8 @@ const NEXT_STEPS = [
 
 export const SellerVerificationSubmittedScreen = () => {
   const router = useRouter();
+  const { status } = useSellerVerificationStatus();
+  const needsAction = Boolean(status?.canResubmit);
 
   return (
     <ScreenWrapper className="bg-brand-background">
@@ -39,14 +46,24 @@ export const SellerVerificationSubmittedScreen = () => {
         </View>
       </View>
 
-      <SellerCard className="mt-lg items-center">
-        <Typography variant="headingLeft" className="text-center text-[24px]">
-          Verification in progress
-        </Typography>
-        <Typography variant="subheading" className="mt-sm">
-          Typical review time is 2–4 business hours.
-        </Typography>
-      </SellerCard>
+      {needsAction ? null : (
+        <SellerCard className="mt-lg items-center">
+          <Typography variant="headingLeft" className="text-center text-[24px]">
+            Verification in progress
+          </Typography>
+          <Typography variant="subheading" className="mt-sm">
+            Typical review time is 2–4 business hours.
+          </Typography>
+        </SellerCard>
+      )}
+
+      <SellerVerificationStatusBanner
+        status={status}
+        showReviewStates={needsAction || status?.status === 'APPROVED'}
+        actionLabel="Update & Resubmit"
+        onAction={() => router.replace(ROUTES.SELLER.VERIFICATION as Href)}
+        className="mt-lg"
+      />
 
       <SellerCard title="What happens next" className="mt-lg">
         <View className="gap-md">
