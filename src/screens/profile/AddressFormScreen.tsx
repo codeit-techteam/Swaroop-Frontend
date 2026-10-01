@@ -20,7 +20,10 @@ import { ADDRESS_KIND_OPTIONS, PINCODE_REGEX, toApiAddressType } from '@/constan
 import { useAddressAutocomplete } from '@/hooks/use-address-autocomplete';
 import { SearchIcon } from '@/icons';
 import {
+  CURRENT_LOCATION_PHASE_LABELS,
+  type CurrentLocationPhase,
   fetchCurrentDeliveryAddress,
+  getSearchBiasPosition,
   lookupPincode,
   normalizedToResolved,
 } from '@/services/location';
@@ -34,6 +37,7 @@ import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
 import type { AddressCaptureSource, ResolvedGeoAddress, SavedAddressKind } from '@/types/address';
 import { LocationAccessError } from '@/types/address';
+import { logger } from '@/utils/logger';
 
 const KIND_LABELS = ADDRESS_KIND_OPTIONS.map((option) => option.label);
 /** GPS fixes this coarse are never stored as the address coordinates. */
@@ -110,14 +114,32 @@ export const AddressFormScreen = memo(function AddressFormScreen() {
   const [isDefault, setIsDefault] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [detecting, setDetecting] = useState(false);
+  const [gpsPhase, setGpsPhase] = useState<CurrentLocationPhase | null>(null);
+  const detecting = gpsPhase != null;
   const [lookingUpPin, setLookingUpPin] = useState(false);
   const [geo, setGeo] = useState<GeoMeta>(EMPTY_GEO);
+  const hasSeed = Boolean(editing || params.line1 || params.latitude);
+  const [step, setStep] = useState<'search' | 'details'>(hasSeed ? 'details' : 'search');
+  const [devicePoint, setDevicePoint] = useState<{ latitude: number; longitude: number } | null>(
+    null,
+  );
   const autocomplete = useAddressAutocomplete({
-    near: latitude != null && longitude != null ? { latitude, longitude } : null,
+    near: latitude != null && longitude != null ? { latitude, longitude } : devicePoint,
   });
-  const searchError =
-    autocomplete.error && !isLocationServiceDown(autocomplete.error) ? autocomplete.error : null;
+
+  useEffect(() => {
+    let active = true;
+    void getSearchBiasPosition().then((point) => {
+      if (active) setDevicePoint(point);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+  const autocompleteUnavailable = Boolean(
+    autocomplete.error && isLocationServiceDown(autocomplete.error),
+  );
+  const searchError = autocompleteUnavailable ? null : autocomplete.error;
 
   const seedKey = [
     params.id,
@@ -176,6 +198,7 @@ export const AddressFormScreen = memo(function AddressFormScreen() {
       accuracyMeters: accuracy != null && Number.isFinite(accuracy) ? accuracy : null,
       source: toCaptureSource(editing?.source ?? params.source),
     });
+    setStep(editing || source.line1 || source.latitude != null ? 'details' : 'search');
     // Seed once per navigation payload so typing is not reset.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seedKey]);
@@ -227,6 +250,18 @@ export const AddressFormScreen = memo(function AddressFormScreen() {
       accuracyMeters: resolved.accuracyMeters ?? null,
       source: resolved.captureSource ?? 'GPS',
     });
+    setStep('details');
+  }, []);
+
+  const startManualEntry = useCallback(() => {
+    autocomplete.reset();
+    setError(null);
+    setStep('details');
+  }, [autocomplete]);
+
+  const backToSearch = useCallback(() => {
+    setError(null);
+    setStep('search');
   }, []);
 
   const handlePickSuggestion = useCallback(
@@ -244,18 +279,21 @@ export const AddressFormScreen = memo(function AddressFormScreen() {
   );
 
   const handleUseGps = useCallback(async () => {
-    setDetecting(true);
+    setGpsPhase('locating');
     setError(null);
     try {
-      applyResolved(await fetchCurrentDeliveryAddress());
+      applyResolved(await fetchCurrentDeliveryAddress(setGpsPhase));
     } catch (cause) {
+      logger.warn('Current location failed', {
+        code: cause instanceof LocationAccessError ? cause.code : 'unknown',
+      });
       setError(
         cause instanceof LocationAccessError
           ? cause.message
           : 'Unable to fetch current location. Search for your address instead.',
       );
     } finally {
-      setDetecting(false);
+      setGpsPhase(null);
     }
   }, [applyResolved]);
 
@@ -266,6 +304,7 @@ export const AddressFormScreen = memo(function AddressFormScreen() {
   const coordsUnusable = lowAccuracy && (geo.accuracyMeters ?? 0) > UNUSABLE_ACCURACY_METERS;
 
   const onSave = useCallback(async () => {
+    if (saving) return;
     if (line1.trim().length < 3) {
       setError('Enter a street or warehouse address.');
       return;
@@ -331,9 +370,36 @@ export const AddressFormScreen = memo(function AddressFormScreen() {
     longitude,
     postalCode,
     router,
+    saving,
     stateName,
     updateAddress,
   ]);
+
+  const currentLocationButton = (
+    <Pressable
+      onPress={() => {
+        void handleUseGps();
+      }}
+      disabled={detecting || saving}
+      className="mb-md flex-row items-center rounded-xl border border-brand-primary bg-brand-primary-light px-md py-md"
+      accessibilityRole="button"
+      accessibilityLabel="Use current location"
+      accessibilityState={{ busy: detecting, disabled: detecting || saving }}
+    >
+      {gpsPhase ? (
+        <>
+          <ActivityIndicator size="small" color={brandColors.primary} />
+          <Typography variant="roleTitle" className="ml-sm flex-1 text-[14px] text-brand-primary">
+            {CURRENT_LOCATION_PHASE_LABELS[gpsPhase]}
+          </Typography>
+        </>
+      ) : (
+        <Typography variant="roleTitle" className="text-[14px] text-brand-primary">
+          Use current location
+        </Typography>
+      )}
+    </Pressable>
+  );
 
   return (
     <ScreenWrapper className="bg-brand-background" padded={false} edges={['top']}>
@@ -347,161 +413,244 @@ export const AddressFormScreen = memo(function AddressFormScreen() {
         contentContainerClassName="px-xl pb-xl"
         keyboardShouldPersistTaps="handled"
       >
-        <InputField
-          label="SEARCH ADDRESS"
-          value={autocomplete.query}
-          onChangeText={autocomplete.setQuery}
-          placeholder="Search area, street, landmark or pincode"
-          autoCorrect={false}
-          returnKeyType="search"
-          leftSlot={
-            <View className="mr-sm">
-              <SearchIcon size={iconSizes.sm} color={brandColors.muted} />
-            </View>
-          }
-          containerClassName="mb-sm"
-        />
-        <LocationSuggestionList
-          suggestions={autocomplete.suggestions}
-          status={autocomplete.status === 'error' && !searchError ? 'idle' : autocomplete.status}
-          error={searchError}
-          resolvingPlaceId={autocomplete.resolvingPlaceId}
-          onSelect={(suggestion) => {
-            void handlePickSuggestion(suggestion);
-          }}
-        />
+        {step === 'search' ? (
+          <>
+            {autocompleteUnavailable ? (
+              <Typography variant="error" className="mb-md">
+                Address search is unavailable right now. Use your current location or enter the
+                address manually.
+              </Typography>
+            ) : (
+              <>
+                <InputField
+                  label="SEARCH ADDRESS"
+                  value={autocomplete.query}
+                  onChangeText={autocomplete.setQuery}
+                  placeholder="Search area, street, landmark or pincode"
+                  autoCorrect={false}
+                  autoFocus={!editing}
+                  returnKeyType="search"
+                  leftSlot={
+                    <View className="mr-sm">
+                      <SearchIcon size={iconSizes.sm} color={brandColors.muted} />
+                    </View>
+                  }
+                  containerClassName="mb-sm"
+                />
+                <LocationSuggestionList
+                  suggestions={autocomplete.suggestions}
+                  status={
+                    autocomplete.status === 'error' && !searchError ? 'idle' : autocomplete.status
+                  }
+                  error={searchError}
+                  resolvingPlaceId={autocomplete.resolvingPlaceId}
+                  onSelect={(suggestion) => {
+                    void handlePickSuggestion(suggestion);
+                  }}
+                />
+              </>
+            )}
 
-        <Pressable
-          onPress={() => {
-            void handleUseGps();
-          }}
-          disabled={detecting}
-          className="mb-lg flex-row items-center rounded-xl border border-brand-primary bg-brand-primary-light px-md py-md"
-          accessibilityRole="button"
-          accessibilityLabel="Use current location"
-        >
-          {detecting ? (
-            <ActivityIndicator size="small" color={brandColors.primary} />
-          ) : (
-            <Typography variant="roleTitle" className="text-[14px] text-brand-primary">
-              Use current location
-            </Typography>
-          )}
-          <Typography
-            variant="caption"
-            className="ml-sm flex-1 font-sans text-[12px] normal-case tracking-normal text-brand-muted"
-          >
-            Auto-fill from GPS like Amazon / Myntra
-          </Typography>
-        </Pressable>
+            {currentLocationButton}
 
-        {lowAccuracy ? (
-          <Typography variant="error" className="-mt-sm mb-md">
-            {`GPS accuracy is about ${Math.round(geo.accuracyMeters ?? 0)} m. Check every field below${
-              coordsUnusable
-                ? ' — this position is too imprecise to store, so only the typed address will be saved'
-                : ''
-            }, or search for the exact address.`}
-          </Typography>
-        ) : null}
+            {error ? (
+              <Typography variant="error" className="mb-md">
+                {error}
+              </Typography>
+            ) : null}
 
-        <DropdownField
-          label="ADDRESS TYPE"
-          value={typeLabel}
-          options={KIND_LABELS}
-          onChange={setTypeLabel}
-          containerClassName="mb-md"
-        />
-        <InputField
-          label="LABEL"
-          value={label}
-          onChangeText={setLabel}
-          placeholder="Primary Warehouse"
-          containerClassName="mb-md"
-        />
-        <InputField
-          label="ADDRESS LINE 1"
-          value={line1}
-          onChangeText={setLine1}
-          placeholder="Plot / street / industrial estate"
-          containerClassName="mb-md"
-        />
-        <InputField
-          label="ADDRESS LINE 2"
-          value={line2}
-          onChangeText={setLine2}
-          placeholder="Area, landmark"
-          containerClassName="mb-md"
-        />
-        <InputField
-          label="PINCODE"
-          value={postalCode}
-          onChangeText={(value) => {
-            void handlePincodeChange(value);
-          }}
-          keyboardType="number-pad"
-          maxLength={6}
-          placeholder="400001"
-          rightSlot={
-            lookingUpPin ? <ActivityIndicator size="small" color={brandColors.primary} /> : null
-          }
-          containerClassName="mb-md"
-        />
-        <InputField
-          label="CITY"
-          value={city}
-          onChangeText={setCity}
-          placeholder="Mumbai"
-          containerClassName="mb-md"
-        />
-        <InputField
-          label="STATE"
-          value={stateName}
-          onChangeText={setStateName}
-          placeholder="Maharashtra"
-          containerClassName="mb-md"
-        />
-        <InputField
-          label="LANDMARK"
-          value={landmark}
-          onChangeText={setLandmark}
-          placeholder="Near highway / port"
-          containerClassName="mb-lg"
-        />
-
-        <View className="mb-lg flex-row items-center justify-between rounded-xl border border-brand-border bg-brand-white px-md py-md">
-          <View className="flex-1 pr-md">
-            <Typography variant="roleTitle" className="text-[14px] text-brand-heading">
-              Set as primary
-            </Typography>
-            <Typography
-              variant="caption"
-              className="mt-0.5 font-sans text-[12px] normal-case tracking-normal text-brand-muted"
+            <Pressable
+              onPress={startManualEntry}
+              className="self-start py-sm"
+              accessibilityRole="button"
+              accessibilityLabel="Enter address manually"
             >
-              Used for checkout freight and home delivery
-            </Typography>
-          </View>
-          <Switch
-            value={isDefault}
-            onValueChange={setIsDefault}
-            trackColor={{ false: brandColors.border, true: brandColors.primaryLight }}
-            thumbColor={isDefault ? brandColors.primary : brandColors.muted}
-          />
-        </View>
-
-        {error ? (
-          <Typography variant="error" className="mb-md">
-            {error}
-          </Typography>
+              <Typography
+                variant="caption"
+                className="font-sans-semibold text-[13px] normal-case tracking-normal text-brand-muted"
+              >
+                Enter address manually
+              </Typography>
+            </Pressable>
+          </>
         ) : null}
 
-        <PrimaryButton
-          label={editing ? 'Update Address' : 'Save Address'}
-          onPress={() => {
-            void onSave();
-          }}
-          loading={saving}
-        />
+        {step === 'details' ? (
+          <>
+            <View className="mb-md flex-row items-start rounded-xl border border-brand-border bg-brand-white px-md py-md">
+              <View className="flex-1 pr-md">
+                <Typography
+                  variant="roleTitle"
+                  className="text-[14px] text-brand-heading"
+                  numberOfLines={1}
+                >
+                  {label.trim() || geo.locality || city.trim() || 'Delivery location'}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  className="mt-0.5 font-sans text-[12px] normal-case tracking-normal text-brand-muted"
+                >
+                  {geo.formattedAddress ||
+                    [line1, line2, city, stateName, postalCode]
+                      .map((part) => part.trim())
+                      .filter(Boolean)
+                      .join(', ') ||
+                    'Enter the address details below'}
+                </Typography>
+              </View>
+              <Pressable
+                onPress={backToSearch}
+                accessibilityRole="button"
+                accessibilityLabel="Change location"
+              >
+                <Typography variant="roleTitle" className="text-[13px] text-brand-primary">
+                  Change
+                </Typography>
+              </Pressable>
+            </View>
+
+            {latitude == null || longitude == null ? currentLocationButton : null}
+
+            {lowAccuracy ? (
+              <Typography variant="error" className="-mt-sm mb-md">
+                {`GPS accuracy is about ${Math.round(geo.accuracyMeters ?? 0)} m. Check every field below${
+                  coordsUnusable
+                    ? ' — this position is too imprecise to store, so only the typed address will be saved'
+                    : ''
+                }, or search for the exact address.`}
+              </Typography>
+            ) : null}
+
+            {autocompleteUnavailable ? null : (
+              <>
+                <InputField
+                  label="SEARCH ADDRESS"
+                  value={autocomplete.query}
+                  onChangeText={autocomplete.setQuery}
+                  placeholder="Search area, building, landmark or PIN"
+                  autoCorrect={false}
+                  returnKeyType="search"
+                  leftSlot={
+                    <View className="mr-sm">
+                      <SearchIcon size={iconSizes.sm} color={brandColors.muted} />
+                    </View>
+                  }
+                  containerClassName="mb-sm"
+                />
+                <LocationSuggestionList
+                  suggestions={autocomplete.suggestions}
+                  status={
+                    autocomplete.status === 'error' && !searchError ? 'idle' : autocomplete.status
+                  }
+                  error={searchError}
+                  resolvingPlaceId={autocomplete.resolvingPlaceId}
+                  onSelect={(suggestion) => {
+                    void handlePickSuggestion(suggestion);
+                  }}
+                />
+              </>
+            )}
+
+            <DropdownField
+              label="ADDRESS TYPE"
+              value={typeLabel}
+              options={KIND_LABELS}
+              onChange={setTypeLabel}
+              containerClassName="mb-md"
+            />
+            <InputField
+              label="SAVE AS"
+              value={label}
+              onChangeText={setLabel}
+              placeholder="Optional nickname, e.g. Main plant"
+              containerClassName="mb-md"
+            />
+            <InputField
+              label="ADDRESS LINE 1"
+              value={line1}
+              onChangeText={setLine1}
+              placeholder="Plot / street / industrial estate"
+              containerClassName="mb-md"
+            />
+            <InputField
+              label="ADDRESS LINE 2"
+              value={line2}
+              onChangeText={setLine2}
+              placeholder="Area, landmark"
+              containerClassName="mb-md"
+            />
+            <InputField
+              label="PINCODE"
+              value={postalCode}
+              onChangeText={(value) => {
+                void handlePincodeChange(value);
+              }}
+              keyboardType="number-pad"
+              maxLength={6}
+              placeholder="6-digit pincode"
+              rightSlot={
+                lookingUpPin ? <ActivityIndicator size="small" color={brandColors.primary} /> : null
+              }
+              containerClassName="mb-md"
+            />
+            <InputField
+              label="CITY"
+              value={city}
+              onChangeText={setCity}
+              placeholder="City"
+              containerClassName="mb-md"
+            />
+            <InputField
+              label="STATE"
+              value={stateName}
+              onChangeText={setStateName}
+              placeholder="State"
+              containerClassName="mb-md"
+            />
+            <InputField
+              label="LANDMARK"
+              value={landmark}
+              onChangeText={setLandmark}
+              placeholder="Near highway / port"
+              containerClassName="mb-lg"
+            />
+
+            <View className="mb-lg flex-row items-center justify-between rounded-xl border border-brand-border bg-brand-white px-md py-md">
+              <View className="flex-1 pr-md">
+                <Typography variant="roleTitle" className="text-[14px] text-brand-heading">
+                  Set as primary
+                </Typography>
+                <Typography
+                  variant="caption"
+                  className="mt-0.5 font-sans text-[12px] normal-case tracking-normal text-brand-muted"
+                >
+                  Used for checkout freight and home delivery
+                </Typography>
+              </View>
+              <Switch
+                value={isDefault}
+                onValueChange={setIsDefault}
+                trackColor={{ false: brandColors.border, true: brandColors.primaryLight }}
+                thumbColor={isDefault ? brandColors.primary : brandColors.muted}
+              />
+            </View>
+
+            {error ? (
+              <Typography variant="error" className="mb-md">
+                {error}
+              </Typography>
+            ) : null}
+
+            <PrimaryButton
+              label={editing ? 'Update Address' : 'Save Address'}
+              onPress={() => {
+                void onSave();
+              }}
+              loading={saving}
+              disabled={detecting}
+            />
+          </>
+        ) : null}
       </KeyboardAwareScrollView>
     </ScreenWrapper>
   );

@@ -33,6 +33,8 @@ export type SellerNotification = {
   actionText?: string;
   status?: string;
   actions?: SellerNotificationAction[];
+  /** In-app destination when the row itself is tapped (e.g. an Import deal). */
+  route?: string;
 };
 
 export type SellerNotificationsSnapshot = {

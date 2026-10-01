@@ -1,13 +1,13 @@
-import { memo, useEffect, useState } from 'react';
+import { memo, useEffect, useMemo } from 'react';
 
-import { Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
 import { type Href, useRouter } from 'expo-router';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { apiClient } from '@/api/client';
 import { ScreenWrapper, Typography } from '@/components';
+import { appConfig } from '@/config/env';
 import {
   BankIcon,
   BellIcon,
@@ -29,11 +29,32 @@ import {
   ProfileMenuItem,
   SellerBottomNavigation,
 } from '@/seller/components';
+import { usePullToRefresh } from '@/seller/hooks/usePullToRefresh';
 import { navigateSellerBottomTab } from '@/seller/navigation/useSellerBottomNavigation';
-import { getSellerProfile } from '@/seller/services/sellerMockService';
 import { useSellerStore } from '@/seller/store/sellerStore';
+import type { SellerProfileData } from '@/seller/types/profile';
+import {
+  formatSellerAddress,
+  formatSellerTypeLabel,
+  type SellerAccountSummary,
+} from '@/services/seller-profile';
 import { showConfirmDialog } from '@/store/dialog-store';
 import { brandColors } from '@/theme/colors';
+
+const toProfileData = (account: SellerAccountSummary): SellerProfileData => ({
+  name: account.ownerName,
+  company: account.companyName,
+  initials: account.initials,
+  verified: account.verified,
+  badge: formatSellerTypeLabel(account),
+  gst: account.gstin ?? 'Not added',
+  profileImage: account.logoUrl,
+  address: formatSellerAddress(account) ?? 'Not added',
+  bankVerified: account.bankVerified,
+  kycStatus: account.verificationStatus,
+  kycDocumentsCount: account.kycDocumentsCount,
+  appVersion: `Version ${appConfig.version}`,
+});
 
 const PROFILE_ROUTE_MAP = {
   'company-profile': ROUTES.SELLER.PROFILE_COMPANY,
@@ -45,6 +66,7 @@ const PROFILE_ROUTE_MAP = {
   'price-revisions': ROUTES.SELLER.PRICE_REVISIONS,
   'vehicle-slots': ROUTES.SELLER.VEHICLE_SLOTS,
   'procurement-workbench': ROUTES.SELLER.PROCUREMENT_WORKBENCH,
+  'import-trading': ROUTES.SELLER.IMPORT_TRADING,
   payments: ROUTES.SELLER.PAYMENTS,
   'bank-details': ROUTES.SELLER.PROFILE_BANK,
   'kyc-documents': ROUTES.SELLER.PROFILE_KYC,
@@ -58,8 +80,19 @@ const PROFILE_ROUTE_MAP = {
 export const SellerProfileScreen = memo(function SellerProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const profile = getSellerProfile();
+  const account = useSellerStore((state) => state.account);
+  const accountStatus = useSellerStore((state) => state.accountStatus);
+  const accountError = useSellerStore((state) => state.accountError);
+  const refreshSellerAccount = useSellerStore((state) => state.refreshSellerAccount);
   const logoutSeller = useSellerStore((state) => state.logoutSeller);
+  const profile = useMemo(() => (account ? toProfileData(account) : null), [account]);
+  const { isRefreshing, refresh } = usePullToRefresh(async () => {
+    await refreshSellerAccount();
+  });
+
+  useEffect(() => {
+    void refreshSellerAccount();
+  }, [refreshSellerAccount]);
 
   const navigateProfileRoute = (routeKey: keyof typeof PROFILE_ROUTE_MAP) => {
     router.push(PROFILE_ROUTE_MAP[routeKey] as Href);
@@ -113,11 +146,37 @@ export const SellerProfileScreen = memo(function SellerProfileScreen() {
           className="flex-1 px-lg"
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingTop: 8, paddingBottom: insets.bottom + 120 }}
+          refreshControl={
+            <RefreshControl refreshing={isRefreshing} onRefresh={() => void refresh()} />
+          }
         >
-          <ProfileHeader
-            profile={profile}
-            onEditProfile={() => router.push(ROUTES.SELLER.PROFILE_EDIT as Href)}
-          />
+          {profile ? (
+            <ProfileHeader
+              profile={profile}
+              onEditProfile={() => router.push(ROUTES.SELLER.PROFILE_EDIT as Href)}
+            />
+          ) : (
+            <View className="items-center rounded-[24px] border border-brand-border bg-brand-white p-lg">
+              {accountStatus === 'error' ? (
+                <>
+                  <Typography variant="body" className="text-center text-brand-heading">
+                    {accountError ?? 'Could not load seller profile.'}
+                  </Typography>
+                  <Pressable
+                    onPress={() => void refreshSellerAccount()}
+                    accessibilityRole="button"
+                    className="mt-md rounded-full bg-brand-primary px-lg py-sm"
+                  >
+                    <Typography variant="badge" className="text-brand-white">
+                      Retry
+                    </Typography>
+                  </Pressable>
+                </>
+              ) : (
+                <ActivityIndicator color={brandColors.primary} />
+              )}
+            </View>
+          )}
           <AccountManagerCard />
 
           <ProfileInfoCard title="Company Information">
@@ -130,13 +189,13 @@ export const SellerProfileScreen = memo(function SellerProfileScreen() {
             <ProfileMenuItem
               icon={<LocationPinIcon size={18} color={brandColors.primaryDark} />}
               title="Business Address"
-              subtitle={profile.address}
+              subtitle={profile?.address ?? 'Registered business address'}
               onPress={() => navigateProfileRoute('business-address')}
             />
             <ProfileMenuItem
               icon={<DocumentFileIcon size={18} color={brandColors.primaryDark} />}
               title="GST Information"
-              subtitle={profile.gst}
+              subtitle={profile?.gst ?? 'Tax registration'}
               subtitleAccent="primary"
               onPress={() => navigateProfileRoute('gst-information')}
             />
@@ -177,6 +236,12 @@ export const SellerProfileScreen = memo(function SellerProfileScreen() {
               onPress={() => navigateProfileRoute('procurement-workbench')}
             />
             <ProfileMenuItem
+              icon={<StoreIcon size={18} color={brandColors.primaryDark} />}
+              title="Import Trading"
+              subtitle="International sell offers & buy requests"
+              onPress={() => navigateProfileRoute('import-trading')}
+            />
+            <ProfileMenuItem
               icon={<BankIcon size={18} color={brandColors.primaryDark} />}
               title="Payments & PI"
               subtitle="Payments and proforma invoices"
@@ -189,20 +254,20 @@ export const SellerProfileScreen = memo(function SellerProfileScreen() {
             <ProfileMenuItem
               icon={<BankIcon size={18} color={brandColors.primaryDark} />}
               title="Bank Details"
-              subtitle={profile.bankVerified ? 'Verified' : 'Pending verification'}
-              subtitleAccent={profile.bankVerified ? 'success' : 'default'}
+              subtitle={profile?.bankVerified ? 'Verified' : 'Pending verification'}
+              subtitleAccent={profile?.bankVerified ? 'success' : 'default'}
               onPress={() => navigateProfileRoute('bank-details')}
             />
             <ProfileMenuItem
               icon={<DocumentFileIcon size={18} color={brandColors.primaryDark} />}
               title="KYC Documents"
-              subtitle={`${profile.kycDocumentsCount} files uploaded`}
+              subtitle={`${profile?.kycDocumentsCount ?? 0} files uploaded`}
               onPress={() => navigateProfileRoute('kyc-documents')}
             />
             <ProfileMenuItem
               icon={<ShieldCheckIcon size={18} color={brandColors.primaryDark} />}
               title="Trade Licenses"
-              subtitle={`Expires in ${profile.tradeLicenseExpiryDays} days`}
+              subtitle="Licenses and certificates"
               onPress={() => navigateProfileRoute('trade-licenses')}
               isLast
             />
@@ -250,7 +315,7 @@ export const SellerProfileScreen = memo(function SellerProfileScreen() {
           </Pressable>
 
           <Typography variant="legal" className="mt-lg text-center text-brand-footer">
-            {profile.appVersion}
+            {`Version ${appConfig.version}`}
           </Typography>
         </ScrollView>
 
@@ -264,33 +329,13 @@ export const SellerProfileScreen = memo(function SellerProfileScreen() {
 });
 
 const AccountManagerCard = memo(function AccountManagerCard() {
-  const [text, setText] = useState<string | null>(null);
+  const managers = useSellerStore((state) => state.accountManagers);
+  const manager = managers.find((row) => row.isPrimary) ?? managers[0];
+  if (!manager) return null;
 
-  useEffect(() => {
-    let cancelled = false;
-    void apiClient
-      .get('/seller/profile')
-      .then((response) => {
-        const payload = response.data?.data ?? response.data;
-        const managers = Array.isArray(payload?.accountManagers)
-          ? payload.accountManagers
-          : [];
-        const manager =
-          managers.find((row: { isPrimary?: boolean }) => row.isPrimary) ?? managers[0];
-        if (!manager || cancelled) return;
-        const name = manager.name || 'Seller Manager';
-        const contact = [manager.phone, manager.email].filter(Boolean).join(' · ');
-        setText(contact ? `${name} · ${contact}` : name);
-      })
-      .catch(() => {
-        if (!cancelled) setText(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  if (!text) return null;
+  const name = manager.name || 'Seller Manager';
+  const contact = [manager.phone, manager.email].filter(Boolean).join(' · ');
+  const text = contact ? `${name} · ${contact}` : name;
 
   return (
     <View className="mb-md rounded-2xl bg-brand-white p-md">

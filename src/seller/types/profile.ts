@@ -21,15 +21,14 @@ export type SellerProfileMenuRoute =
 export type SellerProfileData = {
   name: string;
   company: string;
+  initials: string;
   verified: boolean;
   badge: string;
   gst: string;
-  profileImage: string;
+  profileImage: string | null;
   address: string;
   bankVerified: boolean;
   kycStatus: string;
   kycDocumentsCount: number;
-  tradeLicenseExpiryDays: number;
-  documents: SellerProfileDocument[];
   appVersion: string;
 };

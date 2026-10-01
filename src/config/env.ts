@@ -17,7 +17,7 @@ const envSchema = z.object({
 
 type EnvSchema = z.infer<typeof envSchema>;
 
-const DEV_API_PORT = 4000;
+const DEV_API_PORT = 3000;
 const DEV_API_PATH = '/api/v1';
 
 /** Safe defaults so preview/production APK builds boot without a local .env file. */

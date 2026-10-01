@@ -26,6 +26,7 @@ import { HomeFeedSkeleton } from '@/components/ui/skeleton';
 import { QUICK_SUMMARY_ITEMS, TAB_BAR_HEIGHT } from '@/constants/dashboard';
 import { DEFAULT_HOME_HERO_BANNER } from '@/constants/homeBanners';
 import { getTrackRouteForOrder, inferOrderStatus } from '@/constants/orderWorkflow';
+import { ImportTradingHomeSection } from '@/features/import/home-card';
 import { useCustomerKycStatus } from '@/hooks/use-customer-kyc-status';
 import { useDeliveryLocation } from '@/hooks/use-delivery-location';
 import { useNotificationBadge } from '@/hooks/use-notifications';
@@ -323,6 +324,8 @@ export const CustomerHomeScreen = () => {
               onImpression={handleBannerImpression}
             />
           ) : null}
+
+          <ImportTradingHomeSection className="mt-xl" />
 
           {activeOrder ? (
             <View className="mt-lg">

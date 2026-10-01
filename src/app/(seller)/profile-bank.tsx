@@ -3,6 +3,7 @@ import { SellerProfileDetailScreen } from '@/seller/screens/Profile/SellerProfil
 export default function SellerProfileBankRoute() {
   return (
     <SellerProfileDetailScreen
+      section="bank"
       title="Bank Details"
       subtitle="Settlement account and verification status"
     />

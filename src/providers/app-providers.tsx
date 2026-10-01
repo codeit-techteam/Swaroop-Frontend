@@ -30,7 +30,7 @@ import { useSettlementStore } from '@/seller/modules/settlement-payout/store/set
 import { useInventoryStore } from '@/seller/store/inventoryStore';
 import { useSellerProductStore } from '@/seller/store/sellerProductStore';
 import { useSellerStore } from '@/seller/store/sellerStore';
-import { applyDevResetIfNeeded } from '@/services/dev-reset';
+import { applyDevResetIfNeeded, applySellerIdentityMigration } from '@/services/dev-reset';
 import { configureNotifications } from '@/services/notification-service';
 import { useAddressStore } from '@/store/address-store';
 import { useAuthStore } from '@/store/auth-store';
@@ -109,6 +109,7 @@ export const AppProviders = ({ children }: AppProvidersProps) => {
         if (!active) {
           return;
         }
+        applySellerIdentityMigration();
         hydrateSession();
         hydrateKyc();
         hydrateCart();
@@ -130,6 +131,9 @@ export const AppProviders = ({ children }: AppProvidersProps) => {
         // Seller purchase-orders API requires a seller profile — never call it on customer sessions.
         if (isSellerSession) {
           hydrateSellerOrdersState();
+          if (useSellerStore.getState().sellerLoggedIn) {
+            void useSellerStore.getState().refreshSellerAccount();
+          }
         }
       } finally {
         if (active) {

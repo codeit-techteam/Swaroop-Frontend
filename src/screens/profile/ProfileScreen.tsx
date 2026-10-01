@@ -50,6 +50,8 @@ export const ProfileScreen = memo(function ProfileScreen() {
           subtitle = `${profile.bankAccounts.length} Accounts Linked`;
         } else if (item.subtitleKey === 'credit') {
           subtitle = 'Request credit & track application';
+        } else if (item.subtitleKey === 'import') {
+          subtitle = 'International buy requests & offers';
         } else {
           subtitle = 'Forms 16A, 26AS';
         }
@@ -59,6 +61,7 @@ export const ProfileScreen = memo(function ProfileScreen() {
           'bank-accounts': ROUTES.CUSTOMER.PROFILE_BANK_ACCOUNTS,
           'tax-documents': ROUTES.CUSTOMER.PROFILE_TAX_DOCUMENTS,
           'trading-credit': ROUTES.CUSTOMER.CREDIT_FACILITY,
+          'import-trading': ROUTES.CUSTOMER.IMPORT_TRADING,
         };
 
         return {

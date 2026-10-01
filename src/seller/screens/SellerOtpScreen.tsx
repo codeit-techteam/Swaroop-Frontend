@@ -8,6 +8,10 @@ import { AuthCard, FooterLinks, OtpInput, ScreenWrapper, Typography } from '@/co
 import { DEMO_OTP, DEMO_USER_NAME, isOfflineBackendFallbackEnabled } from '@/config/development';
 import { SELLER_RESEND_SECONDS } from '@/seller/constants';
 import { getSellerInitialRoute } from '@/seller/navigation/getSellerInitialRoute';
+import {
+  isKnownExistingDemoSeller,
+  resolveSellerHomeAccess,
+} from '@/seller/navigation/resolveSellerHome';
 import { useSellerStore } from '@/seller/store/sellerStore';
 import {
   authenticateSellerFromOtp,
@@ -27,6 +31,7 @@ export const SellerOtpScreen = () => {
   const [isResending, setIsResending] = useState(false);
   const setMobile = useSellerStore((state) => state.setMobile);
   const markOtpVerified = useSellerStore((state) => state.markOtpVerified);
+  const grantExistingSellerAccess = useSellerStore((state) => state.grantExistingSellerAccess);
 
   useEffect(() => {
     if (secondsLeft <= 0) {
@@ -58,12 +63,24 @@ export const SellerOtpScreen = () => {
       }
 
       setMobile(mobile);
-      markOtpVerified();
+      void useSellerStore.getState().refreshSellerAccount();
+
+      const access = await resolveSellerHomeAccess();
+      const openHome =
+        access === 'home' ||
+        (access === 'unknown' && isKnownExistingDemoSeller(mobile, otp));
+
+      if (openHome && access !== 'home') {
+        grantExistingSellerAccess();
+      } else if (!openHome) {
+        markOtpVerified();
+      }
+
       router.replace(getSellerInitialRoute(useSellerStore.getState()) as Href);
     } finally {
       setIsVerifying(false);
     }
-  }, [markOtpVerified, otp, params.mobile, router, setMobile]);
+  }, [grantExistingSellerAccess, markOtpVerified, otp, params.mobile, router, setMobile]);
 
   const handleResend = useCallback(async () => {
     if (secondsLeft > 0 || isResending) return;

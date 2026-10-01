@@ -62,6 +62,7 @@ export const ROUTES = {
     PROFILE_DOCUMENTS: '/(customer)/profile/documents',
     PROFILE_DOCUMENT_DETAIL: '/(customer)/profile/document-detail',
     BULK_LOGISTICS_QUOTE: '/(customer)/profile/bulk-logistics-quote',
+    IMPORT_TRADING: '/(customer)/import',
     NOTIFICATIONS: '/(customer)/notifications',
     SUPPORT: '/(customer)/profile/support',
     SUPPORT_RAISE: '/(customer)/profile/raise-ticket',
@@ -131,6 +132,7 @@ export const ROUTES = {
     PRICE_REVISIONS: '/(seller)/price-revisions',
     VEHICLE_SLOTS: '/(seller)/vehicle-slots',
     PROCUREMENT_WORKBENCH: '/(seller)/procurement-workbench',
+    IMPORT_TRADING: '/(seller)/import-trading',
     SEARCH: '/(seller)/search',
     RAISE_TICKET: '/(seller)/raise-ticket',
   },
@@ -205,6 +207,7 @@ export type CustomerRoute =
   | typeof ROUTES.CUSTOMER.PROFILE_DOCUMENTS
   | typeof ROUTES.CUSTOMER.PROFILE_DOCUMENT_DETAIL
   | typeof ROUTES.CUSTOMER.BULK_LOGISTICS_QUOTE
+  | typeof ROUTES.CUSTOMER.IMPORT_TRADING
   | typeof ROUTES.CUSTOMER.NOTIFICATIONS
   | typeof ROUTES.CUSTOMER.SUPPORT
   | typeof ROUTES.CUSTOMER.SUPPORT_RAISE;
@@ -274,6 +277,7 @@ export type SellerRoute =
   | typeof ROUTES.SELLER.PRICE_REVISIONS
   | typeof ROUTES.SELLER.VEHICLE_SLOTS
   | typeof ROUTES.SELLER.PROCUREMENT_WORKBENCH
+  | typeof ROUTES.SELLER.IMPORT_TRADING
   | typeof ROUTES.SELLER.SEARCH
   | typeof ROUTES.SELLER.RAISE_TICKET;
 

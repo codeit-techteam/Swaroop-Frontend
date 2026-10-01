@@ -18,6 +18,7 @@ import {
   SellerHeader,
 } from '@/seller/components';
 import { useSellerNotifications } from '@/seller/hooks/useSellerNotifications';
+import type { SellerNotification } from '@/seller/types/notifications';
 
 const ACTION_ROUTE_MAP: Record<string, string> = {
   payments: ROUTES.SELLER.SETTLEMENTS,
@@ -51,11 +52,20 @@ export const SellerNotificationsScreen = memo(function SellerNotificationsScreen
         item.actions?.some((action) => action.id === actionId),
       );
       const action = notification?.actions?.find((item) => item.id === actionId);
-      if (action?.route && ACTION_ROUTE_MAP[action.route]) {
-        router.push(ACTION_ROUTE_MAP[action.route] as Href);
-      }
+      if (!action?.route) return;
+      const target =
+        ACTION_ROUTE_MAP[action.route] ?? (action.route.startsWith('/') ? action.route : null);
+      if (target) router.push(target as Href);
     },
     [filteredCriticalActions, handleMarkRead, router],
+  );
+
+  const openActivity = useCallback(
+    (notification: SellerNotification) => {
+      handleMarkRead(notification.id);
+      if (notification.route) router.push(notification.route as Href);
+    },
+    [handleMarkRead, router],
   );
 
   return (
@@ -157,7 +167,7 @@ export const SellerNotificationsScreen = memo(function SellerNotificationsScreen
                         <View className={index > 0 ? 'border-t border-brand-border' : undefined}>
                           <NotificationActivityItem
                             notification={notification}
-                            onPress={() => handleMarkRead(notification.id)}
+                            onPress={() => openActivity(notification)}
                           />
                         </View>
                       </Swipeable>

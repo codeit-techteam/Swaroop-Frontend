@@ -286,6 +286,18 @@ export function resubmitSellerOnboarding(): Promise<SellerOnboardingStatus> {
   });
 }
 
+/**
+ * A seller who already has a profile past draft should open the home screen,
+ * not the onboarding wizard. Matches the seller web app.
+ */
+export function isExistingSellerAccount(
+  status: SellerOnboardingStatus | null | undefined,
+): boolean {
+  if (!status) return false;
+  if (status.sellerStatus && status.sellerStatus !== 'DRAFT') return true;
+  return Boolean(status.status && status.status !== 'DRAFT');
+}
+
 export function fetchSellerOnboardingStatus(): Promise<SellerOnboardingStatus | null> {
   return withSellerSession(async () => {
     try {

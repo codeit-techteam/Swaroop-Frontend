@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
@@ -9,6 +9,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScreenWrapper, Typography } from '@/components';
+import { ImportTradingHomeSection } from '@/features/import/home-card';
 import { LocationPinIcon } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
 import {
@@ -67,15 +68,28 @@ export const SellerDashboardScreen = memo(function SellerDashboardScreen() {
   const hydrateSellerOffersState = useSellerOffersStore((state) => state.hydrateSellerOffersState);
   const { status: verificationStatus, refresh: refreshVerification } =
     useSellerVerificationStatus();
+  const refreshSellerAccount = useSellerStore((state) => state.refreshSellerAccount);
+  const [importRefreshKey, setImportRefreshKey] = useState(0);
   const { isRefreshing, refresh } = usePullToRefresh(async () => {
     refreshSellerOffersState();
     refreshSellerOrdersState();
-    await Promise.all([refreshDashboard(), refreshVerification()]);
+    setImportRefreshKey((key) => key + 1);
+    await Promise.all([refreshDashboard(), refreshVerification(), refreshSellerAccount()]);
   });
   const sellerName = useSellerStore(
-    (state) => state.company.companyName || state.profile.ownerName,
+    (state) =>
+      state.account?.ownerName ||
+      state.account?.companyName ||
+      state.company.companyName ||
+      state.profile.ownerName,
   );
-  const initials = useSellerStore((state) => state.profile.companyInitials || 'PT');
+  const initials = useSellerStore(
+    (state) => state.account?.initials || state.profile.companyInitials || 'PT',
+  );
+
+  useEffect(() => {
+    void refreshSellerAccount();
+  }, [refreshSellerAccount]);
   const orderSummary = useSellerOrdersStore((state) => state.summary);
   const offerStats = useSellerOffersStore((state) => state.stats);
   const { dashboardPreviews } = useSellerShipments();
@@ -287,6 +301,15 @@ export const SellerDashboardScreen = memo(function SellerDashboardScreen() {
 
               <AnimatedSection entering={FadeInDown.duration(380).delay(160)}>
                 <DashboardQuickActions onPress={handleQuickAction} />
+              </AnimatedSection>
+
+              <AnimatedSection entering={FadeInDown.duration(380).delay(180)}>
+                <ImportTradingHomeSection
+                  mode="seller"
+                  inset={false}
+                  refreshKey={importRefreshKey}
+                  className="mt-lg"
+                />
               </AnimatedSection>
 
               <AnimatedSection entering={FadeInDown.duration(380).delay(200)}>

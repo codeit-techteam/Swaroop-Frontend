@@ -78,6 +78,16 @@ export default function SellerLayout() {
       <Stack.Screen name="price-revisions" />
       <Stack.Screen name="vehicle-slots" />
       <Stack.Screen name="procurement-workbench" />
+      <Stack.Screen name="import-trading/index" />
+      <Stack.Screen name="import-trading/mine" />
+      <Stack.Screen name="import-trading/form" />
+      <Stack.Screen name="import-trading/listing" />
+      <Stack.Screen name="import-trading/market" />
+      <Stack.Screen name="import-trading/market-listing" />
+      <Stack.Screen name="import-trading/negotiations" />
+      <Stack.Screen name="import-trading/negotiation" />
+      <Stack.Screen name="import-trading/deals" />
+      <Stack.Screen name="import-trading/deal" />
       <Stack.Screen name="search" />
       <Stack.Screen name="raise-ticket" />
     </Stack>

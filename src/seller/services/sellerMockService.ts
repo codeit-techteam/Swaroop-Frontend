@@ -1,5 +1,4 @@
 import { SELLER_NOTIFICATIONS_SEED } from '@/seller/mock/notifications';
-import { SELLER_PROFILE_SEED } from '@/seller/mock/profile';
 import {
   SELLER_SHIPMENT_ANALYTICS_SEED,
   SELLER_SHIPMENTS_SEED,
@@ -9,7 +8,6 @@ import type {
   SellerNotification,
   SellerNotificationsSnapshot,
 } from '@/seller/types/notifications';
-import type { SellerProfileData } from '@/seller/types/profile';
 import type {
   ActiveShipment,
   ShipmentAnalytics,
@@ -32,8 +30,6 @@ export const resetSellerMockState = (): void => {
   notificationsState = cloneNotificationsSnapshot();
   shipmentsState = cloneShipments();
 };
-
-export const getSellerProfile = (): SellerProfileData => ({ ...SELLER_PROFILE_SEED });
 
 export const getSellerNotificationsSnapshot = (): SellerNotificationsSnapshot => ({
   criticalActions: [...notificationsState.criticalActions],

@@ -1,8 +1,8 @@
-import { memo, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 
 import { Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
-import { type Href, useRouter } from 'expo-router';
+import { type Href, useFocusEffect, useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -37,12 +37,24 @@ export const SellerSupportScreen = memo(function SellerSupportScreen() {
     isLoading,
     isRefreshing,
     refresh,
+    reload,
     pullRefresh,
   } = useSellerSupport();
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  const hasFocused = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      if (!hasFocused.current) {
+        hasFocused.current = true;
+        return;
+      }
+      void reload().catch(() => undefined);
+    }, [reload]),
+  );
 
   const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
   const [statusSheet, setStatusSheet] = useState(false);

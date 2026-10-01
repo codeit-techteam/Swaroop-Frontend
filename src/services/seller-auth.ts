@@ -10,6 +10,7 @@ import {
 } from '@/config/development';
 import { STORAGE_KEYS } from '@/constants';
 import { useAuthStore } from '@/store/auth-store';
+import { clearCachedSellerAccount } from '@/services/seller-profile';
 import type { ApiRequestConfig } from '@/types/api';
 import { getStorageItem, removeStorageItem, setStorageItem } from '@/utils/storage';
 
@@ -89,6 +90,7 @@ function unwrapSession(body: unknown): SellerAuthSession {
 }
 
 export function persistSellerAuthSession(session: SellerAuthSession): void {
+  clearCachedSellerAccount();
   setStorageItem(STORAGE_KEYS.ACCESS_TOKEN, session.accessToken);
   if (session.refreshToken) {
     setStorageItem(STORAGE_KEYS.REFRESH_TOKEN, session.refreshToken);
@@ -192,9 +194,15 @@ export async function authenticateSellerFromOtp(
 
   try {
     if (isDemoLogin) {
-      const session = await loginSellerWithPassword(DEMO_SELLER_EMAIL, DEMO_PASSWORD);
-      persistSellerAuthSession(session);
-      return { ok: true };
+      // Same order as Seller Web: the phone's own seller account first, then
+      // the seeded seller@test.local catalog account if OTP verify is unavailable.
+      try {
+        persistSellerAuthSession(await verifySellerOtpSession(mobile, otp));
+        return { ok: true };
+      } catch {
+        persistSellerAuthSession(await loginSellerWithPassword(DEMO_SELLER_EMAIL, DEMO_PASSWORD));
+        return { ok: true };
+      }
     }
 
     try {

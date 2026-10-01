@@ -52,6 +52,7 @@ export function useSellerSupport() {
     isLoading,
     isRefreshing,
     refresh: initialLoad,
+    reload: load,
     pullRefresh: refresh,
     submitTicket,
   };

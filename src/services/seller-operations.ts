@@ -1,5 +1,6 @@
 import { apiClient } from '@/api/client';
 import { isAxiosError } from 'axios';
+import { importNotificationTarget } from '@/features/import/config';
 import type { SellerOrder, SellerOrderPaymentMethod, SellerOrderStatus } from '@/seller/modules/seller-orders/types/sellerOrders';
 import type {
   DocumentCategory,
@@ -211,27 +212,49 @@ export async function resolveSellerDocumentPreviewUri(id: string): Promise<strin
   return result.url;
 }
 
+type BackendSellerNotification = {
+  id: string;
+  title: string;
+  body: string;
+  readAt?: string | null;
+  createdAt: string;
+  status?: string;
+  entityType?: string | null;
+  entityId?: string | null;
+};
+
 export async function fetchSellerNotifications(): Promise<SellerNotificationsSnapshot> {
-  const payload = await apiClient.get<Envelope<Array<{
-    id: string;
-    title: string;
-    body: string;
-    readAt?: string | null;
-    createdAt: string;
-    status?: string;
-  }>>>('/seller/notifications?limit=50');
+  const payload = await apiClient.get<Envelope<BackendSellerNotification[]>>(
+    '/seller/notifications?limit=50',
+  );
   const items = payload.data.data ?? [];
-  const mapped: SellerNotification[] = items.map((row) => ({
-    id: row.id,
-    type: row.readAt ? 'activity' : 'action',
-    category: 'orders',
-    title: row.title,
-    description: row.body,
-    priority: row.readAt ? 'info' : 'warning',
-    time: row.createdAt,
-    isRead: Boolean(row.readAt),
-    status: row.status,
-  }));
+  const mapped: SellerNotification[] = items.map((row) => {
+    const importTarget = importNotificationTarget('seller', row.entityType, row.entityId);
+    return {
+      id: row.id,
+      type: row.readAt ? 'activity' : 'action',
+      category: 'orders',
+      title: row.title,
+      description: row.body,
+      priority: row.readAt ? 'info' : 'warning',
+      time: row.createdAt,
+      isRead: Boolean(row.readAt),
+      status: row.status,
+      ...(importTarget
+        ? {
+            route: importTarget.route,
+            actions: [
+              {
+                id: `open-${row.id}`,
+                label: importTarget.label,
+                variant: 'primary' as const,
+                route: importTarget.route,
+              },
+            ],
+          }
+        : {}),
+    };
+  });
   return {
     criticalActions: mapped.filter((item) => !item.isRead),
     recentActivity: mapped.filter((item) => item.isRead),

@@ -21,7 +21,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     infoPlist: {
       UIBackgroundModes: ['remote-notification'],
       NSLocationWhenInUseUsageDescription:
-        'PetroTrade uses your location to detect the delivery pincode and save warehouse addresses, like Amazon or Myntra.',
+        'PetroTrade uses your location to detect the delivery pincode and save warehouse addresses.',
       NSLocationAlwaysAndWhenInUseUsageDescription:
         'PetroTrade uses your location to detect the delivery pincode and save warehouse addresses.',
       NSAppTransportSecurity: {

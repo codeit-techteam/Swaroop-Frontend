@@ -1,5 +1,6 @@
 import { apiClient } from '@/api/client';
 import { isOfflineBackendFallbackEnabled } from '@/config/development';
+import { importNotificationTarget } from '@/features/import/config';
 import {
   getCustomerNotificationMocks,
   getMockUnreadCount,
@@ -158,6 +159,22 @@ export const getNotificationRoute = (notification: CustomerNotification): string
 
 const mapBackendNotification = (row: BackendNotification): CustomerNotification => {
   const metadata = row.metadata ?? {};
+  const importTarget = importNotificationTarget('customer', row.entityType, row.entityId);
+  if (importTarget) {
+    const isRead = Boolean(row.readAt) || row.status === 'READ';
+    return {
+      id: row.id,
+      category: 'marketplace',
+      title: row.title,
+      description: row.body,
+      createdAt: row.createdAt,
+      isRead,
+      priority: inferPriority(isRead, row.title),
+      reference: asString(metadata.referenceNumber) ?? asString(row.entityId),
+      actionLabel: importTarget.label,
+      route: importTarget.route,
+    };
+  }
   const category =
     asCategory(metadata.category) ??
     ENTITY_CATEGORY_MAP[row.entityType ?? ''] ??

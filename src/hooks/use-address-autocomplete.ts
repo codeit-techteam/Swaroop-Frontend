@@ -10,6 +10,7 @@ import {
   searchLocations,
   toLocationError,
 } from '@/services/location-search';
+import { logger } from '@/utils/logger';
 
 export const AUTOCOMPLETE_DEBOUNCE_MS = 300;
 export const AUTOCOMPLETE_MIN_LENGTH = 2;
@@ -93,11 +94,9 @@ export function useAddressAutocomplete(options?: {
           })
           .catch((cause: unknown) => {
             if (isAbortError(cause) || controller.signal.aborted) return;
-            setResult({
-              key,
-              suggestions: [],
-              error: toLocationError(cause, 'AUTOCOMPLETE_FAILED'),
-            });
+            const failure = toLocationError(cause, 'AUTOCOMPLETE_FAILED');
+            logger.warn('Address autocomplete failed', { code: failure.code });
+            setResult({ key, suggestions: [], error: failure });
           });
       },
       cached ? 0 : debounceMs,
@@ -121,6 +120,7 @@ export function useAddressAutocomplete(options?: {
         return location;
       } catch (cause) {
         const failure = toLocationError(cause, 'PLACE_NOT_FOUND');
+        logger.warn('Address place selection failed', { code: failure.code });
         setSelectError(failure);
         throw failure;
       } finally {

@@ -3,6 +3,7 @@ import { memo } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { Typography } from '@/components';
+import { SupportReplyPreview } from '@/components/support/SupportReplyPreview';
 import { LockIcon, PhoneIcon } from '@/icons';
 import { DEVICE_TYPE_LABELS } from '@/seller/mock/security';
 import { TICKET_STATUS_LABELS } from '@/seller/mock/support';
@@ -66,6 +67,12 @@ export const TicketCard = memo(function TicketCard({ ticket, onPress }: TicketCa
           {ticket.createdDate}
         </Typography>
       </View>
+
+      <SupportReplyPreview
+        resolutionNote={ticket.resolutionNote}
+        supportReply={ticket.supportReply}
+        awaitingReply={ticket.awaitingReply}
+      />
     </Pressable>
   );
 });

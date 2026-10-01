@@ -17,6 +17,11 @@ import { PetroTradeLogo } from '@/icons';
 import { getLoggedInRoute } from '@/navigation/post-auth-route';
 import { ROUTES } from '@/navigation/routes';
 import { getSellerInitialRoute } from '@/seller/navigation/getSellerInitialRoute';
+import {
+  isKnownExistingDemoSeller,
+  resolveSellerHomeAccess,
+} from '@/seller/navigation/resolveSellerHome';
+import { isSellerOnboardingComplete } from '@/seller/mock/mockSellerService';
 import { useSellerStore } from '@/seller/store/sellerStore';
 import { useAuthStore } from '@/store/auth-store';
 import { brandColors } from '@/theme/colors';
@@ -40,29 +45,41 @@ export const SplashScreen = () => {
     }
     hasRoutedRef.current = true;
 
-    const authStore = useAuthStore.getState();
-    authStore.resolvePendingKycApproval();
+    void (async () => {
+      const authStore = useAuthStore.getState();
+      authStore.resolvePendingKycApproval();
 
-    const { isLoggedIn, kycApproved, reviewSubmitted, onboardingCompleted } =
-      useAuthStore.getState();
-    const sellerSnapshot = useSellerStore.getState();
+      const { isLoggedIn, kycApproved, reviewSubmitted, onboardingCompleted } =
+        useAuthStore.getState();
+      const sellerSnapshot = useSellerStore.getState();
 
-    if (sellerSnapshot.sellerLoggedIn && authStore.selectedRole === 'seller') {
-      router.replace(getSellerInitialRoute(sellerSnapshot));
-      return;
-    }
+      if (sellerSnapshot.sellerLoggedIn && authStore.selectedRole === 'seller') {
+        if (!isSellerOnboardingComplete(sellerSnapshot)) {
+          const access = await resolveSellerHomeAccess();
+          if (
+            access === 'unknown' &&
+            sellerSnapshot.otpVerified &&
+            isKnownExistingDemoSeller(sellerSnapshot.mobile)
+          ) {
+            useSellerStore.getState().grantExistingSellerAccess();
+          }
+        }
+        router.replace(getSellerInitialRoute(useSellerStore.getState()));
+        return;
+      }
 
-    if (isLoggedIn) {
-      router.replace(getLoggedInRoute({ kycApproved, reviewSubmitted }));
-      return;
-    }
+      if (isLoggedIn) {
+        router.replace(getLoggedInRoute({ kycApproved, reviewSubmitted }));
+        return;
+      }
 
-    if (onboardingCompleted) {
-      router.replace(ROUTES.AUTH.ROLE_SELECTION as Href);
-      return;
-    }
+      if (onboardingCompleted) {
+        router.replace(ROUTES.AUTH.ROLE_SELECTION as Href);
+        return;
+      }
 
-    router.replace(ROUTES.ONBOARDING.INTRO_ONE as Href);
+      router.replace(ROUTES.ONBOARDING.INTRO_ONE as Href);
+    })();
   }, [router]);
 
   useEffect(() => {

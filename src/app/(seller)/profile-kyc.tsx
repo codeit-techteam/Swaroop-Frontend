@@ -3,6 +3,7 @@ import { SellerProfileDetailScreen } from '@/seller/screens/Profile/SellerProfil
 export default function SellerProfileKycRoute() {
   return (
     <SellerProfileDetailScreen
+      section="kyc"
       title="KYC Documents"
       subtitle="Uploaded identity and compliance documents"
     />

@@ -30,7 +30,9 @@ type BackendTicket = {
   subject: string;
   description: string;
   attachmentName?: string | null;
+  resolutionNote?: string | null;
   createdAt: string;
+  messages?: Array<{ sender: string; senderName: string; body: string }>;
 };
 
 const CATEGORY_TO_API: Record<TicketCategory, string> = {
@@ -105,6 +107,17 @@ function mapTicket(row: BackendTicket): SupportTicket {
     description: row.description,
     createdDate: formatCreatedDate(row.createdAt),
     attachmentName: row.attachmentName ?? undefined,
+    ...supportReplyFields(row),
+  };
+}
+
+function supportReplyFields(row: BackendTicket) {
+  const lastAgent = [...(row.messages ?? [])].reverse().find((m) => m.sender === 'AGENT');
+  const terminal = row.status === 'RESOLVED' || row.status === 'CLOSED';
+  return {
+    awaitingReply: row.status === 'WAITING_CUSTOMER',
+    supportReply: lastAgent ? { body: lastAgent.body, senderName: lastAgent.senderName } : undefined,
+    resolutionNote: terminal ? row.resolutionNote ?? undefined : undefined,
   };
 }
 
@@ -150,6 +163,7 @@ export async function createSupportTicket(
       subject: input.subject.trim(),
       description: input.description.trim(),
       attachmentName: input.attachmentName,
+      channel: 'APP',
     },
   );
   if (!payload.data.data) {

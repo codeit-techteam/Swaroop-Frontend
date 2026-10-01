@@ -33,12 +33,22 @@ export const ProfileHeader = memo(function ProfileHeader({
     >
       <View className="flex-row items-start">
         <View className="relative">
-          <View className="h-20 w-20 overflow-hidden rounded-2xl bg-brand-overlay">
-            <Image
-              source={{ uri: profile.profileImage }}
-              className="h-full w-full"
-              accessibilityLabel={`${profile.name} profile photo`}
-            />
+          <View className="h-20 w-20 items-center justify-center overflow-hidden rounded-2xl bg-brand-primary-light">
+            {profile.profileImage ? (
+              <Image
+                source={{ uri: profile.profileImage }}
+                className="h-full w-full"
+                accessibilityLabel={`${profile.name} profile photo`}
+              />
+            ) : (
+              <Typography
+                variant="headingLeft"
+                className="text-[26px] leading-[32px] text-brand-primary-dark"
+                accessibilityLabel={`${profile.name} initials`}
+              >
+                {profile.initials}
+              </Typography>
+            )}
           </View>
           {profile.verified ? <VerifiedBadge /> : null}
         </View>

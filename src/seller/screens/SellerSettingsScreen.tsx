@@ -37,8 +37,12 @@ const SETTINGS_LINKS = [
 export const SellerSettingsScreen = memo(function SellerSettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const sellerName = useSellerStore((state) => state.company.companyName || state.profile.ownerName);
-  const companyName = useSellerStore((state) => state.company.companyName);
+  const sellerName = useSellerStore(
+    (state) => state.account?.ownerName || state.company.companyName || state.profile.ownerName,
+  );
+  const companyName = useSellerStore(
+    (state) => state.account?.companyName || state.company.companyName,
+  );
   const logoutSeller = useSellerStore((state) => state.logoutSeller);
   const notifications = useSettlementStore((state) => state.notifications);
   const markNotificationRead = useSettlementStore((state) => state.markNotificationRead);

@@ -1,3 +1,5 @@
+import type { SellerAccountManager, SellerAccountSummary } from '@/services/seller-profile';
+
 export type SellerRole = 'seller';
 
 export type SellerStepId = 'company' | 'verification' | 'review';
@@ -185,12 +187,20 @@ export type SellerSnapshot = {
 
 export type SellerStoreState = SellerSnapshot & {
   isHydrated: boolean;
+  /** Seller identity from GET /seller/profile — same source as Seller Web. */
+  account: SellerAccountSummary | null;
+  accountManagers: SellerAccountManager[];
+  accountStatus: 'idle' | 'loading' | 'ready' | 'error';
+  accountError: string | null;
 };
 
 export type SellerStoreActions = {
   hydrateSellerSession: () => void;
   setMobile: (mobile: string) => void;
   markOtpVerified: () => void;
+  /** Existing seller (profile already past draft) — open the home screen. */
+  grantExistingSellerAccess: () => void;
+  refreshSellerAccount: () => Promise<SellerAccountSummary | null>;
   saveCompany: (company: SellerCompany) => void;
   setDocument: (documentId: SellerDocumentId, patch: Partial<SellerDocument>) => void;
   submitVerification: () => void;

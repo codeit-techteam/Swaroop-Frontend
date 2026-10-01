@@ -24,6 +24,10 @@ export type SupportTicket = {
   description: string;
   createdDate: string;
   attachmentName?: string;
+  /** Support asked the seller for more information. */
+  awaitingReply?: boolean;
+  supportReply?: { body: string; senderName: string };
+  resolutionNote?: string;
 };
 
 export type FaqItem = {

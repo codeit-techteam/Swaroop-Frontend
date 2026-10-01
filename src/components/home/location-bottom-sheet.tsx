@@ -12,11 +12,12 @@ import {
 
 import { LocationSuggestionList } from '@/components/location/location-suggestion-list';
 import { Typography } from '@/components/ui/typography';
-import { DELIVERY_LOCATIONS } from '@/constants/dashboard';
 import { addressKindLabel, formatDeliveryLabel, GPS_LOCATION_ID } from '@/constants/locations';
 import { useAddressAutocomplete } from '@/hooks/use-address-autocomplete';
 import { LocationPinIcon, SearchIcon } from '@/icons';
 import {
+  CURRENT_LOCATION_PHASE_LABELS,
+  type CurrentLocationPhase,
   fetchCurrentDeliveryAddress,
   lookupPincode,
   normalizedToResolved,
@@ -49,6 +50,7 @@ type LocationBottomSheetProps = {
 
 type DetectedState = {
   status: 'idle' | 'loading' | 'ready' | 'error';
+  phase?: CurrentLocationPhase;
   address?: ResolvedGeoAddress;
   error?: string;
   needsSettings?: boolean;
@@ -166,9 +168,11 @@ export const LocationBottomSheet = memo(
     );
 
     const handleUseCurrent = useCallback(async () => {
-      setDetected({ status: 'loading' });
+      setDetected({ status: 'loading', phase: 'locating' });
       try {
-        const address = await fetchCurrentDeliveryAddress();
+        const address = await fetchCurrentDeliveryAddress((phase) =>
+          setDetected((prev) => (prev.status === 'loading' ? { ...prev, phase } : prev)),
+        );
         setDetected({ status: 'ready', address });
       } catch (error) {
         const access = error instanceof LocationAccessError ? error : null;
@@ -261,17 +265,6 @@ export const LocationBottomSheet = memo(
           .includes(needle),
       );
     }, [addresses, query]);
-
-    const popular = useMemo(() => {
-      if (query.trim()) {
-        return DELIVERY_LOCATIONS.filter((location) =>
-          `${location.city} ${location.label} ${location.pincode}`
-            .toLowerCase()
-            .includes(query.trim().toLowerCase()),
-        );
-      }
-      return DELIVERY_LOCATIONS;
-    }, [query]);
 
     const currentSelected = selectedId === GPS_LOCATION_ID;
 
@@ -393,14 +386,6 @@ export const LocationBottomSheet = memo(
                 <Typography variant="roleTitle" className="text-[15px] text-brand-heading">
                   Use current location
                 </Typography>
-                {detected.status === 'idle' ? (
-                  <Typography
-                    variant="caption"
-                    className="mt-0.5 font-sans text-[12px] normal-case tracking-normal text-brand-muted"
-                  >
-                    Detect via GPS, then confirm before saving
-                  </Typography>
-                ) : null}
                 {detected.status === 'loading' ? (
                   <View className="mt-xs flex-row items-center">
                     <ActivityIndicator size="small" color={brandColors.primary} />
@@ -408,7 +393,7 @@ export const LocationBottomSheet = memo(
                       variant="caption"
                       className="ml-sm font-sans text-[12px] normal-case tracking-normal text-brand-muted"
                     >
-                      Detecting pincode and area…
+                      {CURRENT_LOCATION_PHASE_LABELS[detected.phase ?? 'locating']}
                     </Typography>
                   </View>
                 ) : null}
@@ -553,22 +538,6 @@ export const LocationBottomSheet = memo(
               />
             ))
           )}
-
-          <Typography
-            variant="fieldLabel"
-            className="mb-sm mt-sm text-[11px] tracking-[0.8px] text-brand-muted"
-          >
-            POPULAR CITIES
-          </Typography>
-          {popular.map((location) => (
-            <LocationRow
-              key={location.id}
-              title={location.city}
-              subtitle={location.label}
-              selected={location.id === selectedId}
-              onPress={() => commit(location)}
-            />
-          ))}
         </BottomSheetScrollView>
       </BottomSheetModal>
     );

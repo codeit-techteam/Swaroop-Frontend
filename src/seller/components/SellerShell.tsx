@@ -42,7 +42,9 @@ export const SellerShell = memo(function SellerShell({
 }: SellerShellProps) {
   const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const companyName = useSellerStore((state) => state.company.companyName);
+  const companyName = useSellerStore(
+    (state) => state.account?.companyName || state.company.companyName,
+  );
   const logoutSeller = useSellerStore((state) => state.logoutSeller);
 
   return (

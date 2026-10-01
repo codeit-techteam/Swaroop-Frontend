@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 
 import {
   Linking,
@@ -9,10 +9,11 @@ import {
   View,
 } from 'react-native';
 
-import { type Href, useRouter } from 'expo-router';
+import { type Href, useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppHeader, PrimaryButton, ScreenWrapper, Typography } from '@/components';
+import { SupportReplyPreview } from '@/components/support/SupportReplyPreview';
 import { ROUTES } from '@/navigation/routes';
 import {
   createCustomerSupportTicket,
@@ -57,15 +58,30 @@ function TicketRow({ ticket }: { ticket: CustomerSupportTicket }) {
             {ticket.subject}
           </Typography>
         </View>
-        <View className="rounded-full bg-sky-50 px-sm py-xs">
-          <Typography variant="badge" className="text-[10px] text-sky-700">
-            {STATUS_LABEL[ticket.status] ?? ticket.status}
+        <View
+          className={cn(
+            'rounded-full px-sm py-xs',
+            ticket.awaitingReply ? 'bg-orange-50' : 'bg-sky-50',
+          )}
+        >
+          <Typography
+            variant="badge"
+            className={cn('text-[10px]', ticket.awaitingReply ? 'text-orange-700' : 'text-sky-700')}
+          >
+            {ticket.awaitingReply
+              ? 'Awaiting your reply'
+              : (STATUS_LABEL[ticket.status] ?? ticket.status)}
           </Typography>
         </View>
       </View>
       <Typography variant="legal" className="mt-sm text-brand-body">
         {ticket.categoryLabel} · {ticket.createdDate}
       </Typography>
+      <SupportReplyPreview
+        resolutionNote={ticket.resolutionNote}
+        supportReply={ticket.supportReply}
+        awaitingReply={ticket.awaitingReply}
+      />
     </View>
   );
 }
@@ -94,9 +110,11 @@ export const CustomerSupportScreen = memo(function CustomerSupportScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load]),
+  );
 
   const handleCall = () => {
     const phone = snapshot.contacts.find((c) => c.type === 'phone');

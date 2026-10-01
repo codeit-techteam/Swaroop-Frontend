@@ -1,7 +1,9 @@
 import { apiClient } from '@/api/client';
 import {
   DEMO_CUSTOMER_EMAIL,
+  DEMO_OTP,
   DEMO_PASSWORD,
+  DEMO_PHONE,
   DEMO_SELLER_EMAIL,
   DEVELOPMENT_MODE,
 } from '@/config/development';
@@ -59,7 +61,26 @@ export function resolveDevBackendRole(): DevRole {
   return useAuthStore.getState().selectedRole === 'seller' ? 'seller' : 'customer';
 }
 
+/** Demo seller phone signs in as its own account, matching Seller Web OTP login. */
+async function loginDemoSellerPhone(): Promise<boolean> {
+  const mobile = (getStorageItem(STORAGE_KEYS.SELLER_MOBILE) ?? '').replace(/\D/g, '').slice(-10);
+  if (mobile && mobile !== DEMO_PHONE) return false;
+  try {
+    const response = await apiClient.post(
+      '/auth/otp/verify',
+      { phone: `+91${DEMO_PHONE}`, otp: DEMO_OTP, purpose: 'LOGIN', roleHint: 'SELLER' },
+      { skipAuth: true, skipRefresh: true } as ApiRequestConfig,
+    );
+    return persistTokens(unwrapAuthPayload(response.data));
+  } catch {
+    return false;
+  }
+}
+
 export async function loginDevBackend(role: DevRole = 'customer'): Promise<boolean> {
+  if (role === 'seller' && (await loginDemoSellerPhone())) {
+    return true;
+  }
   const email = role === 'seller' ? DEMO_SELLER_EMAIL : DEMO_CUSTOMER_EMAIL;
   const response = await apiClient.post(
     '/auth/login',

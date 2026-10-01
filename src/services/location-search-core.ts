@@ -57,6 +57,7 @@ export type LocationErrorCode =
   | 'PLACE_NOT_FOUND'
   | 'GEOCODING_FAILED'
   | 'INVALID_COORDINATES'
+  | 'LOCATION_OUTSIDE_SERVICE_AREA'
   | 'LOCATION_RATE_LIMITED'
   | 'NETWORK_ERROR';
 
@@ -77,6 +78,8 @@ export const LOCATION_ERROR_MESSAGES: Record<LocationErrorCode, string> = {
   GEOCODING_FAILED:
     'Unable to resolve an address for this location. Please search for your address manually.',
   INVALID_COORDINATES: 'The selected location coordinates are invalid.',
+  LOCATION_OUTSIDE_SERVICE_AREA:
+    'This location is outside India. Please choose an Indian delivery address.',
   LOCATION_RATE_LIMITED: 'Too many address lookups. Please wait a moment and try again.',
   NETWORK_ERROR: 'You appear to be offline. Check your connection and try again.',
 };
@@ -98,6 +101,7 @@ const SERVER_CODES = new Set<string>([
   'PLACE_NOT_FOUND',
   'GEOCODING_FAILED',
   'INVALID_COORDINATES',
+  'LOCATION_OUTSIDE_SERVICE_AREA',
   'LOCATION_RATE_LIMITED',
 ]);
 

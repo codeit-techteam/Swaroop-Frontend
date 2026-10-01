@@ -1,4 +1,4 @@
-import { forwardRef, memo, useCallback, useMemo, useState } from 'react';
+import { forwardRef, memo, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { ActivityIndicator, Keyboard, Pressable, View } from 'react-native';
 
@@ -19,7 +19,10 @@ import { useAddressAutocomplete } from '@/hooks/use-address-autocomplete';
 import { LocationPinIcon, SearchIcon } from '@/icons';
 import { useSellerLocationStore } from '@/seller/store/sellerLocationStore';
 import {
+  CURRENT_LOCATION_PHASE_LABELS,
+  type CurrentLocationPhase,
   fetchCurrentDeliveryAddress,
+  getSearchBiasPosition,
   normalizedToResolved,
   openLocationSettings,
 } from '@/services/location';
@@ -32,6 +35,7 @@ import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
 import { LocationAccessError, type ResolvedGeoAddress } from '@/types/address';
 import { cn } from '@/utils/cn';
+import { logger } from '@/utils/logger';
 
 /** GPS fixes this coarse cannot be saved as a pickup point. */
 const UNUSABLE_ACCURACY_METERS = 1000;
@@ -39,14 +43,18 @@ const UNUSABLE_ACCURACY_METERS = 1000;
 type Draft = {
   name: string;
   addressLine: string;
+  addressLine2: string;
+  landmark: string;
   city: string;
   state: string;
   pincode: string;
 };
 
 const toDraft = (address: ResolvedGeoAddress): Draft => ({
-  name: '',
+  name: address.name || address.area || '',
   addressLine: address.line1,
+  addressLine2: address.line2 ?? '',
+  landmark: address.landmark ?? '',
   city: address.city,
   state: address.state,
   pincode: address.postalCode.replace(/\D/g, '').slice(0, 6),
@@ -99,15 +107,30 @@ export const SellerLocationSheet = memo(
     const selectLocation = useSellerLocationStore((s) => s.selectLocation);
     const saveGeoLocation = useSellerLocationStore((s) => s.saveGeoLocation);
 
-    const autocomplete = useAddressAutocomplete();
+    const [devicePoint, setDevicePoint] = useState<{ latitude: number; longitude: number } | null>(
+      null,
+    );
+    const autocomplete = useAddressAutocomplete({ near: devicePoint });
+
+    useEffect(() => {
+      let active = true;
+      void getSearchBiasPosition().then((point) => {
+        if (active) setDevicePoint(point);
+      });
+      return () => {
+        active = false;
+      };
+    }, []);
     const [candidate, setCandidate] = useState<ResolvedGeoAddress | null>(null);
     const [draft, setDraft] = useState<Draft | null>(null);
-    const [detecting, setDetecting] = useState(false);
+    const [gpsPhase, setGpsPhase] = useState<CurrentLocationPhase | null>(null);
     const [gpsError, setGpsError] = useState<{ message: string; settings: boolean } | null>(null);
     const [saving, setSaving] = useState(false);
 
-    const searchError =
-      autocomplete.error && !isLocationServiceDown(autocomplete.error) ? autocomplete.error : null;
+    const autocompleteUnavailable = Boolean(
+      autocomplete.error && isLocationServiceDown(autocomplete.error),
+    );
+    const searchError = autocompleteUnavailable ? null : autocomplete.error;
 
     const renderBackdrop = useCallback(
       (props: BottomSheetBackdropProps) => (
@@ -126,7 +149,7 @@ export const SellerLocationSheet = memo(
       setCandidate(null);
       setDraft(null);
       setGpsError(null);
-      setDetecting(false);
+      setGpsPhase(null);
     }, [autocomplete]);
 
     const adoptCandidate = useCallback((address: ResolvedGeoAddress) => {
@@ -149,19 +172,20 @@ export const SellerLocationSheet = memo(
     );
 
     const handleUseCurrent = useCallback(async () => {
-      setDetecting(true);
+      setGpsPhase('locating');
       setGpsError(null);
       try {
-        adoptCandidate(await fetchCurrentDeliveryAddress());
+        adoptCandidate(await fetchCurrentDeliveryAddress(setGpsPhase));
       } catch (error) {
         const access = error instanceof LocationAccessError ? error : null;
+        logger.warn('Seller current location failed', { code: access?.code ?? 'unknown' });
         setGpsError({
           message:
             access?.message ?? 'Unable to detect your location. Search for the address instead.',
           settings: access?.code === 'PERMISSION_DENIED' || access?.code === 'SERVICES_DISABLED',
         });
       } finally {
-        setDetecting(false);
+        setGpsPhase(null);
       }
     }, [adoptCandidate]);
 
@@ -173,7 +197,7 @@ export const SellerLocationSheet = memo(
       lowAccuracy && (candidate?.accuracyMeters ?? 0) > UNUSABLE_ACCURACY_METERS;
 
     const handleSave = useCallback(async () => {
-      if (!candidate || !draft) return;
+      if (!candidate || !draft || saving) return;
       if (coordsUnusable) {
         Toast.show({
           type: 'error',
@@ -182,11 +206,15 @@ export const SellerLocationSheet = memo(
         });
         return;
       }
+      if (!draft.addressLine.trim()) {
+        Toast.show({ type: 'error', text1: 'Enter the street or warehouse address' });
+        return;
+      }
       if (!draft.city.trim() || !draft.state.trim()) {
         Toast.show({ type: 'error', text1: 'Enter the city and state for this location' });
         return;
       }
-      if (draft.pincode && !PINCODE_REGEX.test(draft.pincode)) {
+      if (!PINCODE_REGEX.test(draft.pincode)) {
         Toast.show({ type: 'error', text1: 'Enter a valid 6-digit pincode' });
         return;
       }
@@ -197,9 +225,9 @@ export const SellerLocationSheet = memo(
           latitude: candidate.latitude,
           longitude: candidate.longitude,
           name: draft.name.trim() || `${city} Warehouse`,
-          addressLine: draft.addressLine.trim() || candidate.area || city,
-          addressLine2: candidate.line2,
-          landmark: candidate.landmark,
+          addressLine: draft.addressLine.trim(),
+          addressLine2: draft.addressLine2.trim() || undefined,
+          landmark: draft.landmark.trim() || undefined,
           locality: candidate.area,
           city,
           district: candidate.district,
@@ -231,7 +259,7 @@ export const SellerLocationSheet = memo(
       } finally {
         setSaving(false);
       }
-    }, [candidate, coordsUnusable, dismiss, draft, saveGeoLocation]);
+    }, [candidate, coordsUnusable, dismiss, draft, saveGeoLocation, saving]);
 
     const handleSelectSaved = useCallback(
       async (locationId: string) => {
@@ -315,10 +343,38 @@ export const SellerLocationSheet = memo(
                 </Typography>
               ) : null}
 
+              {autocompleteUnavailable ? null : (
+                <>
+                  <View className="mb-sm h-11 flex-row items-center rounded-xl border border-brand-border bg-brand-surface px-md">
+                    <SearchIcon size={iconSizes.sm} color={brandColors.muted} />
+                    <BottomSheetTextInput
+                      value={autocomplete.query}
+                      onChangeText={autocomplete.setQuery}
+                      placeholder="Search area, building or landmark"
+                      placeholderTextColor={brandColors.footer}
+                      autoCorrect={false}
+                      returnKeyType="search"
+                      className="ml-sm flex-1 font-sans text-[14px] text-brand-heading"
+                    />
+                  </View>
+                  <LocationSuggestionList
+                    suggestions={autocomplete.suggestions}
+                    status={
+                      autocomplete.status === 'error' && !searchError ? 'idle' : autocomplete.status
+                    }
+                    error={searchError}
+                    resolvingPlaceId={autocomplete.resolvingPlaceId}
+                    onSelect={(suggestion) => {
+                      void handlePickSuggestion(suggestion);
+                    }}
+                  />
+                </>
+              )}
+
               <Field
-                label="LOCATION NAME"
+                label="SAVE AS"
                 value={draft.name}
-                placeholder={draft.city ? `${draft.city} Warehouse` : 'Main warehouse'}
+                placeholder={draft.city ? `${draft.city} Warehouse` : 'Optional nickname'}
                 onChangeText={(name) => setDraft((prev) => (prev ? { ...prev, name } : prev))}
               />
               <Field
@@ -327,6 +383,22 @@ export const SellerLocationSheet = memo(
                 placeholder="Plot / street / industrial estate"
                 onChangeText={(addressLine) =>
                   setDraft((prev) => (prev ? { ...prev, addressLine } : prev))
+                }
+              />
+              <Field
+                label="ADDRESS LINE 2"
+                value={draft.addressLine2}
+                placeholder="Area, locality (optional)"
+                onChangeText={(addressLine2) =>
+                  setDraft((prev) => (prev ? { ...prev, addressLine2 } : prev))
+                }
+              />
+              <Field
+                label="LANDMARK"
+                value={draft.landmark}
+                placeholder="Near highway / port (optional)"
+                onChangeText={(landmark) =>
+                  setDraft((prev) => (prev ? { ...prev, landmark } : prev))
                 }
               />
               <View className="flex-row gap-sm">
@@ -397,30 +469,30 @@ export const SellerLocationSheet = memo(
                 onPress={() => {
                   void handleUseCurrent();
                 }}
-                disabled={detecting}
+                disabled={gpsPhase != null}
                 accessibilityRole="button"
                 accessibilityLabel="Use current location"
+                accessibilityState={{ busy: gpsPhase != null, disabled: gpsPhase != null }}
                 className="mb-md rounded-xl border border-brand-border bg-brand-white px-md py-md"
               >
                 <View className="flex-row items-center">
-                  {detecting ? (
+                  {gpsPhase ? (
                     <ActivityIndicator size="small" color={brandColors.primary} />
                   ) : (
                     <LocationPinIcon color={brandColors.primary} />
                   )}
                   <View className="ml-md flex-1">
                     <Typography variant="roleTitle" className="text-[15px] text-brand-heading">
-                      {detecting ? 'Detecting your location…' : 'Use current location'}
+                      {gpsPhase ? CURRENT_LOCATION_PHASE_LABELS[gpsPhase] : 'Use current location'}
                     </Typography>
-                    <Typography
-                      variant="caption"
-                      className={cn(
-                        'mt-0.5 font-sans text-[12px] normal-case tracking-normal',
-                        gpsError ? 'text-brand-error' : 'text-brand-muted',
-                      )}
-                    >
-                      {gpsError?.message ?? 'Detect via GPS, then confirm before saving'}
-                    </Typography>
+                    {gpsError ? (
+                      <Typography
+                        variant="caption"
+                        className="mt-0.5 font-sans text-[12px] normal-case tracking-normal text-brand-error"
+                      >
+                        {gpsError.message}
+                      </Typography>
+                    ) : null}
                   </View>
                 </View>
                 {gpsError?.settings ? (

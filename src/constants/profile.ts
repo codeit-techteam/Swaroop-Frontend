@@ -128,6 +128,12 @@ export const LOGISTICS_MENU_ITEMS = [
     subtitleKey: 'credit' as const,
     route: 'credit-facility',
   },
+  {
+    id: 'import-trading',
+    title: 'Import Trading',
+    subtitleKey: 'import' as const,
+    route: 'import-trading',
+  },
 ] as const;
 
 export const SETTINGS_MENU_ITEMS = [

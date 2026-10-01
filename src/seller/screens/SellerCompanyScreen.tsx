@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
-import { View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 
 import { type Href, useRouter } from 'expo-router';
 
@@ -25,6 +25,11 @@ import {
   SELLER_STATE_OPTIONS,
 } from '@/seller/constants';
 import { useSellerStore } from '@/seller/store/sellerStore';
+import {
+  isKnownExistingDemoSeller,
+  resolveSellerHomeAccess,
+} from '@/seller/navigation/resolveSellerHome';
+import { brandColors } from '@/theme/colors';
 import { type GstParseResult, parseGstin } from '@/seller/utils/gst';
 import {
   saveSellerOnboardingDraft,
@@ -85,6 +90,37 @@ export const SellerCompanyScreen = () => {
   );
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [checkingAccount, setCheckingAccount] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+
+    void (async () => {
+      const access = await resolveSellerHomeAccess();
+      if (!active) return;
+
+      const snapshot = useSellerStore.getState();
+      const openHome =
+        access === 'home' ||
+        (access === 'unknown' &&
+          snapshot.otpVerified &&
+          isKnownExistingDemoSeller(snapshot.mobile));
+
+      if (openHome) {
+        if (access !== 'home') {
+          snapshot.grantExistingSellerAccess();
+        }
+        router.replace(ROUTES.SELLER.DASHBOARD as Href);
+        return;
+      }
+
+      setCheckingAccount(false);
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [router]);
 
   const stateValue = watch('state');
   const gstValue = watch('gst');
@@ -127,6 +163,16 @@ export const SellerCompanyScreen = () => {
       setSaving(false);
     }
   };
+
+  if (checkingAccount) {
+    return (
+      <ScreenWrapper className="bg-brand-background">
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator color={brandColors.primary} />
+        </View>
+      </ScreenWrapper>
+    );
+  }
 
   return (
     <ScreenWrapper scrollable className="bg-brand-background">

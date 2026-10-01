@@ -56,6 +56,16 @@ export default function CustomerLayout() {
       <Stack.Screen name="profile/document-detail" />
       <Stack.Screen name="profile/bulk-logistics-quote" />
       <Stack.Screen name="notifications/index" />
+      <Stack.Screen name="import/index" />
+      <Stack.Screen name="import/mine" />
+      <Stack.Screen name="import/form" />
+      <Stack.Screen name="import/listing" />
+      <Stack.Screen name="import/market" />
+      <Stack.Screen name="import/market-listing" />
+      <Stack.Screen name="import/negotiations" />
+      <Stack.Screen name="import/negotiation" />
+      <Stack.Screen name="import/deals" />
+      <Stack.Screen name="import/deal" />
     </Stack>
   );
 }

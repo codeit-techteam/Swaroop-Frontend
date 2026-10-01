@@ -368,8 +368,44 @@ export async function getCurrentDevicePosition(): Promise<DevicePosition> {
   };
 }
 
-export async function fetchCurrentDeliveryAddress(): Promise<ResolvedGeoAddress> {
+/**
+ * Recent device position for biasing autocomplete. Never prompts: returns null
+ * unless location permission was already granted and a fix is cached.
+ */
+export async function getSearchBiasPosition(): Promise<{
+  latitude: number;
+  longitude: number;
+} | null> {
+  try {
+    const permission = await Location.getForegroundPermissionsAsync();
+    if (permission.status !== 'granted') return null;
+    const lastKnown = await Location.getLastKnownPositionAsync({
+      maxAge: LAST_KNOWN_MAX_AGE_MS,
+      requiredAccuracy: 5000,
+    });
+    if (!lastKnown) return null;
+    const { latitude, longitude } = lastKnown.coords;
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+    if (latitude === 0 && longitude === 0) return null;
+    return { latitude, longitude };
+  } catch {
+    return null;
+  }
+}
+
+export type CurrentLocationPhase = 'locating' | 'resolving';
+
+export const CURRENT_LOCATION_PHASE_LABELS: Record<CurrentLocationPhase, string> = {
+  locating: 'Getting your location…',
+  resolving: 'Resolving address…',
+};
+
+export async function fetchCurrentDeliveryAddress(
+  onPhase?: (phase: CurrentLocationPhase) => void,
+): Promise<ResolvedGeoAddress> {
+  onPhase?.('locating');
   const position = await getCurrentDevicePosition();
+  onPhase?.('resolving');
   const resolved = await reverseGeocodeCoords(position.latitude, position.longitude, 'GPS');
   return { ...resolved, accuracyMeters: position.accuracyMeters, captureSource: 'GPS' };
 }
