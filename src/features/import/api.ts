@@ -3,6 +3,7 @@ import { sidePath } from '@/features/import/config';
 import type {
   ImportBrand,
   ImportDeal,
+  ImportDealDetail,
   ImportDocument,
   ImportGrade,
   ImportListing,
@@ -14,6 +15,11 @@ import type {
   ImportPaymentTerm,
   ImportPort,
   ImportProduct,
+  ImportShipment,
+  ImportShipmentCreateInput,
+  ImportShipmentDetailsInput,
+  ImportShipmentEventInput,
+  ImportShipmentStatus,
   ImportSide,
   ImportSummary,
   ImportTermsInput,
@@ -228,7 +234,34 @@ export const closeNegotiation = (id: string, action: 'reject' | 'withdraw', note
 export const fetchDeals = (query: { status?: string; page?: number; limit?: number }) =>
   getPaged<ImportDeal>(`/import/deals${qs(query)}`);
 
-export const fetchDeal = (id: string) => get<ImportDeal>(`/import/deals/${id}`);
+export const fetchDeal = (id: string) => get<ImportDealDetail>(`/import/deals/${id}`);
 
 export const confirmDeal = (id: string, idempotencyKey: string) =>
-  post<ImportDeal>(`/import/deals/${id}/confirm`, {}, idempotencyKey);
+  post<ImportDealDetail>(`/import/deals/${id}/confirm`, {}, idempotencyKey);
+
+// Shipments -----------------------------------------------------------------
+
+export const listShipments = (query: {
+  status?: ImportShipmentStatus;
+  dealId?: string;
+  search?: string;
+  as?: 'buyer' | 'seller';
+  page?: number;
+  limit?: number;
+}) => getPaged<ImportShipment>(`/import/shipments${qs(query)}`);
+
+export const getShipment = (id: string) => get<ImportShipment>(`/import/shipments/${id}`);
+
+export const createShipment = (
+  dealId: string,
+  body: ImportShipmentCreateInput,
+  idempotencyKey: string,
+) => post<ImportShipment>(`/import/deals/${dealId}/shipments`, body, idempotencyKey);
+
+export const updateShipment = (
+  id: string,
+  body: ImportShipmentDetailsInput & { version: number },
+) => patch<ImportShipment>(`/import/shipments/${id}`, body);
+
+export const addShipmentEvent = (id: string, body: ImportShipmentEventInput) =>
+  post<ImportShipment>(`/import/shipments/${id}/events`, body);

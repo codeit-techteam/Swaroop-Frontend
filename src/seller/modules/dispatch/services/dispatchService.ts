@@ -18,7 +18,6 @@ import {
   fetchSellerDispatchesPage,
   type SellerDispatchRecord,
 } from '@/services/seller-dispatches';
-import { logger } from '@/utils/logger';
 
 type DispatchSeed = {
   orders: DispatchOrder[];

@@ -5,7 +5,6 @@ import { Pressable, View } from 'react-native';
 import { DialogShell } from '@/components/ui/app-dialog';
 import { Typography } from '@/components/ui/typography';
 import { ClockIcon } from '@/icons';
-import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
 
 type QuoteExpiredModalProps = {

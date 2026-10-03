@@ -1,8 +1,9 @@
 /**
  * Frontend-only development authentication flags.
- * Flip DEVELOPMENT_MODE to false when wiring a real backend later.
+ * Tied to the Metro dev build so release APK/IPA builds never ship the demo
+ * shortcuts below (local OTP, shared demo accounts, offline sessions).
  */
-export const DEVELOPMENT_MODE = true;
+export const DEVELOPMENT_MODE = __DEV__;
 
 /** Shared demo identity across Customer + Seller mobile panels. */
 export const DEMO_PHONE = '8240890242';
@@ -35,25 +36,15 @@ export const DEV_RESET_VERSION = 1;
 export const DEV_FEATURES = {
   /** Accept DEMO_OTP without SMS / API. */
   localOtpValidation: true,
-  /** Simulate KYC verification completing after a delay in dev. */
-  autoKycApproval: true,
-  /** Persist login + KYC locally via AsyncStorage. */
+  /** Persist login locally via AsyncStorage. KYC approval always comes from the backend. */
   localStorageLogin: true,
   /** Allow local session when catalog backend is unreachable. */
   allowOfflineBackendFallback: true,
-  /** Dev-only wait before KYC is marked approved after submission. */
-  kycVerificationDelayMs: 8000,
 } as const;
 
 export const isDevAuthEnabled = (): boolean => DEVELOPMENT_MODE;
 
 export const isLocalOtpEnabled = (): boolean => DEVELOPMENT_MODE && DEV_FEATURES.localOtpValidation;
-
-export const isAutoKycApprovalEnabled = (): boolean =>
-  DEVELOPMENT_MODE && DEV_FEATURES.autoKycApproval;
-
-export const getKycVerificationDelayMs = (): number =>
-  isAutoKycApprovalEnabled() ? DEV_FEATURES.kycVerificationDelayMs : 0;
 
 export const isLocalStorageLoginEnabled = (): boolean =>
   DEVELOPMENT_MODE && DEV_FEATURES.localStorageLogin;

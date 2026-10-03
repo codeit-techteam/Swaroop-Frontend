@@ -5,7 +5,13 @@ import { Pressable, View } from 'react-native';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 
 import { AuthCard, FooterLinks, OtpInput, ScreenWrapper, Typography } from '@/components';
-import { DEMO_OTP, DEMO_USER_NAME, isOfflineBackendFallbackEnabled } from '@/config/development';
+import {
+  DEMO_OTP,
+  DEMO_USER_NAME,
+  DEVELOPMENT_MODE,
+  isOfflineBackendFallbackEnabled,
+} from '@/config/development';
+import { SellerHeader, SellerPrimaryButton } from '@/seller/components';
 import { SELLER_RESEND_SECONDS } from '@/seller/constants';
 import { getSellerInitialRoute } from '@/seller/navigation/getSellerInitialRoute';
 import {
@@ -13,11 +19,7 @@ import {
   resolveSellerHomeAccess,
 } from '@/seller/navigation/resolveSellerHome';
 import { useSellerStore } from '@/seller/store/sellerStore';
-import {
-  authenticateSellerFromOtp,
-  requestSellerOtpSend,
-} from '@/services/seller-auth';
-import { SellerHeader, SellerPrimaryButton } from '@/seller/components';
+import { authenticateSellerFromOtp, requestSellerOtpSend } from '@/services/seller-auth';
 
 const formatTimer = (seconds: number): string => `00:${seconds.toString().padStart(2, '0')}`;
 
@@ -67,8 +69,7 @@ export const SellerOtpScreen = () => {
 
       const access = await resolveSellerHomeAccess();
       const openHome =
-        access === 'home' ||
-        (access === 'unknown' && isKnownExistingDemoSeller(mobile, otp));
+        access === 'home' || (access === 'unknown' && isKnownExistingDemoSeller(mobile, otp));
 
       if (openHome && access !== 'home') {
         grantExistingSellerAccess();
@@ -111,9 +112,11 @@ export const SellerOtpScreen = () => {
         <Typography variant="subheadingLeft" className="mt-sm">
           Enter the 6-digit OTP sent to +91 {params.mobile ?? ''}.
         </Typography>
-        <Typography variant="legal" className="mt-sm text-left">
-          Dev login: {DEMO_USER_NAME} · OTP {DEMO_OTP}
-        </Typography>
+        {DEVELOPMENT_MODE ? (
+          <Typography variant="legal" className="mt-sm text-left">
+            Dev login: {DEMO_USER_NAME} · OTP {DEMO_OTP}
+          </Typography>
+        ) : null}
 
         <OtpInput
           value={otp}
@@ -152,11 +155,13 @@ export const SellerOtpScreen = () => {
           }}
         />
 
-        <View className="mt-lg rounded-2xl bg-brand-surface p-md">
-          <Typography variant="legal" className="text-left">
-            Demo OTP: {DEMO_OTP} (same as Seller Web)
-          </Typography>
-        </View>
+        {DEVELOPMENT_MODE ? (
+          <View className="mt-lg rounded-2xl bg-brand-surface p-md">
+            <Typography variant="legal" className="text-left">
+              Demo OTP: {DEMO_OTP} (same as Seller Web)
+            </Typography>
+          </View>
+        ) : null}
       </AuthCard>
 
       <FooterLinks className="mt-2xl" />

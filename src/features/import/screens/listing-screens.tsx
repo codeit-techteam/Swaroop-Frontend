@@ -7,6 +7,7 @@ import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import Toast from 'react-native-toast-message';
 
 import { PrimaryButton, Typography } from '@/components';
+import { useCanManageImport, ViewOnlyNotice } from '@/features/import/access';
 import {
   deleteListing,
   dismissMatch,
@@ -56,6 +57,7 @@ export function ImportOwnListingScreen({ mode }: { mode: ImportMode }) {
   const [tab, setTab] = useState<OwnTab>('matches');
   const [busy, setBusy] = useState<string | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const canManage = useCanManageImport(mode);
 
   const state = useImportLoader(async () => {
     const listing = await fetchListing(cfg.ownSide, id);
@@ -103,7 +105,7 @@ export function ImportOwnListingScreen({ mode }: { mode: ImportMode }) {
   }
 
   const actions: { label: string; onPress: () => void; danger?: boolean }[] = [];
-  if (l) {
+  if (l && canManage) {
     if (editable) {
       actions.push({
         label: l.status === 'DRAFT' ? 'Continue draft' : 'Edit',
@@ -163,6 +165,7 @@ export function ImportOwnListingScreen({ mode }: { mode: ImportMode }) {
       ) : (
         <>
           <ListingHeader listing={l} />
+          {!canManage ? <ViewOnlyNotice /> : null}
           {l.status === 'CANCELLED' && l.cancelReason ? (
             <Notice tone="neutral">Cancellation reason: {l.cancelReason}</Notice>
           ) : null}
@@ -204,7 +207,9 @@ export function ImportOwnListingScreen({ mode }: { mode: ImportMode }) {
             ]}
           />
           {tab === 'details' ? <ListingDetails listing={l} /> : null}
-          {tab === 'documents' ? <DocumentsCard listingId={l.id} canManage={editable} /> : null}
+          {tab === 'documents' ? (
+            <DocumentsCard listingId={l.id} canManage={editable && canManage} />
+          ) : null}
           {tab === 'negotiations' ? (
             state.data.negotiations.length === 0 ? (
               <EmptyBlock
@@ -244,6 +249,7 @@ export function ImportOwnListingScreen({ mode }: { mode: ImportMode }) {
               mode={mode}
               listing={l}
               matches={state.data.matches}
+              canManage={canManage}
               onDismiss={async (matchId) => {
                 try {
                   await dismissMatch(cfg.ownSide, l.id, matchId);
@@ -273,11 +279,13 @@ function MatchesPanel({
   mode,
   listing,
   matches,
+  canManage,
   onDismiss,
 }: {
   mode: ImportMode;
   listing: ImportListing;
   matches: ImportMatch[];
+  canManage: boolean;
   onDismiss: (matchId: string) => Promise<void>;
 }) {
   const cfg = IMPORT_MODES[mode];
@@ -382,7 +390,7 @@ function MatchesPanel({
                 {expanded === m.id ? 'Hide scoring' : 'Why this score'}
               </Typography>
             </Pressable>
-            {m.status === 'SUGGESTED' ? (
+            {m.status === 'SUGGESTED' && canManage ? (
               <Pressable onPress={() => void onDismiss(m.id)}>
                 <Typography variant="link" className="text-brand-muted">
                   Dismiss
@@ -403,6 +411,7 @@ export function ImportMarketListingScreen({ mode }: { mode: ImportMode }) {
   const router = useRouter();
   const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
   const [offerOpen, setOfferOpen] = useState(false);
+  const canManage = useCanManageImport(mode);
   const state = useImportLoader(async () => {
     const [listing, master] = await Promise.all([
       fetchListing(cfg.marketSide, id),
@@ -428,7 +437,7 @@ export function ImportMarketListingScreen({ mode }: { mode: ImportMode }) {
               label={`Open negotiation ${existing.referenceNumber}`}
               onPress={() => pushImport(router, cfg.routes.negotiation, { id: existing.id })}
             />
-          ) : open ? (
+          ) : open && canManage ? (
             <PrimaryButton label="Make an offer" onPress={() => setOfferOpen(true)} />
           ) : null
         ) : null
@@ -448,6 +457,7 @@ export function ImportMarketListingScreen({ mode }: { mode: ImportMode }) {
       ) : (
         <>
           <ListingHeader listing={l} />
+          {!canManage ? <ViewOnlyNotice /> : null}
           {existing && existing.status !== 'OPEN' ? (
             <Notice tone="neutral">
               Your previous negotiation {existing.referenceNumber} is{' '}

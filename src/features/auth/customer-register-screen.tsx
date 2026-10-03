@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 
 import { Pressable, View } from 'react-native';
 
@@ -11,6 +11,11 @@ import { CountryPicker, InputField, PrimaryButton, ScreenWrapper, Typography } f
 import { LockIcon, PetroTradeLogo } from '@/icons';
 import { useZodForm } from '@/lib/forms';
 import { ROUTES } from '@/navigation/routes';
+import {
+  customerAuthErrorMessage,
+  isOtpCooldownError,
+  sendCustomerOtp,
+} from '@/services/customer-auth';
 import { gstSchema, phoneSchema, requiredString } from '@/utils/validators';
 
 const registerSchema = z.object({
@@ -24,6 +29,8 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export const CustomerRegisterScreen = () => {
   const router = useRouter();
+  const [isSending, setIsSending] = useState(false);
+  const [sendError, setSendError] = useState<string | undefined>();
 
   const {
     control,
@@ -40,7 +47,19 @@ export const CustomerRegisterScreen = () => {
   });
 
   const onRegister = useCallback(
-    (values: RegisterFormValues) => {
+    async (values: RegisterFormValues) => {
+      setIsSending(true);
+      setSendError(undefined);
+      try {
+        await sendCustomerOtp(values.mobile, 'SIGNUP');
+      } catch (error) {
+        if (!isOtpCooldownError(error)) {
+          setSendError(customerAuthErrorMessage(error, 'Unable to send OTP. Please try again.'));
+          return;
+        }
+      } finally {
+        setIsSending(false);
+      }
       router.push({
         pathname: ROUTES.AUTH.OTP_VERIFICATION,
         params: { phone: values.mobile, source: 'register' },
@@ -110,7 +129,7 @@ export const CustomerRegisterScreen = () => {
               value={value}
               onChangeText={onChange}
               onBlur={onBlur}
-              error={fieldState.error?.message}
+              error={fieldState.error?.message ?? sendError}
               leftSlot={<CountryPicker />}
             />
           )}
@@ -137,6 +156,7 @@ export const CustomerRegisterScreen = () => {
         label="Register & Continue"
         className="mt-2xl"
         disabled={!isValid}
+        loading={isSending}
         onPress={handleSubmit(onRegister)}
       />
 

@@ -16,13 +16,14 @@ import { LoadingSpinner, Typography } from '@/components';
 import { PetroTradeLogo } from '@/icons';
 import { getLoggedInRoute } from '@/navigation/post-auth-route';
 import { ROUTES } from '@/navigation/routes';
+import { isSellerOnboardingComplete } from '@/seller/mock/mockSellerService';
 import { getSellerInitialRoute } from '@/seller/navigation/getSellerInitialRoute';
 import {
   isKnownExistingDemoSeller,
   resolveSellerHomeAccess,
 } from '@/seller/navigation/resolveSellerHome';
-import { isSellerOnboardingComplete } from '@/seller/mock/mockSellerService';
 import { useSellerStore } from '@/seller/store/sellerStore';
+import { refreshKycStatus } from '@/services/kyc-status-sync';
 import { useAuthStore } from '@/store/auth-store';
 import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
@@ -47,13 +48,16 @@ export const SplashScreen = () => {
 
     void (async () => {
       const authStore = useAuthStore.getState();
-      authStore.resolvePendingKycApproval();
+      const sellerSnapshot = useSellerStore.getState();
+      const sellerSession = sellerSnapshot.sellerLoggedIn && authStore.selectedRole === 'seller';
+      if (authStore.isLoggedIn && !sellerSession) {
+        await refreshKycStatus();
+      }
 
       const { isLoggedIn, kycApproved, reviewSubmitted, onboardingCompleted } =
         useAuthStore.getState();
-      const sellerSnapshot = useSellerStore.getState();
 
-      if (sellerSnapshot.sellerLoggedIn && authStore.selectedRole === 'seller') {
+      if (sellerSession) {
         if (!isSellerOnboardingComplete(sellerSnapshot)) {
           const access = await resolveSellerHomeAccess();
           if (

@@ -14,12 +14,16 @@ import {
 } from '@/components';
 import { ClockIcon, OtpIllustration } from '@/icons';
 import { getLoggedInRoute } from '@/navigation/post-auth-route';
-import { isOfflineBackendFallbackEnabled } from '@/config/development';
-import { getInvalidOtpMessage, validateDevOtp } from '@/services/dev-auth';
-import { loginDevBackend } from '@/services/backend-session';
+import {
+  customerAuthErrorMessage,
+  isOtpCooldownError,
+  sendCustomerOtp,
+  verifyCustomerOtp,
+  type CustomerOtpPurpose,
+} from '@/services/customer-auth';
+import { refreshKycStatus } from '@/services/kyc-status-sync';
 import { useAuthStore } from '@/store/auth-store';
 import { wp } from '@/utils/responsive';
-import { logger } from '@/utils/logger';
 
 const RESEND_SECONDS = 44;
 
@@ -45,6 +49,8 @@ export const OtpVerificationScreen = () => {
   const [otp, setOtp] = useState('');
   const [otpError, setOtpError] = useState<string | undefined>();
   const [secondsLeft, setSecondsLeft] = useState(RESEND_SECONDS);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const purpose: CustomerOtpPurpose = params.source === 'register' ? 'SIGNUP' : 'LOGIN';
 
   const phoneDisplay = useMemo(() => formatPhone(params.phone), [params.phone]);
   const isOtpComplete = otp.length === 6;
@@ -64,14 +70,23 @@ export const OtpVerificationScreen = () => {
     router.back();
   }, [router]);
 
-  const handleResend = useCallback(() => {
+  const handleResend = useCallback(async () => {
     if (!canResend) {
       return;
     }
     setOtp('');
     setOtpError(undefined);
-    setSecondsLeft(RESEND_SECONDS);
-  }, [canResend]);
+    try {
+      await sendCustomerOtp(params.phone ?? '', purpose);
+      setSecondsLeft(RESEND_SECONDS);
+    } catch (error) {
+      if (isOtpCooldownError(error)) {
+        setSecondsLeft(RESEND_SECONDS);
+        return;
+      }
+      setOtpError(customerAuthErrorMessage(error, 'Unable to resend OTP. Please try again.'));
+    }
+  }, [canResend, params.phone, purpose]);
 
   const handleOtpChange = useCallback((value: string) => {
     setOtp(value);
@@ -79,36 +94,35 @@ export const OtpVerificationScreen = () => {
   }, []);
 
   const handleVerify = useCallback(async () => {
-    if (!isOtpComplete) {
-      return;
-    }
-
-    if (!validateDevOtp(otp)) {
-      setOtpError(getInvalidOtpMessage());
+    if (!isOtpComplete || isVerifying) {
       return;
     }
 
     const mobileNumber = params.phone ?? '';
     const role = useAuthStore.getState().selectedRole === 'seller' ? 'seller' : 'customer';
+    setIsVerifying(true);
     try {
-      await loginDevBackend(role);
+      await verifyCustomerOtp(
+        mobileNumber,
+        otp,
+        purpose,
+        role === 'seller' ? 'SELLER' : 'CUSTOMER',
+      );
     } catch (error) {
-      logger.error('Dev OTP backend login failed', {
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
-      if (!isOfflineBackendFallbackEnabled()) {
-        setOtpError('Unable to authenticate against the catalog backend.');
-        return;
-      }
-      // Backend unreachable (common on device/simulator localhost) — continue with local demo session.
+      setOtpError(customerAuthErrorMessage(error, 'Invalid OTP. Please try again.'));
+      setIsVerifying(false);
+      return;
     }
 
     completeLogin(mobileNumber);
-    useAuthStore.getState().resolvePendingKycApproval();
+    if (role === 'customer') {
+      await refreshKycStatus();
+    }
+    setIsVerifying(false);
 
     const { kycApproved, reviewSubmitted } = useAuthStore.getState();
     router.replace(getLoggedInRoute({ kycApproved, reviewSubmitted }));
-  }, [completeLogin, isOtpComplete, otp, params.phone, router]);
+  }, [completeLogin, isOtpComplete, isVerifying, otp, params.phone, purpose, router]);
 
   return (
     <ScreenWrapper className="bg-brand-white">
@@ -134,7 +148,9 @@ export const OtpVerificationScreen = () => {
             <Typography variant="legal">Resend code in {formatTimer(secondsLeft)}</Typography>
           </View>
           <Pressable
-            onPress={handleResend}
+            onPress={() => {
+              void handleResend();
+            }}
             disabled={!canResend}
             accessibilityRole="button"
             accessibilityState={{ disabled: !canResend }}
@@ -150,7 +166,14 @@ export const OtpVerificationScreen = () => {
       </View>
 
       <View className="pb-md">
-        <PrimaryButton label="Verify & Continue" disabled={!isOtpComplete} onPress={handleVerify} />
+        <PrimaryButton
+          label="Verify & Continue"
+          disabled={!isOtpComplete}
+          loading={isVerifying}
+          onPress={() => {
+            void handleVerify();
+          }}
+        />
         <Typography variant="legal" className="mt-lg px-md">
           Secure multi-factor authentication for authorized PetroTrade personnel only.
         </Typography>

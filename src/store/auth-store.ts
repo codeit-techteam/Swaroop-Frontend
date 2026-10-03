@@ -11,7 +11,6 @@ import {
   saveKYC,
   saveUser,
 } from '@/services/storage';
-import { canAccessHomeAfterSubmission } from '@/services/kyc-verification';
 import {
   getCurrentUser,
   isDemoUser,
@@ -162,14 +161,13 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
           (isAccountSwitch ? null : get().selectedRole) ??
           ('buyer' as UserRole),
         displayName:
-          existingUser?.displayName ?? (isAccountSwitch ? undefined : get().userProfile?.displayName),
+          existingUser?.displayName ??
+          (isAccountSwitch ? undefined : get().userProfile?.displayName),
       };
 
       saveAuth(auth);
       saveUser(userProfile);
     }
-
-    get().resolvePendingKycApproval();
 
     const current = getCurrentUser();
     applyCurrentUserToStore(set, current);
@@ -195,32 +193,17 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     });
   },
 
-  approveKyc: () => {
+  syncKycStatus: ({ status, kycVerified, submittedAt }) => {
     const existing = getKYC();
-    const kyc = {
-      kycApproved: true,
-      reviewSubmitted: true,
+    const reviewSubmitted = kycVerified || status !== 'NOT_SUBMITTED';
+    const submittedMs = submittedAt ? Date.parse(submittedAt) : NaN;
+    saveKYC({
+      kycApproved: kycVerified,
+      reviewSubmitted,
       referenceId: get().referenceId ?? existing.referenceId,
-      submittedAt: existing.submittedAt,
-    };
-    saveKYC(kyc);
-    set({
-      kycApproved: true,
-      reviewSubmitted: true,
+      submittedAt: Number.isFinite(submittedMs) ? submittedMs : existing.submittedAt,
     });
-  },
-
-  resolvePendingKycApproval: () => {
-    if (get().kycApproved) {
-      return true;
-    }
-
-    if (!canAccessHomeAfterSubmission()) {
-      return false;
-    }
-
-    get().approveKyc();
-    return true;
+    set({ kycApproved: kycVerified, reviewSubmitted });
   },
 
   setLocation: (location) => {

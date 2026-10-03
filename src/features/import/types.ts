@@ -25,6 +25,19 @@ export type ImportDealStatus =
 
 export type ImportQuantityUnit = 'MT' | 'KG' | 'CONTAINER' | 'OTHER';
 
+export type ImportShipmentStatus =
+  | 'BOOKED'
+  | 'SHIPPED'
+  | 'IN_TRANSIT'
+  | 'ARRIVED'
+  | 'CUSTOMS_CLEARANCE'
+  | 'OUT_FOR_DELIVERY'
+  | 'DELIVERED'
+  | 'EXCEPTION'
+  | 'CANCELLED';
+
+export type ImportShipmentMode = 'SEA' | 'AIR' | 'ROAD' | 'RAIL' | 'MULTIMODAL';
+
 export type Named = { id: string; code: string; name: string };
 
 export type ImportCurrency = Named & {
@@ -62,6 +75,8 @@ export type ImportMasterBundle = {
   countries: Named[];
   paymentTerms: ImportPaymentTerm[];
   allowCustomGrade: boolean;
+  /** Days a BUY request stays open after publish (server-assigned validity). */
+  buyRequestValidityDays?: number;
   enums: {
     quantityUnits: ImportQuantityUnit[];
     priceTypes: string[];
@@ -72,6 +87,8 @@ export type ImportMasterBundle = {
     inspectionTypes: string[];
     readyStockTypes: string[];
     portTypes: string[];
+    shipmentModes?: ImportShipmentMode[];
+    shipmentStatuses?: ImportShipmentStatus[];
   };
 };
 
@@ -315,6 +332,89 @@ export type ImportDeal = {
   confirmedAt: string | null;
   cancelledAt: string | null;
   createdAt: string;
+};
+
+export type ImportShipmentEvent = {
+  id: string;
+  /** Status after this event. */
+  status: ImportShipmentStatus;
+  /** null = note/location update without a status change. */
+  previousStatus: ImportShipmentStatus | null;
+  location: string | null;
+  description: string | null;
+  occurredAt: string;
+  actorParty: 'BUYER' | 'SELLER' | 'ADMIN' | 'SYSTEM';
+  source: string;
+};
+
+export type ImportShipment = {
+  id: string;
+  referenceNumber: string;
+  status: ImportShipmentStatus;
+  mode: ImportShipmentMode;
+  myParty: 'BUYER' | 'SELLER' | 'ADMIN';
+  canManage: boolean;
+  /** Present only when `canManage`. */
+  allowedTransitions?: ImportShipmentStatus[];
+  deal: {
+    id: string;
+    referenceNumber: string;
+    status: ImportDealStatus;
+    quantity: string;
+    quantityUnit: ImportQuantityUnit;
+    product: string | null;
+  };
+  buyerRef: string;
+  sellerRef: string;
+  quantity: string;
+  quantityUnit: ImportQuantityUnit;
+  carrierName: string | null;
+  trackingNumber: string | null;
+  vesselName: string | null;
+  voyageNumber: string | null;
+  containerNumbers: string[];
+  originLocation: string | null;
+  destinationLocation: string | null;
+  etd: string | null;
+  /** null = no ETA yet; never estimate one client-side. */
+  eta: string | null;
+  departedAt: string | null;
+  arrivedAt: string | null;
+  deliveredAt: string | null;
+  cancelledAt: string | null;
+  exceptionReason: string | null;
+  remarks: string | null;
+  version: number;
+  /** Ascending by occurredAt. */
+  events: ImportShipmentEvent[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ImportDealDetail = ImportDeal & { shipments: ImportShipment[] };
+
+/** Carrier and routing details; every field optional on PATCH. */
+export type ImportShipmentDetailsInput = {
+  mode?: ImportShipmentMode;
+  carrierName?: string | null;
+  trackingNumber?: string | null;
+  vesselName?: string | null;
+  voyageNumber?: string | null;
+  containerNumbers?: string[];
+  originLocation?: string | null;
+  destinationLocation?: string | null;
+  etd?: string | null;
+  eta?: string | null;
+  remarks?: string | null;
+};
+
+export type ImportShipmentCreateInput = ImportShipmentDetailsInput & { quantity: string };
+
+export type ImportShipmentEventInput = {
+  status?: ImportShipmentStatus;
+  location?: string | null;
+  description?: string | null;
+  occurredAt?: string;
 };
 
 export type ImportDocument = {

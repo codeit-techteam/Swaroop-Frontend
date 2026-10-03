@@ -127,7 +127,7 @@ export const SellerGstValidateCard = memo(function SellerGstValidateCard({
             accessibilityRole="link"
           >
             <Typography variant="link" className="text-[#4F6BFF]">
-              Let's Connect – Book a meeting
+              Let&apos;s Connect – Book a meeting
             </Typography>
           </Pressable>
         </View>

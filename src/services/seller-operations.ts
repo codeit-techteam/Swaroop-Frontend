@@ -221,6 +221,7 @@ type BackendSellerNotification = {
   status?: string;
   entityType?: string | null;
   entityId?: string | null;
+  metadata?: Record<string, unknown> | null;
 };
 
 export async function fetchSellerNotifications(): Promise<SellerNotificationsSnapshot> {
@@ -229,7 +230,12 @@ export async function fetchSellerNotifications(): Promise<SellerNotificationsSna
   );
   const items = payload.data.data ?? [];
   const mapped: SellerNotification[] = items.map((row) => {
-    const importTarget = importNotificationTarget('seller', row.entityType, row.entityId);
+    const importTarget = importNotificationTarget(
+      'seller',
+      row.entityType,
+      row.entityId,
+      row.metadata,
+    );
     return {
       id: row.id,
       type: row.readAt ? 'activity' : 'action',

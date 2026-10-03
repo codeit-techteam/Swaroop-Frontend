@@ -77,9 +77,10 @@ export const getRouteAfterCreditCountdown = (order: Order): Href => {
     return ROUTES.CUSTOMER.CREDIT_PAYMENT_REMINDER as Href;
   }
   const { daysRemaining } = getCreditCountdownParts(order.credit.dueDate);
-  return daysRemaining <= CREDIT_REMINDER_THRESHOLD_DAYS
-    ? (ROUTES.CUSTOMER.CREDIT_PAYMENT_REMINDER as Href)
-    : (ROUTES.CUSTOMER.CREDIT_COUNTDOWN as Href);
+  if (daysRemaining <= CREDIT_REMINDER_THRESHOLD_DAYS) {
+    return ROUTES.CUSTOMER.CREDIT_PAYMENT_REMINDER as Href;
+  }
+  return ROUTES.CUSTOMER.CREDIT_COUNTDOWN as Href;
 };
 
 export const getRouteAfterCreditPaymentReminder = (): Href =>

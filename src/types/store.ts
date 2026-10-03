@@ -27,9 +27,12 @@ export type AuthActions = {
   setMobileNumber: (mobileNumber: string) => void;
   completeLogin: (mobileNumber: string) => LoginResult;
   setReviewSubmitted: (referenceId: string) => void;
-  approveKyc: () => void;
-  /** Approves KYC when the verification waiting period has elapsed. Returns true if approved. */
-  resolvePendingKycApproval: () => boolean;
+  /** Applies the backend KYC decision; the local copy is only a routing cache. */
+  syncKycStatus: (status: {
+    status: 'NOT_SUBMITTED' | 'SUBMITTED' | 'CHANGES_REQUESTED' | 'APPROVED' | 'REJECTED';
+    kycVerified: boolean;
+    submittedAt: string | null;
+  }) => void;
   setLocation: (location: DeliveryLocation) => void;
   updateUserProfile: (patch: Partial<UserProfilePayload>) => void;
   logout: () => Promise<void>;

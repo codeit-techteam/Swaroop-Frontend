@@ -5,6 +5,7 @@ import { Pressable, View } from 'react-native';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 
 import { InputField, PrimaryButton, Typography } from '@/components';
+import { useCanManageImport, ViewOnlyNotice } from '@/features/import/access';
 import {
   fetchDeals,
   fetchImportConfig,
@@ -56,6 +57,7 @@ export const pushImport = (
 export function ImportHubScreen({ mode }: { mode: ImportMode }) {
   const cfg = IMPORT_MODES[mode];
   const router = useRouter();
+  const canManage = useCanManageImport(mode);
   const state = useImportLoader(async () => {
     const config = await fetchImportConfig();
     if (!config.enabled) return { enabled: false as const };
@@ -86,7 +88,7 @@ export function ImportHubScreen({ mode }: { mode: ImportMode }) {
     },
     {
       title: 'Deals',
-      subtitle: 'Confirm agreed deals',
+      subtitle: 'Confirm agreed deals and track shipments',
       route: cfg.routes.deals,
       badge: side?.pendingDeals,
     },
@@ -130,12 +132,15 @@ export function ImportHubScreen({ mode }: { mode: ImportMode }) {
                 </View>
               ))}
             </View>
-            <PrimaryButton
-              className="mt-md"
-              label={`New ${cfg.copy.own.toLowerCase()}`}
-              onPress={() => pushImport(router, cfg.routes.form)}
-            />
+            {canManage ? (
+              <PrimaryButton
+                className="mt-md"
+                label={`New ${cfg.copy.own.toLowerCase()}`}
+                onPress={() => pushImport(router, cfg.routes.form)}
+              />
+            ) : null}
           </Card>
+          {!canManage ? <ViewOnlyNotice /> : null}
           {rows.map((r) => (
             <Pressable
               key={r.route}
@@ -188,6 +193,7 @@ type MineTab = (typeof MINE_TABS)[number]['id'];
 export function ImportMyListingsScreen({ mode }: { mode: ImportMode }) {
   const cfg = IMPORT_MODES[mode];
   const router = useRouter();
+  const canManage = useCanManageImport(mode);
   const [tab, setTab] = useState<MineTab>('all');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -211,12 +217,15 @@ export function ImportMyListingsScreen({ mode }: { mode: ImportMode }) {
       refreshing={state.refreshing}
       onRefresh={state.refresh}
       footer={
-        <PrimaryButton
-          label={`New ${cfg.copy.own.toLowerCase()}`}
-          onPress={() => pushImport(router, cfg.routes.form)}
-        />
+        canManage ? (
+          <PrimaryButton
+            label={`New ${cfg.copy.own.toLowerCase()}`}
+            onPress={() => pushImport(router, cfg.routes.form)}
+          />
+        ) : undefined
       }
     >
+      {!canManage ? <ViewOnlyNotice /> : null}
       <Chips
         options={MINE_TABS.map((t) => ({ id: t.id, label: t.label }))}
         value={tab}
@@ -243,7 +252,9 @@ export function ImportMyListingsScreen({ mode }: { mode: ImportMode }) {
           message={
             debounced
               ? 'Try a different search.'
-              : `Create a ${cfg.copy.own.toLowerCase()} to get started.`
+              : canManage
+                ? `Create a ${cfg.copy.own.toLowerCase()} to get started.`
+                : undefined
           }
         />
       ) : (

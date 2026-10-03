@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 
 import { Redirect, type Href } from 'expo-router';
 
+import { getLoggedInRoute } from '@/navigation/post-auth-route';
 import { ROUTES } from '@/navigation/routes';
 import {
   selectIsHydrated,
@@ -17,14 +18,19 @@ type AuthGuardProps = {
 export const PrivateRouteGuard = ({ children }: AuthGuardProps): ReactNode => {
   const isLoggedIn = useAuthStore(selectIsLoggedIn);
   const kycApproved = useAuthStore(selectKycApproved);
+  const reviewSubmitted = useAuthStore((state) => state.reviewSubmitted);
   const isHydrated = useAuthStore(selectIsHydrated);
 
   if (!isHydrated) {
     return null;
   }
 
-  if (!isLoggedIn || !kycApproved) {
+  if (!isLoggedIn) {
     return <Redirect href={ROUTES.AUTH.CUSTOMER_LOGIN as Href} />;
+  }
+
+  if (!kycApproved) {
+    return <Redirect href={getLoggedInRoute({ kycApproved, reviewSubmitted })} />;
   }
 
   return children;

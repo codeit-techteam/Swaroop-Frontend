@@ -8,8 +8,8 @@ import {
   DEVELOPMENT_MODE,
 } from '@/config/development';
 import { STORAGE_KEYS } from '@/constants';
-import type { ApiRequestConfig } from '@/types/api';
 import { useAuthStore } from '@/store/auth-store';
+import type { ApiRequestConfig } from '@/types/api';
 import { logger } from '@/utils/logger';
 import { getStorageItem, removeStorageItem, setStorageItem } from '@/utils/storage';
 
@@ -22,24 +22,20 @@ type LoginPayload = {
   refreshToken?: string;
 };
 
-const unwrapAuthPayload = (body: unknown): LoginPayload => {
+export const unwrapAuthPayload = (body: unknown): LoginPayload => {
   if (!body || typeof body !== 'object') {
     return {};
   }
   const root = body as Record<string, unknown>;
   const nested =
-    root.data && typeof root.data === 'object'
-      ? (root.data as Record<string, unknown>)
-      : root;
+    root.data && typeof root.data === 'object' ? (root.data as Record<string, unknown>) : root;
   return {
-    accessToken:
-      typeof nested.accessToken === 'string' ? nested.accessToken : undefined,
-    refreshToken:
-      typeof nested.refreshToken === 'string' ? nested.refreshToken : undefined,
+    accessToken: typeof nested.accessToken === 'string' ? nested.accessToken : undefined,
+    refreshToken: typeof nested.refreshToken === 'string' ? nested.refreshToken : undefined,
   };
 };
 
-const persistTokens = (payload: LoginPayload): boolean => {
+export const persistTokens = (payload: LoginPayload): boolean => {
   if (!payload.accessToken) {
     return false;
   }
@@ -82,11 +78,10 @@ export async function loginDevBackend(role: DevRole = 'customer'): Promise<boole
     return true;
   }
   const email = role === 'seller' ? DEMO_SELLER_EMAIL : DEMO_CUSTOMER_EMAIL;
-  const response = await apiClient.post(
-    '/auth/login',
-    { email, password: DEMO_PASSWORD },
-    { skipAuth: true, skipRefresh: true } as ApiRequestConfig,
-  );
+  const response = await apiClient.post('/auth/login', { email, password: DEMO_PASSWORD }, {
+    skipAuth: true,
+    skipRefresh: true,
+  } as ApiRequestConfig);
   const payload = unwrapAuthPayload(response.data);
   if (!persistTokens(payload)) {
     throw new Error('Catalog backend login did not return an access token.');

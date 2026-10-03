@@ -3,6 +3,7 @@ import { memo, useCallback, useEffect, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
 import { type Href, useRouter } from 'expo-router';
+
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScreenWrapper, Typography } from '@/components';
@@ -95,6 +96,7 @@ export const SellerPaymentsScreen = memo(function SellerPaymentsScreen() {
           ) : proformas.length === 0 ? (
             <View className="mt-md">
               <EmptyState
+                variant="no_documents"
                 title="No proforma invoices"
                 description="Proforma invoices will appear here after commercial acceptance."
               />
@@ -128,6 +130,7 @@ export const SellerPaymentsScreen = memo(function SellerPaymentsScreen() {
           ) : payments.length === 0 ? (
             <View className="mt-md">
               <EmptyState
+                variant="no_orders"
                 title="No payments yet"
                 description="Inbound payments will appear here with blind buyer references."
               />

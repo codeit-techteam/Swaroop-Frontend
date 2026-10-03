@@ -44,8 +44,47 @@ export type CustomerKycSlot = {
   document: CustomerKycDocument | null;
 };
 
+export type KycVerificationStatus = 'VERIFYING' | 'VERIFIED' | 'FAILED' | 'MANUAL_REVIEW';
+
+export type KycVerificationDetails = {
+  legalName?: string | null;
+  tradeName?: string | null;
+  gstStatus?: string | null;
+  registrationDate?: string | null;
+  address?: string | null;
+  state?: string | null;
+  pincode?: string | null;
+  nameOnPan?: string | null;
+  panStatus?: string | null;
+  panCategory?: string | null;
+};
+
+export type KycVerification = {
+  id: string;
+  type: 'PAN' | 'GST';
+  status: KycVerificationStatus;
+  method: 'PROVIDER' | 'MANUAL' | null;
+  identifierMasked: string;
+  details: KycVerificationDetails;
+  failureCode: string | null;
+  message: string;
+  verifiedAt: string | null;
+  createdAt: string;
+};
+
+export type KycVerifyResult = KycVerification & { warning: string | null };
+
+export type KycChecklistItem = {
+  key: 'pan' | 'gst' | 'documents' | 'review';
+  label: string;
+  state: 'done' | 'pending' | 'attention' | 'todo';
+  detail: string;
+};
+
 export type CustomerKycOverview = {
   status: CustomerKycStatus;
+  /** Backend decision; the only signal that unlocks the customer home. */
+  kycVerified: boolean;
   submittedAt: string | null;
   reviewedAt: string | null;
   reviewNotes: string | null;
@@ -54,6 +93,14 @@ export type CustomerKycOverview = {
   locked: boolean;
   canSubmit: boolean;
   missingRequired: string[];
+  verifications: { pan: KycVerification | null; gst: KycVerification | null };
+  checklist: KycChecklistItem[];
+  organization: {
+    name: string | null;
+    legalName: string | null;
+    gstin: string | null;
+    pan: string | null;
+  };
   slots: CustomerKycSlot[];
 };
 
@@ -68,8 +115,17 @@ export const CUSTOMER_KYC_MIME_TYPES = [
 /** Backend default STORAGE_MAX_DOCUMENT_SIZE_MB; the API re-validates. */
 export const CUSTOMER_KYC_MAX_BYTES = 10 * 1024 * 1024;
 
-const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
-const PAN_PATTERN = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+export const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
+export const PAN_PATTERN = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+
+export function normalizeIdentifier(value: string): string {
+  return value.toUpperCase().replace(/[\s-]/g, '');
+}
+
+/** VERIFIED, or accepted for manual confirmation by the compliance team. */
+export function verificationAccepted(verification: KycVerification | null | undefined): boolean {
+  return verification?.status === 'VERIFIED' || verification?.status === 'MANUAL_REVIEW';
+}
 
 export function toBackendKycSlot(id: KycDocumentId): BackendSlot {
   return id === 'cancelled_cheque' ? 'cancelledCheque' : id;
@@ -99,6 +155,10 @@ function resolveMime(file: DocumentFile): string {
 
 export function customerKycErrorMessage(error: unknown, fallback: string): string {
   if (isAxiosError<{ message?: string | string[] }>(error)) {
+    if (error.response?.status === 429) {
+      return 'Too many attempts. Please wait a few minutes and try again.';
+    }
+    if (error.response && error.response.status >= 500) return fallback;
     const message = error.response?.data?.message;
     if (typeof message === 'string' && message) return message;
     if (Array.isArray(message) && message[0]) return String(message[0]);
@@ -193,20 +253,35 @@ export function uploadCustomerKycDocument(
   });
 }
 
-/** Sends only the business fields that pass the backend validation rules. */
+/** PAN and GSTIN come from the backend verification records, so only the name is sent. */
 export function submitCustomerKyc(info?: BusinessInformation): Promise<CustomerKycOverview> {
   return withCustomerSession(async () => {
-    const body: { businessName?: string; gstin?: string; pan?: string } = {};
+    const body: { businessName?: string } = {};
     const name = info?.businessEntityName.trim();
-    const gstin = info?.gstNumber.trim().toUpperCase();
-    const pan = info?.panNumber.trim().toUpperCase();
     if (name) body.businessName = name;
-    if (gstin && GSTIN_PATTERN.test(gstin)) body.gstin = gstin;
-    if (pan && PAN_PATTERN.test(pan)) body.pan = pan;
     const response = await apiClient.post<Envelope<CustomerKycOverview>>(
       '/customer/kyc/submit',
       body,
     );
+    return response.data.data;
+  });
+}
+
+/** PAN / GSTIN are checked server-side; provider credentials never reach the app. */
+export function verifyCustomerPan(pan: string): Promise<KycVerifyResult> {
+  return withCustomerSession(async () => {
+    const response = await apiClient.post<Envelope<KycVerifyResult>>('/customer/kyc/pan/verify', {
+      pan: normalizeIdentifier(pan),
+    });
+    return response.data.data;
+  });
+}
+
+export function verifyCustomerGst(gstin: string): Promise<KycVerifyResult> {
+  return withCustomerSession(async () => {
+    const response = await apiClient.post<Envelope<KycVerifyResult>>('/customer/kyc/gst/verify', {
+      gstin: normalizeIdentifier(gstin),
+    });
     return response.data.data;
   });
 }

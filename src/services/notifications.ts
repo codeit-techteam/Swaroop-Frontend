@@ -159,7 +159,7 @@ export const getNotificationRoute = (notification: CustomerNotification): string
 
 const mapBackendNotification = (row: BackendNotification): CustomerNotification => {
   const metadata = row.metadata ?? {};
-  const importTarget = importNotificationTarget('customer', row.entityType, row.entityId);
+  const importTarget = importNotificationTarget('customer', row.entityType, row.entityId, metadata);
   if (importTarget) {
     const isRead = Boolean(row.readAt) || row.status === 'READ';
     return {

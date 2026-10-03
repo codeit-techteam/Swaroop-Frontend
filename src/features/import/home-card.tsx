@@ -9,6 +9,7 @@ import Svg, { Circle, Defs, Ellipse, LinearGradient, Path, Rect, Stop } from 're
 
 import { SectionHeader } from '@/components/home/section-header';
 import { Typography } from '@/components/ui/typography';
+import { useCanManageImport } from '@/features/import/access';
 import { fetchImportConfig, fetchImportSummary } from '@/features/import/api';
 import { IMPORT_MODES, type ImportMode } from '@/features/import/config';
 import type { ImportSummary } from '@/features/import/types';
@@ -209,6 +210,7 @@ export function ImportTradingHomeSection({
   const router = useRouter();
   const cfg = IMPORT_MODES[mode];
   const content = CONTENT[mode];
+  const canManage = useCanManageImport(mode);
   const [state, setState] = useState<CardState>({ status: 'loading' });
   const requestRef = useRef(0);
 
@@ -424,18 +426,20 @@ export function ImportTradingHomeSection({
           ) : null}
 
           <View className="mt-lg flex-row gap-sm">
-            <Pressable
-              onPress={() => go(cfg.routes.form)}
-              accessibilityRole="button"
-              accessibilityLabel={content.primary.label}
-              className="h-11 flex-1 flex-row items-center justify-center rounded-xl bg-brand-white"
-              style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
-            >
-              <Ionicons name={content.primary.icon} size={17} color={brandColors.navy} />
-              <Typography variant="roleTitle" className="ml-xs text-[13px] text-brand-navy">
-                {content.primary.label}
-              </Typography>
-            </Pressable>
+            {canManage ? (
+              <Pressable
+                onPress={() => go(cfg.routes.form)}
+                accessibilityRole="button"
+                accessibilityLabel={content.primary.label}
+                className="h-11 flex-1 flex-row items-center justify-center rounded-xl bg-brand-white"
+                style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
+              >
+                <Ionicons name={content.primary.icon} size={17} color={brandColors.navy} />
+                <Typography variant="roleTitle" className="ml-xs text-[13px] text-brand-navy">
+                  {content.primary.label}
+                </Typography>
+              </Pressable>
+            ) : null}
             <Pressable
               onPress={() => go(cfg.routes.market)}
               accessibilityRole="button"

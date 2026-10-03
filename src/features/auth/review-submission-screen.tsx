@@ -13,7 +13,9 @@ import {
   ScreenWrapper,
   Typography,
 } from '@/components';
+import { KycVerificationSummary } from '@/components/kyc/kyc-verification-summary';
 import { generateKycReferenceId, getKycStepperSteps } from '@/constants/documents';
+import { useCustomerKycStatus } from '@/hooks/use-customer-kyc-status';
 import { TrustIllustration } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
 import {
@@ -21,6 +23,7 @@ import {
   fetchCustomerKyc,
   submitCustomerKyc,
 } from '@/services/customer-kyc';
+import { useAuthStore } from '@/store/auth-store';
 import { useKycStore } from '@/store/kyc-store';
 import { wp } from '@/utils/responsive';
 
@@ -57,15 +60,18 @@ export const ReviewSubmissionScreen = () => {
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const { overview, refresh } = useCustomerKycStatus();
+  const alreadySubmitted = Boolean(overview?.locked || overview?.kycVerified);
+  const missing = overview && !alreadySubmitted ? overview.missingRequired : [];
 
   const handleSubmit = useCallback(async () => {
     setSubmitting(true);
     setSubmitError(null);
     try {
       const current = await fetchCustomerKyc();
-      if (current.status !== 'SUBMITTED' && current.status !== 'APPROVED') {
-        await submitCustomerKyc(businessInfo);
-      }
+      const next =
+        current.locked || current.kycVerified ? current : await submitCustomerKyc(businessInfo);
+      useAuthStore.getState().syncKycStatus(next);
       const referenceId = generateKycReferenceId();
       setReferenceId(referenceId);
       router.push({
@@ -76,10 +82,11 @@ export const ReviewSubmissionScreen = () => {
       setSubmitError(
         customerKycErrorMessage(error, 'Could not submit your KYC. Please try again.'),
       );
+      void refresh();
     } finally {
       setSubmitting(false);
     }
-  }, [businessInfo, router, setReferenceId]);
+  }, [businessInfo, refresh, router, setReferenceId]);
 
   return (
     <ScreenWrapper scrollable className="bg-brand-white" contentClassName="pb-xl">
@@ -115,6 +122,20 @@ export const ReviewSubmissionScreen = () => {
         onEdit={handleEditDocuments}
       />
 
+      <Typography variant="headingLeft" className="mt-2xl text-[18px] text-brand-primary">
+        PAN &amp; GST Verification
+      </Typography>
+      <KycVerificationSummary
+        pan={overview?.verifications.pan}
+        gst={overview?.verifications.gst}
+        className="mt-md"
+      />
+
+      {missing.length ? (
+        <Typography variant="legal" className="mt-xl text-left text-amber-800">
+          Still required: {missing.join(', ')}
+        </Typography>
+      ) : null}
       {submitError ? (
         <Typography variant="error" className="mt-xl text-left">
           {submitError}
@@ -122,10 +143,15 @@ export const ReviewSubmissionScreen = () => {
       ) : null}
 
       <PrimaryButton
-        label="Submit Application"
+        label={
+          submitting
+            ? 'Submitting KYC…'
+            : alreadySubmitted
+              ? 'View Application Status'
+              : 'Submit Application'
+        }
         className="mt-2xl"
-        loading={submitting}
-        disabled={submitting}
+        disabled={submitting || !overview || (!alreadySubmitted && !overview.canSubmit)}
         onPress={() => void handleSubmit()}
       />
     </ScreenWrapper>

@@ -1,9 +1,11 @@
 import { Linking } from 'react-native';
 
-import { type Href, type Router } from 'expo-router';
+import { type Href, type useRouter } from 'expo-router';
 
 import { ROUTES } from '@/navigation/routes';
 import type { HomeBanner } from '@/types/home';
+
+type Router = ReturnType<typeof useRouter>;
 
 function resolveAction(options: {
   action?: string | null;
@@ -19,7 +21,11 @@ function resolveAction(options: {
   if (action === 'OPEN_EXTERNAL_URL' && externalUrl) {
     return { type: 'url', url: externalUrl };
   }
-  if (action === 'OPEN_MARKETPLACE' || action === 'OPEN_PURCHASE_REQUEST' || action === 'OPEN_OFFER') {
+  if (
+    action === 'OPEN_MARKETPLACE' ||
+    action === 'OPEN_PURCHASE_REQUEST' ||
+    action === 'OPEN_OFFER'
+  ) {
     return { type: 'route', href: ROUTES.CUSTOMER.MARKET as Href };
   }
   if (action === 'OPEN_ORDERS') {
@@ -77,10 +83,7 @@ function applyNav(
   return true;
 }
 
-export function openCustomerBanner(
-  router: Router,
-  banner: HomeBanner,
-): boolean {
+export function openCustomerBanner(router: Router, banner: HomeBanner): boolean {
   return applyNav(
     router,
     resolveAction({
@@ -92,10 +95,7 @@ export function openCustomerBanner(
   );
 }
 
-export function openCustomerBannerSecondary(
-  router: Router,
-  banner: HomeBanner,
-): boolean {
+export function openCustomerBannerSecondary(router: Router, banner: HomeBanner): boolean {
   return applyNav(
     router,
     resolveAction({

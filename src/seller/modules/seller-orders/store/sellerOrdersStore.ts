@@ -3,7 +3,6 @@ import { create } from 'zustand';
 import type { Order } from '@/types/order';
 import { useAuthStore } from '@/store/auth-store';
 import { useOrderStore } from '@/store/order-store';
-import { mapDispatchOrderToOrder } from '@/seller/modules/dispatch/services/dispatchService';
 import { useDispatchStore } from '@/seller/modules/dispatch/store/dispatchStore';
 import {
   buildDefaultSellerOrdersSnapshot,

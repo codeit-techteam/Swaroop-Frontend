@@ -1,4 +1,9 @@
-import type { ImportParty, ImportSide } from '@/features/import/types';
+import type {
+  ImportParty,
+  ImportShipmentMode,
+  ImportShipmentStatus,
+  ImportSide,
+} from '@/features/import/types';
 
 /**
  * The customer panel trades the BUY side (publishes RFQs, browses sell offers);
@@ -83,18 +88,35 @@ export const IMPORT_MODES: Record<ImportMode, ImportModeConfig> = {
   },
 };
 
+const SHIPMENT_EVENT_KEYS = ['IMPORT_SHIPMENT_CREATED', 'IMPORT_SHIPMENT_STATUS_CHANGED'];
+
 /**
  * Deep link for a backend Import notification. Listing notices (match found,
  * near expiry, expired, Admin status change) always go to the listing owner,
- * so they open the user's own listing.
+ * so they open the user's own listing. Shipment notices open their deal.
  */
 export function importNotificationTarget(
   mode: ImportMode,
   entityType?: string | null,
   entityId?: string | null,
+  metadata?: Record<string, unknown> | null,
 ): { route: string; label: string } | null {
-  if (!entityId) return null;
   const { routes, copy } = IMPORT_MODES[mode];
+  const eventKey = typeof metadata?.eventKey === 'string' ? metadata.eventKey : null;
+  if (entityType === 'IMPORT_SHIPMENT' || (eventKey && SHIPMENT_EVENT_KEYS.includes(eventKey))) {
+    const dealId =
+      typeof metadata?.dealId === 'string' && metadata.dealId
+        ? metadata.dealId
+        : entityType === 'IMPORT_DEAL'
+          ? entityId
+          : null;
+    if (!dealId) return null;
+    return {
+      route: `${routes.deal}?id=${encodeURIComponent(dealId)}`,
+      label: mode === 'customer' ? 'Track shipment' : 'View shipment',
+    };
+  }
+  if (!entityId) return null;
   const id = encodeURIComponent(entityId);
   switch (entityType) {
     case 'IMPORT_DEAL':
@@ -107,6 +129,22 @@ export function importNotificationTarget(
       return null;
   }
 }
+
+/** Fallback when the master-data bundle predates `enums.shipmentModes`. */
+export const SHIPMENT_MODES: ImportShipmentMode[] = ['SEA', 'AIR', 'ROAD', 'RAIL', 'MULTIMODAL'];
+
+/**
+ * Buyer-facing tracking steps after "Order confirmed". A step is done once the
+ * shipment has reached any of its statuses (from the status or event history).
+ */
+export const SHIPMENT_TIMELINE: { label: string; statuses: ImportShipmentStatus[] }[] = [
+  { label: 'Shipment booked', statuses: ['BOOKED'] },
+  { label: 'Shipped / picked up', statuses: ['SHIPPED'] },
+  { label: 'In transit', statuses: ['IN_TRANSIT'] },
+  { label: 'Arrived / customs', statuses: ['ARRIVED', 'CUSTOMS_CLEARANCE'] },
+  { label: 'Out for delivery', statuses: ['OUT_FOR_DELIVERY'] },
+  { label: 'Delivered', statuses: ['DELIVERED'] },
+];
 
 /** API path segment for a listing side. */
 export const sidePath = (side: ImportSide): string =>

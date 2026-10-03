@@ -9,8 +9,8 @@ import {
   DEVELOPMENT_MODE,
 } from '@/config/development';
 import { STORAGE_KEYS } from '@/constants';
-import { useAuthStore } from '@/store/auth-store';
 import { clearCachedSellerAccount } from '@/services/seller-profile';
+import { useAuthStore } from '@/store/auth-store';
 import type { ApiRequestConfig } from '@/types/api';
 import { getStorageItem, removeStorageItem, setStorageItem } from '@/utils/storage';
 
@@ -65,7 +65,7 @@ export function sellerAuthErrorMessage(error: unknown, fallback: string): string
     if (typeof message === 'string' && message) return message;
     if (Array.isArray(message) && message[0]) return message[0];
     if (!error.response) {
-      return 'Unable to reach PetroTrade API. Confirm the backend is running.';
+      return 'Unable to reach PetroTrade. Check your internet connection and try again.';
     }
   }
   if (error instanceof Error && error.message) return error.message;
@@ -130,11 +130,10 @@ export function clearSellerAccess() {
 
 export async function sendSellerOtp(mobile: string): Promise<{ sent: true; demoOtp?: string }> {
   const phone = toE164IndianPhone(mobile);
-  const response = await apiClient.post(
-    '/auth/otp/send',
-    { phone, purpose: 'LOGIN' },
-    { skipAuth: true, skipRefresh: true } as ApiRequestConfig,
-  );
+  const response = await apiClient.post('/auth/otp/send', { phone, purpose: 'LOGIN' }, {
+    skipAuth: true,
+    skipRefresh: true,
+  } as ApiRequestConfig);
   const data = (response.data as Envelope<{ devOtp?: string }>)?.data ?? response.data;
   return {
     sent: true,
@@ -186,7 +185,7 @@ export async function authenticateSellerFromOtp(
   otp: string,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   const digits = mobile.replace(/\D/g, '').slice(-10);
-  const isDemoLogin = otp === DEMO_OTP && digits === DEMO_PHONE.slice(-10);
+  const isDemoLogin = DEVELOPMENT_MODE && otp === DEMO_OTP && digits === DEMO_PHONE.slice(-10);
 
   if (otp.length !== 6) {
     return { ok: false, message: 'Enter the 6-digit OTP.' };
@@ -207,6 +206,13 @@ export async function authenticateSellerFromOtp(
 
     try {
       const session = await verifySellerOtpSession(mobile, otp);
+      if (session.user?.mustChangePassword) {
+        return {
+          ok: false,
+          message:
+            'Your temporary password must be changed first. Sign in once on Seller Web to set a new password, then return to the app.',
+        };
+      }
       persistSellerAuthSession(session);
       return { ok: true };
     } catch (error) {
@@ -230,15 +236,24 @@ export async function authenticateSellerFromOtp(
 
 export async function requestSellerOtpSend(
   mobile: string,
-): Promise<{ ok: true; message?: string }> {
+): Promise<{ ok: boolean; message?: string }> {
   try {
     await sendSellerOtp(mobile);
     return { ok: true };
   } catch (error) {
-    // Match Seller Web: still open OTP screen; demo OTP + password fallback works in DEV.
+    // An OTP issued moments ago is still valid; let the user enter it.
+    if (isAxiosError(error) && error.response?.status === 429) {
+      return { ok: true };
+    }
+    if (DEVELOPMENT_MODE) {
+      return {
+        ok: true,
+        message: sellerAuthErrorMessage(error, `OTP request failed — use demo OTP ${DEMO_OTP}.`),
+      };
+    }
     return {
-      ok: true,
-      message: sellerAuthErrorMessage(error, `OTP request failed — use demo OTP ${DEMO_OTP}.`),
+      ok: false,
+      message: sellerAuthErrorMessage(error, 'Unable to send OTP. Please try again.'),
     };
   }
 }

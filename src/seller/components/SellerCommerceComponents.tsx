@@ -22,7 +22,6 @@ import {
   WalletIcon,
 } from '@/icons';
 import type { SellerBottomNavTarget } from '@/seller/navigation/useSellerBottomNavigation';
-import { readSellerAccess } from '@/services/seller-auth';
 import type {
   SellerPaymentPricing,
   SellerPricingTier,
@@ -33,6 +32,7 @@ import type {
   SellerTechnicalSpecs,
 } from '@/seller/types';
 import { formatSellerSellingPrice, getSellerSellingPrice } from '@/seller/utils/pricing';
+import { readSellerAccess } from '@/services/seller-auth';
 import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
 import { elevation } from '@/theme/shadows';
@@ -191,7 +191,13 @@ export const PricingCard = memo(function PricingCard({
   );
 });
 
-const ScrollValueInput = ({ value, onChange }: { value: string; onChange: (value: string) => void }) => {
+const ScrollValueInput = ({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) => {
   return (
     <TextInput
       value={value}
@@ -236,7 +242,10 @@ export const TierCard = memo(function TierCard({
           >{`${tierTitle}: ${rangeLabel}`}</Typography>
           <Typography
             variant="headingLeft"
-            className={cn('mt-xs text-[22px]', index === 2 ? 'text-brand-white' : 'text-brand-primary')}
+            className={cn(
+              'mt-xs text-[22px]',
+              index === 2 ? 'text-brand-white' : 'text-brand-primary',
+            )}
           >
             ₹{tier.price || '--'}/MT
           </Typography>
@@ -287,7 +296,9 @@ export const TierCard = memo(function TierCard({
             <View
               className={cn(
                 'mt-xs rounded-xl border px-sm',
-                index === 2 ? 'border-brand-white/15 bg-brand-white/10' : 'border-brand-border bg-brand-surface',
+                index === 2
+                  ? 'border-brand-white/15 bg-brand-white/10'
+                  : 'border-brand-border bg-brand-surface',
               )}
             >
               <TextInput
@@ -316,7 +327,9 @@ export const TierCard = memo(function TierCard({
         <View
           className={cn(
             'mt-xs rounded-xl border px-sm',
-            index === 2 ? 'border-brand-white/15 bg-brand-white/10' : 'border-brand-border bg-brand-surface',
+            index === 2
+              ? 'border-brand-white/15 bg-brand-white/10'
+              : 'border-brand-border bg-brand-surface',
           )}
         >
           <TextInput
@@ -364,7 +377,10 @@ export const BuyerPreviewCard = memo(function BuyerPreviewCard({
       </Typography>
       <View className="mt-md overflow-hidden rounded-2xl border border-brand-border bg-brand-white">
         <View className="bg-brand-navy px-md py-lg">
-          <Typography variant="badge" className="text-[11px] tracking-[1px] text-brand-primary-light">
+          <Typography
+            variant="badge"
+            className="text-[11px] tracking-[1px] text-brand-primary-light"
+          >
             {(product.category || 'GRADE').toUpperCase()}
           </Typography>
           <Typography variant="headingLeft" className="mt-xs text-[22px] text-brand-white">
@@ -554,12 +570,29 @@ export const SellerProductCard = memo(function SellerProductCard({
         </View>
 
         <View className="mt-lg flex-row flex-wrap gap-sm">
-          <ActionPill label="Edit" onPress={onEdit} icon={<EditIcon size={14} color={brandColors.primaryDark} />} />
-          <ActionPill label="Duplicate" onPress={onDuplicate} icon={<StoreIcon size={14} color={brandColors.primaryDark} />} />
+          <ActionPill
+            label="Edit"
+            onPress={onEdit}
+            icon={<EditIcon size={14} color={brandColors.primaryDark} />}
+          />
+          <ActionPill
+            label="Duplicate"
+            onPress={onDuplicate}
+            icon={<StoreIcon size={14} color={brandColors.primaryDark} />}
+          />
           {product.status !== 'inactive' ? (
-            <ActionPill label="Deactivate" onPress={onDeactivate} icon={<AlertCircleIcon size={14} color={brandColors.primaryDark} />} />
+            <ActionPill
+              label="Deactivate"
+              onPress={onDeactivate}
+              icon={<AlertCircleIcon size={14} color={brandColors.primaryDark} />}
+            />
           ) : null}
-          <ActionPill label="Delete" onPress={onDelete} icon={<TrashIcon size={14} color={brandColors.error} />} danger />
+          <ActionPill
+            label="Delete"
+            onPress={onDelete}
+            icon={<TrashIcon size={14} color={brandColors.error} />}
+            danger
+          />
         </View>
       </View>
     </Pressable>
@@ -606,7 +639,7 @@ export const SellerBottomNavigation = memo(function SellerBottomNavigation({
     !access?.permissions?.length || access.role !== 'SELLER_MANAGER'
       ? true
       : access.permissions.includes(permission);
-  const items: {
+  const allItems: {
     id: SellerBottomNavTarget;
     label: string;
     permission: string;
@@ -642,7 +675,8 @@ export const SellerBottomNavigation = memo(function SellerBottomNavigation({
       permission: 'profile.view',
       renderIcon: (color) => <ProfileIcon size={iconSizes.md} color={color} />,
     },
-  ].filter((item) => allowed(item.permission));
+  ];
+  const items = allItems.filter((item) => allowed(item.permission));
 
   return (
     <View

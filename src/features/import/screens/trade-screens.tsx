@@ -7,6 +7,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import Toast from 'react-native-toast-message';
 
 import { PrimaryButton, SecondaryButton, Typography } from '@/components';
+import { useCanManageImport, ViewOnlyNotice } from '@/features/import/access';
 import {
   acceptNegotiation,
   closeNegotiation,
@@ -37,6 +38,7 @@ import {
   parseImportError,
 } from '@/features/import/format';
 import { pushImport } from '@/features/import/screens/list-screens';
+import { ShipmentsSection } from '@/features/import/shipments';
 import { ReasonSheet, TermsSheet } from '@/features/import/trade-widgets';
 import type {
   ImportListingSummary,
@@ -115,6 +117,7 @@ export function ImportNegotiationScreen({ mode }: { mode: ImportMode }) {
   const [closing, setClosing] = useState<'reject' | 'withdraw' | null>(null);
   const [busy, setBusy] = useState(false);
   const acceptKey = useRef(newIdempotencyKey());
+  const canManage = useCanManageImport(mode);
 
   const state = useImportLoader(async () => {
     const [negotiation, master] = await Promise.all([fetchNegotiation(id), fetchImportMaster()]);
@@ -122,7 +125,7 @@ export function ImportNegotiationScreen({ mode }: { mode: ImportMode }) {
   }, [id]);
   const n = state.data?.negotiation;
   const can = (a: 'COUNTER' | 'ACCEPT' | 'REJECT' | 'WITHDRAW') =>
-    Boolean(n?.allowedActions.includes(a));
+    canManage && Boolean(n?.allowedActions.includes(a));
 
   async function accept() {
     if (!n) return;
@@ -227,6 +230,7 @@ export function ImportNegotiationScreen({ mode }: { mode: ImportMode }) {
         />
       ) : (
         <>
+          {!canManage ? <ViewOnlyNotice /> : null}
           {n.status === 'OPEN' ? (
             <Notice tone={n.awaitingMyResponse ? 'warning' : 'neutral'}>
               {n.awaitingMyResponse
@@ -356,6 +360,7 @@ export function ImportDealScreen({ mode }: { mode: ImportMode }) {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [busy, setBusy] = useState(false);
   const key = useRef(newIdempotencyKey());
+  const canManage = useCanManageImport(mode);
   const state = useImportLoader(() => fetchDeal(id), [id]);
   const d = state.data;
 
@@ -384,6 +389,11 @@ export function ImportDealScreen({ mode }: { mode: ImportMode }) {
 
   const counterparty = d ? (d.myParty === 'BUYER' ? d.seller : d.buyer) : undefined;
   const counterpartyRef = d ? (d.myParty === 'BUYER' ? d.sellerRef : d.buyerRef) : '';
+  const showShipments = Boolean(
+    d &&
+    ((d.shipments?.length ?? 0) > 0 ||
+      ['CONFIRMED', 'PARTIALLY_FULFILLED', 'FULFILLED'].includes(d.status)),
+  );
 
   return (
     <ImportScreen
@@ -391,7 +401,7 @@ export function ImportDealScreen({ mode }: { mode: ImportMode }) {
       refreshing={state.refreshing}
       onRefresh={state.refresh}
       footer={
-        d?.awaitingMyConfirmation ? (
+        d?.awaitingMyConfirmation && canManage ? (
           <PrimaryButton
             label={busy ? 'Confirming…' : 'Confirm deal'}
             disabled={busy}
@@ -409,6 +419,7 @@ export function ImportDealScreen({ mode }: { mode: ImportMode }) {
         />
       ) : (
         <>
+          {!canManage ? <ViewOnlyNotice /> : null}
           <Card>
             <View className="flex-row items-start justify-between gap-sm">
               <View className="flex-1">
@@ -472,6 +483,13 @@ export function ImportDealScreen({ mode }: { mode: ImportMode }) {
               </Typography>
             ) : null}
           </Card>
+          {showShipments ? (
+            <ShipmentsSection
+              deal={{ ...d, shipments: d.shipments ?? [] }}
+              canManage={mode === 'seller' && d.myParty === 'SELLER' && canManage}
+              onChanged={state.reload}
+            />
+          ) : null}
         </>
       )}
     </ImportScreen>

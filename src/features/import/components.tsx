@@ -168,6 +168,44 @@ export function Card({
   );
 }
 
+/** Collapsible group for optional fields; opens itself when it holds values or errors. */
+export function MoreDetails({
+  title = 'More details (optional)',
+  hasValues,
+  hasErrors,
+  children,
+}: {
+  title?: string;
+  hasValues: boolean;
+  hasErrors: boolean;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(hasValues || hasErrors);
+  // Fields with errors must stay reachable, so errors keep the group expanded.
+  const expanded = open || hasErrors;
+  return (
+    <View className="gap-lg">
+      <Pressable
+        onPress={() => setOpen(!expanded)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded }}
+        className="flex-row items-center justify-between rounded-xl border border-brand-border bg-brand-surface px-md py-sm active:opacity-80"
+      >
+        <Typography
+          variant="roleTitle"
+          className={cn('text-[14px]', hasErrors && 'text-brand-error')}
+        >
+          {title}
+        </Typography>
+        <Typography variant="input" className="text-brand-muted">
+          {expanded ? '▴' : '▾'}
+        </Typography>
+      </Pressable>
+      {expanded ? children : null}
+    </View>
+  );
+}
+
 export function KeyValues({ rows }: { rows: [string, ReactNode][] }) {
   return (
     <View className="gap-sm">
@@ -731,6 +769,7 @@ export function DateField({
   value,
   onChange,
   minimumDate,
+  maximumDate,
   required,
   error,
   hint,
@@ -740,6 +779,7 @@ export function DateField({
   value: string | null | undefined;
   onChange: (value: string | null) => void;
   minimumDate?: string | null;
+  maximumDate?: string | null;
   required?: boolean;
   error?: string;
   hint?: string;
@@ -747,6 +787,7 @@ export function DateField({
 }) {
   const [open, setOpen] = useState(false);
   const min = minimumDate ? parseDateOnly(minimumDate) : undefined;
+  const max = maximumDate ? parseDateOnly(maximumDate) : undefined;
   const current = value ? parseDateOnly(value) : (min ?? new Date());
   const [temp, setTemp] = useState(current);
 
@@ -817,6 +858,7 @@ export function DateField({
                 mode="date"
                 display="spinner"
                 minimumDate={min}
+                maximumDate={max}
                 onChange={handleChange}
               />
             </Pressable>
@@ -829,6 +871,7 @@ export function DateField({
           mode="date"
           display="default"
           minimumDate={min}
+          maximumDate={max}
           onChange={handleChange}
         />
       ) : null}

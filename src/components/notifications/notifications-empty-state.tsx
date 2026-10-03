@@ -25,7 +25,7 @@ export const NotificationsEmptyState = memo(function NotificationsEmptyState({
         <BellIcon size={28} color={brandColors.primaryDark} />
       </View>
       <Typography variant="roleTitle" className="mt-lg text-center">
-        You're all caught up
+        You&apos;re all caught up
       </Typography>
       <Typography variant="subheading" className="mt-sm text-center">
         No new notifications. Alerts for orders, payments, and shipments will appear here.

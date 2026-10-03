@@ -2,7 +2,7 @@ import { memo, useCallback, type ReactElement } from 'react';
 
 import { Pressable, View } from 'react-native';
 
-import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import type { BottomTabBarProps } from 'expo-router/tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Typography } from '@/components/ui/typography';

@@ -7,6 +7,7 @@ import { type Href, useLocalSearchParams, useNavigation, useRouter } from 'expo-
 import Toast from 'react-native-toast-message';
 
 import { InputField, PrimaryButton, SecondaryButton, Typography } from '@/components';
+import { useCanManageImport, ViewOnlyNotice } from '@/features/import/access';
 import {
   createListing,
   fetchImportBrands,
@@ -29,6 +30,7 @@ import {
   ImportScreen,
   KeyValues,
   LoadingBlock,
+  MoreDetails,
   Notice,
   SelectField,
   useImportLoader,
@@ -63,12 +65,48 @@ type Values = Required<Pick<ImportListingInput, 'documentRequirementIds'>> &
 
 type StepId = 'product' | 'commercial' | 'shipping' | 'quality' | 'review';
 
-const STEPS: { id: StepId; title: string }[] = [
+const stepsFor = (side: ImportSide): { id: StepId; title: string }[] => [
   { id: 'product', title: 'Product' },
   { id: 'commercial', title: 'Commercial' },
   { id: 'shipping', title: 'Shipping' },
   { id: 'quality', title: 'Quality' },
-  { id: 'review', title: 'Review' },
+  { id: 'review', title: side === 'BUY' ? 'Review & submit' : 'Review' },
+];
+
+/** BUY validity is assigned by the server on publish; the app never sends it. */
+const VALIDITY_FIELDS = new Set(['validUntil', 'validFrom']);
+
+/** Optional fields per step, collapsed under "More details" unless they hold values or errors. */
+const OPTIONAL_PRODUCT_BUY: (keyof Values)[] = [
+  'packagingId',
+  'acceptableQuantityMin',
+  'acceptableQuantityMax',
+  'requiredDeliveryDate',
+  'application',
+  'hsCode',
+  'casNumber',
+  'specialRequirements',
+];
+const OPTIONAL_PRODUCT_SELL: (keyof Values)[] = [
+  'packagingId',
+  'maximumQuantity',
+  'application',
+  'hsCode',
+  'casNumber',
+];
+const OPTIONAL_SHIPPING: (keyof Values)[] = [
+  'transitMinDays',
+  'transitMaxDays',
+  'partialShipment',
+  'transshipment',
+  'shipmentType',
+  'containerCount',
+];
+const OPTIONAL_QUALITY: (keyof Values)[] = [
+  'specification',
+  'inspectionType',
+  'documentRequirementIds',
+  'remarks',
 ];
 
 const FIELD_STEP: Record<string, StepId> = {
@@ -142,7 +180,7 @@ const DECIMAL_FIELDS: Record<string, RegExp> = {
   price: DECIMAL_PRICE,
 };
 
-function toValues(l?: ImportListing | null): Values {
+function toValues(side: ImportSide, l?: ImportListing | null): Values {
   return {
     categoryId: l?.product.categoryId ?? null,
     gradeId: l?.product.gradeId ?? null,
@@ -186,8 +224,15 @@ function toValues(l?: ImportListing | null): Values {
     maximumQuantity: l?.sellTerms?.maximumQuantity ?? null,
     readyStockType: l?.sellTerms?.readyStockType ?? null,
     remarks: l?.remarks ?? null,
-    validUntil: l?.validity.validUntil ?? null,
+    ...(side === 'SELL' ? { validUntil: l?.validity.validUntil ?? null } : {}),
   };
+}
+
+function payloadFor(side: ImportSide, input: ImportListingInput): ImportListingInput {
+  if (side !== 'BUY') return input;
+  const out: Record<string, unknown> = { ...input };
+  for (const key of VALIDITY_FIELDS) delete out[key];
+  return out as ImportListingInput;
 }
 
 function labelsFrom(l?: ImportListing | null): Record<string, string> {
@@ -227,8 +272,12 @@ function localDecimalError(key: string, value: unknown): string | undefined {
 }
 
 /** New drafts start from the Admin-configured default import currency. */
-function initialValues(initial: ImportListing | null, bundle: ImportMasterBundle): Values {
-  const values = toValues(initial);
+function initialValues(
+  side: ImportSide,
+  initial: ImportListing | null,
+  bundle: ImportMasterBundle,
+): Values {
+  const values = toValues(side, initial);
   if (initial || values.currencyId) return values;
   const def = bundle.currencies.find((c) => c.code === bundle.defaultCurrencyCode);
   return def ? { ...values, currencyId: def.id } : values;
@@ -245,6 +294,7 @@ type SaveState = 'idle' | 'dirty' | 'saving' | 'saved' | 'error' | 'conflict';
 export function ImportListingFormScreen({ mode }: { mode: ImportMode }) {
   const cfg = IMPORT_MODES[mode];
   const { id } = useLocalSearchParams<{ id?: string }>();
+  const canManage = useCanManageImport(mode);
   const state = useImportLoader(async () => {
     const [bundle, listing] = await Promise.all([
       fetchImportMaster(),
@@ -258,6 +308,13 @@ export function ImportListingFormScreen({ mode }: { mode: ImportMode }) {
   const [loaded, setLoaded] = useState<typeof state.data>(null);
   if (state.data && !loaded) setLoaded(state.data);
 
+  if (!canManage) {
+    return (
+      <ImportScreen title={title}>
+        <ViewOnlyNotice />
+      </ImportScreen>
+    );
+  }
   if (!loaded) {
     return (
       <ImportScreen title={title}>
@@ -299,9 +356,10 @@ function ListingForm({
   const navigation = useNavigation();
   const isBuy = side === 'BUY';
   const live = Boolean(initial && initial.status !== 'DRAFT');
+  const STEPS = useMemo(() => stepsFor(side), [side]);
 
   const [listing, setListing] = useState<ImportListing | null>(initial);
-  const [values, setValues] = useState<Values>(() => initialValues(initial, bundle));
+  const [values, setValues] = useState<Values>(() => initialValues(side, initial, bundle));
   const [labels, setLabels] = useState<Record<string, string>>(() => labelsFrom(initial));
   const [step, setStep] = useState<StepId>('product');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -310,7 +368,7 @@ function ListingForm({
   const [publishing, setPublishing] = useState(false);
   const [terms, setTerms] = useState<Option[] | null>(null);
 
-  const savedRef = useRef<Values>(initialValues(initial, bundle));
+  const savedRef = useRef<Values>(initialValues(side, initial, bundle));
   const versionRef = useRef<number>(initial?.version ?? 0);
   const idRef = useRef<string | null>(initial?.id ?? null);
   const savingRef = useRef<Promise<boolean> | null>(null);
@@ -320,7 +378,9 @@ function ListingForm({
     valuesRef.current = values;
   }, [values]);
   // Mirrors savedRef for rendering; savedRef stays authoritative inside async saves.
-  const [savedSnapshot, setSavedSnapshot] = useState<Values>(() => initialValues(initial, bundle));
+  const [savedSnapshot, setSavedSnapshot] = useState<Values>(() =>
+    initialValues(side, initial, bundle),
+  );
 
   const currencyCode = bundle.currencies.find((c) => c.id === values.currencyId)?.code ?? null;
   const incoterm = bundle.incoterms.find((i) => i.id === values.incotermId);
@@ -370,9 +430,15 @@ function ListingForm({
   const pending = useMemo(() => diff(savedSnapshot, values), [savedSnapshot, values]);
   const hasPending = Object.keys(pending).length > 0;
 
-  const applyErrors = (errors: ImportFieldError[]) => {
-    if (errors.length) setFieldErrors(Object.fromEntries(errors.map((e) => [e.field, e.message])));
-  };
+  const applyErrors = useCallback(
+    (errors: ImportFieldError[]) => {
+      const relevant = isBuy ? errors.filter((e) => !VALIDITY_FIELDS.has(e.field)) : errors;
+      if (relevant.length) {
+        setFieldErrors(Object.fromEntries(relevant.map((e) => [e.field, e.message])));
+      }
+    },
+    [isBuy],
+  );
 
   /** Persists pending changes as a backend draft. Resolves false on failure. */
   const save = useCallback(async (): Promise<boolean> => {
@@ -385,14 +451,14 @@ function ListingForm({
       try {
         let result: ImportListing;
         if (!idRef.current) {
-          result = await createListing(side, {
-            ...diff(toValues(null), savedRef.current),
-            ...changes,
-          });
+          result = await createListing(
+            side,
+            payloadFor(side, { ...diff(toValues(side, null), savedRef.current), ...changes }),
+          );
           idRef.current = result.id;
         } else {
           result = await updateListing(side, idRef.current, {
-            ...changes,
+            ...payloadFor(side, changes),
             version: versionRef.current,
           });
         }
@@ -421,7 +487,7 @@ function ListingForm({
     } finally {
       savingRef.current = null;
     }
-  }, [side]);
+  }, [side, applyErrors]);
 
   // Drafts autosave after each edit; live listings save explicitly so
   // counterparties are not notified on every keystroke.
@@ -477,14 +543,15 @@ function ListingForm({
     } catch (error) {
       const e = parseImportError(error);
       if (e.status !== null) publishKeyRef.current = null;
-      if (e.fields.length) {
-        applyErrors(e.fields);
-        const firstField = e.fields[0]?.field;
+      const fields = isBuy ? e.fields.filter((f) => !VALIDITY_FIELDS.has(f.field)) : e.fields;
+      if (fields.length) {
+        applyErrors(fields);
+        const firstField = fields[0]?.field;
         const first = firstField ? FIELD_STEP[firstField] : undefined;
         if (first) setStep(first);
         Toast.show({
           type: 'error',
-          text1: `Please fix ${e.fields.length} field${e.fields.length > 1 ? 's' : ''} before publishing.`,
+          text1: `Please fix ${fields.length} field${fields.length > 1 ? 's' : ''} before publishing.`,
         });
       } else {
         Toast.show({ type: 'error', text1: e.message });
@@ -594,6 +661,24 @@ function ListingForm({
 
   const qtyUnit = importLabel(values.quantityUnit ?? 'MT');
   const termsName = terms?.find((t) => t.value === values.paymentTermId)?.label;
+  const containerUnit = values.quantityUnit === 'CONTAINER';
+
+  const filled = (keys: (keyof Values)[]) =>
+    keys.some((k) => {
+      const v = values[k];
+      return Array.isArray(v) ? v.length > 0 : v !== null && v !== undefined && v !== '';
+    });
+  const hasErr = (keys: (keyof Values)[]) => keys.some((k) => Boolean(err(k as string)));
+  const optionalProduct = isBuy ? OPTIONAL_PRODUCT_BUY : OPTIONAL_PRODUCT_SELL;
+  // Container size is mandatory when quantity is counted in containers.
+  const optionalShipping: (keyof Values)[] = containerUnit
+    ? OPTIONAL_SHIPPING
+    : [...OPTIONAL_SHIPPING, 'containerSize'];
+  const validityDays = bundle.buyRequestValidityDays;
+  const docNames = bundle.documentRequirements
+    .filter((d) => values.documentRequirementIds.includes(d.id))
+    .map((d) => d.name)
+    .join(', ');
 
   let statusLine: string;
   if (saveState === 'conflict') statusLine = 'Changed elsewhere — reload to continue';
@@ -699,7 +784,7 @@ function ListingForm({
               <Typography
                 variant="roleDescription"
                 className={cn(
-                  'text-[11px]',
+                  'text-center text-[11px]',
                   active ? 'font-semibold text-brand-heading' : 'text-brand-muted',
                 )}
               >
@@ -803,52 +888,56 @@ function ListingForm({
               placeholder: 'e.g. 500',
             })}
             {enumField('quantityUnit', 'Unit', bundle.enums.quantityUnits, true)}
-            <SelectField
-              label="Packaging"
-              value={values.packagingId}
-              placeholder="Select packaging"
-              options={bundle.packaging.map((p) => ({ value: p.id, label: p.name }))}
-              error={err('packagingId')}
-              onChange={(v) => set('packagingId', v)}
-            />
-            {isBuy ? (
-              <>
-                {text('acceptableQuantityMin', `Minimum acceptable quantity (${qtyUnit})`, {
-                  decimal: true,
-                })}
-                {text('acceptableQuantityMax', `Maximum acceptable quantity (${qtyUnit})`, {
-                  decimal: true,
-                })}
-                <DateField
-                  label="Required delivery date"
-                  value={values.requiredDeliveryDate}
-                  minimumDate={toDateOnly(new Date())}
-                  error={err('requiredDeliveryDate')}
-                  onChange={(v) => set('requiredDeliveryDate', v)}
-                />
-              </>
-            ) : (
+            {!isBuy ? (
               <>
                 {text('moq', `Minimum order quantity (${qtyUnit})`, {
                   required: true,
                   decimal: true,
                 })}
-                {text('maximumQuantity', `Maximum per buyer (${qtyUnit})`, { decimal: true })}
                 {enumField('readyStockType', 'Stock type', bundle.enums.readyStockTypes, true)}
               </>
-            )}
-            {text('application', 'Application', {
-              maxLength: 300,
-              placeholder: 'e.g. Injection moulding',
-            })}
-            {text('hsCode', 'HS code', { maxLength: 20, placeholder: 'e.g. 39021000' })}
-            {text('casNumber', 'CAS number', { maxLength: 20, placeholder: 'e.g. 9003-07-0' })}
-            {isBuy
-              ? text('specialRequirements', 'Special requirements', {
-                  multiline: true,
-                  maxLength: 3000,
-                })
-              : null}
+            ) : null}
+            <MoreDetails hasValues={filled(optionalProduct)} hasErrors={hasErr(optionalProduct)}>
+              <SelectField
+                label="Packaging"
+                value={values.packagingId}
+                placeholder="Select packaging"
+                options={bundle.packaging.map((p) => ({ value: p.id, label: p.name }))}
+                error={err('packagingId')}
+                onChange={(v) => set('packagingId', v)}
+              />
+              {isBuy ? (
+                <>
+                  {text('acceptableQuantityMin', `Minimum acceptable quantity (${qtyUnit})`, {
+                    decimal: true,
+                  })}
+                  {text('acceptableQuantityMax', `Maximum acceptable quantity (${qtyUnit})`, {
+                    decimal: true,
+                  })}
+                  <DateField
+                    label="Required delivery date"
+                    value={values.requiredDeliveryDate}
+                    minimumDate={toDateOnly(new Date())}
+                    error={err('requiredDeliveryDate')}
+                    onChange={(v) => set('requiredDeliveryDate', v)}
+                  />
+                </>
+              ) : (
+                text('maximumQuantity', `Maximum per buyer (${qtyUnit})`, { decimal: true })
+              )}
+              {text('application', 'Application', {
+                maxLength: 300,
+                placeholder: 'e.g. Injection moulding',
+              })}
+              {text('hsCode', 'HS code', { maxLength: 20, placeholder: 'e.g. 39021000' })}
+              {text('casNumber', 'CAS number', { maxLength: 20, placeholder: 'e.g. 9003-07-0' })}
+              {isBuy
+                ? text('specialRequirements', 'Special requirements', {
+                    multiline: true,
+                    maxLength: 3000,
+                  })
+                : null}
+            </MoreDetails>
           </View>
         </Card>
       ) : null}
@@ -961,25 +1050,27 @@ function ListingForm({
               }
               onChange={(v) => set('lsd', v)}
             />
-            {intField('transitMinDays', 'Transit time — minimum days')}
-            {intField('transitMaxDays', 'Transit time — maximum days')}
-            <Notice tone="neutral">
-              Estimated arrival:{' '}
-              {listing?.shipping.estimatedEta
-                ? `${formatDate(listing.shipping.estimatedEta.from)} – ${formatDate(listing.shipping.estimatedEta.to)}`
-                : 'add shipment dates and transit days to see an estimate'}
-              . Estimate only: shipment window plus transit days, not a carrier schedule.
-            </Notice>
-            {enumField('partialShipment', 'Partial shipment', bundle.enums.shipmentPermissions)}
-            {enumField('transshipment', 'Transshipment', bundle.enums.shipmentPermissions)}
-            {enumField('shipmentType', 'Shipment type', bundle.enums.shipmentTypes)}
-            {enumField(
-              'containerSize',
-              'Container size',
-              bundle.enums.containerSizes,
-              values.quantityUnit === 'CONTAINER',
-            )}
-            {intField('containerCount', 'Number of containers')}
+            {containerUnit
+              ? enumField('containerSize', 'Container size', bundle.enums.containerSizes, true)
+              : null}
+            <MoreDetails hasValues={filled(optionalShipping)} hasErrors={hasErr(optionalShipping)}>
+              {intField('transitMinDays', 'Transit time — minimum days')}
+              {intField('transitMaxDays', 'Transit time — maximum days')}
+              <Notice tone="neutral">
+                Estimated arrival:{' '}
+                {listing?.shipping.estimatedEta
+                  ? `${formatDate(listing.shipping.estimatedEta.from)} – ${formatDate(listing.shipping.estimatedEta.to)}`
+                  : 'add shipment dates and transit days to see an estimate'}
+                . Estimate only: shipment window plus transit days, not a carrier schedule.
+              </Notice>
+              {enumField('partialShipment', 'Partial shipment', bundle.enums.shipmentPermissions)}
+              {enumField('transshipment', 'Transshipment', bundle.enums.shipmentPermissions)}
+              {enumField('shipmentType', 'Shipment type', bundle.enums.shipmentTypes)}
+              {!containerUnit
+                ? enumField('containerSize', 'Container size', bundle.enums.containerSizes)
+                : null}
+              {intField('containerCount', 'Number of containers')}
+            </MoreDetails>
           </View>
         </Card>
       ) : null}
@@ -988,40 +1079,49 @@ function ListingForm({
         <>
           <Card title="Quality & documents">
             <View className="gap-lg">
-              {text('specification', 'Specification', {
-                multiline: true,
-                maxLength: 5000,
-                placeholder: 'MFI, density, additives, moisture…',
-              })}
-              {enumField('inspectionType', 'Inspection', bundle.enums.inspectionTypes)}
-              <View className="gap-sm">
-                <Typography variant="fieldLabel">
-                  {isBuy ? 'Required documents' : 'Documents offered'}
-                </Typography>
-                {bundle.documentRequirements.map((d) => {
-                  const checked = values.documentRequirementIds.includes(d.id);
-                  return (
-                    <CheckRow
-                      key={d.id}
-                      checked={checked}
-                      title={d.name}
-                      description={d.description}
-                      onToggle={() =>
-                        set(
-                          'documentRequirementIds',
-                          checked
-                            ? values.documentRequirementIds.filter((x) => x !== d.id)
-                            : [...values.documentRequirementIds, d.id],
-                        )
-                      }
-                    />
-                  );
+              <Typography variant="roleDescription" className="text-brand-muted">
+                Nothing here is required. Specifications and documents help{' '}
+                {cfg.copy.counterparty.toLowerCase()}s respond with accurate terms.
+              </Typography>
+              <MoreDetails
+                hasValues={filled(OPTIONAL_QUALITY)}
+                hasErrors={hasErr(OPTIONAL_QUALITY)}
+              >
+                {text('specification', 'Specification', {
+                  multiline: true,
+                  maxLength: 5000,
+                  placeholder: 'MFI, density, additives, moisture…',
                 })}
-                {err('documentRequirementIds') ? (
-                  <Typography variant="error">{err('documentRequirementIds')}</Typography>
-                ) : null}
-              </View>
-              {text('remarks', 'Remarks', { multiline: true, maxLength: 3000 })}
+                {enumField('inspectionType', 'Inspection', bundle.enums.inspectionTypes)}
+                <View className="gap-sm">
+                  <Typography variant="fieldLabel">
+                    {isBuy ? 'Required documents' : 'Documents offered'}
+                  </Typography>
+                  {bundle.documentRequirements.map((d) => {
+                    const checked = values.documentRequirementIds.includes(d.id);
+                    return (
+                      <CheckRow
+                        key={d.id}
+                        checked={checked}
+                        title={d.name}
+                        description={d.description}
+                        onToggle={() =>
+                          set(
+                            'documentRequirementIds',
+                            checked
+                              ? values.documentRequirementIds.filter((x) => x !== d.id)
+                              : [...values.documentRequirementIds, d.id],
+                          )
+                        }
+                      />
+                    );
+                  })}
+                  {err('documentRequirementIds') ? (
+                    <Typography variant="error">{err('documentRequirementIds')}</Typography>
+                  ) : null}
+                </View>
+                {text('remarks', 'Remarks', { multiline: true, maxLength: 3000 })}
+              </MoreDetails>
             </View>
           </Card>
           {listing ? (
@@ -1036,74 +1136,186 @@ function ListingForm({
 
       {step === 'review' ? (
         <>
-          <Card title="Validity">
-            <View className="gap-md">
-              <DateField
-                label="Valid until"
-                required
-                value={values.validUntil ? toDateOnly(new Date(values.validUntil)) : null}
-                minimumDate={toDateOnly(new Date())}
-                hint={
-                  values.validUntil
-                    ? `Expires ${formatDateTime(values.validUntil)} (checked against the server clock).`
-                    : 'The listing expires automatically at the end of this day.'
-                }
-                error={err('validUntil')}
-                onChange={(v) => set('validUntil', v ? endOfDayIso(v) : null)}
-              />
-              <View className="flex-row gap-sm">
-                {[7, 15, 30].map((days) => (
-                  <SecondaryButton
-                    key={days}
-                    variant="outline"
-                    label={`${days} days`}
-                    className="flex-1"
-                    onPress={() =>
-                      set(
-                        'validUntil',
-                        endOfDayIso(toDateOnly(new Date(Date.now() + days * 86400000))),
-                      )
-                    }
-                  />
-                ))}
+          {isBuy ? (
+            <Notice tone="info">
+              {live && listing?.validity.validUntil
+                ? `This request is open until ${formatDateTime(listing.validity.validUntil)}.`
+                : validityDays
+                  ? `Your request stays open for ${validityDays} days after you publish it.`
+                  : 'Your request stays open for a fixed period after you publish it. The closing date is set when it goes live.'}
+            </Notice>
+          ) : (
+            <Card title="Validity">
+              <View className="gap-md">
+                <DateField
+                  label="Valid until"
+                  required
+                  value={values.validUntil ? toDateOnly(new Date(values.validUntil)) : null}
+                  minimumDate={toDateOnly(new Date())}
+                  hint={
+                    values.validUntil
+                      ? `Expires ${formatDateTime(values.validUntil)} (checked against the server clock).`
+                      : 'The listing expires automatically at the end of this day.'
+                  }
+                  error={err('validUntil')}
+                  onChange={(v) => set('validUntil', v ? endOfDayIso(v) : null)}
+                />
+                <View className="flex-row gap-sm">
+                  {[7, 15, 30].map((days) => (
+                    <SecondaryButton
+                      key={days}
+                      variant="outline"
+                      label={`${days} days`}
+                      className="flex-1"
+                      onPress={() =>
+                        set(
+                          'validUntil',
+                          endOfDayIso(toDateOnly(new Date(Date.now() + days * 86400000))),
+                        )
+                      }
+                    />
+                  ))}
+                </View>
               </View>
-            </View>
-          </Card>
-          <Card title="Summary">
-            <KeyValues
-              rows={[
-                ['Product', labels.categoryId],
-                ['Grade', labels.gradeId ?? values.customGradeName],
-                ['Brand', labels.brandId],
-                ['Origin', bundle.countries.find((c) => c.id === values.originCountryId)?.name],
-                ['Quantity', values.quantity ? `${values.quantity} ${qtyUnit}` : null],
-                [
-                  cfg.copy.price,
-                  values.price
-                    ? `${currencyCode ?? ''} ${values.price} / ${importLabel(values.priceUnit ?? 'MT')}`
-                    : null,
+            </Card>
+          )}
+          {(
+            [
+              {
+                id: 'product',
+                title: 'Product',
+                rows: [
+                  ['Product', labels.categoryId],
+                  ['Grade', labels.gradeId ?? values.customGradeName],
+                  ['Brand', labels.brandId],
+                  ['Origin', bundle.countries.find((c) => c.id === values.originCountryId)?.name],
+                  ['Quantity', values.quantity ? `${values.quantity} ${qtyUnit}` : null],
+                  ...((isBuy
+                    ? [
+                        [
+                          'Acceptable range',
+                          values.acceptableQuantityMin || values.acceptableQuantityMax
+                            ? `${values.acceptableQuantityMin || '—'} – ${values.acceptableQuantityMax || '—'} ${qtyUnit}`
+                            : null,
+                        ],
+                        [
+                          'Required delivery',
+                          values.requiredDeliveryDate
+                            ? formatDate(values.requiredDeliveryDate)
+                            : null,
+                        ],
+                      ]
+                    : [
+                        ['MOQ', values.moq ? `${values.moq} ${qtyUnit}` : null],
+                        [
+                          'Max per buyer',
+                          values.maximumQuantity ? `${values.maximumQuantity} ${qtyUnit}` : null,
+                        ],
+                        [
+                          'Stock type',
+                          values.readyStockType ? importLabel(values.readyStockType) : null,
+                        ],
+                      ]) as [string, string | null | undefined][]),
+                  ['Packaging', bundle.packaging.find((p) => p.id === values.packagingId)?.name],
                 ],
-                [
-                  'Incoterm',
-                  incoterm
-                    ? `${incoterm.code} ${labels.priceBasisPortId ?? values.priceBasisLocation ?? ''}`
-                    : null,
+              },
+              {
+                id: 'commercial',
+                title: 'Commercial',
+                rows: [
+                  [
+                    cfg.copy.price,
+                    values.price
+                      ? `${currencyCode ?? ''} ${values.price} / ${importLabel(values.priceUnit ?? 'MT')}`
+                      : null,
+                  ],
+                  ['Price type', values.priceType ? importLabel(values.priceType) : null],
+                  [
+                    'Incoterm',
+                    incoterm
+                      ? `${incoterm.code} ${labels.priceBasisPortId ?? values.priceBasisLocation ?? ''}`
+                      : null,
+                  ],
+                  ['Payment terms', termsName],
+                  ...((currencyCode === 'INR'
+                    ? [['GST', values.gstTreatment ? importLabel(values.gstTreatment) : null]]
+                    : []) as [string, string | null][]),
                 ],
-                ['Payment terms', termsName],
-                [
-                  'POL → POD',
-                  labels.polId && labels.podId ? `${labels.polId} → ${labels.podId}` : null,
+              },
+              {
+                id: 'shipping',
+                title: 'Shipping',
+                rows: [
+                  [
+                    'POL → POD',
+                    labels.polId && labels.podId ? `${labels.polId} → ${labels.podId}` : null,
+                  ],
+                  [
+                    'Shipment window',
+                    values.esd && values.lsd
+                      ? `${formatDate(values.esd)} – ${formatDate(values.lsd)}`
+                      : null,
+                  ],
+                  [
+                    'Transit',
+                    values.transitMinDays !== null &&
+                    values.transitMinDays !== undefined &&
+                    values.transitMaxDays !== null &&
+                    values.transitMaxDays !== undefined
+                      ? `${values.transitMinDays}–${values.transitMaxDays} days`
+                      : null,
+                  ],
+                  ['Shipment type', values.shipmentType ? importLabel(values.shipmentType) : null],
+                  [
+                    'Containers',
+                    values.containerSize || values.containerCount
+                      ? [
+                          values.containerCount ? `${values.containerCount} ×` : null,
+                          values.containerSize ? importLabel(values.containerSize) : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' ')
+                      : null,
+                  ],
                 ],
-                [
-                  'Shipment window',
-                  values.esd && values.lsd
-                    ? `${formatDate(values.esd)} – ${formatDate(values.lsd)}`
-                    : null,
+              },
+              {
+                id: 'quality',
+                title: 'Quality & documents',
+                rows: [
+                  ['Inspection', values.inspectionType ? importLabel(values.inspectionType) : null],
+                  [isBuy ? 'Required documents' : 'Documents offered', docNames || null],
+                  ['Specification', values.specification],
+                  ['Remarks', values.remarks],
                 ],
-                ['Valid until', values.validUntil ? formatDateTime(values.validUntil) : null],
-              ]}
-            />
-          </Card>
+              },
+            ] as { id: StepId; title: string; rows: [string, string | null | undefined][] }[]
+          ).map((section) => {
+            const errors = stepErrors[section.id];
+            return (
+              <Card
+                key={section.id}
+                title={section.title}
+                right={
+                  <Pressable
+                    onPress={() => goToStep(STEPS.findIndex((s) => s.id === section.id))}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Edit ${section.title}`}
+                  >
+                    <Typography
+                      variant="link"
+                      className={cn('font-semibold', errors && 'text-brand-error')}
+                    >
+                      {errors ? `Edit · ${errors} to fix` : 'Edit'}
+                    </Typography>
+                  </Pressable>
+                }
+              >
+                <KeyValues rows={section.rows} />
+              </Card>
+            );
+          })}
           {Object.keys(fieldErrors).length ? (
             <Card title="Fix these before publishing">
               <View className="gap-xs">

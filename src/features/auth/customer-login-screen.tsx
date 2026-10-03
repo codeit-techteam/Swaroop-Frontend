@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 
 import { Pressable, View } from 'react-native';
 
@@ -19,10 +19,15 @@ import {
   SecondaryButton,
   Typography,
 } from '@/components';
-import { DEMO_PHONE, DEMO_OTP, DEMO_USER_NAME } from '@/config/development';
+import { DEMO_PHONE, DEMO_OTP, DEMO_USER_NAME, DEVELOPMENT_MODE } from '@/config/development';
 import { LockIcon } from '@/icons';
 import { useZodForm } from '@/lib/forms';
 import { ROUTES } from '@/navigation/routes';
+import {
+  customerAuthErrorMessage,
+  isOtpCooldownError,
+  sendCustomerOtp,
+} from '@/services/customer-auth';
 import { brandColors } from '@/theme/colors';
 import { phoneSchema } from '@/utils/validators';
 
@@ -34,17 +39,31 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export const CustomerLoginScreen = () => {
   const router = useRouter();
+  const [isSending, setIsSending] = useState(false);
+  const [sendError, setSendError] = useState<string | undefined>();
   const {
     control,
     handleSubmit,
     formState: { isValid },
   } = useZodForm(loginSchema, {
-    defaultValues: { mobile: DEMO_PHONE },
+    defaultValues: { mobile: DEVELOPMENT_MODE ? DEMO_PHONE : '' },
     mode: 'onChange',
   });
 
   const onGetOtp = useCallback(
-    (values: LoginFormValues) => {
+    async (values: LoginFormValues) => {
+      setIsSending(true);
+      setSendError(undefined);
+      try {
+        await sendCustomerOtp(values.mobile, 'LOGIN');
+      } catch (error) {
+        if (!isOtpCooldownError(error)) {
+          setSendError(customerAuthErrorMessage(error, 'Unable to send OTP. Please try again.'));
+          return;
+        }
+      } finally {
+        setIsSending(false);
+      }
       router.push({
         pathname: ROUTES.AUTH.OTP_VERIFICATION,
         params: { phone: values.mobile, source: 'login' },
@@ -86,7 +105,7 @@ export const CustomerLoginScreen = () => {
                 value={value}
                 onChangeText={onChange}
                 onBlur={onBlur}
-                error={fieldState.error?.message}
+                error={fieldState.error?.message ?? sendError}
                 leftSlot={<CountryPicker />}
               />
             )}
@@ -96,12 +115,15 @@ export const CustomerLoginScreen = () => {
             label="GET OTP"
             className="mt-xl"
             disabled={!isValid}
+            loading={isSending}
             onPress={handleSubmit(onGetOtp)}
           />
 
-          <Typography variant="legal" className="mt-md text-center">
-            Dev: {DEMO_USER_NAME} · {DEMO_PHONE} · OTP {DEMO_OTP}
-          </Typography>
+          {DEVELOPMENT_MODE ? (
+            <Typography variant="legal" className="mt-md text-center">
+              Dev: {DEMO_USER_NAME} · {DEMO_PHONE} · OTP {DEMO_OTP}
+            </Typography>
+          ) : null}
 
           <Divider className="my-xl" />
 

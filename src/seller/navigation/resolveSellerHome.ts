@@ -1,14 +1,12 @@
-import { DEMO_OTP, DEMO_PHONE } from '@/config/development';
+import { DEMO_OTP, DEMO_PHONE, DEVELOPMENT_MODE } from '@/config/development';
 import { useSellerStore } from '@/seller/store/sellerStore';
-import {
-  fetchSellerOnboardingStatus,
-  isExistingSellerAccount,
-} from '@/services/seller-onboarding';
+import { fetchSellerOnboardingStatus, isExistingSellerAccount } from '@/services/seller-onboarding';
 
 export type SellerHomeAccess = 'home' | 'onboarding' | 'unknown';
 
 /** Seeded seller phone 8240890242. OTP is checked when the caller just verified it. */
 export function isKnownExistingDemoSeller(mobile: string, otp?: string): boolean {
+  if (!DEVELOPMENT_MODE) return false;
   const digits = mobile.replace(/\D/g, '').slice(-10);
   if (digits !== DEMO_PHONE) return false;
   return otp == null || otp === DEMO_OTP;

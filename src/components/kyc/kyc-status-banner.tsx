@@ -65,14 +65,16 @@ export const KycStatusBanner = memo(function KycStatusBanner({
     box = 'border-red-300 bg-brand-error-light';
     titleClass = 'text-red-900';
     buttonClass = 'bg-brand-error';
-    title = 'KYC verification rejected';
-    message = overview.rejectedReason ?? 'Fix the highlighted documents and resubmit.';
+    title = 'KYC needs correction';
+    message = overview.rejectedReason
+      ? `Reason: ${overview.rejectedReason}`
+      : 'Fix the highlighted details and resubmit.';
   } else if (showReviewStates && overview.status === 'SUBMITTED') {
     box = 'border-brand-primary bg-brand-primary-tint';
     titleClass = 'text-brand-heading';
-    title = 'Verification in progress';
-    message = 'Our compliance team is reviewing your documents. We will notify you once done.';
-  } else if (showReviewStates && overview.status === 'APPROVED') {
+    title = 'Your KYC is under review';
+    message = 'Our compliance team is reviewing your details. We will notify you once done.';
+  } else if (showReviewStates && overview.kycVerified) {
     box = 'border-green-300 bg-brand-success-light';
     titleClass = 'text-green-900';
     title = 'KYC verified';

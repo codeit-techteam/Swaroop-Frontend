@@ -120,20 +120,45 @@ export const generateKycReferenceId = (): string => {
   return `PT-KYC-${suffix}`;
 };
 
-export const buildSubmissionTimeline = (): TimelineStep[] => [
+type ChecklistItem = {
+  key: string;
+  label: string;
+  state: 'done' | 'pending' | 'attention' | 'todo';
+  detail: string;
+};
+
+const CHECKLIST_TIMELINE_STATUS: Record<ChecklistItem['state'], TimelineStep['status']> = {
+  done: 'completed',
+  pending: 'in_progress',
+  attention: 'in_progress',
+  todo: 'pending',
+};
+
+const DEFAULT_SUBMISSION_TIMELINE: TimelineStep[] = [
   {
     id: 'verification',
     title: 'Document Verification',
     description: 'Compliance team is reviewing your files.',
     status: 'in_progress',
-    meta: 'In Progress — Est. 24-48 hours',
   },
   {
     id: 'activation',
     title: 'Account Activation',
-    description: 'Receive trading credentials via email.',
+    description: 'Full access once your KYC is approved.',
     status: 'pending',
   },
 ];
+
+/** Timeline driven by the backend KYC checklist; falls back to a static outline while loading. */
+export const buildSubmissionTimeline = (checklist?: ChecklistItem[] | null): TimelineStep[] =>
+  checklist?.length
+    ? checklist.map((item) => ({
+        id: item.key,
+        title: item.label,
+        description: item.detail,
+        status: CHECKLIST_TIMELINE_STATUS[item.state],
+        meta: item.state === 'attention' ? 'Needs your attention' : undefined,
+      }))
+    : DEFAULT_SUBMISSION_TIMELINE;
 
 export const SUPPORT_PHONE = '1-800-555-PETRO';

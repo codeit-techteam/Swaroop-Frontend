@@ -1,5 +1,6 @@
-import Constants from 'expo-constants';
 import { Platform } from 'react-native';
+
+import Constants from 'expo-constants';
 
 import { z } from 'zod';
 
@@ -55,9 +56,14 @@ const rawEnv: EnvSchema = {
     process.env.EXPO_PUBLIC_ONESIGNAL_APP_ID ?? ENV_DEFAULTS.EXPO_PUBLIC_ONESIGNAL_APP_ID,
 };
 
-const parsedEnv = envSchema.safeParse(rawEnv);
-
-const env: EnvSchema = parsedEnv.success ? parsedEnv.data : ENV_DEFAULTS;
+// Validate per key: one empty optional value (e.g. a blank Firebase key) must not
+// discard the configured API URL and silently fall back to localhost.
+const env = Object.fromEntries(
+  (Object.keys(envSchema.shape) as (keyof EnvSchema)[]).map((key) => {
+    const parsed = envSchema.shape[key].safeParse(rawEnv[key]);
+    return [key, parsed.success ? parsed.data : ENV_DEFAULTS[key]];
+  }),
+) as EnvSchema;
 
 type ExpoHostConstants = {
   expoGoConfig?: { debuggerHost?: string };
@@ -86,7 +92,12 @@ function extractHost(value?: string | null): string | undefined {
 }
 
 function isLoopbackHost(hostname: string): boolean {
-  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1' || hostname === '0.0.0.0';
+  return (
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname === '::1' ||
+    hostname === '0.0.0.0'
+  );
 }
 
 function isPlaceholderApiHost(hostname: string): boolean {
@@ -105,7 +116,11 @@ function isPrivateLanHost(hostname: string): boolean {
 
   const first = Number(match[1]);
   const second = Number(match[2]);
-  return first === 10 || (first === 192 && second === 168) || (first === 172 && second >= 16 && second <= 31);
+  return (
+    first === 10 ||
+    (first === 192 && second === 168) ||
+    (first === 172 && second >= 16 && second <= 31)
+  );
 }
 
 function getExpoDevHost(): string | undefined {
@@ -133,7 +148,10 @@ function getExpoDevHost(): string | undefined {
  * Physical phones cannot reach the Mac's localhost. In development, rewrite
  * placeholder / loopback API URLs to the Expo LAN host (or the Android emulator alias).
  */
-function resolveDevApiBaseUrl(configured: string, appEnv: EnvSchema['EXPO_PUBLIC_APP_ENV']): string {
+function resolveDevApiBaseUrl(
+  configured: string,
+  appEnv: EnvSchema['EXPO_PUBLIC_APP_ENV'],
+): string {
   let parsed: URL;
   try {
     parsed = new URL(configured);
@@ -141,7 +159,10 @@ function resolveDevApiBaseUrl(configured: string, appEnv: EnvSchema['EXPO_PUBLIC
     parsed = new URL(ENV_DEFAULTS.EXPO_PUBLIC_API_BASE_URL);
   }
 
-  if (appEnv !== 'development' || (!isLoopbackHost(parsed.hostname) && !isPlaceholderApiHost(parsed.hostname))) {
+  if (
+    appEnv !== 'development' ||
+    (!isLoopbackHost(parsed.hostname) && !isPlaceholderApiHost(parsed.hostname))
+  ) {
     return configured.replace(/\/$/, '');
   }
 

@@ -33,12 +33,7 @@ export {
   getSessionSnapshot,
   clearAll,
 } from '@/services/storage';
-export {
-  validateDevOtp,
-  getInvalidOtpMessage,
-  shouldAutoApproveKyc,
-  isDevAccount,
-} from '@/services/dev-auth';
+export { validateDevOtp, getInvalidOtpMessage, isDevAccount } from '@/services/dev-auth';
 export {
   getCurrentUser,
   saveCurrentUser,

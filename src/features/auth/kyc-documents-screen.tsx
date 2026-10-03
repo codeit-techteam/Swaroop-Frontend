@@ -15,6 +15,7 @@ import {
   VerificationBanner,
 } from '@/components';
 import { KycStatusBanner } from '@/components/kyc/kyc-status-banner';
+import { KycVerificationSummary } from '@/components/kyc/kyc-verification-summary';
 import { getKycStepperSteps } from '@/constants/documents';
 import { useDocumentUpload } from '@/hooks/use-document-upload';
 import { LockIcon, TrustIllustration } from '@/icons';
@@ -82,6 +83,14 @@ export const KycDocumentsScreen = () => {
         className="mt-2xl"
         onEdit={handleEditBusiness}
       />
+
+      {overview ? (
+        <KycVerificationSummary
+          pan={overview.verifications.pan}
+          gst={overview.verifications.gst}
+          className="mt-md"
+        />
+      ) : null}
 
       <View className="mt-2xl">
         <Typography variant="headingLeft" className="text-[18px] text-brand-primary">

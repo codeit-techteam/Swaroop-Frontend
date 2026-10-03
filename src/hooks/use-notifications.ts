@@ -129,17 +129,15 @@ export function useCustomerNotifications() {
       }
     });
 
-    return [
+    const all: NotificationDateGroup[] = [
       { key: 'today', label: 'Today', items: today },
       { key: 'yesterday', label: 'Yesterday', items: yesterday },
       { key: 'earlier', label: 'Earlier', items: earlier },
-    ].filter((group) => group.items.length > 0);
+    ];
+    return all.filter((group) => group.items.length > 0);
   }, [visibleItems]);
 
-  const unreadCount = useMemo(
-    () => items.filter((item) => !item.isRead).length,
-    [items],
-  );
+  const unreadCount = useMemo(() => items.filter((item) => !item.isRead).length, [items]);
 
   useEffect(() => {
     if (!isLoading) {

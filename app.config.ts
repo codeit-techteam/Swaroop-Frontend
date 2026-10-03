@@ -1,9 +1,10 @@
 import { ExpoConfig, ConfigContext } from 'expo/config';
 
 const APP_ENV = process.env.EXPO_PUBLIC_APP_ENV ?? 'development';
+// Plain-HTTP (LAN backend on the dev machine) is only allowed in development builds.
+const ALLOW_CLEARTEXT = APP_ENV === 'development';
 const APP_VERSION = process.env.EXPO_PUBLIC_APP_VERSION ?? '1.0.0';
-const EAS_PROJECT_ID =
-  process.env.EAS_PROJECT_ID ?? '8fa5420d-cb2b-4656-bc7a-411b977c9d7b';
+const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID ?? '8fa5420d-cb2b-4656-bc7a-411b977c9d7b';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -25,8 +26,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       NSLocationAlwaysAndWhenInUseUsageDescription:
         'PetroTrade uses your location to detect the delivery pincode and save warehouse addresses.',
       NSAppTransportSecurity: {
-        NSAllowsArbitraryLoads: true,
-        NSAllowsLocalNetworking: true,
+        NSAllowsArbitraryLoads: ALLOW_CLEARTEXT,
+        NSAllowsLocalNetworking: ALLOW_CLEARTEXT,
       },
     },
   },
@@ -36,7 +37,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       backgroundColor: '#ffffff',
     },
     package: 'com.swaroop.app',
-    usesCleartextTraffic: true,
     permissions: [
       'android.permission.INTERNET',
       'android.permission.ACCESS_NETWORK_STATE',
@@ -91,7 +91,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           targetSdkVersion: 36,
           buildToolsVersion: '36.0.0',
           minSdkVersion: 24,
-          usesCleartextTraffic: true,
+          usesCleartextTraffic: ALLOW_CLEARTEXT,
         },
         ios: {
           deploymentTarget: '16.4',

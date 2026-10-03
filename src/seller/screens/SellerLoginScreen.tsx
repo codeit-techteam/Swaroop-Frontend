@@ -15,7 +15,7 @@ import {
   ScreenWrapper,
   Typography,
 } from '@/components';
-import { DEMO_PHONE } from '@/config/development';
+import { DEMO_PHONE, DEVELOPMENT_MODE } from '@/config/development';
 import { useZodForm } from '@/lib/forms';
 import { ROUTES } from '@/navigation/routes';
 import { SellerPrimaryButton, SellerTextField } from '@/seller/components';
@@ -41,7 +41,7 @@ export const SellerLoginScreen = () => {
     handleSubmit,
     formState: { isValid },
   } = useZodForm(sellerLoginSchema, {
-    defaultValues: { mobile: snapshot.mobile || DEMO_PHONE },
+    defaultValues: { mobile: snapshot.mobile || (DEVELOPMENT_MODE ? DEMO_PHONE : '') },
     mode: 'onChange',
   });
 
@@ -53,6 +53,7 @@ export const SellerLoginScreen = () => {
       try {
         // Skip OTP for repeat demo sessions that already have dashboard access.
         if (
+          DEVELOPMENT_MODE &&
           values.mobile === DEMO_PHONE &&
           snapshot.sellerLoggedIn &&
           snapshot.dashboardAccess
@@ -64,6 +65,9 @@ export const SellerLoginScreen = () => {
         const result = await requestSellerOtpSend(values.mobile);
         if (result.message) {
           setHint(result.message);
+        }
+        if (!result.ok) {
+          return;
         }
 
         router.push({
@@ -124,11 +128,13 @@ export const SellerLoginScreen = () => {
           })}
         />
 
-        <View className="mt-xl rounded-2xl bg-brand-surface p-md">
-          <Typography variant="legal" className="text-left">
-            Demo mobile: {DEMO_PHONE}
-          </Typography>
-        </View>
+        {DEVELOPMENT_MODE ? (
+          <View className="mt-xl rounded-2xl bg-brand-surface p-md">
+            <Typography variant="legal" className="text-left">
+              Demo mobile: {DEMO_PHONE}
+            </Typography>
+          </View>
+        ) : null}
 
         <Pressable className="mt-xl rounded-2xl border border-brand-border px-lg py-md">
           <Typography variant="body" className="text-center">

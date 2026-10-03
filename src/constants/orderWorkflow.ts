@@ -1,6 +1,16 @@
 import type { Href } from 'expo-router';
 
 import {
+  CREDIT_STATUS_SEQUENCE,
+  getCreditScreenRoute,
+  isCreditPaymentFlow,
+} from '@/constants/creditWorkflow';
+import {
+  createDeliveryCompletedPatch,
+  isOnDeliveryPaymentFlow,
+  ON_DELIVERY_PAYMENT_SEQUENCE,
+} from '@/constants/deliveryCompleted';
+import {
   createDispatchStartedPatch,
   createInTransitWithoutPaymentPatch,
   DEFAULT_SHIPMENT_DETAILS,
@@ -10,16 +20,6 @@ import {
   createLoadingCompletedPatch,
   createLoadingScheduledPatch,
 } from '@/constants/loadingWorkflow';
-import {
-  createDeliveryCompletedPatch,
-  isOnDeliveryPaymentFlow,
-  ON_DELIVERY_PAYMENT_SEQUENCE,
-} from '@/constants/deliveryCompleted';
-import {
-  CREDIT_STATUS_SEQUENCE,
-  getCreditScreenRoute,
-  isCreditPaymentFlow,
-} from '@/constants/creditWorkflow';
 import { createInitialProcurementState } from '@/constants/procurementSteps';
 import { ROUTES } from '@/navigation/routes';
 import type { Order } from '@/types/order';
@@ -497,9 +497,11 @@ export const getScreenRouteForOrder = (order: Order): Href => {
       return ROUTES.CUSTOMER.LOADING_COMPLETED as Href;
     case 'PAYMENT_PENDING':
       if (isCreditPaymentFlow(order)) {
-        return (
-          getCreditScreenRoute(order) ?? (ROUTES.CUSTOMER.CREDIT_COUNTDOWN as Href)
-        );
+        const creditScreen = getCreditScreenRoute(order);
+        if (creditScreen) {
+          return creditScreen;
+        }
+        return ROUTES.CUSTOMER.CREDIT_COUNTDOWN as Href;
       }
       if (isOnDeliveryPaymentFlow(order) && order.deliveryStatus === 'delivered') {
         return ROUTES.CUSTOMER.PAYMENT_REMINDER as Href;
