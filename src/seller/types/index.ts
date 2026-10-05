@@ -18,7 +18,10 @@ export type SellerCompany = {
   companyName: string;
   gst: string;
   pan: string;
+  /** Backend accepted the GSTIN (VERIFIED or sent for manual review). */
   gstVerified: boolean;
+  /** Backend accepted the PAN (VERIFIED or sent for manual review). */
+  panVerified?: boolean;
   gstStateCode: string;
   gstState: string;
   entityType: string;
@@ -221,7 +224,10 @@ export type SellerProductStoreActions = {
   /** Replace products from production seller API (keeps editor/dashboard fields). */
   hydrateFromApi: () => Promise<void>;
   refreshFromApi: () => Promise<void>;
-  updateFormField: <K extends keyof SellerProductForm>(field: K, value: SellerProductForm[K]) => void;
+  updateFormField: <K extends keyof SellerProductForm>(
+    field: K,
+    value: SellerProductForm[K],
+  ) => void;
   updatePricingField: <K extends keyof SellerPaymentPricing>(
     field: K,
     value: SellerPaymentPricing[K],
@@ -235,8 +241,8 @@ export type SellerProductStoreActions = {
   deleteTier: (tierId: string) => void;
   moveTier: (tierId: string, direction: 'up' | 'down') => void;
   validateProductForm: (mode: 'draft' | 'publish') => boolean;
-  saveDraftProduct: () => { success: boolean; productId?: string };
-  publishProduct: () => { success: boolean; productId?: string };
+  saveDraftProduct: () => Promise<{ success: boolean; productId?: string; error?: string }>;
+  publishProduct: () => Promise<{ success: boolean; productId?: string; error?: string }>;
   editProduct: (productId: string) => void;
   applyCatalogGrade: (catalogId: string) => boolean;
   clearSelection: () => void;
@@ -252,19 +258,10 @@ export type InventoryCategory = 'Polymer' | 'Chemicals' | 'Speciality' | 'Lubric
 
 export type InventoryStatus = 'normal' | 'low_stock' | 'out_of_stock';
 
-export type WarehouseOption =
-  | 'Main Warehouse'
-  | 'Hazira'
-  | 'JNPT'
-  | 'Bhiwandi'
-  | 'Mundra';
+export type WarehouseOption = 'Main Warehouse' | 'Hazira' | 'JNPT' | 'Bhiwandi' | 'Mundra';
 
 export type StockAdjustmentReason =
-  | 'New Procurement'
-  | 'Inventory Adjustment'
-  | 'Quality Hold'
-  | 'Damage'
-  | 'Manual Correction';
+  'New Procurement' | 'Inventory Adjustment' | 'Quality Hold' | 'Damage' | 'Manual Correction';
 
 export type InventoryProduct = {
   id: string;

@@ -7,8 +7,13 @@ import type {
   SellerTechnicalSpecs,
 } from '@/seller/types';
 import { matchCatalogForLegacyForm } from '@/seller/utils/catalog';
+import { buildListingInput, isBackendId } from '@/seller/utils/listing-input';
 import { createEmptyPricing, normalizeSellerPricing } from '@/seller/utils/pricing';
-import { fetchSellerProducts } from '@/services/seller-products';
+import {
+  createSellerListing,
+  fetchSellerProducts,
+  updateSellerListing,
+} from '@/services/seller-products';
 import { getStorageItem, setStorageItem } from '@/utils/storage';
 
 const safeParse = <T>(value: string | undefined, fallback: T): T => {
@@ -229,12 +234,35 @@ export const updateProduct = (
 };
 
 export const saveDraft = (snapshot: SellerProductSnapshot, selectedProductId: string | null) =>
-  selectedProductId ? updateProduct(snapshot, selectedProductId, 'draft') : createProduct(snapshot, 'draft');
-
-export const publishProduct = (snapshot: SellerProductSnapshot, selectedProductId: string | null) =>
   selectedProductId
-    ? updateProduct(snapshot, selectedProductId, 'published')
-    : createProduct(snapshot, 'published');
+    ? updateProduct(snapshot, selectedProductId, 'draft')
+    : createProduct(snapshot, 'draft');
+
+/**
+ * Creates or updates the listing on the backend (product + inventory + offer)
+ * and replaces the local entry with the saved backend product.
+ */
+export const saveListingToBackend = async (
+  snapshot: SellerProductSnapshot,
+  selectedProductId: string | null,
+  publish: boolean,
+): Promise<{ snapshot: SellerProductSnapshot; product: SellerProduct }> => {
+  const input = buildListingInput(snapshot, publish);
+  const saved = isBackendId(selectedProductId)
+    ? await updateSellerListing(selectedProductId, input)
+    : await createSellerListing(input);
+  const products = snapshot.products.filter(
+    (item) => item.id !== selectedProductId && item.id !== saved.id,
+  );
+  return {
+    product: saved,
+    snapshot: reconcileCollections({
+      ...snapshot,
+      products: [saved, ...products],
+      selectedProductId: saved.id,
+    }),
+  };
+};
 
 export const getProducts = (snapshot: SellerProductSnapshot): SellerProduct[] => snapshot.products;
 

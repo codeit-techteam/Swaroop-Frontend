@@ -10,15 +10,25 @@ import {
   getSellerProductSnapshot,
   loadProductIntoEditor,
   persistSellerProductSnapshot,
-  publishProduct,
   resetEditorState,
   saveDraft,
+  saveListingToBackend,
   updateStock,
 } from '@/seller/services/sellerProductService';
 import type { SellerProductForm, SellerProductStore, SellerTechnicalSpecs } from '@/seller/types';
 import { buildEditorFromCatalogId } from '@/seller/utils/catalog';
+import { canSaveListingToBackend } from '@/seller/utils/listing-input';
 import { getLiveCatalogProduct } from '@/services/catalog';
 import { logger } from '@/utils/logger';
+
+const listingErrorMessage = (error: unknown): string => {
+  const data = (error as { response?: { data?: { message?: unknown } } })?.response?.data;
+  const message = Array.isArray(data?.message) ? data.message.join(' ') : data?.message;
+  if (typeof message === 'string' && message.trim()) {
+    return message;
+  }
+  return error instanceof Error && error.message ? error.message : 'Could not save the listing.';
+};
 
 const catalogHasSpec = (form: SellerProductForm, spec: 'mfi' | 'density'): boolean => {
   const catalog = form.catalogProductId ? getLiveCatalogProduct(form.catalogProductId) : undefined;
@@ -239,34 +249,44 @@ export const useSellerProductStore = create<SellerProductStore>((set, get) => ({
     return Object.keys(formErrors).length === 0;
   },
 
-  saveDraftProduct: () => {
+  saveDraftProduct: async () => {
     const state = get();
     if (!state.validateProductForm('draft')) {
       return { success: false };
     }
 
-    const result = saveDraft(state, state.selectedProductId);
-    set({
-      ...result.snapshot,
-      formErrors: {},
-    });
-    persist(get());
-    return { success: true, productId: result.product.id };
+    try {
+      const result = canSaveListingToBackend(state)
+        ? await saveListingToBackend(state, state.selectedProductId, false)
+        : saveDraft(state, state.selectedProductId);
+      set({
+        ...result.snapshot,
+        formErrors: {},
+      });
+      persist(get());
+      return { success: true, productId: result.product.id };
+    } catch (error) {
+      return { success: false, error: listingErrorMessage(error) };
+    }
   },
 
-  publishProduct: () => {
+  publishProduct: async () => {
     const state = get();
     if (!state.validateProductForm('publish')) {
       return { success: false };
     }
 
-    const result = publishProduct(state, state.selectedProductId);
-    set({
-      ...resetEditorState(result.snapshot),
-      formErrors: {},
-    });
-    persist(get());
-    return { success: true, productId: result.product.id };
+    try {
+      const result = await saveListingToBackend(state, state.selectedProductId, true);
+      set({
+        ...resetEditorState(result.snapshot),
+        formErrors: {},
+      });
+      persist(get());
+      return { success: true, productId: result.product.id };
+    } catch (error) {
+      return { success: false, error: listingErrorMessage(error) };
+    }
   },
 
   editProduct: (productId) => {

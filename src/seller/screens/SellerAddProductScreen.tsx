@@ -141,6 +141,7 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
   const [query, setQuery] = useState('');
   const [catalogProducts, setCatalogProducts] = useState<MarketProduct[]>([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const appliedCatalogRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -262,21 +263,35 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
     goToStep(3);
   };
 
-  const handleSaveDraft = () => {
-    const result = saveDraftProduct();
+  const handleSaveDraft = async () => {
+    if (saving) return;
+    setSaving(true);
+    const result = await saveDraftProduct();
+    setSaving(false);
     if (result.success) {
       router.replace(ROUTES.SELLER.PRODUCTS as Href);
+      return;
+    }
+    if (result.error) {
+      Toast.show({ type: 'error', text1: 'Could not save draft', text2: result.error });
       return;
     }
     Toast.show({ type: 'info', text1: 'Add a grade name before saving draft' });
   };
 
-  const handlePublish = () => {
-    const result = publishProduct();
+  const handlePublish = async () => {
+    if (saving) return;
+    setSaving(true);
+    const result = await publishProduct();
+    setSaving(false);
     if (result.success && result.productId) {
       router.replace(
         `${ROUTES.SELLER.PRODUCT_PUBLISHED}?id=${encodeURIComponent(result.productId)}` as Href,
       );
+      return;
+    }
+    if (result.error) {
+      Toast.show({ type: 'error', text1: 'Could not publish listing', text2: result.error });
       return;
     }
     Toast.show({
@@ -742,8 +757,9 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
               </Typography>
             </Pressable>
             <SellerPrimaryButton
-              label={isEdit ? 'Publish changes' : 'Publish listing'}
+              label={saving ? 'Publishing…' : isEdit ? 'Publish changes' : 'Publish listing'}
               className="flex-1"
+              disabled={saving}
               onPress={handlePublish}
             />
           </View>
