@@ -9,7 +9,7 @@ import type {
 } from '@/seller/types';
 import { ensureDevBackendSession } from '@/services/backend-session';
 import { putFileToSignedUrl } from '@/services/customer-credit';
-import type { KycVerification, KycVerifyResult } from '@/services/customer-kyc';
+import type { KycVerification, KycVerifyResult, PanHolderDetails } from '@/services/customer-kyc';
 
 type Envelope<T> = {
   success?: boolean;
@@ -329,11 +329,11 @@ export function fetchSellerOnboardingStatus(): Promise<SellerOnboardingStatus | 
 }
 
 /** PAN / GSTIN are checked server-side; provider credentials never reach the app. */
-export function verifySellerPan(pan: string): Promise<KycVerifyResult> {
+export function verifySellerPan(pan: string, holder: PanHolderDetails): Promise<KycVerifyResult> {
   return withSellerSession(async () => {
     const response = await apiClient.post<Envelope<KycVerifyResult>>(
       '/seller/onboarding/pan/verify',
-      { pan, source: 'SELLER_APP' },
+      { pan, fullName: holder.fullName, dob: holder.dob, source: 'SELLER_APP' },
       { timeout: 30_000 },
     );
     return response.data.data;

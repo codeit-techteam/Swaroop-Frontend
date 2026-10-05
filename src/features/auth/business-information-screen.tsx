@@ -22,7 +22,9 @@ import { useZodForm } from '@/lib/forms';
 import { ROUTES } from '@/navigation/routes';
 import {
   customerKycErrorMessage,
+  formatPanDateInput,
   normalizeIdentifier,
+  toPanHolderDetails,
   verificationAccepted,
   verifyCustomerGst,
   verifyCustomerPan,
@@ -84,6 +86,9 @@ export const BusinessInformationScreen = () => {
   const [verifications, setVerifications] = useState<Verifications | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [verifyError, setVerifyError] = useState<string | null>(null);
+  const [panHolderName, setPanHolderName] = useState('');
+  const [panHolderDob, setPanHolderDob] = useState('');
+  const [panHolderError, setPanHolderError] = useState<string | undefined>();
   const [editing, setEditing] = useState<{ gstNumber: boolean; panNumber: boolean }>({
     gstNumber: false,
     panNumber: false,
@@ -157,10 +162,17 @@ export const BusinessInformationScreen = () => {
       };
       let mismatch: string | null = null;
       let mismatchChecked = false;
+      const panNeedsVerify = !alreadyAccepted(overview, 'pan', pan);
+      const holderDetails = panNeedsVerify ? toPanHolderDetails(panHolderName, panHolderDob) : null;
+      if (holderDetails && 'error' in holderDetails) {
+        setPanHolderError(holderDetails.error);
+        return;
+      }
+      setPanHolderError(undefined);
       try {
-        if (!alreadyAccepted(overview, 'pan', pan)) {
+        if (holderDetails) {
           setVerifying('PAN');
-          const result = await verifyCustomerPan(pan);
+          const result = await verifyCustomerPan(pan, holderDetails.holder);
           results.pan = result;
           mismatch = result.warning;
           mismatchChecked = typeof result.mismatch === 'boolean';
@@ -197,7 +209,7 @@ export const BusinessInformationScreen = () => {
       }
       router.push(ROUTES.AUTH.KYC_DOCUMENTS as Href);
     },
-    [locked, overview, refresh, router, setBusinessInfo],
+    [locked, overview, panHolderDob, panHolderName, refresh, router, setBusinessInfo],
   );
 
   const shown = verifications ?? overview?.verifications ?? null;
@@ -229,6 +241,23 @@ export const BusinessInformationScreen = () => {
           lockedIdentifiers={lockedIdentifiers}
           onEditIdentifier={
             locked ? undefined : (field) => setEditing((prev) => ({ ...prev, [field]: true }))
+          }
+          panHolder={
+            locked
+              ? undefined
+              : {
+                  fullName: panHolderName,
+                  dob: panHolderDob,
+                  error: panHolderError,
+                  onChangeFullName: (text) => {
+                    setPanHolderName(text);
+                    setPanHolderError(undefined);
+                  },
+                  onChangeDob: (text) => {
+                    setPanHolderDob(formatPanDateInput(text));
+                    setPanHolderError(undefined);
+                  },
+                }
           }
         />
       </View>

@@ -11,6 +11,8 @@ import {
 import { SellerPrimaryButton, SellerTextField } from '@/seller/components/SellerPrimitives';
 import {
   PAN_PATTERN,
+  formatPanDateInput,
+  toPanHolderDetails,
   type KycVerificationDetails,
   type KycVerifyResult,
 } from '@/services/customer-kyc';
@@ -44,6 +46,8 @@ export const SellerPanVerifyField = memo(function SellerPanVerifyField({
 }: SellerPanVerifyFieldProps) {
   const [verifying, setVerifying] = useState(false);
   const [localError, setLocalError] = useState<string | undefined>();
+  const [fullName, setFullName] = useState('');
+  const [dob, setDob] = useState('');
   const accepted = status === 'verified' || status === 'manual_review';
   const inputLocked = locked || accepted;
 
@@ -53,10 +57,15 @@ export const SellerPanVerifyField = memo(function SellerPanVerifyField({
       setLocalError('Enter a valid 10-character PAN (for example ABCDE1234F).');
       return;
     }
+    const details = toPanHolderDetails(fullName, dob);
+    if ('error' in details) {
+      setLocalError(details.error);
+      return;
+    }
     setLocalError(undefined);
     setVerifying(true);
     try {
-      const result = await verifySellerPan(pan);
+      const result = await verifySellerPan(pan, details.holder);
       if (result.status === 'FAILED') setLocalError(result.message);
       onResult(result, pan);
     } catch (err) {
@@ -84,10 +93,41 @@ export const SellerPanVerifyField = memo(function SellerPanVerifyField({
         onBlur={onBlur}
         error={localError ?? error}
       />
+      {!inputLocked ? (
+        <>
+          <SellerTextField
+            label="Name as per PAN"
+            placeholder="As printed on the PAN card"
+            autoCapitalize="characters"
+            autoCorrect={false}
+            maxLength={150}
+            value={fullName}
+            editable={!verifying}
+            onChangeText={(text) => {
+              setFullName(text);
+              setLocalError(undefined);
+            }}
+          />
+          <SellerTextField
+            label="Date of birth / incorporation"
+            placeholder="DD/MM/YYYY"
+            keyboardType="number-pad"
+            maxLength={10}
+            value={dob}
+            editable={!verifying}
+            onChangeText={(text) => {
+              setDob(formatPanDateInput(text));
+              setLocalError(undefined);
+            }}
+          />
+        </>
+      ) : null}
       <SellerPrimaryButton
         label={verifyButtonLabel(status, verifying)}
         loading={verifying}
-        disabled={inputLocked || value.length !== 10}
+        disabled={
+          inputLocked || value.length !== 10 || fullName.trim().length < 2 || dob.length !== 10
+        }
         onPress={() => void handleVerify()}
         className={cn(
           'rounded-2xl py-md',

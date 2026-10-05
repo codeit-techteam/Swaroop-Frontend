@@ -45,6 +45,14 @@ type BusinessInfoFormProps = {
   lockedIdentifiers?: { gstNumber?: boolean; panNumber?: boolean };
   /** Omit when identifiers cannot change at all (KYC submitted or approved). */
   onEditIdentifier?: (field: 'gstNumber' | 'panNumber') => void;
+  /** PAN Verify needs the holder's name and date of birth / incorporation; shown while the PAN is editable. */
+  panHolder?: {
+    fullName: string;
+    dob: string;
+    error?: string;
+    onChangeFullName: (text: string) => void;
+    onChangeDob: (text: string) => void;
+  };
 };
 
 const ReverifyNotice = ({ onEdit }: { onEdit?: () => void }) => (
@@ -69,6 +77,7 @@ export const BusinessInfoForm = memo(function BusinessInfoForm({
   clearErrors,
   lockedIdentifiers,
   onEditIdentifier,
+  panHolder,
 }: BusinessInfoFormProps) {
   const cityOptions = useMemo(
     () => (stateValue ? (INDIAN_STATES[stateValue] ?? []) : []),
@@ -159,6 +168,29 @@ export const BusinessInfoForm = memo(function BusinessInfoForm({
           </View>
         )}
       />
+
+      {panHolder && !lockedIdentifiers?.panNumber ? (
+        <>
+          <InputField
+            label="Name as per PAN *"
+            placeholder="As printed on the PAN card"
+            autoCapitalize="characters"
+            autoCorrect={false}
+            maxLength={150}
+            value={panHolder.fullName}
+            onChangeText={panHolder.onChangeFullName}
+          />
+          <InputField
+            label="Date of Birth / Incorporation *"
+            placeholder="DD/MM/YYYY"
+            keyboardType="number-pad"
+            maxLength={10}
+            value={panHolder.dob}
+            onChangeText={panHolder.onChangeDob}
+            error={panHolder.error}
+          />
+        </>
+      ) : null}
 
       <Controller
         control={control}

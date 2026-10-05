@@ -134,6 +134,46 @@ export function normalizeIdentifier(value: string): string {
   return value.toUpperCase().replace(/[\s-]/g, '');
 }
 
+/** Name and date of birth / incorporation (YYYY-MM-DD) exactly as printed on the PAN card. */
+export type PanHolderDetails = { fullName: string; dob: string };
+
+const PAN_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9 .&'()/,-]*$/;
+
+/** Formats typed digits as DD/MM/YYYY, the way dates are printed on PAN cards. */
+export function formatPanDateInput(text: string): string {
+  const digits = text.replace(/\D/g, '').slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+}
+
+/** Validates the holder details and converts DD/MM/YYYY to the API's YYYY-MM-DD. */
+export function toPanHolderDetails(
+  fullName: string,
+  dobText: string,
+): { holder: PanHolderDetails } | { error: string } {
+  const name = fullName.trim().replace(/\s+/g, ' ');
+  if (name.length < 2 || name.length > 150 || !PAN_NAME_PATTERN.test(name)) {
+    return { error: 'Enter the name exactly as printed on the PAN card.' };
+  }
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(dobText.trim());
+  const day = Number(match?.[1]);
+  const month = Number(match?.[2]);
+  const year = Number(match?.[3]);
+  const date = new Date(year, month - 1, day);
+  if (
+    !match ||
+    year < 1850 ||
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day ||
+    date.getTime() > Date.now()
+  ) {
+    return { error: 'Enter the date of birth / incorporation as DD/MM/YYYY.' };
+  }
+  return { holder: { fullName: name, dob: `${match[3]}-${match[2]}-${match[1]}` } };
+}
+
 /** VERIFIED, or accepted for manual confirmation by the compliance team. */
 export function verificationAccepted(verification: KycVerification | null | undefined): boolean {
   return verification?.status === 'VERIFIED' || verification?.status === 'MANUAL_REVIEW';
@@ -280,10 +320,12 @@ export function submitCustomerKyc(info?: BusinessInformation): Promise<CustomerK
 }
 
 /** PAN / GSTIN are checked server-side; provider credentials never reach the app. */
-export function verifyCustomerPan(pan: string): Promise<KycVerifyResult> {
+export function verifyCustomerPan(pan: string, holder: PanHolderDetails): Promise<KycVerifyResult> {
   return withCustomerSession(async () => {
     const response = await apiClient.post<Envelope<KycVerifyResult>>('/customer/kyc/pan/verify', {
       pan: normalizeIdentifier(pan),
+      fullName: holder.fullName,
+      dob: holder.dob,
       source: 'CUSTOMER_APP',
     });
     return response.data.data;
