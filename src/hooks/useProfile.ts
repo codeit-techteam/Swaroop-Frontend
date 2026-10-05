@@ -7,12 +7,7 @@ import {
 } from '@/constants/profile';
 import { selectSavedAddresses, useAddressStore } from '@/store/address-store';
 import { selectKycApproved, selectMobileNumber, useAuthStore } from '@/store/auth-store';
-import {
-  selectBusinessInfo,
-  selectDocuments,
-  selectMandatoryDocsReady,
-  useKycStore,
-} from '@/store/kyc-store';
+import { selectBusinessInfo, selectMandatoryDocsReady, useKycStore } from '@/store/kyc-store';
 import type {
   ComplianceStatus,
   KycVerificationStatus,
@@ -58,16 +53,16 @@ const deriveTradingStatus = (kycApproved: boolean): TradingStatus =>
 
 const buildComplianceStatus = (params: {
   kycApproved: boolean;
-  gstUploaded: boolean;
-  panUploaded: boolean;
+  gstVerified: boolean;
+  panVerified: boolean;
   documentsComplete: boolean;
 }): ComplianceStatus => {
-  const { kycApproved, gstUploaded, panUploaded, documentsComplete } = params;
+  const { kycApproved, gstVerified, panVerified, documentsComplete } = params;
 
   return {
     kycVerified: kycApproved,
-    gstVerified: gstUploaded && kycApproved,
-    panVerified: panUploaded && kycApproved,
+    gstVerified,
+    panVerified,
     documentsComplete,
     validTillLabel: getComplianceValidTillLabel(),
     summary:
@@ -80,25 +75,16 @@ const buildComplianceStatus = (params: {
 export const useProfile = () => {
   const mobileNumber = useAuthStore(selectMobileNumber);
   const kycApproved = useAuthStore(selectKycApproved);
+  const identityVerified = useAuthStore((state) => state.identityVerified);
   const userProfile = useAuthStore((state) => state.userProfile);
   const updateUserProfile = useAuthStore((state) => state.updateUserProfile);
   const savedDeliveryAddresses = useAddressStore(selectSavedAddresses);
 
   const businessInfo = useKycStore(selectBusinessInfo);
-  const documents = useKycStore(selectDocuments);
   const docsReady = useKycStore(selectMandatoryDocsReady);
   const updateBusinessInfo = useKycStore((state) => state.updateBusinessInfo);
 
   const profile = useMemo<ProfileData>(() => {
-    const gstUploaded = documents.some(
-      (document) =>
-        document.id === 'gst' && (document.status === 'uploaded' || document.status === 'verified'),
-    );
-    const panUploaded = documents.some(
-      (document) =>
-        document.id === 'pan' && (document.status === 'uploaded' || document.status === 'verified'),
-    );
-
     const companyName = businessInfo.businessEntityName;
     const savedAddresses: ProfileData['savedAddresses'] =
       savedDeliveryAddresses.length > 0
@@ -147,15 +133,23 @@ export const useProfile = () => {
       tradingStatus: deriveTradingStatus(kycApproved),
       compliance: buildComplianceStatus({
         kycApproved,
-        gstUploaded,
-        panUploaded,
+        gstVerified: identityVerified.gst,
+        panVerified: identityVerified.pan,
         documentsComplete: docsReady,
       }),
       savedAddresses,
       bankAccounts,
       taxDocuments: DEFAULT_TAX_DOCUMENTS,
     };
-  }, [businessInfo, docsReady, documents, kycApproved, mobileNumber, savedDeliveryAddresses, userProfile]);
+  }, [
+    businessInfo,
+    docsReady,
+    identityVerified,
+    kycApproved,
+    mobileNumber,
+    savedDeliveryAddresses,
+    userProfile,
+  ]);
 
   const updateProfile = useCallback(
     (patch: ProfileUpdatePayload) => {

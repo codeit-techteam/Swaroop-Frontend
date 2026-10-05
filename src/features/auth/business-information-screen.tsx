@@ -61,6 +61,9 @@ type BusinessInfoFormValues = z.infer<typeof businessInfoSchema>;
 
 type Verifications = { pan: KycVerification | null; gst: KycVerification | null };
 
+const PAN_GST_MISMATCH =
+  'GST/PAN mismatch: the PAN associated with the GSTIN does not match the entered PAN.';
+
 /** An earlier backend result can be reused only if it was for the same identifier. */
 function alreadyAccepted(
   overview: CustomerKycOverview | null,
@@ -81,6 +84,10 @@ export const BusinessInformationScreen = () => {
   const [verifications, setVerifications] = useState<Verifications | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [verifyError, setVerifyError] = useState<string | null>(null);
+  const [editing, setEditing] = useState<{ gstNumber: boolean; panNumber: boolean }>({
+    gstNumber: false,
+    panNumber: false,
+  });
 
   const {
     control,
@@ -96,7 +103,13 @@ export const BusinessInformationScreen = () => {
   });
 
   const stateValue = watch('state');
+  const panValue = normalizeIdentifier(watch('panNumber') ?? '');
+  const gstValue = normalizeIdentifier(watch('gstNumber') ?? '');
   const locked = Boolean(overview?.locked || overview?.kycVerified);
+  const lockedIdentifiers = {
+    panNumber: locked || (!editing.panNumber && alreadyAccepted(overview, 'pan', panValue)),
+    gstNumber: locked || (!editing.gstNumber && alreadyAccepted(overview, 'gst', gstValue)),
+  };
 
   useEffect(() => {
     const subscription = watch((_values, info) => {
@@ -143,18 +156,21 @@ export const BusinessInformationScreen = () => {
         gst: overview?.verifications.gst ?? null,
       };
       let mismatch: string | null = null;
+      let mismatchChecked = false;
       try {
         if (!alreadyAccepted(overview, 'pan', pan)) {
           setVerifying('PAN');
           const result = await verifyCustomerPan(pan);
           results.pan = result;
           mismatch = result.warning;
+          mismatchChecked = typeof result.mismatch === 'boolean';
         }
         if (verificationAccepted(results.pan) && !alreadyAccepted(overview, 'gst', gstin)) {
           setVerifying('GST');
           const result = await verifyCustomerGst(gstin);
           results.gst = result;
           mismatch = result.warning ?? mismatch;
+          mismatchChecked = mismatchChecked || typeof result.mismatch === 'boolean';
         }
       } catch (error) {
         setVerifyError(
@@ -167,10 +183,14 @@ export const BusinessInformationScreen = () => {
       } finally {
         setVerifying(null);
         setVerifications(results);
+        setEditing({ gstNumber: false, panNumber: false });
         void refresh();
       }
 
       if (!verificationAccepted(results.pan) || !verificationAccepted(results.gst)) return;
+      if (!mismatch && !mismatchChecked && overview?.verifications.mismatch) {
+        mismatch = PAN_GST_MISMATCH;
+      }
       if (mismatch) {
         setWarning(mismatch);
         return;
@@ -206,6 +226,10 @@ export const BusinessInformationScreen = () => {
           errors={errors}
           stateValue={stateValue}
           clearErrors={clearErrors}
+          lockedIdentifiers={lockedIdentifiers}
+          onEditIdentifier={
+            locked ? undefined : (field) => setEditing((prev) => ({ ...prev, [field]: true }))
+          }
         />
       </View>
 
@@ -213,7 +237,10 @@ export const BusinessInformationScreen = () => {
         <KycVerificationSummary
           pan={shown.pan}
           gst={shown.gst}
-          warning={warning}
+          warning={
+            warning ??
+            (verifications === null && overview?.verifications.mismatch ? PAN_GST_MISMATCH : null)
+          }
           className="mt-xl"
         />
       ) : null}

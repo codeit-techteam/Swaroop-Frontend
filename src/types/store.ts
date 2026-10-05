@@ -9,6 +9,8 @@ export type AuthState = {
   isHydrated: boolean;
   mobileNumber: string | null;
   kycApproved: boolean;
+  /** PAN / GSTIN verification recorded by the backend (VERIFIED only). */
+  identityVerified: { pan: boolean; gst: boolean };
   reviewSubmitted: boolean;
   onboardingCompleted: boolean;
   selectedRole: UserRole | null;
@@ -32,6 +34,10 @@ export type AuthActions = {
     status: 'NOT_SUBMITTED' | 'SUBMITTED' | 'CHANGES_REQUESTED' | 'APPROVED' | 'REJECTED';
     kycVerified: boolean;
     submittedAt: string | null;
+    verifications?: {
+      pan: { status: string } | null;
+      gst: { status: string } | null;
+    };
   }) => void;
   setLocation: (location: DeliveryLocation) => void;
   updateUserProfile: (patch: Partial<UserProfilePayload>) => void;

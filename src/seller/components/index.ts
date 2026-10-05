@@ -4,7 +4,12 @@ export {
   SellerTextField,
   SellerBottomSheet,
 } from '@/seller/components/SellerPrimitives';
-export { SellerGstValidateCard } from '@/seller/components/SellerGstValidateCard';
+export {
+  SellerGstValidateCard,
+  sellerIdentityStatus,
+  type SellerIdentityStatus,
+} from '@/seller/components/SellerGstValidateCard';
+export { SellerPanVerifyField } from '@/seller/components/SellerPanVerifyField';
 export { SellerStepper } from '@/seller/components/SellerStepper';
 export {
   SellerCard,

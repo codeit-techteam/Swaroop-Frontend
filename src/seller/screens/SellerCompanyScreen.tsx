@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { ActivityIndicator, View } from 'react-native';
 
@@ -14,6 +14,9 @@ import {
   SellerCard,
   SellerGstValidateCard,
   SellerHeader,
+  type SellerIdentityStatus,
+  sellerIdentityStatus,
+  SellerPanVerifyField,
   SellerPrimaryButton,
   SellerStepper,
   SellerTextField,
@@ -24,17 +27,22 @@ import {
   SELLER_STATES,
   SELLER_STATE_OPTIONS,
 } from '@/seller/constants';
-import { useSellerStore } from '@/seller/store/sellerStore';
 import {
   isKnownExistingDemoSeller,
   resolveSellerHomeAccess,
 } from '@/seller/navigation/resolveSellerHome';
-import { brandColors } from '@/theme/colors';
-import { type GstParseResult, parseGstin } from '@/seller/utils/gst';
+import { useSellerStore } from '@/seller/store/sellerStore';
+import { extractPanFromGstin, parseGstin } from '@/seller/utils/gst';
+import type { KycVerificationDetails, KycVerifyResult } from '@/services/customer-kyc';
 import {
+  fetchSellerOnboardingIdentity,
+  fetchSellerOnboardingStatus,
+  type SellerOnboardingIdentity,
+  type SellerOnboardingStatus,
   saveSellerOnboardingDraft,
   sellerOnboardingErrorMessage,
 } from '@/services/seller-onboarding';
+import { brandColors } from '@/theme/colors';
 import {
   emailSchema,
   gstSchema,
@@ -70,6 +78,43 @@ const sellerCompanySchema = z.object({
 
 type SellerCompanyForm = z.infer<typeof sellerCompanySchema>;
 
+type IdentityState = {
+  value: string;
+  status: SellerIdentityStatus;
+  details: KycVerificationDetails | null;
+  message: string | null;
+};
+
+const EMPTY_IDENTITY: IdentityState = { value: '', status: 'idle', details: null, message: null };
+
+const isAccepted = (status: SellerIdentityStatus) =>
+  status === 'verified' || status === 'manual_review';
+
+function savedIdentityStatus(value: string | null | undefined): SellerIdentityStatus | null {
+  if (value === 'verified') return 'verified';
+  if (value === 'manual_review') return 'manual_review';
+  return null;
+}
+
+/** Reconciles local identity state with what the backend has accepted. */
+function reconcileIdentity(
+  prev: IdentityState,
+  savedValue: string | null | undefined,
+  savedStatus: string | null | undefined,
+  verification: { details: KycVerificationDetails; message: string } | null | undefined,
+): IdentityState {
+  const status = savedIdentityStatus(savedStatus);
+  if (savedValue && status) {
+    return {
+      value: savedValue,
+      status,
+      details: verification?.details ?? null,
+      message: verification?.message ?? null,
+    };
+  }
+  return isAccepted(prev.status) ? { ...EMPTY_IDENTITY, value: prev.value } : prev;
+}
+
 export const SellerCompanyScreen = () => {
   const router = useRouter();
   const company = useSellerStore((state) => state.company);
@@ -85,12 +130,45 @@ export const SellerCompanyScreen = () => {
     defaultValues: company,
     mode: 'onChange',
   });
-  const [gstResult, setGstResult] = useState<GstParseResult | null>(() =>
-    company.gstVerified ? parseGstin(company.gst) : null,
-  );
+  const [gstIdentity, setGstIdentity] = useState<IdentityState>(EMPTY_IDENTITY);
+  const [panIdentity, setPanIdentity] = useState<IdentityState>(EMPTY_IDENTITY);
+  const [identityLocked, setIdentityLocked] = useState(false);
+  const [mismatch, setMismatch] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [checkingAccount, setCheckingAccount] = useState(true);
+
+  const applyIdentity = useCallback(
+    (status: SellerOnboardingStatus | null, saved: SellerOnboardingIdentity | null) => {
+      setIdentityLocked(Boolean(status?.locked));
+      setMismatch(Boolean(status?.verifications?.mismatch));
+      setGstIdentity((prev) =>
+        reconcileIdentity(prev, saved?.gstin, saved?.gstStatus, status?.verifications?.gst),
+      );
+      setPanIdentity((prev) =>
+        reconcileIdentity(prev, saved?.pan, saved?.panStatus, status?.verifications?.pan),
+      );
+      if (saved?.gstin && savedIdentityStatus(saved.gstStatus)) {
+        setValue('gst', saved.gstin, { shouldValidate: true });
+      }
+      if (saved?.pan && savedIdentityStatus(saved.panStatus)) {
+        setValue('pan', saved.pan, { shouldValidate: true });
+      }
+    },
+    [setValue],
+  );
+
+  const refreshIdentity = useCallback(async () => {
+    try {
+      const [status, saved] = await Promise.all([
+        fetchSellerOnboardingStatus(),
+        fetchSellerOnboardingIdentity(),
+      ]);
+      applyIdentity(status, saved);
+    } catch {
+      // Keep the current state; the backend re-checks verification on submit.
+    }
+  }, [applyIdentity]);
 
   useEffect(() => {
     let active = true;
@@ -114,42 +192,66 @@ export const SellerCompanyScreen = () => {
         return;
       }
 
+      await refreshIdentity();
+      if (!active) return;
       setCheckingAccount(false);
     })();
 
     return () => {
       active = false;
     };
-  }, [router]);
+  }, [refreshIdentity, router]);
 
   const stateValue = watch('state');
   const gstValue = watch('gst');
-  const gstVerified = Boolean(gstResult?.isValid && gstResult.gstNumber === gstValue);
+  const panValue = watch('pan');
+  const gstStatus: SellerIdentityStatus =
+    gstIdentity.value === gstValue ? gstIdentity.status : 'idle';
+  const panStatus: SellerIdentityStatus =
+    panIdentity.value === panValue ? panIdentity.status : 'idle';
+  const identityAccepted = isAccepted(gstStatus) && isAccepted(panStatus) && !mismatch;
   const cityOptions = useMemo(
     () => (stateValue ? [...(SELLER_STATES[stateValue as keyof typeof SELLER_STATES] ?? [])] : []),
     [stateValue],
   );
 
-  const handleGstVerified = (result: GstParseResult) => {
-    setGstResult(result);
-    setValue('gst', result.gstNumber, { shouldValidate: true });
-    setValue('pan', result.pan, { shouldValidate: true });
-    if (result.state in SELLER_STATES) {
-      setValue('state', result.state, { shouldValidate: true });
-      setValue('city', '');
+  const handleGstResult = (result: KycVerifyResult, gstin: string) => {
+    const status = sellerIdentityStatus(result.status);
+    setGstIdentity({ value: gstin, status, details: result.details, message: result.message });
+    setValue('gst', gstin, { shouldValidate: true });
+    if (typeof result.mismatch === 'boolean') setMismatch(result.mismatch);
+    if (isAccepted(status)) {
+      const state = result.details.state;
+      if (state && state in SELLER_STATES) {
+        setValue('state', state, { shouldValidate: true });
+        setValue('city', '');
+      }
+      if (!panValue) setValue('pan', extractPanFromGstin(gstin), { shouldValidate: true });
+      clearErrors(['gst']);
     }
-    clearErrors(['gst', 'pan']);
+    void refreshIdentity();
+  };
+
+  const handlePanResult = (result: KycVerifyResult, pan: string) => {
+    const status = sellerIdentityStatus(result.status);
+    setPanIdentity({ value: pan, status, details: result.details, message: result.message });
+    setValue('pan', pan, { shouldValidate: true });
+    if (typeof result.mismatch === 'boolean') setMismatch(result.mismatch);
+    if (isAccepted(status)) clearErrors(['pan']);
+    void refreshIdentity();
   };
 
   const handleContinue = async (values: SellerCompanyForm) => {
-    if (!gstVerified || !gstResult?.isValid) {
+    if (!identityAccepted) {
       return;
     }
+    const decoded = parseGstin(values.gst);
     const nextCompany = {
       ...values,
       gstVerified: true,
-      gstStateCode: gstResult.stateCode,
-      gstState: gstResult.state,
+      panVerified: true,
+      gstStateCode: gstIdentity.details?.stateCode ?? decoded.stateCode,
+      gstState: gstIdentity.details?.state ?? decoded.state,
     };
     saveCompany(nextCompany);
     setSaving(true);
@@ -193,16 +295,14 @@ export const SellerCompanyScreen = () => {
           <SellerGstValidateCard
             className="mt-lg"
             value={value}
-            verified={gstVerified}
-            result={gstVerified ? gstResult : null}
+            status={gstStatus}
+            details={gstIdentity.details}
+            message={gstIdentity.message}
+            locked={identityLocked}
             error={errors.gst?.message}
-            onChange={(text) => {
-              onChange(text);
-              if (gstResult && gstResult.gstNumber !== text) {
-                setGstResult(null);
-              }
-            }}
-            onVerified={handleGstVerified}
+            onChange={onChange}
+            onResult={handleGstResult}
+            onEdit={() => setGstIdentity((prev) => ({ ...EMPTY_IDENTITY, value: prev.value }))}
             onBlur={onBlur}
           />
         )}
@@ -229,14 +329,17 @@ export const SellerCompanyScreen = () => {
             control={control}
             name="pan"
             render={({ field: { value, onChange, onBlur } }) => (
-              <SellerTextField
-                label="Permanent Account Number (PAN)"
-                placeholder="Validate GST to auto-fill PAN"
-                autoCapitalize="characters"
+              <SellerPanVerifyField
                 value={value}
-                onChangeText={(text) => onChange(text.toUpperCase())}
-                onBlur={onBlur}
+                status={panStatus}
+                details={panIdentity.details}
+                message={panIdentity.message}
+                locked={identityLocked}
                 error={errors.pan?.message}
+                onChange={onChange}
+                onResult={handlePanResult}
+                onEdit={() => setPanIdentity((prev) => ({ ...EMPTY_IDENTITY, value: prev.value }))}
+                onBlur={onBlur}
               />
             )}
           />
@@ -452,6 +555,12 @@ export const SellerCompanyScreen = () => {
         </View>
       </SellerCard>
 
+      {mismatch ? (
+        <Typography variant="error" className="mt-md text-left">
+          GST/PAN mismatch: the PAN associated with the GSTIN does not match the entered PAN.
+        </Typography>
+      ) : null}
+
       {saveError ? (
         <Typography variant="error" className="mt-md text-left">
           {saveError}
@@ -463,7 +572,7 @@ export const SellerCompanyScreen = () => {
           label="Save & Continue"
           showArrow
           loading={saving}
-          disabled={!isValid || !gstVerified}
+          disabled={!isValid || !identityAccepted}
           onPress={handleSubmit(handleContinue)}
         />
       </View>

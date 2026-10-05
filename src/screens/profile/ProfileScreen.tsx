@@ -17,6 +17,7 @@ import {
 } from '@/components/profile';
 import { TAB_BAR_HEIGHT } from '@/constants/dashboard';
 import { LOGISTICS_MENU_ITEMS } from '@/constants/profile';
+import { useCustomerKycStatus } from '@/hooks/use-customer-kyc-status';
 import { useProfile } from '@/hooks/useProfile';
 import { ROUTES } from '@/navigation/routes';
 import { useAuthStore } from '@/store/auth-store';
@@ -26,6 +27,7 @@ import type { DocumentTab } from '@/types/documents';
 export const ProfileScreen = memo(function ProfileScreen() {
   const router = useRouter();
   const { profile } = useProfile();
+  useCustomerKycStatus();
   const logout = useAuthStore((state) => state.logout);
   const fetchDocuments = useDocumentsStore((state) => state.fetchFromApi);
   const purchaseOrdersCount = useDocumentsStore((state) => state.purchaseOrders.length);

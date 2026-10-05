@@ -9,6 +9,7 @@ import type {
 } from '@/seller/types';
 import { ensureDevBackendSession } from '@/services/backend-session';
 import { putFileToSignedUrl } from '@/services/customer-credit';
+import type { KycVerification, KycVerifyResult } from '@/services/customer-kyc';
 
 type Envelope<T> = {
   success?: boolean;
@@ -59,6 +60,22 @@ export type SellerOnboardingStatus = {
   rejectedReason?: string | null;
   changeRequest?: SellerChangeRequest | null;
   canResubmit?: boolean;
+  /** Submitted / under review / approved — PAN and GSTIN can no longer change. */
+  locked?: boolean;
+  verifications?: {
+    pan: KycVerification | null;
+    gst: KycVerification | null;
+    mismatch: boolean;
+  };
+  verificationBlockers?: string[];
+};
+
+/** Saved identifiers with their server-derived status ('verified' | 'manual_review' | 'pending'). */
+export type SellerOnboardingIdentity = {
+  gstin: string | null;
+  pan: string | null;
+  gstStatus: string | null;
+  panStatus: string | null;
 };
 
 /** Must match the backend onboarding MIME allow-list. */
@@ -217,7 +234,6 @@ function buildDraftSections(company: SellerCompany, currentStep: string) {
       state: company.gstState,
       stateCode: company.gstStateCode,
       pan: company.pan,
-      status: company.gstVerified ? 'verified' : 'pending',
     },
     panData: { pan: company.pan },
     bankData: {
@@ -305,6 +321,57 @@ export function fetchSellerOnboardingStatus(): Promise<SellerOnboardingStatus | 
         '/seller/onboarding/status',
       );
       return response.data.data;
+    } catch (error) {
+      if (isNotFound(error)) return null;
+      throw error;
+    }
+  });
+}
+
+/** PAN / GSTIN are checked server-side; provider credentials never reach the app. */
+export function verifySellerPan(pan: string): Promise<KycVerifyResult> {
+  return withSellerSession(async () => {
+    const response = await apiClient.post<Envelope<KycVerifyResult>>(
+      '/seller/onboarding/pan/verify',
+      { pan, source: 'SELLER_APP' },
+      { timeout: 30_000 },
+    );
+    return response.data.data;
+  });
+}
+
+export function verifySellerGst(gstin: string): Promise<KycVerifyResult> {
+  return withSellerSession(async () => {
+    const response = await apiClient.post<Envelope<KycVerifyResult>>(
+      '/seller/onboarding/gst/verify',
+      { gstin, source: 'SELLER_APP' },
+      { timeout: 30_000 },
+    );
+    return response.data.data;
+  });
+}
+
+function readString(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+export function fetchSellerOnboardingIdentity(): Promise<SellerOnboardingIdentity | null> {
+  return withSellerSession(async () => {
+    try {
+      const response = await apiClient.get<
+        Envelope<{
+          gstData?: Record<string, unknown> | null;
+          panData?: Record<string, unknown> | null;
+        }>
+      >('/seller/onboarding');
+      const gstData = response.data.data?.gstData ?? {};
+      const panData = response.data.data?.panData ?? {};
+      return {
+        gstin: readString(gstData.gstin),
+        pan: readString(panData.pan),
+        gstStatus: readString(gstData.status),
+        panStatus: readString(panData.status),
+      };
     } catch (error) {
       if (isNotFound(error)) return null;
       throw error;

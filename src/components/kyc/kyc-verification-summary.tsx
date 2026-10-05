@@ -24,8 +24,10 @@ const STATUS_STYLE: Record<KycVerification['status'], { label: string; className
 function detailLine(verification: KycVerification): string | null {
   const d = verification.details;
   if (verification.type === 'PAN') return d.nameOnPan ?? null;
+  const state = d.state ? (d.stateCode ? `${d.state} (${d.stateCode})` : d.state) : null;
   return (
-    [d.legalName, d.gstStatus ? `GST ${d.gstStatus}` : null].filter(Boolean).join(' · ') || null
+    [d.legalName, d.gstStatus ? `GST ${d.gstStatus}` : null, state].filter(Boolean).join(' · ') ||
+    null
   );
 }
 

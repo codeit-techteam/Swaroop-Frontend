@@ -31,6 +31,7 @@ const initialState = {
   isHydrated: false,
   mobileNumber: null as string | null,
   kycApproved: false,
+  identityVerified: { pan: false, gst: false },
   reviewSubmitted: false,
   onboardingCompleted: false,
   selectedRole: null as UserRole | null,
@@ -193,7 +194,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     });
   },
 
-  syncKycStatus: ({ status, kycVerified, submittedAt }) => {
+  syncKycStatus: ({ status, kycVerified, submittedAt, verifications }) => {
     const existing = getKYC();
     const reviewSubmitted = kycVerified || status !== 'NOT_SUBMITTED';
     const submittedMs = submittedAt ? Date.parse(submittedAt) : NaN;
@@ -203,7 +204,14 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       referenceId: get().referenceId ?? existing.referenceId,
       submittedAt: Number.isFinite(submittedMs) ? submittedMs : existing.submittedAt,
     });
-    set({ kycApproved: kycVerified, reviewSubmitted });
+    set({
+      kycApproved: kycVerified,
+      reviewSubmitted,
+      identityVerified: {
+        pan: verifications?.pan?.status === 'VERIFIED',
+        gst: verifications?.gst?.status === 'VERIFIED',
+      },
+    });
   },
 
   setLocation: (location) => {

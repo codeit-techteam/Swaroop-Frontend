@@ -1,6 +1,6 @@
 import { memo, useMemo } from 'react';
 
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import {
   Controller,
@@ -12,6 +12,7 @@ import {
 import { CountryPicker } from '@/components/ui/country-picker';
 import { DropdownField } from '@/components/ui/dropdown-field';
 import { InputField } from '@/components/ui/input-field';
+import { Typography } from '@/components/ui/typography';
 import {
   COMPANY_TYPE_OPTIONS,
   INDIAN_STATES,
@@ -40,13 +41,34 @@ type BusinessInfoFormProps = {
   errors: FieldErrors<BusinessFormValues>;
   stateValue: string;
   clearErrors: UseFormClearErrors<BusinessFormValues>;
+  /** Verified identifiers are read-only until the user chooses to re-verify. */
+  lockedIdentifiers?: { gstNumber?: boolean; panNumber?: boolean };
+  /** Omit when identifiers cannot change at all (KYC submitted or approved). */
+  onEditIdentifier?: (field: 'gstNumber' | 'panNumber') => void;
 };
+
+const ReverifyNotice = ({ onEdit }: { onEdit?: () => void }) => (
+  <View className="mt-xs flex-row items-center justify-between gap-sm">
+    <Typography variant="legal" className="flex-1 text-left text-brand-label">
+      Changing this information requires re-verification.
+    </Typography>
+    {onEdit ? (
+      <Pressable onPress={onEdit} hitSlop={8} accessibilityRole="button">
+        <Typography variant="link" className="text-brand-primary">
+          Change
+        </Typography>
+      </Pressable>
+    ) : null}
+  </View>
+);
 
 export const BusinessInfoForm = memo(function BusinessInfoForm({
   control,
   errors,
   stateValue,
   clearErrors,
+  lockedIdentifiers,
+  onEditIdentifier,
 }: BusinessInfoFormProps) {
   const cityOptions = useMemo(
     () => (stateValue ? (INDIAN_STATES[stateValue] ?? []) : []),
@@ -93,15 +115,23 @@ export const BusinessInfoForm = memo(function BusinessInfoForm({
         control={control}
         name="gstNumber"
         render={({ field: { onChange, onBlur, value } }) => (
-          <InputField
-            label="GST Number *"
-            placeholder="22AAAAA0000A1Z5"
-            autoCapitalize="characters"
-            value={value}
-            onChangeText={(text) => onChange(text.toUpperCase())}
-            onBlur={onBlur}
-            error={errors.gstNumber?.message}
-          />
+          <View>
+            <InputField
+              label="GST Number *"
+              placeholder="22AAAAA0000A1Z5"
+              autoCapitalize="characters"
+              value={value}
+              editable={!lockedIdentifiers?.gstNumber}
+              onChangeText={(text) => onChange(text.toUpperCase())}
+              onBlur={onBlur}
+              error={errors.gstNumber?.message}
+            />
+            {lockedIdentifiers?.gstNumber ? (
+              <ReverifyNotice
+                onEdit={onEditIdentifier ? () => onEditIdentifier('gstNumber') : undefined}
+              />
+            ) : null}
+          </View>
         )}
       />
 
@@ -109,16 +139,24 @@ export const BusinessInfoForm = memo(function BusinessInfoForm({
         control={control}
         name="panNumber"
         render={({ field: { onChange, onBlur, value } }) => (
-          <InputField
-            label="PAN Number *"
-            placeholder="AAAAA0000A"
-            autoCapitalize="characters"
-            maxLength={10}
-            value={value}
-            onChangeText={(text) => onChange(text.toUpperCase())}
-            onBlur={onBlur}
-            error={errors.panNumber?.message}
-          />
+          <View>
+            <InputField
+              label="PAN Number *"
+              placeholder="AAAAA0000A"
+              autoCapitalize="characters"
+              maxLength={10}
+              value={value}
+              editable={!lockedIdentifiers?.panNumber}
+              onChangeText={(text) => onChange(text.toUpperCase())}
+              onBlur={onBlur}
+              error={errors.panNumber?.message}
+            />
+            {lockedIdentifiers?.panNumber ? (
+              <ReverifyNotice
+                onEdit={onEditIdentifier ? () => onEditIdentifier('panNumber') : undefined}
+              />
+            ) : null}
+          </View>
         )}
       />
 
