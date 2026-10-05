@@ -14,11 +14,11 @@ type BlindListing = {
   moq?: number | string | null;
   quantityAvailable?: number | string | null;
   leadTime?: string | null;
-  priceTiers?: Array<{
+  priceTiers?: {
     minQty?: number | string | null;
     maxQty?: number | string | null;
     price?: number | string | null;
-  }>;
+  }[];
 };
 
 type BlindProductDocument = {
@@ -64,17 +64,13 @@ export function mapBlindProduct(product: BlindProduct): MarketProduct {
     priceTiers.length > 0
       ? priceTiers.map((tier, index) => {
           const minMt = num(tier.minQty);
-          const maxMt =
-            tier.maxQty == null || tier.maxQty === ''
-              ? null
-              : num(tier.maxQty);
+          const maxMt = tier.maxQty == null || tier.maxQty === '' ? null : num(tier.maxQty);
           return {
             id: `tier-${index}-${minMt}`,
             minMt,
             maxMt,
             pricePerMt: num(tier.price),
-            quantityLabel:
-              maxMt == null ? `${minMt}+ MT` : `${minMt} - ${maxMt} MT`,
+            quantityLabel: maxMt == null ? `${minMt}+ MT` : `${minMt} - ${maxMt} MT`,
           };
         })
       : undefined;
@@ -175,6 +171,9 @@ type SellerGrade = {
   code: string;
   name: string;
   displayName?: string;
+  gradeNo?: string | null;
+  gradeGroup?: string | null;
+  manufacturer?: string | null;
   category?: { id: string; code: string; name: string; parentGroup?: string } | null;
 };
 
@@ -197,11 +196,23 @@ export function setLiveCatalogCache(products: MarketProduct[]) {
   liveCatalogCache = products;
 }
 
+function mergeLiveCatalogCache(products: MarketProduct[]) {
+  const known = new Set(liveCatalogCache.map((product) => product.id));
+  liveCatalogCache = [...liveCatalogCache, ...products.filter((product) => !known.has(product.id))];
+}
+
 export function getLiveCatalogProduct(id?: string | null): MarketProduct | undefined {
   if (!id) return undefined;
   return liveCatalogCache.find(
     (product) => product.id === id || product.gradeCode === id || product.grade === id,
   );
+}
+
+let sellerGradeTotal: number | null = null;
+
+/** Total ACTIVE + seller-visible grades reported by the backend on the last catalog load. */
+export function getSellerGradeTotal(): number | null {
+  return sellerGradeTotal;
 }
 
 export async function fetchSellerVisibleGrades(): Promise<SellerGrade[]> {
@@ -216,6 +227,7 @@ export async function fetchSellerVisibleGrades(): Promise<SellerGrade[]> {
     const body = payload.data;
     pages.push(...(body.data ?? []));
     totalPages = body.meta?.totalPages ?? 1;
+    sellerGradeTotal = body.meta?.total ?? sellerGradeTotal;
     page += 1;
   } while (page <= totalPages && page <= 10);
   return pages;
@@ -238,16 +250,31 @@ export function mapSellerGradeToCatalogItem(grade: SellerGrade): MarketProduct {
     gradeCode: grade.code,
     categoryId: PARENT_FROM_GROUP[grade.category?.parentGroup ?? ''] ?? 'polymers',
     materialType: material,
-    description: grade.name,
+    subCategory: grade.gradeGroup ?? undefined,
+    description: grade.manufacturer ? `${grade.name} · ${grade.manufacturer}` : grade.name,
     applications: [],
     technicalSpecs: {},
     creditEligible: false,
   };
 }
 
+/** Server-side Grade Master search over all ACTIVE + seller-visible grades. */
+export async function searchSellerCatalogProducts(
+  search: string,
+  limit = 50,
+): Promise<MarketProduct[]> {
+  await ensureDevBackendSession('seller');
+  const payload = await apiClient.get<Envelope<SellerGrade[]>>('/master-data/grades/seller', {
+    params: { search: search.trim(), page: 1, limit, sortBy: 'sortOrder', sortOrder: 'asc' },
+  });
+  const products = (payload.data.data ?? []).map(mapSellerGradeToCatalogItem);
+  mergeLiveCatalogCache(products);
+  return products;
+}
+
 export async function fetchSellerCatalogProducts(): Promise<MarketProduct[]> {
   const grades = await fetchSellerVisibleGrades();
   const products = grades.map(mapSellerGradeToCatalogItem);
-  setLiveCatalogCache(products);
+  mergeLiveCatalogCache(products);
   return products;
 }

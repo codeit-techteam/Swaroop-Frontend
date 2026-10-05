@@ -843,9 +843,13 @@ function ListingForm({
               disabled={!values.categoryId || locked('gradeId')}
               error={err('gradeId')}
               load={async (search) =>
-                (await fetchImportGrades(values.categoryId ?? undefined, search || undefined)).map(
-                  (g) => ({ value: g.id, label: g.displayName ?? g.name, hint: g.code }),
-                )
+                (
+                  await fetchImportGrades(values.categoryId ?? undefined, search || undefined, side)
+                ).map((g) => ({
+                  value: g.id,
+                  label: g.displayName ?? g.name,
+                  hint: [g.manufacturer, g.gradeGroup].filter(Boolean).join(' · ') || g.code,
+                }))
               }
               onChange={(v, o) => set('gradeId', v, o?.label ?? '')}
             />

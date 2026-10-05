@@ -91,8 +91,8 @@ export const fetchImportMaster = () => get<ImportMasterBundle>('/import/master-d
 export const fetchImportProducts = (search?: string) =>
   get<ImportProduct[]>(`/import/master-data/products${qs({ search })}`);
 
-export const fetchImportGrades = (categoryId?: string, search?: string) =>
-  get<ImportGrade[]>(`/import/master-data/grades${qs({ categoryId, search, limit: 50 })}`);
+export const fetchImportGrades = (categoryId?: string, search?: string, side?: ImportSide) =>
+  get<ImportGrade[]>(`/import/master-data/grades${qs({ categoryId, search, side, limit: 50 })}`);
 
 export const fetchImportBrands = (search?: string) =>
   get<ImportBrand[]>(`/import/master-data/brands${qs({ search })}`);

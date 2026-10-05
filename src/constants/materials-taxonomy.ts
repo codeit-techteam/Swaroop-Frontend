@@ -97,7 +97,11 @@ export function materialsFromCatalog(products: MarketProduct[]): SellerMaterialF
       gradeCount: grades.length,
       startingPrice: prices.length > 0 ? Math.min(...prices) : 0,
       subCategories: Array.from(
-        new Set(grades.map((grade) => grade.subCategory).filter((value): value is string => Boolean(value))),
+        new Set(
+          grades
+            .map((grade) => grade.subCategory)
+            .filter((value): value is string => Boolean(value)),
+        ),
       ),
     } satisfies SellerMaterialFamily;
   });
@@ -111,7 +115,10 @@ export function materialsFromCatalog(products: MarketProduct[]): SellerMaterialF
       return normalizedLeft - normalizedRight;
     }
     if (left.parentGroup !== right.parentGroup) {
-      return MATERIAL_PARENT_GROUPS.indexOf(left.parentGroup) - MATERIAL_PARENT_GROUPS.indexOf(right.parentGroup);
+      return (
+        MATERIAL_PARENT_GROUPS.indexOf(left.parentGroup) -
+        MATERIAL_PARENT_GROUPS.indexOf(right.parentGroup)
+      );
     }
     return left.code.localeCompare(right.code);
   });
@@ -119,12 +126,18 @@ export function materialsFromCatalog(products: MarketProduct[]): SellerMaterialF
 
 export const SELLER_CATALOG_PARENT_FILTERS = ['All', ...MATERIAL_PARENT_GROUPS] as const;
 
+export function parentGroupOf(product: MarketProduct): MaterialParentGroup {
+  return PARENT_BY_CATEGORY[product.categoryId as MarketParentCategoryId] ?? 'Polymers';
+}
+
 export function getMaterialFamilyByName(
   name: string,
   families: SellerMaterialFamily[],
 ): SellerMaterialFamily | undefined {
   return families.find(
-    (family) => family.name.toLowerCase() === name.toLowerCase() || family.code.toLowerCase() === name.toLowerCase(),
+    (family) =>
+      family.name.toLowerCase() === name.toLowerCase() ||
+      family.code.toLowerCase() === name.toLowerCase(),
   );
 }
 

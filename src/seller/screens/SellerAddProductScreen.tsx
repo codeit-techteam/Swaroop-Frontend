@@ -19,13 +19,14 @@ import {
   SELLER_CATALOG_PARENT_FILTERS,
   getCatalogGradesForFamily,
   getMaterialsByParentGroup,
-  searchCatalogGrades,
+  parentGroupOf,
   type SellerMaterialFamily,
 } from '@/constants/materials-taxonomy';
 import { BackArrowIcon, ChevronDownIcon } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
 import {
   BuyerPreviewCard,
+  EmptyState,
   FilterChipRow,
   ProductSkeleton,
   SearchField,
@@ -48,6 +49,7 @@ import {
   SELLER_PAYMENT_TERM_PRICE_FIELDS,
   SELLER_UNIT_OPTIONS,
 } from '@/seller/constants/grade-options';
+import { useSellerGradeSearch } from '@/seller/hooks/useSellerGradeSearch';
 import { INVENTORY_WAREHOUSES } from '@/seller/services/inventoryService';
 import { useSellerProductStore } from '@/seller/store/sellerProductStore';
 import type { SellerPaymentPricing, SellerProductForm } from '@/seller/types';
@@ -170,16 +172,18 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
     () => getMaterialsByParentGroup(catalogProducts, parentGroup),
     [catalogProducts, parentGroup],
   );
+  const gradeSearch = useSellerGradeSearch(query);
   const catalogGrades = useMemo(() => {
-    const trimmed = query.trim();
-    if (trimmed) {
-      return searchCatalogGrades(catalogProducts, trimmed);
+    if (gradeSearch.results) {
+      return parentGroup === 'All'
+        ? gradeSearch.results
+        : gradeSearch.results.filter((product) => parentGroupOf(product) === parentGroup);
     }
     if (!selectedFamily) {
       return [];
     }
     return getCatalogGradesForFamily(catalogProducts, selectedFamily.name);
-  }, [catalogProducts, query, selectedFamily]);
+  }, [catalogProducts, gradeSearch.results, parentGroup, selectedFamily]);
 
   useEffect(() => {
     if (isEdit) {
@@ -374,7 +378,7 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
                   <SearchField
                     value={query}
                     onChangeText={setQuery}
-                    placeholder="Search HDPE, Melamine, PE100..."
+                    placeholder="Search grade, grade no. or manufacturer"
                   />
                 </View>
                 <View className="mt-md">
@@ -413,13 +417,33 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
                   </View>
                 ) : (
                   <View className="mt-lg gap-md">
-                    {catalogGrades.map((product) => (
-                      <SellerCatalogGradeRow
-                        key={product.id}
-                        product={product}
-                        onPress={() => handleSelectGrade(product.id)}
+                    {gradeSearch.loading ? (
+                      <ProductSkeleton />
+                    ) : gradeSearch.error ? (
+                      <EmptyState
+                        variant="no_search_results"
+                        title="Search failed"
+                        description={gradeSearch.error}
+                        ctaLabel="Retry"
+                        onCtaPress={gradeSearch.retry}
                       />
-                    ))}
+                    ) : gradeSearch.results && catalogGrades.length === 0 ? (
+                      <EmptyState
+                        variant="no_search_results"
+                        title="No matching grades"
+                        description="Try another grade, grade number, or manufacturer."
+                        ctaLabel="Clear search"
+                        onCtaPress={() => setQuery('')}
+                      />
+                    ) : (
+                      catalogGrades.map((product) => (
+                        <SellerCatalogGradeRow
+                          key={product.id}
+                          product={product}
+                          onPress={() => handleSelectGrade(product.id)}
+                        />
+                      ))
+                    )}
                   </View>
                 )}
               </View>

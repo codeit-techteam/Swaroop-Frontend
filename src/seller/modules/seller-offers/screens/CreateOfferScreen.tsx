@@ -3,11 +3,13 @@ import { memo, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
+
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PrimaryButton, ScreenWrapper, SecondaryButton, Typography } from '@/components';
 import { ChevronDownIcon, ClockIcon } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
+import { SellerHeader } from '@/seller/components';
 import {
   ActiveOfferCompactCard,
   BuyerPreviewCard,
@@ -17,50 +19,15 @@ import {
 } from '@/seller/modules/seller-offers/components';
 import {
   DEFAULT_WAREHOUSE,
-  OFFER_PRODUCT_GRADES,
   OFFER_VALIDITY_OPTIONS,
 } from '@/seller/modules/seller-offers/services/sellerOffersService';
 import { useSellerOffersStore } from '@/seller/modules/seller-offers/store/sellerOffersStore';
 import { useSellerProductStore } from '@/seller/store/sellerProductStore';
-import { SellerHeader } from '@/seller/components';
+import type { SellerProduct } from '@/seller/types';
 import { brandColors } from '@/theme/colors';
 import { cn } from '@/utils/cn';
 
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-const PRODUCT_MAP: Record<string, { product: string; grade: string; category: string }> = {
-  'HDPE PE100': {
-    product: 'HDPE PE100 (Pipe Grade)',
-    grade: 'PE100',
-    category: 'POLYMER',
-  },
-  'LLDPE Film Grade (C6)': {
-    product: 'LLDPE Film Grade (C6)',
-    grade: 'C6',
-    category: 'POLYMER',
-  },
-  'PP Raffia': {
-    product: 'PP Raffia',
-    grade: 'Raffia',
-    category: 'POLYMER',
-  },
-  'LLDPE F2001': {
-    product: 'LLDPE F2001',
-    grade: 'F2001',
-    category: 'POLYMER',
-  },
-  'Polypropylene PP H110MA': {
-    product: 'Polypropylene PP H110MA',
-    grade: 'H110MA',
-    category: 'POLYMER',
-  },
-  'Polypropylene PP-H030SG': {
-    product: 'Polypropylene PP-H030SG',
-    grade: 'H030SG',
-    category: 'POLYMER',
-  },
-};
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export const CreateOfferScreen = memo(function CreateOfferScreen() {
   const router = useRouter();
@@ -86,41 +53,30 @@ export const CreateOfferScreen = memo(function CreateOfferScreen() {
   const [showTierSheet, setShowTierSheet] = useState(false);
   const [showGradePicker, setShowGradePicker] = useState(false);
 
+  const sellerProducts = useSellerProductStore((state) => state.products);
+  const productsHydrated = useSellerProductStore((state) => state.isHydrated);
+  const hydrateProducts = useSellerProductStore((state) => state.hydrateFromApi);
+  useEffect(() => {
+    if (!productsHydrated) void hydrateProducts();
+  }, [hydrateProducts, productsHydrated]);
+  const offerProducts = useMemo(
+    () =>
+      sellerProducts.filter((product) => UUID_RE.test(product.id) && product.status !== 'inactive'),
+    [sellerProducts],
+  );
+
   const basePrice = Number(editorForm.basePrice) || 0;
   const listedOffers = useMemo(
     () => [...activeOffers, ...pausedOffers].slice(0, 12),
     [activeOffers, pausedOffers],
   );
 
-  const handleGradeSelect = (grade: string) => {
-    const mapped = PRODUCT_MAP[grade];
-    updateEditorField('productGrade', grade);
-    if (mapped) {
-      updateEditorField('product', mapped.product);
-      updateEditorField('grade', mapped.grade);
-      updateEditorField('category', mapped.category);
-    }
-
-    const products = useSellerProductStore.getState().products;
-    const needle = (mapped?.product ?? grade).toLowerCase();
-    const gradeNeedle = (mapped?.grade ?? '').toLowerCase();
-    const match = products.find((product) => {
-      const name = product.form.name.toLowerCase();
-      const code = product.form.grade.toLowerCase();
-      return (
-        name.includes(needle) ||
-        needle.includes(name) ||
-        (gradeNeedle && code === gradeNeedle)
-      );
-    });
-    if (match && UUID_RE.test(match.id)) {
-      updateEditorField('productId', match.id);
-    } else if (match && UUID_RE.test(match.form.catalogProductId)) {
-      updateEditorField('productId', match.form.catalogProductId);
-    } else {
-      updateEditorField('productId', undefined);
-    }
-
+  const handleProductSelect = (product: SellerProduct) => {
+    updateEditorField('productGrade', product.form.name);
+    updateEditorField('product', product.form.name);
+    updateEditorField('grade', product.form.grade);
+    updateEditorField('category', product.form.category);
+    updateEditorField('productId', product.id);
     setShowGradePicker(false);
   };
 
@@ -191,20 +147,37 @@ export const CreateOfferScreen = memo(function CreateOfferScreen() {
             onPress={() => setShowGradePicker((value) => !value)}
             className="mt-sm flex-row items-center justify-between rounded-xl border border-brand-border bg-brand-surface px-md py-md"
           >
-            <Typography variant="roleDescription">{editorForm.productGrade}</Typography>
+            <Typography variant="roleDescription">
+              {editorForm.productGrade || 'Select one of your product listings'}
+            </Typography>
             <ChevronDownIcon size={16} color={brandColors.body} />
           </Pressable>
           {showGradePicker ? (
             <View className="mt-sm rounded-xl border border-brand-border bg-brand-white">
-              {OFFER_PRODUCT_GRADES.map((grade) => (
-                <Pressable
-                  key={grade}
-                  onPress={() => handleGradeSelect(grade)}
-                  className="border-b border-brand-border px-md py-md"
-                >
-                  <Typography variant="roleDescription">{grade}</Typography>
-                </Pressable>
-              ))}
+              {!productsHydrated ? (
+                <Typography variant="legal" className="px-md py-md text-left text-brand-body">
+                  Loading your product listings…
+                </Typography>
+              ) : offerProducts.length === 0 ? (
+                <Typography variant="legal" className="px-md py-md text-left text-brand-body">
+                  No product listings yet. Add a product from the Grade Master catalog first.
+                </Typography>
+              ) : (
+                offerProducts.map((product) => (
+                  <Pressable
+                    key={product.id}
+                    onPress={() => handleProductSelect(product)}
+                    className="border-b border-brand-border px-md py-md"
+                  >
+                    <Typography variant="roleDescription">{product.form.name}</Typography>
+                    {product.form.grade ? (
+                      <Typography variant="legal" className="text-left text-brand-body">
+                        {product.form.grade}
+                      </Typography>
+                    ) : null}
+                  </Pressable>
+                ))
+              )}
             </View>
           ) : null}
 

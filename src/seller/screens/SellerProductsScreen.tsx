@@ -12,7 +12,7 @@ import {
   SELLER_CATALOG_PARENT_FILTERS,
   getCatalogGradesForFamily,
   getMaterialsByParentGroup,
-  searchCatalogGrades,
+  parentGroupOf,
   type SellerMaterialFamily,
 } from '@/constants/materials-taxonomy';
 import { BackArrowIcon } from '@/icons';
@@ -32,11 +32,12 @@ import {
   SellerMaterialTile,
 } from '@/seller/components/SellerCatalogComponents';
 import { usePullToRefresh } from '@/seller/hooks/usePullToRefresh';
+import { useSellerGradeSearch } from '@/seller/hooks/useSellerGradeSearch';
 import { navigateSellerBottomTab } from '@/seller/navigation/useSellerBottomNavigation';
 import { useSellerProductStore } from '@/seller/store/sellerProductStore';
 import type { SellerProduct, SellerProductStatus } from '@/seller/types';
 import { findSellerListingForCatalog } from '@/seller/utils/catalog';
-import { fetchSellerCatalogProducts } from '@/services/catalog';
+import { fetchSellerCatalogProducts, getSellerGradeTotal } from '@/services/catalog';
 import { brandColors } from '@/theme/colors';
 import { elevation } from '@/theme/shadows';
 import type { MarketProduct } from '@/types/market';
@@ -84,7 +85,7 @@ export const SellerProductsScreen = memo(function SellerProductsScreen() {
       .then((grades) => {
         if (cancelled) return;
         setCatalogProducts(grades);
-        setLiveGradeCount(grades.length);
+        setLiveGradeCount(getSellerGradeTotal() ?? grades.length);
         setCatalogError(null);
         setCatalogLoading(false);
       })
@@ -127,23 +128,19 @@ export const SellerProductsScreen = memo(function SellerProductsScreen() {
     return counts;
   }, [products]);
 
+  const gradeSearch = useSellerGradeSearch(query);
+
   const catalogGrades = useMemo(() => {
-    const trimmed = query.trim();
-    if (trimmed) {
-      return searchCatalogGrades(catalogProducts, trimmed).filter((product) => {
-        if (parentGroup === 'All') {
-          return true;
-        }
-        const familyName = product.materialType || product.category;
-        const family = families.find((item) => item.name === familyName);
-        return family?.parentGroup === parentGroup;
-      });
+    if (gradeSearch.results) {
+      return parentGroup === 'All'
+        ? gradeSearch.results
+        : gradeSearch.results.filter((product) => parentGroupOf(product) === parentGroup);
     }
     if (!selectedFamily) {
       return [];
     }
     return getCatalogGradesForFamily(catalogProducts, selectedFamily.name, subCategory);
-  }, [catalogProducts, families, parentGroup, query, selectedFamily, subCategory]);
+  }, [catalogProducts, gradeSearch.results, parentGroup, selectedFamily, subCategory]);
 
   const listingProducts = useMemo(() => {
     if (listingTab === 'draft') {
@@ -244,14 +241,14 @@ export const SellerProductsScreen = memo(function SellerProductsScreen() {
                 <Typography variant="legal" className="mt-xs text-left text-brand-body">
                   {catalogError
                     ? catalogError
-                    : `${liveGradeCount ?? '…'} grades live in the customer app. Tap a material to list it.`}
+                    : `${liveGradeCount ?? '…'} grades in the Grade Master. Search or tap a material to list it.`}
                 </Typography>
 
                 <View className="mt-lg">
                   <SearchField
                     value={query}
                     onChangeText={setQuery}
-                    placeholder="Search HDPE, Melamine, PE100..."
+                    placeholder="Search grade, grade no. or manufacturer"
                   />
                 </View>
 
@@ -318,7 +315,17 @@ export const SellerProductsScreen = memo(function SellerProductsScreen() {
                   </View>
                 ) : (
                   <View className="mt-lg gap-md">
-                    {catalogGrades.length > 0 ? (
+                    {gradeSearch.loading ? (
+                      <ProductSkeleton />
+                    ) : gradeSearch.error ? (
+                      <EmptyState
+                        variant="no_search_results"
+                        title="Search failed"
+                        description={gradeSearch.error}
+                        ctaLabel="Retry"
+                        onCtaPress={gradeSearch.retry}
+                      />
+                    ) : catalogGrades.length > 0 ? (
                       catalogGrades.map((product) => (
                         <SellerCatalogGradeRow
                           key={product.id}

@@ -1,6 +1,3 @@
-import type { MarketProduct } from '@/types/market';
-import { useSellerProductStore } from '@/seller/store/sellerProductStore';
-
 import type {
   BackendOffer,
   BackendOfferSummary,
@@ -29,9 +26,10 @@ import type {
   SellerOffer,
   SellerOffersSnapshot,
 } from '@/seller/modules/seller-offers/types/offers';
+import { useSellerProductStore } from '@/seller/store/sellerProductStore';
+import type { MarketProduct } from '@/types/market';
 
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const VALIDITY_HOURS: Record<OfferValidity, number> = {
   '12h': 12,
@@ -40,21 +38,12 @@ const VALIDITY_HOURS: Record<OfferValidity, number> = {
   '7d': 168,
 };
 
-export const OFFER_VALIDITY_OPTIONS: Array<{ label: string; value: OfferValidity }> = [
+export const OFFER_VALIDITY_OPTIONS: { label: string; value: OfferValidity }[] = [
   { label: '12h', value: '12h' },
   { label: '24h', value: '24h' },
   { label: '72h', value: '72h' },
   { label: '7 Days', value: '7d' },
 ];
-
-export const OFFER_PRODUCT_GRADES = [
-  'HDPE PE100',
-  'LLDPE Film Grade (C6)',
-  'PP Raffia',
-  'LLDPE F2001',
-  'Polypropylene PP H110MA',
-  'Polypropylene PP-H030SG',
-] as const;
 
 export const DEFAULT_WAREHOUSE = {
   name: 'Hazira Plant',
@@ -63,8 +52,7 @@ export const DEFAULT_WAREHOUSE = {
 
 const nowIso = (): string => new Date().toISOString();
 
-const isUuid = (value?: string | null): value is string =>
-  Boolean(value && UUID_RE.test(value));
+const isUuid = (value?: string | null): value is string => Boolean(value && UUID_RE.test(value));
 
 export const computeExpiresAt = (validity: OfferValidity, from = new Date()): string => {
   const hours = VALIDITY_HOURS[validity];
@@ -197,8 +185,7 @@ export const mapBackendOfferToSellerOffer = (item: BackendOffer): SellerOffer =>
 
   const tiers: OfferPricingTier[] = (item.priceTiers ?? []).map((tier, index) => {
     const minQty = num(tier.minQty);
-    const maxQty =
-      tier.maxQty === null || tier.maxQty === undefined ? null : num(tier.maxQty);
+    const maxQty = tier.maxQty === null || tier.maxQty === undefined ? null : num(tier.maxQty);
     const pricePerKg = num(tier.price);
     const discountPercent =
       basePrice > 0 ? Number((((basePrice - pricePerKg) / basePrice) * 100).toFixed(1)) : 0;
@@ -247,7 +234,7 @@ export const mapBackendOfferToSellerOffer = (item: BackendOffer): SellerOffer =>
     expiresAt: item.validUntil ?? computeExpiresAt('72h'),
     submittedAt:
       status === 'pending_review' || status === 'active' || status === 'paused'
-        ? item.updatedAt ?? item.createdAt
+        ? (item.updatedAt ?? item.createdAt)
         : undefined,
     approvedAt: status === 'active' || status === 'paused' ? item.updatedAt : undefined,
     reviewTimeline: buildDefaultReviewTimeline(status),
@@ -255,10 +242,10 @@ export const mapBackendOfferToSellerOffer = (item: BackendOffer): SellerOffer =>
 };
 
 export const createEmptyEditorForm = (): OfferEditorForm => ({
-  productGrade: 'HDPE PE100',
-  product: 'HDPE PE100 (Pipe Grade)',
-  grade: 'PE100',
-  category: 'POLYMER',
+  productGrade: '',
+  product: '',
+  grade: '',
+  category: '',
   basePrice: '145',
   moq: '25',
   remarks: 'Prime material, immediate dispatch.',
@@ -354,10 +341,7 @@ const partitionOffers = (offers: SellerOffer[]) => ({
   ),
 });
 
-const buildStats = (
-  offers: SellerOffer[],
-  summary?: BackendOfferSummary | null,
-): OfferStats => {
+const buildStats = (offers: SellerOffer[], summary?: BackendOfferSummary | null): OfferStats => {
   if (summary) {
     return {
       total: num(summary.total, offers.length),
@@ -416,8 +400,7 @@ export const buildSnapshot = (
   };
 };
 
-export const buildDefaultSellerOffersSnapshot = (): SellerOffersSnapshot =>
-  buildSnapshot([]);
+export const buildDefaultSellerOffersSnapshot = (): SellerOffersSnapshot => buildSnapshot([]);
 
 /** Empty in-memory baseline — backend is the source of truth. */
 export const getOffers = (): SellerOffersSnapshot => buildDefaultSellerOffersSnapshot();
@@ -525,10 +508,7 @@ export const buildCreatePayloadFromEditor = (
   const productId = resolveOfferProductId(form, input);
   const basePrice = num(input?.basePrice ?? form.basePrice);
   const moq = num(input?.moq ?? form.moq);
-  const quantity = num(
-    input?.allocatedStock ?? form.quantity ?? input?.remainingStock ?? 500,
-    500,
-  );
+  const quantity = num(input?.allocatedStock ?? form.quantity ?? input?.remainingStock ?? 500, 500);
   const validity = input?.validity ?? form.validity;
   const remarks = input?.remarks ?? form.remarks;
   const tiers = input?.tiers ?? form.tiers;
@@ -652,8 +632,7 @@ export const fetchSellerOffersSnapshot = async (
       null,
     );
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : 'Failed to load offers from backend.';
+    const message = error instanceof Error ? error.message : 'Failed to load offers from backend.';
     return buildSnapshot(
       [],
       current.selectedOfferId,
@@ -858,7 +837,7 @@ export const getPriceHistory = (): OfferPriceHistoryEntry[] => [
 
 type MarketplaceOfferProduct = MarketProduct & {
   sellerOfferId?: string;
-  bulkTiers?: Array<{ range: string; pricePerKg: number }>;
+  bulkTiers?: { range: string; pricePerKg: number }[];
 };
 
 export const mapOfferToMarketProduct = (offer: SellerOffer): MarketplaceOfferProduct => ({
