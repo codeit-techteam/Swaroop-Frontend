@@ -6,41 +6,22 @@ import {
   clearRecentMarketSearches,
   getRecentMarketSearches,
 } from '@/services/marketSearch';
-import type { MarketCategory, MarketProduct } from '@/types/market';
+import type { MarketProduct } from '@/types/market';
 import { getGradeSearchSuggestions, searchProductsByGrade } from '@/utils/grade-search';
 
 const POPULAR_MATERIAL_LIMIT = 6;
-const PREFERRED_DEFAULT_CATEGORY: MarketCategory = 'Polypropylene';
 
-const matchesCategory = (product: MarketProduct, category: MarketCategory): boolean =>
-  product.category === category || product.materialType === category;
-
-const resolveDefaultCategory = (catalog: MarketProduct[]): MarketCategory | null => {
-  if (catalog.length === 0) {
-    return null;
-  }
-
-  const available = new Set(
-    catalog.flatMap((product) =>
-      [product.category, product.materialType].filter(Boolean) as MarketCategory[],
-    ),
-  );
-
-  if (available.has(PREFERRED_DEFAULT_CATEGORY)) {
-    return PREFERRED_DEFAULT_CATEGORY;
-  }
-
-  return null;
-};
+/** `categoryId` is a Grade Master category id from the backend. */
+const matchesCategory = (product: MarketProduct, categoryId: string): boolean =>
+  product.masterCategoryId === categoryId;
 
 export const useMarketSearch = (catalog: MarketProduct[]) => {
   const [query, setQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<MarketCategory | null>(null);
+  const [requestedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [suggestionsDismissed, setSuggestionsDismissed] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>(getRecentMarketSearches);
   const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hasSyncedCategory = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -50,40 +31,19 @@ export const useMarketSearch = (catalog: MarketProduct[]) => {
     };
   }, []);
 
-  useEffect(() => {
-    if (catalog.length === 0) {
-      return;
-    }
-
-    setSelectedCategory((current) => {
-      const available = new Set(
-        catalog.flatMap((product) =>
-          [product.category, product.materialType].filter(Boolean) as MarketCategory[],
-        ),
-      );
-
-      // Respect an explicit "All" selection after the first catalog sync.
-      if (hasSyncedCategory.current && current === null) {
-        return null;
-      }
-
-      if (current && available.has(current)) {
-        hasSyncedCategory.current = true;
-        return current;
-      }
-
-      hasSyncedCategory.current = true;
-      return resolveDefaultCategory(catalog);
-    });
-  }, [catalog]);
+  const selectedCategory = useMemo(
+    () =>
+      requestedCategory && catalog.some((product) => matchesCategory(product, requestedCategory))
+        ? requestedCategory
+        : null,
+    [catalog, requestedCategory],
+  );
 
   const taxonomy = useMemo(() => materialsFromCatalog(catalog), [catalog]);
 
   const popularMaterials = useMemo(
     () =>
-      [...taxonomy]
-        .sort((a, b) => b.gradeCount - a.gradeCount)
-        .slice(0, POPULAR_MATERIAL_LIMIT),
+      [...taxonomy].sort((a, b) => b.gradeCount - a.gradeCount).slice(0, POPULAR_MATERIAL_LIMIT),
     [taxonomy],
   );
 
@@ -186,7 +146,7 @@ export const useMarketSearch = (catalog: MarketProduct[]) => {
   const handleSelectMaterial = useCallback(
     (material: SellerMaterialFamily) => {
       setQuery(material.code);
-      setSelectedCategory(material.name);
+      setSelectedCategory(null);
       rememberQuery(material.code);
       handleDismissSuggestions();
     },
@@ -216,7 +176,7 @@ export const useMarketSearch = (catalog: MarketProduct[]) => {
   }, []);
 
   const handleSelectCategory = useCallback(
-    (category: MarketCategory | null) => {
+    (category: string | null) => {
       setSelectedCategory(category);
       handleDismissSuggestions();
     },

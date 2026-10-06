@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 
 import {
   KeyboardAvoidingView,
@@ -15,21 +15,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
 import { ScreenWrapper, Typography } from '@/components';
-import {
-  SELLER_CATALOG_PARENT_FILTERS,
-  getCatalogGradesForFamily,
-  getMaterialsByParentGroup,
-  parentGroupOf,
-  type SellerMaterialFamily,
-} from '@/constants/materials-taxonomy';
-import { BackArrowIcon, ChevronDownIcon } from '@/icons';
+import { ChevronDownIcon } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
 import {
   BuyerPreviewCard,
-  EmptyState,
-  FilterChipRow,
-  ProductSkeleton,
-  SearchField,
   SellerBottomSheet,
   SellerHeader,
   SellerPrimaryButton,
@@ -38,23 +27,20 @@ import {
   TierCard,
   UploadCard,
 } from '@/seller/components';
-import {
-  SellerCatalogGradeRow,
-  SellerCatalogSelectedBanner,
-  SellerMaterialTile,
-} from '@/seller/components/SellerCatalogComponents';
+import { SellerCatalogSelectedBanner } from '@/seller/components/SellerCatalogComponents';
+import { SellerGradePicker } from '@/seller/components/SellerGradePicker';
 import {
   SELLER_ORIGIN_OPTIONS,
   SELLER_PACKAGING_TYPES,
   SELLER_PAYMENT_TERM_PRICE_FIELDS,
   SELLER_UNIT_OPTIONS,
 } from '@/seller/constants/grade-options';
-import { useSellerGradeSearch } from '@/seller/hooks/useSellerGradeSearch';
 import { INVENTORY_WAREHOUSES } from '@/seller/services/inventoryService';
 import { useSellerProductStore } from '@/seller/store/sellerProductStore';
 import type { SellerPaymentPricing, SellerProductForm } from '@/seller/types';
 import { PETROTRADE_CREDIT_NOTE } from '@/seller/utils/pricing';
-import { fetchSellerCatalogProducts, getLiveCatalogProduct } from '@/services/catalog';
+import { getLiveCatalogProduct } from '@/services/catalog';
+import { fetchSellerGradeById } from '@/services/grade-master';
 import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
 import type { MarketProduct } from '@/types/market';
@@ -135,81 +121,47 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
   const isEdit = mode === 'edit' || Boolean(selectedProductId);
   const [step, setStep] = useState<ListingStep>(isEdit || catalogId ? 2 : 1);
   const [activePicker, setActivePicker] = useState<PickerKey | null>(null);
-  const [parentGroup, setParentGroup] =
-    useState<(typeof SELLER_CATALOG_PARENT_FILTERS)[number]>('All');
-  const [selectedFamily, setSelectedFamily] = useState<SellerMaterialFamily | null>(null);
-  const [query, setQuery] = useState('');
-  const [catalogProducts, setCatalogProducts] = useState<MarketProduct[]>([]);
-  const [catalogLoading, setCatalogLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [resolvedGrade, setResolvedGrade] = useState<MarketProduct | null>(null);
   const appliedCatalogRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    setCatalogLoading(true);
-    void fetchSellerCatalogProducts()
-      .then((products) => {
-        if (!cancelled) {
-          setCatalogProducts(products);
-          setCatalogLoading(false);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setCatalogProducts([]);
-          setCatalogLoading(false);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const selectedCatalog = form.catalogProductId
     ? (getLiveCatalogProduct(form.catalogProductId) ??
-      catalogProducts.find((item) => item.id === form.catalogProductId))
+      (resolvedGrade?.id === form.catalogProductId ? resolvedGrade : undefined))
     : undefined;
-  const families = useMemo(
-    () => getMaterialsByParentGroup(catalogProducts, parentGroup),
-    [catalogProducts, parentGroup],
-  );
-  const gradeSearch = useSellerGradeSearch(query);
-  const catalogGrades = useMemo(() => {
-    if (gradeSearch.results) {
-      return parentGroup === 'All'
-        ? gradeSearch.results
-        : gradeSearch.results.filter((product) => parentGroupOf(product) === parentGroup);
-    }
-    if (!selectedFamily) {
-      return [];
-    }
-    return getCatalogGradesForFamily(catalogProducts, selectedFamily.name);
-  }, [catalogProducts, gradeSearch.results, parentGroup, selectedFamily]);
 
   useEffect(() => {
-    if (isEdit) {
+    const gradeId = form.catalogProductId;
+    if (!gradeId || getLiveCatalogProduct(gradeId)) return;
+    let cancelled = false;
+    void fetchSellerGradeById(gradeId)
+      .then((grade) => {
+        if (!cancelled && grade) setResolvedGrade(grade);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [form.catalogProductId]);
+
+  useEffect(() => {
+    if (isEdit || !catalogId || appliedCatalogRef.current === catalogId) {
       return;
     }
-    if (catalogId && appliedCatalogRef.current !== catalogId) {
-      applyCatalogGrade(catalogId);
-      appliedCatalogRef.current = catalogId;
-      setStep(2);
-      return;
-    }
-    if (!catalogId && materialType && !form.category) {
-      updateFormField('category', materialType);
-      const family = families.find((item) => item.name === materialType) ?? null;
-      setSelectedFamily(family);
-    }
-  }, [
-    applyCatalogGrade,
-    catalogId,
-    families,
-    form.category,
-    isEdit,
-    materialType,
-    updateFormField,
-  ]);
+    appliedCatalogRef.current = catalogId;
+    void fetchSellerGradeById(catalogId)
+      .then((grade) => {
+        if (!grade || !applyCatalogGrade(grade.id)) {
+          setStep(1);
+          return;
+        }
+        setStep(2);
+      })
+      .catch(() => {
+        setStep(1);
+        Toast.show({ type: 'error', text1: 'Grade is no longer available' });
+      });
+  }, [applyCatalogGrade, catalogId, isEdit]);
 
   const pickers: Record<
     PickerKey,
@@ -236,8 +188,8 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
     scrollRef.current?.scrollTo({ y: 0, animated: true });
   };
 
-  const handleSelectGrade = (id: string) => {
-    applyCatalogGrade(id);
+  const handleSelectGrade = (grade: MarketProduct) => {
+    applyCatalogGrade(grade.id);
     goToStep(2);
   };
 
@@ -314,8 +266,6 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
     </Pressable>
   );
 
-  const showTiles = !query.trim() && !selectedFamily;
-
   return (
     <ScreenWrapper padded={false} className="bg-brand-background">
       <SellerHeader showBack title={screenTitle} onBack={() => router.back()} />
@@ -378,91 +328,25 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
           contentContainerStyle={{ paddingBottom: insets.bottom + 108, paddingTop: 8 }}
         >
           {step === 1 ? (
-            catalogLoading ? (
-              <ProductSkeleton />
-            ) : (
-              <View>
-                <Typography variant="headingLeft" className="text-[26px] leading-[32px]">
-                  Choose a grade
-                </Typography>
-                <Typography variant="legal" className="mt-xs text-left text-brand-body">
-                  List the same SKU buyers already browse in the customer app.
-                </Typography>
-
+            <View>
+              <Typography variant="headingLeft" className="text-[26px] leading-[32px]">
+                Choose a grade
+              </Typography>
+              <Typography variant="legal" className="mt-xs text-left text-brand-body">
+                List the same SKU buyers already browse in the customer app.
+              </Typography>
+              {selectedCatalog ? (
                 <View className="mt-lg">
-                  <SearchField
-                    value={query}
-                    onChangeText={setQuery}
-                    placeholder="Search grade, grade no. or manufacturer"
-                  />
+                  <SellerCatalogSelectedBanner product={selectedCatalog} />
                 </View>
-                <View className="mt-md">
-                  <FilterChipRow
-                    options={[...SELLER_CATALOG_PARENT_FILTERS]}
-                    selected={parentGroup}
-                    onSelect={(value) => {
-                      setParentGroup(value as (typeof SELLER_CATALOG_PARENT_FILTERS)[number]);
-                      setSelectedFamily(null);
-                    }}
-                  />
-                </View>
-
-                {selectedFamily && !query.trim() ? (
-                  <Pressable
-                    onPress={() => setSelectedFamily(null)}
-                    className="mt-lg flex-row items-center"
-                  >
-                    <BackArrowIcon size={16} color={brandColors.navy} />
-                    <Typography variant="roleTitle" className="ml-sm text-[14px] text-brand-navy">
-                      {selectedFamily.code}
-                    </Typography>
-                  </Pressable>
-                ) : null}
-
-                {showTiles ? (
-                  <View className="mt-lg flex-row flex-wrap justify-between">
-                    {families.map((family) => (
-                      <View key={family.id} className="mb-md" style={{ width: '48.5%' }}>
-                        <SellerMaterialTile
-                          family={family}
-                          onPress={() => setSelectedFamily(family)}
-                        />
-                      </View>
-                    ))}
-                  </View>
-                ) : (
-                  <View className="mt-lg gap-md">
-                    {gradeSearch.loading ? (
-                      <ProductSkeleton />
-                    ) : gradeSearch.error ? (
-                      <EmptyState
-                        variant="no_search_results"
-                        title="Search failed"
-                        description={gradeSearch.error}
-                        ctaLabel="Retry"
-                        onCtaPress={gradeSearch.retry}
-                      />
-                    ) : gradeSearch.results && catalogGrades.length === 0 ? (
-                      <EmptyState
-                        variant="no_search_results"
-                        title="No matching grades"
-                        description="Try another grade, grade number, or manufacturer."
-                        ctaLabel="Clear search"
-                        onCtaPress={() => setQuery('')}
-                      />
-                    ) : (
-                      catalogGrades.map((product) => (
-                        <SellerCatalogGradeRow
-                          key={product.id}
-                          product={product}
-                          onPress={() => handleSelectGrade(product.id)}
-                        />
-                      ))
-                    )}
-                  </View>
-                )}
+              ) : null}
+              <View className="mt-lg">
+                <SellerGradePicker
+                  onSelectGrade={handleSelectGrade}
+                  initialCategory={materialType}
+                />
               </View>
-            )
+            </View>
           ) : null}
 
           {step === 2 ? (

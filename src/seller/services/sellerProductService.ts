@@ -9,6 +9,7 @@ import type {
 import { matchCatalogForLegacyForm } from '@/seller/utils/catalog';
 import { buildListingInput, isBackendId } from '@/seller/utils/listing-input';
 import { createEmptyPricing, normalizeSellerPricing } from '@/seller/utils/pricing';
+import { mergeApiProductsWithDeviceDrafts } from '@/seller/utils/product-merge';
 import {
   createSellerListing,
   fetchSellerProducts,
@@ -412,11 +413,12 @@ const reconcileCollections = (snapshot: SellerProductSnapshot): SellerProductSna
   };
 };
 
+/** Applies the backend list without wiping drafts that only exist on this device. */
 export const applyApiProductsToSnapshot = (
   snapshot: SellerProductSnapshot,
   products: SellerProduct[],
 ): SellerProductSnapshot =>
   reconcileCollections({
     ...snapshot,
-    products,
+    products: mergeApiProductsWithDeviceDrafts(snapshot.products, products),
   });

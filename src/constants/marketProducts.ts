@@ -1,35 +1,22 @@
-import type { MarketCategory, MarketProduct, StockLevel } from '@/types/market';
+import type { MarketplaceGradeCategory } from '@/types/grade-master';
+import type { MarketProduct, StockLevel } from '@/types/market';
 
-export const MARKET_SEARCH_PLACEHOLDER =
-  'Search GST, invoices, grades, materials, orders…';
+export const MARKET_SEARCH_PLACEHOLDER = 'Search GST, invoices, grades, materials, orders…';
 
 export const MARKET_LOCATION_LABEL = 'Mumbai, MH';
 
-const PREFERRED_CATEGORIES: MarketCategory[] = [
-  'Polypropylene',
-  'HDPE',
-  'LDPE',
-  'LLDPE',
-  'PVC',
-  'PET',
-  'ABS',
-  'EVA',
-  'Polycarbonate',
-  'Nylon',
-  'CPVC',
-  'HIPS',
-];
-
-export function marketCategoriesFromCatalog(products: MarketProduct[]): MarketCategory[] {
-  const uniqueCategories = Array.from(
-    new Set(products.map((product) => product.category).filter(Boolean)),
-  );
-  return [
-    ...PREFERRED_CATEGORIES.filter((category) => uniqueCategories.includes(category)),
-    ...uniqueCategories
-      .filter((category) => !PREFERRED_CATEGORIES.includes(category))
-      .sort((a, b) => a.localeCompare(b)),
-  ];
+/**
+ * Market chips: backend Grade Master categories (in admin sort order) that currently have at
+ * least one live listing in the loaded catalog.
+ */
+export function marketCategoryChips(
+  categories: MarketplaceGradeCategory[],
+  products: MarketProduct[],
+): { id: string; label: string }[] {
+  const listed = new Set(products.map((product) => product.masterCategoryId).filter(Boolean));
+  return categories
+    .filter((category) => listed.has(category.id))
+    .map((category) => ({ id: category.id, label: category.displayName }));
 }
 
 export const getMarketProductById = (

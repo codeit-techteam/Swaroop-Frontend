@@ -15,6 +15,8 @@ export default function CustomerLayout() {
     >
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="product/[id]" />
+      <Stack.Screen name="grades/index" />
+      <Stack.Screen name="grades/[id]" />
       <Stack.Screen name="cart/index" />
       <Stack.Screen name="checkout/index" />
       <Stack.Screen name="payment/index" />

@@ -47,7 +47,12 @@ type BlindProduct = {
   countryOfOrigin?: string | null;
   supplyOrigin?: string | null;
   listing?: BlindListing | null;
-  grade?: { code?: string; name?: string } | null;
+  grade?: {
+    id?: string;
+    code?: string;
+    name?: string;
+    category?: { id: string; code: string; name: string } | null;
+  } | null;
   documents?: BlindProductDocument[];
 };
 
@@ -88,6 +93,9 @@ export function mapBlindProduct(product: BlindProduct): MarketProduct {
     badge: (typeof specs.badge === 'string' ? specs.badge : 'Best Value') as MarketProduct['badge'],
     image: '',
     gradeCode: product.code,
+    gradeId: product.grade?.id,
+    masterCategoryId: product.grade?.category?.id,
+    masterCategoryName: product.grade?.category?.name,
     categoryId: (specs.parentCategoryId as MarketProduct['categoryId']) ?? 'polymers',
     materialType: String(specs.materialType ?? product.grade?.name ?? product.name),
     subCategory: typeof specs.subCategory === 'string' ? specs.subCategory : undefined,
@@ -166,7 +174,7 @@ export async function fetchProductDocumentUrl(
   return data;
 }
 
-type SellerGrade = {
+export type SellerGrade = {
   id: string;
   code: string;
   name: string;
@@ -196,7 +204,7 @@ export function setLiveCatalogCache(products: MarketProduct[]) {
   liveCatalogCache = products;
 }
 
-function mergeLiveCatalogCache(products: MarketProduct[]) {
+export function mergeLiveCatalogCache(products: MarketProduct[]) {
   const known = new Set(liveCatalogCache.map((product) => product.id));
   liveCatalogCache = [...liveCatalogCache, ...products.filter((product) => !known.has(product.id))];
 }
@@ -206,31 +214,6 @@ export function getLiveCatalogProduct(id?: string | null): MarketProduct | undef
   return liveCatalogCache.find(
     (product) => product.id === id || product.gradeCode === id || product.grade === id,
   );
-}
-
-let sellerGradeTotal: number | null = null;
-
-/** Total ACTIVE + seller-visible grades reported by the backend on the last catalog load. */
-export function getSellerGradeTotal(): number | null {
-  return sellerGradeTotal;
-}
-
-export async function fetchSellerVisibleGrades(): Promise<SellerGrade[]> {
-  await ensureDevBackendSession('seller');
-  const pages: SellerGrade[] = [];
-  let page = 1;
-  let totalPages = 1;
-  do {
-    const payload = await apiClient.get<Envelope<SellerGrade[]>>('/master-data/grades/seller', {
-      params: { page, limit: 100, sortBy: 'sortOrder', sortOrder: 'asc' },
-    });
-    const body = payload.data;
-    pages.push(...(body.data ?? []));
-    totalPages = body.meta?.totalPages ?? 1;
-    sellerGradeTotal = body.meta?.total ?? sellerGradeTotal;
-    page += 1;
-  } while (page <= totalPages && page <= 10);
-  return pages;
 }
 
 export function mapSellerGradeToCatalogItem(grade: SellerGrade): MarketProduct {
@@ -248,6 +231,11 @@ export function mapSellerGradeToCatalogItem(grade: SellerGrade): MarketProduct {
     badge: 'Best Value',
     image: '',
     gradeCode: grade.code,
+    gradeId: grade.id,
+    gradeNo: grade.gradeNo ?? undefined,
+    manufacturer: grade.manufacturer ?? undefined,
+    masterCategoryId: grade.category?.id,
+    masterCategoryName: grade.category?.name,
     categoryId: PARENT_FROM_GROUP[grade.category?.parentGroup ?? ''] ?? 'polymers',
     materialType: material,
     subCategory: grade.gradeGroup ?? undefined,
@@ -256,25 +244,4 @@ export function mapSellerGradeToCatalogItem(grade: SellerGrade): MarketProduct {
     technicalSpecs: {},
     creditEligible: false,
   };
-}
-
-/** Server-side Grade Master search over all ACTIVE + seller-visible grades. */
-export async function searchSellerCatalogProducts(
-  search: string,
-  limit = 50,
-): Promise<MarketProduct[]> {
-  await ensureDevBackendSession('seller');
-  const payload = await apiClient.get<Envelope<SellerGrade[]>>('/master-data/grades/seller', {
-    params: { search: search.trim(), page: 1, limit, sortBy: 'sortOrder', sortOrder: 'asc' },
-  });
-  const products = (payload.data.data ?? []).map(mapSellerGradeToCatalogItem);
-  mergeLiveCatalogCache(products);
-  return products;
-}
-
-export async function fetchSellerCatalogProducts(): Promise<MarketProduct[]> {
-  const grades = await fetchSellerVisibleGrades();
-  const products = grades.map(mapSellerGradeToCatalogItem);
-  mergeLiveCatalogCache(products);
-  return products;
 }

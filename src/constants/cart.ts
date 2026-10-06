@@ -1,4 +1,4 @@
-import type { CartDeliveryLocation, CartItem } from '@/types/product';
+import type { CartDeliveryLocation } from '@/types/product';
 
 export const CART_GST_RATE = 0.18;
 
@@ -35,24 +35,6 @@ export const CART_TRUST_FEATURES = [
     icon: 'headset' as const,
   },
 ] as const;
-
-/** Sample cart line for design reference / empty-state demos (not auto-seeded). */
-export const SAMPLE_CART_ITEM: Omit<CartItem, 'addedAt'> = {
-  id: 'sample-pp-h110ma',
-  productId: 'mkt-pp-h110ma',
-  name: 'PP H110MA Homopolymer',
-  productType: 'POLYPROPYLENE',
-  grade: 'H110MA',
-  quantityMt: 10,
-  unitPricePerMt: 94500,
-  tierId: 'tier-standard',
-  imageUrl: '',
-  moq: 12,
-  quantityIncrement: 1,
-  packaging: '25 KG Bags',
-  warehouseRegion: 'Western India',
-  eta: '2–3 Business Days',
-};
 
 export const formatCartCurrency = (amount: number): string =>
   `₹${Math.round(amount).toLocaleString('en-IN')}`;

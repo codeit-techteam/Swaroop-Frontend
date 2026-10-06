@@ -13,6 +13,7 @@ import { HeroCarousel } from '@/components/home/hero-carousel';
 import {
   CategoryFilter,
   EmptyState,
+  GradeMasterEntry,
   MarketHeader,
   ProductCard,
   SearchBar,
@@ -21,13 +22,14 @@ import {
 import { MarketListSkeleton } from '@/components/ui/skeleton';
 import { Typography } from '@/components/ui/typography';
 import { TAB_BAR_HEIGHT } from '@/constants/dashboard';
-import { marketCategoriesFromCatalog } from '@/constants/marketProducts';
+import { marketCategoryChips } from '@/constants/marketProducts';
 import { useDeliveryLocation } from '@/hooks/use-delivery-location';
+import { useCustomerMarketplaceCategories } from '@/hooks/use-grade-master';
 import { useMarketSearch } from '@/hooks/use-market-search';
 import { useMarketplaceCatalogQuery } from '@/hooks/use-marketplace-catalog';
+import { openCustomerBanner, openCustomerBannerSecondary } from '@/lib/cms-banner';
 import { ROUTES } from '@/navigation/routes';
 import { fetchCustomerMarketplaceBanners, trackCmsBannerEvent } from '@/services/cms';
-import { openCustomerBanner, openCustomerBannerSecondary } from '@/lib/cms-banner';
 import type { HomeBanner } from '@/types/home';
 import type { MarketProduct } from '@/types/market';
 
@@ -63,7 +65,19 @@ export const CustomerMarketScreen = () => {
     handleSelectCategory,
     handleDismissSuggestions,
   } = useMarketSearch(marketProducts);
-  const categories = useMemo(() => marketCategoriesFromCatalog(marketProducts), [marketProducts]);
+  const { data: gradeCategories } = useCustomerMarketplaceCategories();
+  const categories = useMemo(
+    () => marketCategoryChips(gradeCategories ?? [], marketProducts),
+    [gradeCategories, marketProducts],
+  );
+  const selectedCategoryLabel = useMemo(
+    () => categories.find((category) => category.id === selectedCategory)?.label ?? null,
+    [categories, selectedCategory],
+  );
+  const totalGradeCount = useMemo(
+    () => (gradeCategories ?? []).reduce((sum, category) => sum + category.gradeCount, 0),
+    [gradeCategories],
+  );
 
   const shouldAutoFocus = useMemo(() => {
     const value = params.focusSearch;
@@ -80,6 +94,18 @@ export const CustomerMarketScreen = () => {
   const handleCartPress = useCallback(() => {
     router.push(ROUTES.CUSTOMER.CART as Href);
   }, [router]);
+
+  const openGradeBrowser = useCallback(() => {
+    Keyboard.dismiss();
+    const search = query.trim();
+    router.push({
+      pathname: ROUTES.CUSTOMER.GRADES,
+      params: {
+        ...(search ? { search } : {}),
+        ...(selectedCategory ? { categoryId: selectedCategory } : {}),
+      },
+    } as unknown as Href);
+  }, [query, router, selectedCategory]);
 
   useFocusEffect(
     useCallback(() => {
@@ -239,13 +265,14 @@ export const CustomerMarketScreen = () => {
           onCartPress={handleCartPress}
         />
         <EmptyState
-          title="No materials available"
-          description="The marketplace catalog is empty right now. Pull to refresh or try again shortly."
+          title="No live listings right now"
+          description="No seller has a live offer at the moment. You can still browse every grade and check back for offers."
           actionLabel="Refresh"
           onActionPress={() => {
             void refetch();
           }}
         />
+        <GradeMasterEntry onPress={openGradeBrowser} gradeCount={totalGradeCount} />
         <LocationBottomSheet
           ref={locationSheetRef}
           selectedId={selectedLocation.id}
@@ -323,8 +350,8 @@ export const CustomerMarketScreen = () => {
             >
               {trimmedQuery
                 ? `${filteredProducts.length} ${resultLabel} for “${trimmedQuery}”`
-                : selectedCategory
-                  ? `${filteredProducts.length} ${resultLabel} in ${selectedCategory}`
+                : selectedCategoryLabel
+                  ? `${filteredProducts.length} ${resultLabel} in ${selectedCategoryLabel}`
                   : `${filteredProducts.length} ${resultLabel}`}
             </Typography>
             {expandedAcrossCategories ? (
@@ -344,24 +371,35 @@ export const CustomerMarketScreen = () => {
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
             onScrollBeginDrag={handleDismissOverlay}
+            ListHeaderComponent={
+              <GradeMasterEntry
+                onPress={openGradeBrowser}
+                gradeCount={totalGradeCount}
+                query={trimmedQuery}
+              />
+            }
             ListEmptyComponent={
               <EmptyState
                 title={
                   trimmedQuery
-                    ? `No grades match “${trimmedQuery}”`
-                    : selectedCategory
-                      ? `No grades in ${selectedCategory}`
+                    ? `No live listings match “${trimmedQuery}”`
+                    : selectedCategoryLabel
+                      ? `No live listings in ${selectedCategoryLabel}`
                       : 'No materials found'
                 }
                 description={
                   trimmedQuery
-                    ? 'Try a material like PP, HDPE, PVC, or a grade code.'
+                    ? 'Try a grade number or manufacturer, or search all grades above.'
                     : selectedCategory
                       ? 'Switch to All or pick another category to keep browsing.'
                       : 'Try a different grade, category, or search term.'
                 }
                 actionLabel={
-                  trimmedQuery ? 'Clear search' : selectedCategory ? 'Show all materials' : undefined
+                  trimmedQuery
+                    ? 'Clear search'
+                    : selectedCategory
+                      ? 'Show all materials'
+                      : undefined
                 }
                 onActionPress={
                   trimmedQuery

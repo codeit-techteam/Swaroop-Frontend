@@ -21,6 +21,8 @@ export const ROUTES = {
     ORDERS: '/(customer)/(tabs)/orders',
     PROFILE: '/(customer)/(tabs)/profile',
     PRODUCT_DETAILS: '/(customer)/product/[id]',
+    GRADES: '/(customer)/grades',
+    GRADE_DETAILS: '/(customer)/grades/[id]',
     CART: '/(customer)/cart',
     CHECKOUT: '/(customer)/checkout',
     PAYMENT: '/(customer)/payment',

@@ -3,7 +3,6 @@ import { memo } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { Typography } from '@/components';
-import type { SellerMaterialFamily } from '@/constants/materials-taxonomy';
 import type { SellerProduct, SellerProductStatus } from '@/seller/types';
 import { formatCatalogKgPrice, formatCatalogPrice } from '@/seller/utils/catalog';
 import { formatSellerSellingPrice } from '@/seller/utils/pricing';
@@ -11,12 +10,14 @@ import { elevation } from '@/theme/shadows';
 import type { MarketProduct } from '@/types/market';
 import { cn } from '@/utils/cn';
 
-export const SellerMaterialTile = memo(function SellerMaterialTile({
-  family,
+export const SellerCategoryTile = memo(function SellerCategoryTile({
+  label,
+  gradeCount,
   listedCount = 0,
   onPress,
 }: {
-  family: SellerMaterialFamily;
+  label: string;
+  gradeCount: number;
   listedCount?: number;
   onPress: () => void;
 }) {
@@ -24,8 +25,8 @@ export const SellerMaterialTile = memo(function SellerMaterialTile({
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${family.code}, ${family.gradeCount} grades`}
-      className="min-h-[108px] flex-1 rounded-2xl border border-brand-border bg-brand-white px-md py-lg"
+      accessibilityLabel={`${label}, ${gradeCount} grades`}
+      className="min-h-[96px] flex-1 justify-center rounded-2xl border border-brand-border bg-brand-white px-md py-lg"
       style={({ pressed }) => [
         elevation.sm,
         { opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
@@ -36,10 +37,10 @@ export const SellerMaterialTile = memo(function SellerMaterialTile({
         className="text-center text-[15px] leading-[20px] tracking-[0.4px] text-brand-heading"
         numberOfLines={2}
       >
-        {family.code}
+        {label}
       </Typography>
       <Typography variant="legal" className="mt-sm text-center text-[11px] text-brand-body">
-        {family.gradeCount} grade{family.gradeCount === 1 ? '' : 's'}
+        {gradeCount.toLocaleString('en-IN')} grade{gradeCount === 1 ? '' : 's'}
       </Typography>
       {listedCount > 0 ? (
         <View className="mt-sm self-center rounded-full bg-brand-success-light px-sm py-xs">
@@ -47,11 +48,7 @@ export const SellerMaterialTile = memo(function SellerMaterialTile({
             {listedCount} listed
           </Typography>
         </View>
-      ) : (
-        <Typography variant="legal" className="mt-sm text-center text-[10px] text-brand-footer">
-          from {formatCatalogKgPrice(family.startingPrice)}/kg
-        </Typography>
-      )}
+      ) : null}
     </Pressable>
   );
 });
@@ -68,6 +65,12 @@ export const SellerCatalogGradeRow = memo(function SellerCatalogGradeRow({
   const listed = Boolean(listing);
   const status = listing?.status;
   const mfi = product.technicalSpecs?.mfi?.replace(' g/10 min', '');
+  const details = [
+    product.manufacturer,
+    product.subCategory,
+    mfi ? `${mfi} MFI` : null,
+    product.manufacturer ? null : product.gradeCode,
+  ].filter(Boolean);
 
   return (
     <Pressable
@@ -80,8 +83,11 @@ export const SellerCatalogGradeRow = memo(function SellerCatalogGradeRow({
       <View className="flex-1 pr-md">
         <View className="flex-row items-center">
           <View className="rounded-md bg-brand-primary-light px-sm py-xs">
-            <Typography variant="badge" className="text-[10px] tracking-[0.6px] text-brand-primary-dark">
-              {product.grade}
+            <Typography
+              variant="badge"
+              className="text-[10px] tracking-[0.6px] text-brand-primary-dark"
+            >
+              {product.gradeNo ?? product.grade}
             </Typography>
           </View>
           {listed ? (
@@ -119,16 +125,23 @@ export const SellerCatalogGradeRow = memo(function SellerCatalogGradeRow({
           {product.name}
         </Typography>
         <Typography variant="legal" className="mt-xs text-left text-[11px] text-brand-body">
-          {[product.gradeCode, mfi ? `${mfi} MFI` : null, product.subCategory].filter(Boolean).join(' · ')}
+          {details.join(' · ')}
         </Typography>
       </View>
       <View className="items-end">
-        <Typography variant="headingLeft" className="text-[18px] leading-[22px] text-brand-navy">
-          {formatCatalogKgPrice(product.price)}
-        </Typography>
-        <Typography variant="legal" className="mt-xs text-right text-[10px] text-brand-footer">
-          /kg · {formatCatalogPrice(product.price)}/MT
-        </Typography>
+        {product.price > 0 ? (
+          <>
+            <Typography
+              variant="headingLeft"
+              className="text-[18px] leading-[22px] text-brand-navy"
+            >
+              {formatCatalogKgPrice(product.price)}
+            </Typography>
+            <Typography variant="legal" className="mt-xs text-right text-[10px] text-brand-footer">
+              /kg · {formatCatalogPrice(product.price)}/MT
+            </Typography>
+          </>
+        ) : null}
         <View className="mt-sm rounded-full bg-brand-navy px-md py-xs">
           <Typography variant="badge" className="text-[10px] text-brand-white">
             {listed ? 'Manage' : 'List'}
@@ -139,7 +152,10 @@ export const SellerCatalogGradeRow = memo(function SellerCatalogGradeRow({
   );
 });
 
-const listingStatusTone: Record<SellerProductStatus, { chip: string; text: string; label: string }> = {
+const listingStatusTone: Record<
+  SellerProductStatus,
+  { chip: string; text: string; label: string }
+> = {
   published: { chip: 'bg-brand-success-light', text: 'text-brand-success', label: 'Published' },
   draft: { chip: 'bg-brand-primary-light', text: 'text-brand-primary-dark', label: 'Draft' },
   inactive: { chip: 'bg-brand-error-light', text: 'text-brand-error', label: 'Inactive' },
@@ -262,11 +278,23 @@ export const SellerCatalogSelectedBanner = memo(function SellerCatalogSelectedBa
           <Typography variant="badge" className="text-[10px] text-brand-primary-light">
             Marketplace grade
           </Typography>
-          <Typography variant="headingLeft" className="mt-xs text-[20px] leading-[26px] text-brand-white">
+          <Typography
+            variant="headingLeft"
+            className="mt-xs text-[20px] leading-[26px] text-brand-white"
+          >
             {product.name}
           </Typography>
-          <Typography variant="legal" className="mt-sm text-left text-[11px] text-brand-primary-light">
-            {[product.gradeCode, product.materialType, product.subCategory, mfi ? `${mfi} MFI` : null]
+          <Typography
+            variant="legal"
+            className="mt-sm text-left text-[11px] text-brand-primary-light"
+          >
+            {[
+              product.gradeNo ?? product.gradeCode,
+              product.manufacturer,
+              product.materialType,
+              product.subCategory,
+              mfi ? `${mfi} MFI` : null,
+            ]
               .filter(Boolean)
               .join(' · ')}
           </Typography>
@@ -279,24 +307,26 @@ export const SellerCatalogSelectedBanner = memo(function SellerCatalogSelectedBa
           </Pressable>
         ) : null}
       </View>
-      <View className="mt-lg flex-row">
-        <View className="flex-1 rounded-2xl bg-white/10 px-md py-sm">
-          <Typography variant="legal" className="text-left text-[10px] text-brand-primary-light">
-            Indicative
-          </Typography>
-          <Typography variant="roleTitle" className="mt-xs text-[14px] text-brand-white">
-            {formatCatalogKgPrice(product.price)}/kg
-          </Typography>
+      {product.price > 0 || product.moq > 0 ? (
+        <View className="mt-lg flex-row">
+          <View className="flex-1 rounded-2xl bg-white/10 px-md py-sm">
+            <Typography variant="legal" className="text-left text-[10px] text-brand-primary-light">
+              Indicative
+            </Typography>
+            <Typography variant="roleTitle" className="mt-xs text-[14px] text-brand-white">
+              {formatCatalogKgPrice(product.price)}/kg
+            </Typography>
+          </View>
+          <View className="ml-sm flex-1 rounded-2xl bg-white/10 px-md py-sm">
+            <Typography variant="legal" className="text-left text-[10px] text-brand-primary-light">
+              Buyer MOQ
+            </Typography>
+            <Typography variant="roleTitle" className="mt-xs text-[14px] text-brand-white">
+              {product.moq} MT
+            </Typography>
+          </View>
         </View>
-        <View className="ml-sm flex-1 rounded-2xl bg-white/10 px-md py-sm">
-          <Typography variant="legal" className="text-left text-[10px] text-brand-primary-light">
-            Buyer MOQ
-          </Typography>
-          <Typography variant="roleTitle" className="mt-xs text-[14px] text-brand-white">
-            {product.moq} MT
-          </Typography>
-        </View>
-      </View>
+      ) : null}
     </View>
   );
 });

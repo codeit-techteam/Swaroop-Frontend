@@ -70,17 +70,6 @@ const FILTER_GROUPS: Record<FilterModule, FilterGroup[]> = {
       ],
       multi: true,
     },
-    {
-      id: 'material',
-      label: 'Material',
-      options: [
-        { label: 'HDPE', value: 'hdpe' },
-        { label: 'PP', value: 'pp' },
-        { label: 'PVC', value: 'pvc' },
-        { label: 'LDPE', value: 'ldpe' },
-      ],
-      multi: true,
-    },
   ],
   offers: [
     {
@@ -123,16 +112,6 @@ const FILTER_GROUPS: Record<FilterModule, FilterGroup[]> = {
         { label: 'Main Warehouse', value: 'main' },
         { label: 'Hazira', value: 'hazira' },
         { label: 'JNPT', value: 'jnpt' },
-      ],
-      multi: true,
-    },
-    {
-      id: 'material',
-      label: 'Material',
-      options: [
-        { label: 'Polymer', value: 'polymer' },
-        { label: 'Chemicals', value: 'chemicals' },
-        { label: 'Lubricants', value: 'lubricants' },
       ],
       multi: true,
     },

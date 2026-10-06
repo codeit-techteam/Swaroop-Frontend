@@ -34,6 +34,13 @@ export type MarketProduct = {
   /** Blind catalog has no product photography. */
   image?: string;
   gradeCode?: string;
+  /** Grade Master id the listing references. */
+  gradeId?: string;
+  gradeNo?: string;
+  manufacturer?: string;
+  /** Grade Master category (backend `GradeCategory`). */
+  masterCategoryId?: string;
+  masterCategoryName?: string;
   categoryId?: MarketParentCategoryId;
   materialType?: string;
   subCategory?: string;

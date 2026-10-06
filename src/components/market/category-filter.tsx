@@ -6,8 +6,12 @@ import { Typography } from '@/components/ui/typography';
 import { FilterIcon } from '@/icons';
 import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
-import type { MarketCategory } from '@/types/market';
 import { cn } from '@/utils/cn';
+
+export type CategoryFilterOption = {
+  id: string;
+  label: string;
+};
 
 type CategoryChipProps = {
   label: string;
@@ -42,10 +46,12 @@ const CategoryChip = memo(function CategoryChip({ label, selected, onPress }: Ca
 });
 
 type CategoryFilterProps = {
-  categories: MarketCategory[];
-  selectedCategory: MarketCategory | null;
-  onSelectCategory: (category: MarketCategory | null) => void;
+  categories: CategoryFilterOption[];
+  /** Selected option id; `null` is "All". */
+  selectedCategory: string | null;
+  onSelectCategory: (categoryId: string | null) => void;
   onFilterPress?: () => void;
+  filterLabel?: string;
   className?: string;
 };
 
@@ -54,11 +60,12 @@ export const CategoryFilter = memo(function CategoryFilter({
   selectedCategory,
   onSelectCategory,
   onFilterPress,
+  filterLabel = 'Filter',
   className,
 }: CategoryFilterProps) {
   const handleCategoryPress = useCallback(
-    (category: MarketCategory) => {
-      onSelectCategory(selectedCategory === category ? null : category);
+    (categoryId: string) => {
+      onSelectCategory(selectedCategory === categoryId ? null : categoryId);
     },
     [onSelectCategory, selectedCategory],
   );
@@ -70,20 +77,24 @@ export const CategoryFilter = memo(function CategoryFilter({
         showsHorizontalScrollIndicator={false}
         contentContainerClassName="items-center px-lg"
       >
-        <Pressable
-          onPress={onFilterPress}
-          accessibilityRole="button"
-          accessibilityLabel="Open filters"
-          className="mr-sm flex-row items-center gap-xs rounded-lg bg-brand-primary px-md py-sm"
-          style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
-        >
-          <FilterIcon size={iconSizes.sm} color={brandColors.white} />
-          <Typography variant="button" className="text-[13px] tracking-normal">
-            Filter
-          </Typography>
-        </Pressable>
+        {onFilterPress ? (
+          <>
+            <Pressable
+              onPress={onFilterPress}
+              accessibilityRole="button"
+              accessibilityLabel={filterLabel}
+              className="mr-sm flex-row items-center gap-xs rounded-lg bg-brand-primary px-md py-sm"
+              style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
+            >
+              <FilterIcon size={iconSizes.sm} color={brandColors.white} />
+              <Typography variant="button" className="text-[13px] tracking-normal">
+                {filterLabel}
+              </Typography>
+            </Pressable>
 
-        <View className="mr-sm h-6 w-px bg-brand-border" />
+            <View className="mr-sm h-6 w-px bg-brand-border" />
+          </>
+        ) : null}
 
         <CategoryChip
           label="All"
@@ -93,10 +104,10 @@ export const CategoryFilter = memo(function CategoryFilter({
 
         {categories.map((category) => (
           <CategoryChip
-            key={category}
-            label={category}
-            selected={selectedCategory === category}
-            onPress={() => handleCategoryPress(category)}
+            key={category.id}
+            label={category.label}
+            selected={selectedCategory === category.id}
+            onPress={() => handleCategoryPress(category.id)}
           />
         ))}
       </ScrollView>

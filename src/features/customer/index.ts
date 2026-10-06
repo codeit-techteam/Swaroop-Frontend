@@ -4,6 +4,8 @@ export { CustomerOrdersScreen } from '@/features/customer/orders-screen';
 export { CustomerProfileScreen } from '@/features/customer/profile-screen';
 export { CustomerNotificationsScreen } from '@/features/customer/notifications-screen';
 export { CustomerProductDetailsScreen } from '@/features/customer/product-details-screen';
+export { CustomerGradeBrowseScreen } from '@/features/customer/grade-browse-screen';
+export { CustomerGradeDetailScreen } from '@/features/customer/grade-detail-screen';
 export { CustomerCartScreen } from '@/features/customer/cart-screen';
 export { CustomerCheckoutScreen } from '@/features/customer/checkout-screen';
 export { CustomerPaymentSelectionScreen } from '@/features/customer/payment-selection-screen';

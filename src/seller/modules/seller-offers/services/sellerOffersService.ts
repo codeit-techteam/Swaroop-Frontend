@@ -27,8 +27,6 @@ import type {
   SellerOffersSnapshot,
 } from '@/seller/modules/seller-offers/types/offers';
 import { useSellerProductStore } from '@/seller/store/sellerProductStore';
-import type { MarketProduct } from '@/types/market';
-
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const VALIDITY_HOURS: Record<OfferValidity, number> = {
@@ -834,36 +832,6 @@ export const getPriceHistory = (): OfferPriceHistoryEntry[] => [
     delta: 'Stable',
   },
 ];
-
-type MarketplaceOfferProduct = MarketProduct & {
-  sellerOfferId?: string;
-  bulkTiers?: { range: string; pricePerKg: number }[];
-};
-
-export const mapOfferToMarketProduct = (offer: SellerOffer): MarketplaceOfferProduct => ({
-  id: `offer-${offer.id}`,
-  name: offer.product,
-  grade: offer.grade,
-  price: Math.round(offer.basePrice * 1000),
-  origin: offer.warehouseLocation,
-  stock: offer.remainingStock,
-  moq: offer.moq,
-  eta: offer.validity === '12h' ? 'Same Day' : '2–3 Days',
-  category: offer.category.includes('POLY') ? 'Polypropylene' : 'HDPE',
-  badge: offer.tiers.length > 0 ? 'Lowest Cost' : 'Best Value',
-  image: '',
-  materialType: offer.category.includes('POLY') ? 'Polypropylene' : 'HDPE',
-  subCategory: offer.grade,
-  description: `${offer.product} ${offer.grade} listed through verified supply.`,
-  sellerOfferId: offer.id,
-  bulkTiers: offer.tiers.map((tier) => ({
-    range: tier.label,
-    pricePerKg: tier.pricePerKg,
-  })),
-});
-
-export const getActiveMarketplaceListings = (offers: SellerOffer[]): MarketplaceOfferProduct[] =>
-  offers.filter((offer) => offer.status === 'active').map(mapOfferToMarketProduct);
 
 export const syncOfferInventory = (offer: SellerOffer, availableStock: number): SellerOffer => ({
   ...offer,

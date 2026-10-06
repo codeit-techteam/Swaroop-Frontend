@@ -22,9 +22,10 @@ export { SellerVerificationStatusBanner } from '@/seller/components/SellerVerifi
 export {
   SellerCatalogGradeRow,
   SellerCatalogSelectedBanner,
+  SellerCategoryTile,
   SellerListingCard,
-  SellerMaterialTile,
 } from '@/seller/components/SellerCatalogComponents';
+export { SellerGradePicker } from '@/seller/components/SellerGradePicker';
 export { SellerSheetShell } from '@/seller/components/SellerSheetShell';
 export {
   BuyerPreviewCard,

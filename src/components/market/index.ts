@@ -1,7 +1,10 @@
 export { MarketHeader } from '@/components/market/market-header';
 export { SearchBar } from '@/components/market/search-bar';
-export { CategoryFilter } from '@/components/market/category-filter';
+export { CategoryFilter, type CategoryFilterOption } from '@/components/market/category-filter';
 export { ProductCard } from '@/components/market/product-card';
 export { EmptyState } from '@/components/market/empty-state';
+export { GradeMasterEntry } from '@/components/market/grade-master-entry';
+export { GradeCard, gradeIdentityLine, liveOfferLabel } from '@/components/market/grade-card';
+export { GradeFilterSheet, type GradeSheetFilters } from '@/components/market/grade-filter-sheet';
 export { SearchSuggestions } from '@/components/market/search-suggestions';
 export { HighlightedText } from '@/components/market/highlighted-text';
