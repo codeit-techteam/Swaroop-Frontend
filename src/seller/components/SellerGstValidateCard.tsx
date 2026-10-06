@@ -100,6 +100,8 @@ export const SellerGstValidateCard = memo(function SellerGstValidateCard({
         ['Constitution', details.constitution],
         ['Registered On', details.registrationDate],
         ['Cancelled On', details.cancellationDate],
+        ['Registered Address', details.address],
+        ['PIN Code', details.pincode],
       ]
     : [];
 

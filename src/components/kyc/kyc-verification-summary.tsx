@@ -46,6 +46,8 @@ function detailRows(verification: KycVerification): [string, string][] {
           ['Taxpayer type', d.taxpayerType],
           ['Constitution', d.constitution],
           ['State', d.state ? (d.stateCode ? `${d.state} (${d.stateCode})` : d.state) : null],
+          ['Registered address', d.address],
+          ['PIN code', d.pincode],
         ];
   return rows.filter((row): row is [string, string] => Boolean(row[1]));
 }
