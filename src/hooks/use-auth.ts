@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 
+import { signOut as signOutSession } from '@/services/sign-out';
 import {
   selectIsAuthenticated,
   selectIsHydrated,
@@ -15,12 +16,9 @@ export const useAuth = () => {
   const kycApproved = useAuthStore(selectKycApproved);
   const setTokens = useAuthStore((state) => state.setTokens);
   const clearTokens = useAuthStore((state) => state.clearTokens);
-  const logout = useAuthStore((state) => state.logout);
   const resetDemoAccount = useAuthStore((state) => state.resetDemoAccount);
 
-  const signOut = useCallback(async () => {
-    await logout();
-  }, [logout]);
+  const signOut = useCallback(() => signOutSession(), []);
 
   const resetDemo = useCallback(async () => {
     await resetDemoAccount();

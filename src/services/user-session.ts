@@ -1,11 +1,14 @@
-import { EMPTY_BUSINESS_INFO, INITIAL_DOCUMENTS } from '@/constants/documents';
 import { DEMO_PHONE, DEVELOPMENT_MODE } from '@/config/development';
+import { STORAGE_KEYS } from '@/constants';
+import { EMPTY_BUSINESS_INFO, INITIAL_DOCUMENTS } from '@/constants/documents';
 import {
+  getAppSettings,
   getAuth,
   getBusinessInfo,
   getDocuments,
   getKYC,
   getUser,
+  saveAppSettings,
   saveAuth,
   saveBusinessInfo,
   saveDocuments,
@@ -15,57 +18,27 @@ import {
 import type { DocumentItem } from '@/types/document';
 import type { BusinessInformation } from '@/types/kyc';
 import type { CurrentUser, UserRole } from '@/types/session';
+import { removeStorageItem } from '@/utils/storage';
 
-const DEMO_REFERENCE_ID = 'PT-KYC-DEMO';
+const SESSION_KEYS = [
+  STORAGE_KEYS.ACCESS_TOKEN,
+  STORAGE_KEYS.REFRESH_TOKEN,
+  STORAGE_KEYS.SESSION_SOURCE,
+] as const;
 
-const DEMO_BUSINESS_INFO: BusinessInformation = {
-  businessEntityName: 'Karan Veer Trading',
-  companyType: 'Private Limited',
-  gstNumber: '22AAAAA0000A1Z5',
-  panNumber: 'ABCDE1234F',
-  businessEmail: 'karan.veer@test.local',
-  mobileNumber: DEMO_PHONE,
-  businessAddress: 'Mumbai, Maharashtra',
-  state: 'Maharashtra',
-  city: 'Mumbai',
-  pincode: '400001',
-  natureOfBusiness: 'Petrochemical Trading',
-  annualPurchaseVolume: '1000+ MT',
-  expectedMonthlyRequirement: '100 MT',
-};
+const USER_SCOPED_KEYS = [
+  STORAGE_KEYS.USER_PROFILE_KEY,
+  STORAGE_KEYS.CART_KEY,
+  STORAGE_KEYS.PAYMENT_KEY,
+  STORAGE_KEYS.CHECKOUT_KEY,
+  STORAGE_KEYS.ORDER_KEY,
+  STORAGE_KEYS.CUSTOMER_ADDRESSES,
+  STORAGE_KEYS.CUSTOMER_RECENT_SEARCHES,
+] as const;
 
-const buildDemoDocuments = (): DocumentItem[] =>
-  INITIAL_DOCUMENTS.map((document) => {
-    if (document.id === 'cancelled_cheque') {
-      return { ...document, status: 'idle', progress: 0, file: undefined };
-    }
-
-    return {
-      ...document,
-      status: 'uploaded',
-      progress: 100,
-      file: {
-        name: `${document.id}-demo.pdf`,
-        uri: `demo://${document.id}`,
-        size: 1024,
-        mimeType: 'application/pdf',
-      },
-    };
-  });
-
-const hasDemoProfile = (): boolean => {
-  const auth = getAuth();
-  const kyc = getKYC();
-  const businessInfo = getBusinessInfo();
-  const user = getUser();
-
-  return (
-    auth.mobileNumber === DEMO_PHONE &&
-    kyc.kycApproved === true &&
-    Boolean(businessInfo?.businessEntityName) &&
-    Boolean(user?.mobileNumber)
-  );
-};
+/** Values the removed development seed wrote to device storage. */
+const LEGACY_DEMO_REFERENCE_ID = 'PT-KYC-DEMO';
+const LEGACY_DEMO_GSTIN = '22AAAAA0000A1Z5';
 
 export const isDemoUser = (mobileNumber?: string | null): boolean => {
   if (!DEVELOPMENT_MODE) {
@@ -163,44 +136,6 @@ export const saveCurrentUser = (user: Partial<CurrentUser>): CurrentUser => {
 };
 
 /**
- * Seeds the permanent demo account on first login.
- * Reuses existing profile data when present — never overwrites it.
- */
-export const seedDemoUser = (): CurrentUser => {
-  if (!DEVELOPMENT_MODE) {
-    return getCurrentUser();
-  }
-
-  if (hasDemoProfile()) {
-    saveAuth({ isLoggedIn: true, mobileNumber: DEMO_PHONE });
-    return getCurrentUser();
-  }
-
-  saveAuth({
-    isLoggedIn: true,
-    mobileNumber: DEMO_PHONE,
-  });
-
-  saveUser({
-    mobileNumber: DEMO_PHONE,
-    selectedRole: 'buyer',
-    displayName: 'Karan Veer',
-  });
-
-  saveBusinessInfo({ ...DEMO_BUSINESS_INFO });
-  saveDocuments(buildDemoDocuments());
-
-  saveKYC({
-    kycApproved: true,
-    reviewSubmitted: true,
-    referenceId: DEMO_REFERENCE_ID,
-    submittedAt: Date.now(),
-  });
-
-  return getCurrentUser();
-};
-
-/**
  * Wipes KYC / business / document data so a fresh (non-demo) user starts the
  * Business Info → Documents → Review flow from scratch.
  */
@@ -215,11 +150,29 @@ export const resetKycData = (): void => {
   });
 };
 
-/** Clears login flag only — profile / KYC data is preserved. */
+/**
+ * True when device storage still holds the fake company the old development seed
+ * wrote (Karan Veer Trading / 22AAAAA0000A1Z5). It must never be shown as real data.
+ */
+export const hasLegacyDemoData = (): boolean =>
+  getKYC().referenceId === LEGACY_DEMO_REFERENCE_ID ||
+  getBusinessInfo()?.gstNumber === LEGACY_DEMO_GSTIN ||
+  (getDocuments() ?? []).some((document) => document.file?.uri.startsWith('demo://'));
+
+/**
+ * Removes everything tied to the signed-in person: session tokens, KYC draft and
+ * cached decision, profile, cart, checkout, orders, payment and addresses. Device
+ * preferences (onboarding, theme) stay. The next account starts from the backend.
+ */
+export const clearUserData = (options?: { keepSession?: boolean }): void => {
+  if (!options?.keepSession) SESSION_KEYS.forEach((key) => removeStorageItem(key));
+  USER_SCOPED_KEYS.forEach((key) => removeStorageItem(key));
+  saveAppSettings({ ...getAppSettings(), location: null });
+  resetKycData();
+};
+
+/** Signs out and clears user data so the next account cannot see this one's. */
 export const logout = (): void => {
-  const auth = getAuth();
-  saveAuth({
-    isLoggedIn: false,
-    mobileNumber: auth.mobileNumber,
-  });
+  clearUserData();
+  saveAuth({ isLoggedIn: false, mobileNumber: null });
 };

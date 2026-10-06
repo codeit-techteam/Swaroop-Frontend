@@ -37,7 +37,7 @@ export { validateDevOtp, getInvalidOtpMessage, isDevAccount } from '@/services/d
 export {
   getCurrentUser,
   saveCurrentUser,
-  seedDemoUser,
+  clearUserData,
   isDemoUser,
   logout as logoutSession,
 } from '@/services/user-session';

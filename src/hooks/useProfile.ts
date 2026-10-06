@@ -1,13 +1,12 @@
 import { useCallback, useMemo } from 'react';
 
-import {
-  DEFAULT_BANK_ACCOUNTS,
-  DEFAULT_TAX_DOCUMENTS,
-  getComplianceValidTillLabel,
-} from '@/constants/profile';
+import { getComplianceValidTillLabel } from '@/constants/profile';
+import { toCompanyProfile } from '@/services/company-profile';
+import { updateCustomerBusinessProfile, type CustomerKycOverview } from '@/services/customer-kyc';
 import { selectSavedAddresses, useAddressStore } from '@/store/address-store';
 import { selectKycApproved, selectMobileNumber, useAuthStore } from '@/store/auth-store';
-import { selectBusinessInfo, selectMandatoryDocsReady, useKycStore } from '@/store/kyc-store';
+import { useCustomerKycOverviewStore } from '@/store/customer-kyc-overview-store';
+import { selectMandatoryDocsReady, useKycStore } from '@/store/kyc-store';
 import type {
   ComplianceStatus,
   KycVerificationStatus,
@@ -16,6 +15,12 @@ import type {
   ProfileUpdatePayload,
   TradingStatus,
 } from '@/types/profile';
+
+const deriveBackendKycStatus = (overview: CustomerKycOverview): KycVerificationStatus => {
+  if (overview.kycVerified) return 'verified';
+  if (overview.status === 'SUBMITTED') return 'pending';
+  return 'unverified';
+};
 
 const deriveDisplayName = (
   displayName: string | undefined,
@@ -80,12 +85,12 @@ export const useProfile = () => {
   const updateUserProfile = useAuthStore((state) => state.updateUserProfile);
   const savedDeliveryAddresses = useAddressStore(selectSavedAddresses);
 
-  const businessInfo = useKycStore(selectBusinessInfo);
+  const overview = useCustomerKycOverviewStore((state) => state.overview);
+  const setOverview = useCustomerKycOverviewStore((state) => state.setOverview);
   const docsReady = useKycStore(selectMandatoryDocsReady);
-  const updateBusinessInfo = useKycStore((state) => state.updateBusinessInfo);
 
   const profile = useMemo<ProfileData>(() => {
-    const companyName = businessInfo.businessEntityName;
+    const company = toCompanyProfile(overview, mobileNumber);
     const savedAddresses: ProfileData['savedAddresses'] =
       savedDeliveryAddresses.length > 0
         ? savedDeliveryAddresses.map((address) => ({
@@ -107,28 +112,15 @@ export const useProfile = () => {
           }))
         : [];
 
-    const bankAccounts = DEFAULT_BANK_ACCOUNTS.map((account) => ({
-      ...account,
-      accountHolder: companyName || account.accountHolder,
-    }));
-
     return {
-      displayName: deriveDisplayName(userProfile?.displayName, companyName, mobileNumber),
-      companyName,
-      companyType: businessInfo.companyType,
+      displayName: deriveDisplayName(userProfile?.displayName, company.companyName, mobileNumber),
+      ...company,
+      city: '',
       profilePhotoUri: userProfile?.profilePhotoUri ?? null,
       companyLogoUri: userProfile?.companyLogoUri ?? null,
-      email: businessInfo.businessEmail,
-      phone: businessInfo.mobileNumber || mobileNumber || '',
-      gstNumber: businessInfo.gstNumber,
-      panNumber: businessInfo.panNumber,
-      businessAddress: businessInfo.businessAddress,
-      state: businessInfo.state,
-      city: businessInfo.city,
-      pincode: businessInfo.pincode,
-      natureOfBusiness: businessInfo.natureOfBusiness,
-      establishedYear: userProfile?.establishedYear ?? '',
-      kycStatus: deriveKycStatus(kycApproved, docsReady),
+      kycStatus: overview
+        ? deriveBackendKycStatus(overview)
+        : deriveKycStatus(kycApproved, docsReady),
       membership: deriveMembership(kycApproved),
       tradingStatus: deriveTradingStatus(kycApproved),
       compliance: buildComplianceStatus({
@@ -137,12 +129,12 @@ export const useProfile = () => {
         panVerified: identityVerified.pan,
         documentsComplete: docsReady,
       }),
+      companySource: overview ? 'backend' : 'none',
       savedAddresses,
-      bankAccounts,
-      taxDocuments: DEFAULT_TAX_DOCUMENTS,
+      bankAccounts: [],
     };
   }, [
-    businessInfo,
+    overview,
     docsReady,
     identityVerified,
     kycApproved,
@@ -151,53 +143,31 @@ export const useProfile = () => {
     userProfile,
   ]);
 
+  /**
+   * Name, photo and logo are device preferences. Business email and nature of
+   * business are saved to the backend organization, the single shared record.
+   */
   const updateProfile = useCallback(
-    (patch: ProfileUpdatePayload) => {
+    async (patch: ProfileUpdatePayload) => {
       const userPatch: Parameters<typeof updateUserProfile>[0] = {};
+      if (patch.displayName !== undefined) userPatch.displayName = patch.displayName;
+      if (patch.profilePhotoUri !== undefined) userPatch.profilePhotoUri = patch.profilePhotoUri;
+      if (patch.companyLogoUri !== undefined) userPatch.companyLogoUri = patch.companyLogoUri;
 
-      if (patch.displayName !== undefined) {
-        userPatch.displayName = patch.displayName;
-      }
-
-      if (patch.profilePhotoUri !== undefined) {
-        userPatch.profilePhotoUri = patch.profilePhotoUri;
-      }
-
-      if (patch.companyLogoUri !== undefined) {
-        userPatch.companyLogoUri = patch.companyLogoUri;
-      }
-
-      if (patch.phone !== undefined) {
-        userPatch.mobileNumber = patch.phone;
-      }
-
-      if (Object.keys(userPatch).length > 0) {
-        updateUserProfile(userPatch);
-      }
-
-      const businessPatch: Partial<typeof businessInfo> = {};
-
-      if (patch.email !== undefined) {
-        businessPatch.businessEmail = patch.email;
-      }
-
-      if (patch.phone !== undefined) {
-        businessPatch.mobileNumber = patch.phone;
-      }
-
-      if (patch.businessAddress !== undefined) {
-        businessPatch.businessAddress = patch.businessAddress;
-      }
-
+      const businessPatch: { businessEmail?: string; natureOfBusiness?: string } = {};
+      if (patch.email !== undefined) businessPatch.businessEmail = patch.email;
       if (patch.natureOfBusiness !== undefined) {
         businessPatch.natureOfBusiness = patch.natureOfBusiness;
       }
 
       if (Object.keys(businessPatch).length > 0) {
-        updateBusinessInfo(businessPatch);
+        setOverview(await updateCustomerBusinessProfile(businessPatch));
+      }
+      if (Object.keys(userPatch).length > 0) {
+        updateUserProfile(userPatch);
       }
     },
-    [updateBusinessInfo, updateUserProfile],
+    [setOverview, updateUserProfile],
   );
 
   return {

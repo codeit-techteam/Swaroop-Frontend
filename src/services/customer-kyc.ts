@@ -117,6 +117,12 @@ export type CustomerKycOverview = {
     legalName: string | null;
     gstin: string | null;
     pan: string | null;
+    businessType?: string | null;
+    constitutionType?: string | null;
+    natureOfBusiness?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    memberSince?: string | null;
   };
   slots: CustomerKycSlot[];
 };
@@ -310,17 +316,55 @@ export function uploadCustomerKycDocument(
   });
 }
 
-/** PAN and GSTIN come from the backend verification records, so only the name is sent. */
+/**
+ * PAN and GSTIN come from the backend verification records; the business profile
+ * typed into the form is sent so the backend organization stays the single record.
+ */
 export function submitCustomerKyc(info?: BusinessInformation): Promise<CustomerKycOverview> {
   return withCustomerSession(async () => {
-    const body: { businessName?: string } = {};
+    const body: {
+      businessName?: string;
+      businessType?: string;
+      natureOfBusiness?: string;
+      businessEmail?: string;
+    } = {};
     const name = info?.businessEntityName.trim();
     if (name) body.businessName = name;
+    const businessType = info?.companyType.trim();
+    if (businessType) body.businessType = businessType;
+    const natureOfBusiness = info?.natureOfBusiness.trim();
+    if (natureOfBusiness) body.natureOfBusiness = natureOfBusiness;
+    const businessEmail = info?.businessEmail.trim();
+    if (businessEmail) body.businessEmail = businessEmail;
     const response = await apiClient.post<Envelope<CustomerKycOverview>>(
       '/customer/kyc/submit',
       body,
     );
     return response.data.data;
+  });
+}
+
+/** Saves the editable business contact details to the backend organization. */
+export function updateCustomerBusinessProfile(patch: {
+  natureOfBusiness?: string;
+  businessEmail?: string;
+}): Promise<CustomerKycOverview> {
+  return withCustomerSession(async () => {
+    const response = await apiClient.patch<Envelope<CustomerKycOverview>>(
+      '/customer/kyc/business-profile',
+      patch,
+    );
+    return response.data.data;
+  });
+}
+
+/** Short-lived signed URL for a stored KYC document owned by the signed-in customer. */
+export function getCustomerKycDocumentUrl(documentId: string): Promise<string> {
+  return withCustomerSession(async () => {
+    const response = await apiClient.get<Envelope<{ url: string }>>(
+      `/customer/kyc/documents/${documentId}/download`,
+    );
+    return response.data.data.url;
   });
 }
 

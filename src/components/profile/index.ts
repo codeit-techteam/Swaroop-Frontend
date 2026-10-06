@@ -9,3 +9,4 @@ export { ProfileSectionHeader } from '@/components/profile/ProfileSectionHeader'
 export { ProfileInfoRow } from '@/components/profile/ProfileInfoRow';
 export { ProfileVersionFooter } from '@/components/profile/ProfileVersionFooter';
 export { DocumentsCard } from '@/components/profile/DocumentsCard';
+export { ProfileDataState } from '@/components/profile/ProfileDataState';

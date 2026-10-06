@@ -5,6 +5,7 @@ export const SPLASH_DURATION_MS = 2000;
 export const STORAGE_KEYS = {
   ACCESS_TOKEN: 'swaroop_access_token',
   REFRESH_TOKEN: 'swaroop_refresh_token',
+  SESSION_SOURCE: 'swaroop_session_source',
   THEME_MODE: 'swaroop_theme_mode',
   ONBOARDING_COMPLETE: 'swaroop_onboarding_complete',
   AUTH_STORAGE_KEY: 'swaroop_auth',

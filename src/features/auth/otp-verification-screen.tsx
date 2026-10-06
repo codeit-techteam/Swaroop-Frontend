@@ -22,6 +22,7 @@ import {
   type CustomerOtpPurpose,
 } from '@/services/customer-auth';
 import { refreshKycStatus } from '@/services/kyc-status-sync';
+import { resetUserScopedState } from '@/services/sign-out';
 import { useAuthStore } from '@/store/auth-store';
 import { wp } from '@/utils/responsive';
 
@@ -114,6 +115,8 @@ export const OtpVerificationScreen = () => {
       return;
     }
 
+    const previousMobile = useAuthStore.getState().mobileNumber;
+    if (previousMobile && previousMobile !== mobileNumber) resetUserScopedState();
     completeLogin(mobileNumber);
     if (role === 'customer') {
       await refreshKycStatus();

@@ -12,11 +12,11 @@ import {
   saveUser,
 } from '@/services/storage';
 import {
+  clearUserData,
   getCurrentUser,
+  hasLegacyDemoData,
   isDemoUser,
   logout as logoutSession,
-  resetKycData,
-  seedDemoUser,
 } from '@/services/user-session';
 import { useKycStore } from '@/store/kyc-store';
 import type { DeliveryLocation } from '@/types/home';
@@ -64,11 +64,11 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   ...initialState,
 
   hydrateSession: () => {
-    const auth = getAuth();
-
-    // Demo account stays verified across restarts while DEVELOPMENT_MODE is on.
-    if (auth.isLoggedIn && isDemoUser(auth.mobileNumber)) {
-      seedDemoUser();
+    // Older development builds stored a fake company on the device. Drop it so
+    // only backend data is shown; the KYC refresh after start repopulates state.
+    if (hasLegacyDemoData()) {
+      clearUserData();
+      useKycStore.getState().resetKyc();
     }
 
     const current = getCurrentUser();
@@ -137,45 +137,37 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   },
 
   completeLogin: (mobileNumber): LoginResult => {
-    const demoAccount = isDemoUser(mobileNumber);
+    const previousAuth = getAuth();
+    const isAccountSwitch =
+      previousAuth.mobileNumber != null && previousAuth.mobileNumber !== mobileNumber;
 
-    if (demoAccount) {
-      seedDemoUser();
-    } else {
-      const previousAuth = getAuth();
-      const isAccountSwitch =
-        previousAuth.mobileNumber != null && previousAuth.mobileNumber !== mobileNumber;
-
-      if (isAccountSwitch || isDemoUser(previousAuth.mobileNumber)) {
-        resetKycData();
-      }
-
-      const existingUser = isAccountSwitch ? null : getUser();
-      const auth = {
-        isLoggedIn: true,
-        mobileNumber,
-      };
-      const userProfile = {
-        mobileNumber,
-        selectedRole:
-          existingUser?.selectedRole ??
-          (isAccountSwitch ? null : get().selectedRole) ??
-          ('buyer' as UserRole),
-        displayName:
-          existingUser?.displayName ??
-          (isAccountSwitch ? undefined : get().userProfile?.displayName),
-      };
-
-      saveAuth(auth);
-      saveUser(userProfile);
+    if (isAccountSwitch || hasLegacyDemoData()) {
+      // The tokens were just issued for this sign-in, so they belong to the new account.
+      clearUserData({ keepSession: true });
+      useKycStore.getState().resetKyc();
+      set({ location: null });
     }
+
+    const existingUser = isAccountSwitch ? null : getUser();
+    const userProfile = {
+      mobileNumber,
+      selectedRole:
+        existingUser?.selectedRole ??
+        (isAccountSwitch ? null : get().selectedRole) ??
+        ('buyer' as UserRole),
+      displayName:
+        existingUser?.displayName ?? (isAccountSwitch ? undefined : get().userProfile?.displayName),
+    };
+
+    saveAuth({ isLoggedIn: true, mobileNumber });
+    saveUser(userProfile);
 
     const current = getCurrentUser();
     applyCurrentUserToStore(set, current);
 
     return {
       kycApproved: current.isKycApproved,
-      isDemoUser: demoAccount,
+      isDemoUser: isDemoUser(mobileNumber),
     };
   },
 
@@ -242,11 +234,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   logout: async () => {
     logoutSession();
+    useKycStore.getState().resetKyc();
     set({
-      accessToken: null,
-      refreshToken: null,
-      isAuthenticated: false,
-      isLoggedIn: false,
+      ...initialState,
+      onboardingCompleted: get().onboardingCompleted,
       isHydrated: true,
     });
   },

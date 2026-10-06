@@ -12,9 +12,10 @@ import { AppHeader, InputField, PrimaryButton, ScreenWrapper, Typography } from 
 import { NATURE_OF_BUSINESS_OPTIONS } from '@/constants/documents';
 import { useProfile } from '@/hooks/useProfile';
 import { CameraIcon, GalleryIcon } from '@/icons';
+import { customerKycErrorMessage } from '@/services/customer-kyc';
 import { showInfoDialog } from '@/store/dialog-store';
 import { brandColors } from '@/theme/colors';
-import { emailSchema, phoneSchema } from '@/utils/validators';
+import { emailSchema } from '@/utils/validators';
 
 export const EditProfileScreen = memo(function EditProfileScreen() {
   const router = useRouter();
@@ -22,12 +23,11 @@ export const EditProfileScreen = memo(function EditProfileScreen() {
 
   const [displayName, setDisplayName] = useState(profile.displayName);
   const [email, setEmail] = useState(profile.email);
-  const [phone, setPhone] = useState(profile.phone);
-  const [businessAddress, setBusinessAddress] = useState(profile.businessAddress);
   const [natureOfBusiness, setNatureOfBusiness] = useState(profile.natureOfBusiness);
   const [profilePhotoUri, setProfilePhotoUri] = useState(profile.profilePhotoUri);
   const [companyLogoUri, setCompanyLogoUri] = useState(profile.companyLogoUri);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const handleBack = useCallback(() => {
     router.back();
@@ -64,7 +64,7 @@ export const EditProfileScreen = memo(function EditProfileScreen() {
     setCompanyLogoUri(uri);
   }, []);
 
-  const onSave = useCallback(() => {
+  const onSave = useCallback(async () => {
     if (!displayName.trim()) {
       setError('Name is required.');
       return;
@@ -75,48 +75,47 @@ export const EditProfileScreen = memo(function EditProfileScreen() {
       return;
     }
 
-    if (!phoneSchema.safeParse(phone).success) {
-      setError('Enter a valid 10-digit mobile number.');
-      return;
-    }
-
-    if (!businessAddress.trim()) {
-      setError('Company address is required.');
-      return;
-    }
-
     if (!natureOfBusiness.trim()) {
       setError('Business nature is required.');
       return;
     }
 
     setError(null);
-
-    updateProfile({
-      displayName: displayName.trim(),
-      email: email.trim(),
-      phone,
-      businessAddress: businessAddress.trim(),
-      natureOfBusiness: natureOfBusiness.trim(),
-      profilePhotoUri,
-      companyLogoUri,
-    });
+    setSaving(true);
+    try {
+      await updateProfile({
+        displayName: displayName.trim(),
+        ...(email.trim() !== profile.email ? { email: email.trim() } : {}),
+        ...(natureOfBusiness.trim() !== profile.natureOfBusiness
+          ? { natureOfBusiness: natureOfBusiness.trim() }
+          : {}),
+        profilePhotoUri,
+        companyLogoUri,
+      });
+    } catch (saveError) {
+      setError(
+        customerKycErrorMessage(saveError, 'Could not save your changes. Please try again.'),
+      );
+      setSaving(false);
+      return;
+    }
+    setSaving(false);
 
     Toast.show({
       type: 'success',
       text1: 'Profile updated',
-      text2: 'Your changes have been saved locally.',
+      text2: 'Your business details were saved to your PetroTrade account.',
       visibilityTime: 2000,
     });
 
     router.back();
   }, [
-    businessAddress,
     companyLogoUri,
     displayName,
     email,
     natureOfBusiness,
-    phone,
+    profile.email,
+    profile.natureOfBusiness,
     profilePhotoUri,
     router,
     updateProfile,
@@ -186,19 +185,17 @@ export const EditProfileScreen = memo(function EditProfileScreen() {
         />
 
         <InputField
-          label="Phone *"
-          value={phone}
-          onChangeText={(text) => setPhone(text.replace(/\D/g, '').slice(0, 10))}
+          label="Phone (sign-in number)"
+          value={profile.phone}
+          editable={false}
           placeholder="10-digit mobile number"
-          keyboardType="phone-pad"
-          maxLength={10}
         />
 
         <InputField
-          label="Company Address *"
-          value={businessAddress}
-          onChangeText={setBusinessAddress}
-          placeholder="Registered business address"
+          label="Company Address (from GST registration)"
+          value={profile.businessAddress}
+          editable={false}
+          placeholder="Verified with your GST in KYC"
           multiline
         />
 
@@ -215,7 +212,13 @@ export const EditProfileScreen = memo(function EditProfileScreen() {
           </Typography>
         ) : null}
 
-        <PrimaryButton label="Save Changes" onPress={onSave} className="mt-md" />
+        <PrimaryButton
+          label="Save Changes"
+          onPress={() => void onSave()}
+          loading={saving}
+          disabled={saving}
+          className="mt-md"
+        />
       </View>
     </ScreenWrapper>
   );

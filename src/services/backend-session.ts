@@ -15,6 +15,9 @@ import { getStorageItem, removeStorageItem, setStorageItem } from '@/utils/stora
 
 type DevRole = 'customer' | 'seller';
 
+/** `user` = issued by a real OTP / password sign-in; `dev` = the development demo login. */
+type SessionSource = 'user' | 'dev';
+
 let inflight: Promise<boolean> | null = null;
 
 type LoginPayload = {
@@ -35,11 +38,12 @@ export const unwrapAuthPayload = (body: unknown): LoginPayload => {
   };
 };
 
-export const persistTokens = (payload: LoginPayload): boolean => {
+export const persistTokens = (payload: LoginPayload, source: SessionSource = 'user'): boolean => {
   if (!payload.accessToken) {
     return false;
   }
 
+  setStorageItem(STORAGE_KEYS.SESSION_SOURCE, source);
   setStorageItem(STORAGE_KEYS.ACCESS_TOKEN, payload.accessToken);
   if (payload.refreshToken) {
     setStorageItem(STORAGE_KEYS.REFRESH_TOKEN, payload.refreshToken);
@@ -51,6 +55,15 @@ export const persistTokens = (payload: LoginPayload): boolean => {
 export function clearBackendTokens(): void {
   removeStorageItem(STORAGE_KEYS.ACCESS_TOKEN);
   removeStorageItem(STORAGE_KEYS.REFRESH_TOKEN);
+  removeStorageItem(STORAGE_KEYS.SESSION_SOURCE);
+}
+
+/**
+ * A session issued by a real sign-in belongs to that person. The development demo
+ * login must never replace it, or the app would show another account's data.
+ */
+function hasUserSession(): boolean {
+  return getStorageItem(STORAGE_KEYS.SESSION_SOURCE) === 'user';
 }
 
 export function resolveDevBackendRole(): DevRole {
@@ -67,7 +80,7 @@ async function loginDemoSellerPhone(): Promise<boolean> {
       { phone: `+91${DEMO_PHONE}`, otp: DEMO_OTP, purpose: 'LOGIN', roleHint: 'SELLER' },
       { skipAuth: true, skipRefresh: true } as ApiRequestConfig,
     );
-    return persistTokens(unwrapAuthPayload(response.data));
+    return persistTokens(unwrapAuthPayload(response.data), 'dev');
   } catch {
     return false;
   }
@@ -83,7 +96,7 @@ export async function loginDevBackend(role: DevRole = 'customer'): Promise<boole
     skipRefresh: true,
   } as ApiRequestConfig);
   const payload = unwrapAuthPayload(response.data);
-  if (!persistTokens(payload)) {
+  if (!persistTokens(payload, 'dev')) {
     throw new Error('Catalog backend login did not return an access token.');
   }
   return true;
@@ -110,6 +123,10 @@ export async function ensureDevBackendSession(
 
   if (!options?.force && hasUsableToken) {
     return;
+  }
+
+  if (hasUserSession()) {
+    throw new Error('Your session has expired. Please sign in again.');
   }
 
   if (inflight) {
@@ -146,7 +163,7 @@ export async function ensureDevBackendSession(
 
 /** Used by the API client after a failed refresh in DEVELOPMENT_MODE. */
 export async function recoverDevBackendSession(): Promise<string | null> {
-  if (!DEVELOPMENT_MODE) {
+  if (!DEVELOPMENT_MODE || hasUserSession()) {
     return null;
   }
 

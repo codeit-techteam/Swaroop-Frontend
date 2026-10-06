@@ -5,7 +5,7 @@ import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { AppHeader, ScreenWrapper, Typography } from '@/components';
-import { ProfileInfoRow } from '@/components/profile';
+import { ProfileDataState, ProfileInfoRow } from '@/components/profile';
 import { useProfile } from '@/hooks/useProfile';
 
 export const BankAccountsScreen = memo(function BankAccountsScreen() {
@@ -21,6 +21,13 @@ export const BankAccountsScreen = memo(function BankAccountsScreen() {
       <AppHeader variant="back" title="Bank Accounts" onBack={handleBack} />
 
       <View className="mt-lg gap-md">
+        {profile.bankAccounts.length === 0 ? (
+          <ProfileDataState
+            variant="empty"
+            title="No bank accounts linked"
+            message="Bank accounts verified by PetroTrade will appear here."
+          />
+        ) : null}
         {profile.bankAccounts.map((account) => (
           <View
             key={account.id}

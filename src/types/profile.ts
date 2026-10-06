@@ -33,6 +33,8 @@ export type TaxDocument = {
   title: string;
   subtitle: string;
   available: boolean;
+  /** Backend KYC document id used to request a signed download URL. */
+  documentId?: string;
 };
 
 export type ComplianceStatus = {
@@ -47,7 +49,7 @@ export type ComplianceStatus = {
 export type ProfileData = {
   displayName: string;
   companyName: string;
-  companyType: CompanyType | '';
+  companyType: CompanyType | string;
   profilePhotoUri: string | null;
   companyLogoUri: string | null;
   email: string;
@@ -59,11 +61,14 @@ export type ProfileData = {
   city: string;
   pincode: string;
   natureOfBusiness: string;
-  establishedYear: string;
+  /** GST registration date from the verified GST record. */
+  gstRegisteredOn: string;
   kycStatus: KycVerificationStatus;
   membership: MembershipTier;
   tradingStatus: TradingStatus;
   compliance: ComplianceStatus;
+  /** Where company fields came from: the backend, or nothing loaded yet. */
+  companySource: 'backend' | 'none';
   savedAddresses: SavedAddress[];
   bankAccounts: BankAccount[];
   taxDocuments: TaxDocument[];
@@ -72,10 +77,8 @@ export type ProfileData = {
 export type ProfileUpdatePayload = {
   displayName?: string;
   email?: string;
-  phone?: string;
   profilePhotoUri?: string | null;
   companyLogoUri?: string | null;
-  businessAddress?: string;
   natureOfBusiness?: string;
 };
 

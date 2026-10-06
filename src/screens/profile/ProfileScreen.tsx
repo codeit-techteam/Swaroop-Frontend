@@ -20,7 +20,7 @@ import { LOGISTICS_MENU_ITEMS } from '@/constants/profile';
 import { useCustomerKycStatus } from '@/hooks/use-customer-kyc-status';
 import { useProfile } from '@/hooks/useProfile';
 import { ROUTES } from '@/navigation/routes';
-import { useAuthStore } from '@/store/auth-store';
+import { signOut } from '@/services/sign-out';
 import { useDocumentsStore } from '@/store/documents-store';
 import type { DocumentTab } from '@/types/documents';
 
@@ -28,7 +28,6 @@ export const ProfileScreen = memo(function ProfileScreen() {
   const router = useRouter();
   const { profile } = useProfile();
   useCustomerKycStatus();
-  const logout = useAuthStore((state) => state.logout);
   const fetchDocuments = useDocumentsStore((state) => state.fetchFromApi);
   const purchaseOrdersCount = useDocumentsStore((state) => state.purchaseOrders.length);
   const invoicesCount = useDocumentsStore((state) => state.invoices.length);
@@ -49,13 +48,19 @@ export const ProfileScreen = memo(function ProfileScreen() {
         if (item.subtitleKey === 'addresses') {
           subtitle = `${profile.savedAddresses.length} saved ${profile.savedAddresses.length === 1 ? 'location' : 'locations'}`;
         } else if (item.subtitleKey === 'banks') {
-          subtitle = `${profile.bankAccounts.length} Accounts Linked`;
+          subtitle =
+            profile.bankAccounts.length > 0
+              ? `${profile.bankAccounts.length} ${profile.bankAccounts.length === 1 ? 'Account' : 'Accounts'} Linked`
+              : 'No accounts linked';
         } else if (item.subtitleKey === 'credit') {
           subtitle = 'Request credit & track application';
         } else if (item.subtitleKey === 'import') {
           subtitle = 'International buy requests & offers';
         } else {
-          subtitle = 'Forms 16A, 26AS';
+          subtitle =
+            profile.taxDocuments.length > 0
+              ? `${profile.taxDocuments.length} KYC ${profile.taxDocuments.length === 1 ? 'document' : 'documents'} on file`
+              : 'PAN card, GST certificate & KYC';
         }
 
         const routeMap: Record<string, string> = {
@@ -73,7 +78,12 @@ export const ProfileScreen = memo(function ProfileScreen() {
           onPress: () => router.push(routeMap[item.id] as Href),
         };
       }),
-    [profile.bankAccounts.length, profile.savedAddresses.length, router],
+    [
+      profile.bankAccounts.length,
+      profile.savedAddresses.length,
+      profile.taxDocuments.length,
+      router,
+    ],
   );
 
   const handleEditProfile = useCallback(() => {
@@ -85,9 +95,9 @@ export const ProfileScreen = memo(function ProfileScreen() {
   }, [router]);
 
   const handleLogout = useCallback(async () => {
-    await logout();
+    await signOut();
     router.replace(ROUTES.AUTH.ROLE_SELECTION as Href);
-  }, [logout, router]);
+  }, [router]);
 
   const handleNotifications = useCallback(() => {
     router.push(ROUTES.CUSTOMER.NOTIFICATIONS as Href);
@@ -141,7 +151,7 @@ export const ProfileScreen = memo(function ProfileScreen() {
 
         <CompanyDetailsCard
           gstNumber={profile.gstNumber}
-          establishedYear={profile.establishedYear}
+          gstRegisteredOn={profile.gstRegisteredOn}
           onPress={handleCompanyDetails}
         />
 

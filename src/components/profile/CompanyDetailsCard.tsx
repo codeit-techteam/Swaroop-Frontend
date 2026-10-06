@@ -12,14 +12,14 @@ import { cn } from '@/utils/cn';
 
 type CompanyDetailsCardProps = {
   gstNumber: string;
-  establishedYear: string;
+  gstRegisteredOn: string;
   onPress: () => void;
   className?: string;
 };
 
 export const CompanyDetailsCard = memo(function CompanyDetailsCard({
   gstNumber,
-  establishedYear,
+  gstRegisteredOn,
   onPress,
   className,
 }: CompanyDetailsCardProps) {
@@ -49,7 +49,7 @@ export const CompanyDetailsCard = memo(function CompanyDetailsCard({
 
         <View className="mt-lg gap-md">
           <ProfileInfoRow label="GSTIN NUMBER" value={gstNumber} />
-          <ProfileInfoRow label="ESTABLISHED" value={establishedYear || 'Not provided'} />
+          <ProfileInfoRow label="GST REGISTERED ON" value={gstRegisteredOn || 'Not provided'} />
         </View>
       </Pressable>
     </Animated.View>
