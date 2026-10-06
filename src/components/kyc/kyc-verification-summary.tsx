@@ -5,6 +5,7 @@ import { View } from 'react-native';
 import { Typography } from '@/components/ui/typography';
 import type { KycVerification } from '@/services/customer-kyc';
 import { cn } from '@/utils/cn';
+import { formatDate, formatDateTime } from '@/utils/date';
 
 type Props = {
   pan: KycVerification | null | undefined;
@@ -21,14 +22,44 @@ const STATUS_STYLE: Record<KycVerification['status'], { label: string; className
   FAILED: { label: 'Not verified', className: 'bg-brand-error-light text-red-800' },
 };
 
-function detailLine(verification: KycVerification): string | null {
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+function displayDate(value: string | null | undefined): string | null {
+  if (!value) return null;
+  return ISO_DATE.test(value) ? formatDate(value) : value;
+}
+
+function detailRows(verification: KycVerification): [string, string][] {
   const d = verification.details;
-  if (verification.type === 'PAN') return d.nameOnPan ?? null;
-  const state = d.state ? (d.stateCode ? `${d.state} (${d.stateCode})` : d.state) : null;
-  return (
-    [d.legalName, d.gstStatus ? `GST ${d.gstStatus}` : null, state].filter(Boolean).join(' · ') ||
-    null
-  );
+  const rows: [string, string | null | undefined][] =
+    verification.type === 'PAN'
+      ? [
+          ['Name as per PAN', d.nameOnPan],
+          ['Date of birth / incorporation', displayDate(d.dateOnPan)],
+          ['PAN status', d.panStatus],
+        ]
+      : [
+          ['Legal name', d.legalName],
+          ['Trade name', d.tradeName],
+          ['Registration status', d.gstStatus],
+          ['Registered on', displayDate(d.registrationDate)],
+          ['Taxpayer type', d.taxpayerType],
+          ['Constitution', d.constitution],
+          ['State', d.state ? (d.stateCode ? `${d.state} (${d.stateCode})` : d.state) : null],
+        ];
+  return rows.filter((row): row is [string, string] => Boolean(row[1]));
+}
+
+/** Who confirmed a VERIFIED result, and when. */
+function verifiedByLine(verification: KycVerification): string {
+  const at = verification.reviewedAt ?? verification.verifiedAt;
+  const by =
+    verification.method === 'MANUAL'
+      ? 'Verified by the PetroTrade compliance team'
+      : verification.provider === 'surepass'
+        ? 'Verified via Surepass'
+        : 'Verified';
+  return at ? `${by} · ${formatDateTime(at)}` : by;
 }
 
 const Row = ({
@@ -39,7 +70,8 @@ const Row = ({
   verification: KycVerification | null | undefined;
 }) => {
   const style = verification ? STATUS_STYLE[verification.status] : null;
-  const detail = verification ? detailLine(verification) : null;
+  const verified = verification?.status === 'VERIFIED';
+  const rows = verification && verified ? detailRows(verification) : [];
   return (
     <View className="py-sm">
       <View className="flex-row items-center justify-between gap-sm">
@@ -57,9 +89,14 @@ const Row = ({
           {style?.label ?? 'Not verified yet'}
         </Typography>
       </View>
-      {detail && verification?.status === 'VERIFIED' ? (
-        <Typography variant="legal" className="mt-xs text-left text-brand-body">
-          {detail}
+      {rows.map(([term, value]) => (
+        <Typography key={term} variant="legal" className="mt-xs text-left text-brand-body">
+          {term}: {value}
+        </Typography>
+      ))}
+      {verification && verified ? (
+        <Typography variant="legal" className="mt-xs text-left text-green-800">
+          {verifiedByLine(verification)}
         </Typography>
       ) : null}
       {verification && verification.status !== 'VERIFIED' ? (

@@ -97,6 +97,9 @@ export const SellerGstValidateCard = memo(function SellerGstValidateCard({
         ['State Code', details.stateCode],
         ['Company PAN', details.panMasked],
         ['Taxpayer Type', details.taxpayerType],
+        ['Constitution', details.constitution],
+        ['Registered On', details.registrationDate],
+        ['Cancelled On', details.cancellationDate],
       ]
     : [];
 

@@ -18,6 +18,7 @@ import {
 } from '@/services/customer-kyc';
 import { sellerOnboardingErrorMessage, verifySellerPan } from '@/services/seller-onboarding';
 import { cn } from '@/utils/cn';
+import { formatDate } from '@/utils/date';
 
 type SellerPanVerifyFieldProps = {
   value: string;
@@ -140,6 +141,11 @@ export const SellerPanVerifyField = memo(function SellerPanVerifyField({
       />
       {status === 'verified' && details?.nameOnPan ? (
         <Typography variant="success">Name on PAN: {details.nameOnPan}</Typography>
+      ) : null}
+      {status === 'verified' && details?.dateOnPan ? (
+        <Typography variant="success">
+          Date of birth / incorporation: {formatDate(details.dateOnPan)}
+        </Typography>
       ) : null}
       {status === 'manual_review' ? (
         <Typography variant="body" className="text-amber-700">

@@ -60,6 +60,8 @@ export type KycVerificationDetails = {
   pincode?: string | null;
   panMasked?: string | null;
   nameOnPan?: string | null;
+  /** Date of birth / incorporation (YYYY-MM-DD) confirmed by PAN Verify. */
+  dateOnPan?: string | null;
   panStatus?: string | null;
   panCategory?: string | null;
 };
@@ -70,10 +72,13 @@ export type KycVerification = {
   status: KycVerificationStatus;
   method: 'PROVIDER' | 'MANUAL' | null;
   identifierMasked: string;
+  /** `surepass` when the Surepass API produced the result. */
+  provider?: string;
   details: KycVerificationDetails;
   failureCode: string | null;
   message: string;
   verifiedAt: string | null;
+  reviewedAt?: string | null;
   createdAt: string;
 };
 
