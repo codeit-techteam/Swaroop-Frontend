@@ -15,8 +15,11 @@ import {
 } from '@/constants/dispatchStarted';
 import { brandColors } from '@/theme/colors';
 
-/** When enabled, auto-advances the live tracking timeline every 5 seconds. */
-export const TRACKING_DEMO_MODE = __DEV__;
+/**
+ * Demo auto-advance is disabled for production tracking.
+ * Timeline must come from backend-confirmed events only.
+ */
+export const TRACKING_DEMO_MODE = false;
 
 export const TRACKING_DEMO_INTERVAL_MS = 5000;
 
@@ -65,10 +68,11 @@ export const TRACKING_COPY = {
   orderInformationHeading: 'ORDER INFORMATION',
   blindMarketplaceMessage:
     'PetroTrade manages procurement, transportation and delivery while maintaining supplier confidentiality.',
-  downloadToastMessage: 'PDF download will be available after backend integration.',
+  downloadToastMessage:
+    'Authorized PDF is not available yet. The commercial record remains visible in Documents.',
   documentToastTitle: 'Document Unavailable',
-  supportToastMessage: 'Support request will be available after backend integration.',
-  trackHistoryToastMessage: 'Track history will be available after backend integration.',
+  supportToastMessage: 'Open Support to raise a ticket for this order.',
+  trackHistoryToastMessage: 'Only confirmed backend timeline events are shown.',
 } as const;
 
 const TRACKING_STEP_TITLES: Record<TrackingStepId, string> = {

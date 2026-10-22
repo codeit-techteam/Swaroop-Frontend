@@ -4,7 +4,14 @@ import { ScrollView, View } from 'react-native';
 
 import { type Href, useRouter } from 'expo-router';
 
-import { AppHeader, PrimaryButton, RoleCard, ScreenWrapper, Typography } from '@/components';
+import {
+  AppHeader,
+  PrimaryButton,
+  RoleCard,
+  ScreenWrapper,
+  SecondaryButton,
+  Typography,
+} from '@/components';
 import { CartIcon, LockIcon, StoreIcon } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
 import { useAuthStore } from '@/store/auth-store';
@@ -26,6 +33,11 @@ export const RoleSelectionScreen = () => {
       (selectedRole === 'seller' ? ROUTES.SELLER.LOGIN : ROUTES.AUTH.CUSTOMER_LOGIN) as Href,
     );
   }, [persistRole, router, selectedRole]);
+
+  const handleBrowseMarket = useCallback(() => {
+    persistRole('buyer');
+    router.replace(ROUTES.CUSTOMER.MARKET as Href);
+  }, [persistRole, router]);
 
   const continueLabel = selectedRole === 'seller' ? 'CONTINUE AS SELLER' : 'CONTINUE AS BUYER';
 
@@ -99,6 +111,14 @@ export const RoleSelectionScreen = () => {
           accessibilityLabel={continueLabel}
           onPress={handleContinue}
         />
+        {selectedRole === 'buyer' ? (
+          <SecondaryButton
+            label="Browse marketplace as guest"
+            variant="outline"
+            className="mt-md rounded-xl"
+            onPress={handleBrowseMarket}
+          />
+        ) : null}
       </View>
     </ScreenWrapper>
   );

@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScreenWrapper, Typography } from '@/components';
 import { ROUTES } from '@/navigation/routes';
+import { openPrivacyPolicy, openTermsOfService } from '@/services/legal-links';
 import {
   DashboardSkeleton,
   OfflineBanner,
@@ -205,8 +206,18 @@ export const SellerAppSettingsScreen = memo(function SellerAppSettingsScreen() {
             </SettingsGroup>
 
             <SettingsGroup title="Privacy">
-              <SettingsAction label="Privacy Policy" onPress={() => undefined} />
-              <SettingsAction label="Terms of Service" onPress={() => undefined} />
+              <SettingsAction
+                label="Privacy Policy"
+                onPress={() => {
+                  void openPrivacyPolicy();
+                }}
+              />
+              <SettingsAction
+                label="Terms of Service"
+                onPress={() => {
+                  void openTermsOfService();
+                }}
+              />
               <SettingsAction label="Permissions" onPress={() => undefined} />
               <SettingsAction label="Delete Cache" onPress={() => void handleClearCache()} destructive isLast />
             </SettingsGroup>

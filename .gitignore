@@ -49,3 +49,6 @@ coverage/
 
 # EAS
 .easignore
+
+# Local release artifacts (never commit APKs)
+artifacts/

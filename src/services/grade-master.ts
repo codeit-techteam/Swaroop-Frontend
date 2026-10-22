@@ -7,6 +7,14 @@ import {
   mergeLiveCatalogCache,
   type SellerGrade,
 } from '@/services/catalog';
+import { useAuthStore } from '@/store/auth-store';
+
+/** Guest browse uses public marketplace; signed-in customers keep customer paths. */
+function customerMarketplaceBase(): '/public/marketplace' | '/customer/marketplace' {
+  return useAuthStore.getState().accessToken
+    ? '/customer/marketplace'
+    : '/public/marketplace';
+}
 import type {
   BlindGradeOffer,
   CustomerGrade,
@@ -109,8 +117,9 @@ export async function fetchCustomerGradePage(
   page = 1,
   limit = GRADE_PAGE_SIZE,
 ): Promise<GradePage<CustomerGrade>> {
-  await ensureDevBackendSession('customer');
-  const response = await apiClient.get<Envelope<CustomerGrade[]>>('/customer/marketplace/grades', {
+  const base = customerMarketplaceBase();
+  if (base === '/customer/marketplace') await ensureDevBackendSession('customer');
+  const response = await apiClient.get<Envelope<CustomerGrade[]>>(`${base}/grades`, {
     params: browseParams(filters, page, limit),
   });
   const result = toPage(response.data, page);
@@ -118,10 +127,9 @@ export async function fetchCustomerGradePage(
 }
 
 export async function fetchCustomerGrade(id: string): Promise<CustomerGrade> {
-  await ensureDevBackendSession('customer');
-  const response = await apiClient.get<Envelope<CustomerGrade>>(
-    `/customer/marketplace/grades/${id}`,
-  );
+  const base = customerMarketplaceBase();
+  if (base === '/customer/marketplace') await ensureDevBackendSession('customer');
+  const response = await apiClient.get<Envelope<CustomerGrade>>(`${base}/grades/${id}`);
   if (!response.data.data) {
     throw new Error('Grade not found');
   }
@@ -129,9 +137,10 @@ export async function fetchCustomerGrade(id: string): Promise<CustomerGrade> {
 }
 
 export async function fetchCustomerGradeProducts(id: string): Promise<MarketProduct[]> {
-  await ensureDevBackendSession('customer');
+  const base = customerMarketplaceBase();
+  if (base === '/customer/marketplace') await ensureDevBackendSession('customer');
   const response = await apiClient.get<Envelope<Parameters<typeof mapBlindProduct>[0][]>>(
-    `/customer/marketplace/grades/${id}/products`,
+    `${base}/grades/${id}/products`,
     { params: { page: 1, limit: 50 } },
   );
   const products = (response.data.data ?? []).map(mapBlindProduct);
@@ -140,18 +149,20 @@ export async function fetchCustomerGradeProducts(id: string): Promise<MarketProd
 }
 
 export async function fetchCustomerGradeOffers(id: string): Promise<BlindGradeOffer[]> {
-  await ensureDevBackendSession('customer');
+  const base = customerMarketplaceBase();
+  if (base === '/customer/marketplace') await ensureDevBackendSession('customer');
   const response = await apiClient.get<Envelope<Record<string, unknown>[]>>(
-    `/customer/marketplace/grades/${id}/offers`,
+    `${base}/grades/${id}/offers`,
     { params: { page: 1, limit: 50 } },
   );
   return (response.data.data ?? []).map(mapBlindOffer);
 }
 
 export async function fetchCustomerMarketplaceCategories(): Promise<MarketplaceGradeCategory[]> {
-  await ensureDevBackendSession('customer');
+  const base = customerMarketplaceBase();
+  if (base === '/customer/marketplace') await ensureDevBackendSession('customer');
   const response = await apiClient.get<Envelope<MarketplaceGradeCategory[]>>(
-    '/customer/marketplace/categories',
+    `${base}/categories`,
   );
   return (response.data.data ?? []).map((category) => ({
     ...category,

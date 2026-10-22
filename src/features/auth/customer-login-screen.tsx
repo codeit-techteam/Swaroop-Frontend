@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 
 import { Pressable, View } from 'react-native';
 
-import { type Href, useRouter } from 'expo-router';
+import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 
 import { Controller } from 'react-hook-form';
 import { z } from 'zod';
@@ -22,12 +22,14 @@ import {
 import { DEMO_PHONE, DEMO_OTP, DEMO_USER_NAME, DEVELOPMENT_MODE } from '@/config/development';
 import { LockIcon } from '@/icons';
 import { useZodForm } from '@/lib/forms';
+import { parseReturnToParam } from '@/navigation/return-to';
 import { ROUTES } from '@/navigation/routes';
 import {
   customerAuthErrorMessage,
   isOtpCooldownError,
   sendCustomerOtp,
 } from '@/services/customer-auth';
+import { openContactSupport } from '@/services/legal-links';
 import { brandColors } from '@/theme/colors';
 import { phoneSchema } from '@/utils/validators';
 
@@ -39,6 +41,8 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export const CustomerLoginScreen = () => {
   const router = useRouter();
+  const params = useLocalSearchParams<{ returnTo?: string | string[] }>();
+  const returnTo = parseReturnToParam(params.returnTo);
   const [isSending, setIsSending] = useState(false);
   const [sendError, setSendError] = useState<string | undefined>();
   const {
@@ -66,14 +70,25 @@ export const CustomerLoginScreen = () => {
       }
       router.push({
         pathname: ROUTES.AUTH.OTP_VERIFICATION,
-        params: { phone: values.mobile, source: 'login' },
+        params: {
+          phone: values.mobile,
+          source: 'login',
+          ...(returnTo ? { returnTo } : {}),
+        },
       } as unknown as Href);
     },
-    [router],
+    [returnTo, router],
   );
 
   const onSignUp = useCallback(() => {
-    router.push(ROUTES.AUTH.CUSTOMER_REGISTER as Href);
+    router.push({
+      pathname: ROUTES.AUTH.CUSTOMER_REGISTER,
+      params: returnTo ? { returnTo } : {},
+    } as unknown as Href);
+  }, [returnTo, router]);
+
+  const onBrowseMarket = useCallback(() => {
+    router.replace(ROUTES.CUSTOMER.MARKET as Href);
   }, [router]);
 
   return (
@@ -129,12 +144,24 @@ export const CustomerLoginScreen = () => {
 
           <SecondaryButton label="Sign Up" onPress={onSignUp} />
 
+          <SecondaryButton
+            label="Browse marketplace"
+            variant="outline"
+            className="mt-md"
+            onPress={onBrowseMarket}
+          />
+
           <View className="mt-xl items-center gap-sm">
             <View className="flex-row items-center gap-xs">
               <LockIcon />
               <Typography variant="success">Authorized Personnel Only</Typography>
             </View>
-            <Pressable accessibilityRole="link">
+            <Pressable
+              accessibilityRole="link"
+              onPress={() => {
+                void openContactSupport();
+              }}
+            >
               <Typography variant="link">Having trouble? Contact Support</Typography>
             </Pressable>
           </View>

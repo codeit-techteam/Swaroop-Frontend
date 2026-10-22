@@ -26,6 +26,8 @@ export const TrackOrderScreen = memo(function TrackOrderScreen() {
     trackingStatus,
     canCancelOrder,
     moreMenuRef,
+    timelineLoading,
+    timelineError,
     showCreditDeliveryContinue,
     handleBack,
     handleNotifications,
@@ -103,7 +105,23 @@ export const TrackOrderScreen = memo(function TrackOrderScreen() {
               <OrderStatusBadge status={trackingStatus} />
             </View>
 
-            <TrackingStatusCard items={timelineItems} />
+            {timelineLoading ? (
+              <Typography variant="subheadingLeft" className="mb-md text-brand-muted">
+                Loading confirmed timeline…
+              </Typography>
+            ) : null}
+            {timelineError ? (
+              <Typography variant="subheadingLeft" className="mb-md text-red-600">
+                {timelineError}
+              </Typography>
+            ) : null}
+            {timelineItems.length > 0 ? (
+              <TrackingStatusCard items={timelineItems} />
+            ) : !timelineLoading ? (
+              <Typography variant="subheadingLeft" className="mb-md text-brand-muted">
+                No confirmed tracking events yet. Status updates appear here once PetroTrade records them — GPS and ETA are not invented.
+              </Typography>
+            ) : null}
             <OrderInformationCard order={order} className="mt-lg" />
             <BlindMarketplaceNotice className="mt-lg" />
           </>

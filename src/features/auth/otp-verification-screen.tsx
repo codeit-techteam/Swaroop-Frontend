@@ -13,7 +13,7 @@ import {
   Typography,
 } from '@/components';
 import { ClockIcon, OtpIllustration } from '@/icons';
-import { getLoggedInRoute } from '@/navigation/post-auth-route';
+import { parseReturnToParam, resolvePostAuthHref } from '@/navigation/return-to';
 import {
   customerAuthErrorMessage,
   isOtpCooldownError,
@@ -45,7 +45,12 @@ const formatPhone = (phone?: string): string => {
 
 export const OtpVerificationScreen = () => {
   const router = useRouter();
-  const params = useLocalSearchParams<{ phone?: string; source?: string }>();
+  const params = useLocalSearchParams<{
+    phone?: string;
+    source?: string;
+    returnTo?: string | string[];
+  }>();
+  const returnTo = parseReturnToParam(params.returnTo);
   const completeLogin = useAuthStore((state) => state.completeLogin);
   const [otp, setOtp] = useState('');
   const [otpError, setOtpError] = useState<string | undefined>();
@@ -124,8 +129,10 @@ export const OtpVerificationScreen = () => {
     setIsVerifying(false);
 
     const { kycApproved, reviewSubmitted } = useAuthStore.getState();
-    router.replace(getLoggedInRoute({ kycApproved, reviewSubmitted }));
-  }, [completeLogin, isOtpComplete, isVerifying, otp, params.phone, purpose, router]);
+    router.replace(
+      resolvePostAuthHref({ returnTo, kycApproved, reviewSubmitted }),
+    );
+  }, [completeLogin, isOtpComplete, isVerifying, otp, params.phone, purpose, returnTo, router]);
 
   return (
     <ScreenWrapper className="bg-brand-white">

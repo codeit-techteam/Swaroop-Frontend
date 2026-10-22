@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo } from 'react';
 
-import { Pressable, Share, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 
@@ -12,11 +12,11 @@ import { ProfileInfoRow } from '@/components/profile';
 import { INVOICE_DOC_STATUS_LABELS, PAYMENT_DOC_STATUS_LABELS } from '@/constants/documents';
 import { formatInr } from '@/constants/productDetails';
 import { ROUTES } from '@/navigation/routes';
+import { openProformaInvoiceDownload } from '@/services/invoice-download';
 import { useDocumentsStore } from '@/store/documents-store';
 import { brandColors } from '@/theme/colors';
 import type { DocumentKind } from '@/types/documents';
 import { formatDate } from '@/utils/date';
-import { buildInvoiceDocumentContent, buildPoDocumentContent } from '@/utils/document-content';
 
 function parseKind(value?: string | string[]): DocumentKind {
   const raw = Array.isArray(value) ? value[0] : value;
@@ -56,20 +56,35 @@ export const DocumentDetailScreen = memo(function DocumentDetailScreen() {
     router.back();
   }, [router]);
 
-  const handleShare = useCallback(
-    async (title: string, content: string, downloadKind?: DocumentKind, downloadId?: string) => {
+  const handleAuthorizedDownload = useCallback(
+    async (downloadKind: DocumentKind, downloadId: string, title: string) => {
       try {
-        await Share.share({ title, message: content });
-        if (downloadKind && downloadId) {
+        if (downloadKind === 'invoice' || downloadKind === 'proforma') {
+          const result = await openProformaInvoiceDownload(downloadId);
+          if (!result.available) {
+            Toast.show({
+              type: 'info',
+              text1: 'Document unavailable',
+              text2: result.message ?? `${title} PDF is not available for download yet.`,
+            });
+            return;
+          }
           markDownloaded(downloadKind, downloadId);
+          Toast.show({
+            type: 'success',
+            text1: 'Download started',
+            text2: `Opening authorized ${title}…`,
+          });
+          return;
         }
         Toast.show({
-          type: 'success',
-          text1: 'Document ready',
-          text2: 'Use share to save or send this document.',
+          type: 'info',
+          text1: 'Document unavailable',
+          text2:
+            'Authorized PDF download is not available for this document yet. The commercial record remains visible here.',
         });
       } catch {
-        Toast.show({ type: 'error', text1: 'Unable to share', text2: 'Please try again.' });
+        Toast.show({ type: 'error', text1: 'Unable to download', text2: 'Please try again.' });
       }
     },
     [markDownloaded],
@@ -115,7 +130,6 @@ export const DocumentDetailScreen = memo(function DocumentDetailScreen() {
   }
 
   if (po) {
-    const content = buildPoDocumentContent(po);
     return (
       <ScreenWrapper scrollable className="bg-brand-background" contentClassName="pb-xl">
         <AppHeader variant="back" title={po.poNumber} onBack={handleBack} />
@@ -162,16 +176,18 @@ export const DocumentDetailScreen = memo(function DocumentDetailScreen() {
           <ActionButton
             label="Download PDF"
             primary
-            onPress={() => void handleShare(po.poNumber, content, 'purchase_order', po.id)}
+            onPress={() => void handleAuthorizedDownload('purchase_order', po.id, po.poNumber)}
           />
-          <ActionButton label="Share" onPress={() => void handleShare(po.poNumber, content)} />
+          <ActionButton
+            label="Share"
+            onPress={() => void handleAuthorizedDownload('purchase_order', po.id, po.poNumber)}
+          />
         </View>
       </ScreenWrapper>
     );
   }
 
   if (invoice) {
-    const content = buildInvoiceDocumentContent(invoice);
     return (
       <ScreenWrapper scrollable className="bg-brand-background" contentClassName="pb-xl">
         <AppHeader variant="back" title={invoice.invoiceNumber} onBack={handleBack} />
@@ -213,11 +229,15 @@ export const DocumentDetailScreen = memo(function DocumentDetailScreen() {
           <ActionButton
             label="Download PDF"
             primary
-            onPress={() => void handleShare(invoice.invoiceNumber, content, 'invoice', invoice.id)}
+            onPress={() =>
+              void handleAuthorizedDownload('invoice', invoice.id, invoice.invoiceNumber)
+            }
           />
           <ActionButton
             label="Share"
-            onPress={() => void handleShare(invoice.invoiceNumber, content)}
+            onPress={() =>
+              void handleAuthorizedDownload('invoice', invoice.id, invoice.invoiceNumber)
+            }
           />
         </View>
       </ScreenWrapper>

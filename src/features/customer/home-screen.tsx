@@ -343,9 +343,7 @@ export const CustomerHomeScreen = () => {
             <SectionHeader
               title="Price Watchlist"
               actionLabel="EDIT"
-              onActionPress={() =>
-                showInfoToast('Edit Watchlist', 'Manage your polymer price alerts.')
-              }
+              onActionPress={() => router.push(ROUTES.CUSTOMER.PRICE_ALERTS as Href)}
             />
             <View className="mx-lg mt-md overflow-hidden rounded-xl border border-brand-border/60 bg-brand-white shadow-sm">
               {catalogError ? (

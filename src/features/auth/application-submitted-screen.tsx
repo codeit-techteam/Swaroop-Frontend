@@ -17,12 +17,12 @@ import { KycStatusBanner } from '@/components/kyc/kyc-status-banner';
 import {
   buildSubmissionTimeline,
   generateKycReferenceId,
-  SUPPORT_PHONE,
 } from '@/constants/documents';
 import { useCustomerKycStatus } from '@/hooks/use-customer-kyc-status';
 import { SuccessShield } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
 import { kycNeedsAction } from '@/services/customer-kyc';
+import { openContactSupport } from '@/services/legal-links';
 import { useAuthStore } from '@/store/auth-store';
 import { useKycStore } from '@/store/kyc-store';
 import { wp } from '@/utils/responsive';
@@ -73,7 +73,7 @@ export const ApplicationSubmittedScreen = () => {
   }, [refresh]);
 
   const handleSupport = useCallback(() => {
-    // Frontend-only contact action
+    void openContactSupport();
   }, []);
 
   const heading = kycApproved
@@ -151,8 +151,8 @@ export const ApplicationSubmittedScreen = () => {
         onPress={handleSupport}
       />
 
-      <Typography variant="legal" className="mt-xl">
-        Need immediate assistance? Call us at {SUPPORT_PHONE}
+      <Typography variant="legal" className="mt-xl text-center">
+        Need help? Use Contact Support above for the approved support channel.
       </Typography>
     </ScreenWrapper>
   );

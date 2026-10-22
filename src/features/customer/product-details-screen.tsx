@@ -36,18 +36,26 @@ import {
   getTierForQuantity,
   priceForQuantity,
 } from '@/constants/productDetails';
+import { SecondaryButton } from '@/components/ui';
 import { useMarketplaceCatalogQuery } from '@/hooks/use-marketplace-catalog';
+import { useMarketplacePricingEstimate } from '@/hooks/use-marketplace-pricing-estimate';
 import { useNotificationBadge } from '@/hooks/use-notifications';
 import { useProductQuote } from '@/hooks/use-product-quote';
 import { BackArrowIcon } from '@/icons';
+import { buildLoginHref } from '@/navigation/return-to';
 import { ROUTES } from '@/navigation/routes';
 import { addCustomerCartItem, mapBackendCartItems } from '@/services/cart';
-import { fetchCustomerMarketplaceProduct } from '@/services/catalog';
+import {
+  fetchCustomerMarketplaceProduct,
+  fetchProductDocuments,
+} from '@/services/catalog';
 import { checkoutErrorMessage, toBackendPaymentOption } from '@/services/checkout';
+import { selectIsLoggedIn, useAuthStore } from '@/store/auth-store';
 import { useCartStore } from '@/store/cart-store';
 import { brandColors } from '@/theme/colors';
 import type { MarketProduct } from '@/types/market';
 import type { PaymentMethodId } from '@/types/payment';
+import type { ComplianceDocument } from '@/types/product';
 import {
   DEFAULT_ADVANCE_DISCOUNT_RATE,
   buyingSummaryFromQuote,
@@ -55,10 +63,37 @@ import {
   quoteMatchesSelection,
 } from '@/utils/product-quote-estimate';
 
+const mapApiDoc = (doc: {
+  id: string;
+  type: string;
+  title: string;
+  description?: string;
+  version?: number;
+  status?: string;
+  fileName?: string;
+  productId?: string;
+}): ComplianceDocument => ({
+  id: doc.id,
+  type: (String(doc.type).toLowerCase() || 'other') as ComplianceDocument['type'],
+  title: doc.title,
+  description: doc.description ?? 'Verified product document',
+  fileName: doc.fileName ?? `${doc.title}.pdf`,
+  version: doc.version,
+  status: doc.status,
+  productId: doc.productId,
+});
+
 export const CustomerProductDetailsScreen = memo(function CustomerProductDetailsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ id?: string | string[] }>();
+  const params = useLocalSearchParams<{
+    id?: string | string[];
+    qty?: string | string[];
+    destination?: string | string[];
+    notes?: string | string[];
+    rfq?: string | string[];
+  }>();
+  const isLoggedIn = useAuthStore(selectIsLoggedIn);
 
   const {
     products: catalog,
@@ -80,6 +115,10 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
   const [detailProduct, setDetailProduct] = useState<MarketProduct | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [apiDocuments, setApiDocuments] = useState<ComplianceDocument[]>([]);
+  const [docsUnavailableMessage, setDocsUnavailableMessage] = useState<string | null>(null);
+  const [rfqNotes, setRfqNotes] = useState('');
+  const [rfqDestination, setRfqDestination] = useState('');
 
   useEffect(() => {
     if (!productId) return;
@@ -107,6 +146,29 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
     };
   }, [productId]);
 
+  useEffect(() => {
+    if (!productId) return;
+    let cancelled = false;
+    void fetchProductDocuments(productId)
+      .then((docs) => {
+        if (cancelled) return;
+        const mapped = docs.map((doc) => mapApiDoc({ ...doc, productId }));
+        setApiDocuments(mapped);
+        setDocsUnavailableMessage(
+          mapped.length === 0 ? 'TDS unavailable — no approved technical documents on file.' : null,
+        );
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setApiDocuments([]);
+          setDocsUnavailableMessage('TDS unavailable — unable to load technical documents.');
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [productId]);
+
   const product = useMemo(() => {
     if (!productId) return null;
     if (detailProduct) {
@@ -117,6 +179,12 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
 
   const loading = catalogLoading || detailLoading;
   const loadError = detailError ?? catalogError;
+
+  const initialQtyParam = useMemo(() => {
+    const raw = typeof params.qty === 'string' ? params.qty : params.qty?.[0];
+    const n = Number(raw);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }, [params.qty]);
 
   const [quantityMt, setQuantityMt] = useState(25);
   const [selectedTierId, setSelectedTierId] = useState<string>('');
@@ -130,6 +198,16 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
   const pendingCheckout = useRef(false);
   const [awaitingQuote, setAwaitingQuote] = useState(false);
 
+  useEffect(() => {
+    const dest =
+      typeof params.destination === 'string'
+        ? params.destination
+        : params.destination?.[0];
+    const notes = typeof params.notes === 'string' ? params.notes : params.notes?.[0];
+    if (dest) setRfqDestination(dest);
+    if (notes) setRfqNotes(notes);
+  }, [params.destination, params.notes]);
+
   const {
     quote,
     paymentOptions: backendPaymentOptions,
@@ -141,7 +219,7 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
     offerId: product?.offerId,
     quantity: quantityMt,
     paymentId,
-    enabled: Boolean(product),
+    enabled: Boolean(product) && isLoggedIn,
   });
 
   const paymentOptions = useMemo(
@@ -155,10 +233,39 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
       return;
     }
 
-    setQuantityMt(product.moq);
-    const initialTier = getTierForQuantity(product.pricingTiers, product.moq);
+    const nextQty = initialQtyParam ?? product.moq;
+    setQuantityMt(nextQty);
+    const initialTier = getTierForQuantity(product.pricingTiers, nextQty);
     setSelectedTierId(initialTier?.id ?? '');
-  }, [product]);
+  }, [initialQtyParam, product]);
+
+  const offerIdForEstimate = product?.offerId ?? null;
+  const {
+    estimate: pricingEstimate,
+    loading: estimateLoading,
+    error: estimateError,
+  } = useMarketplacePricingEstimate({
+    offerId: offerIdForEstimate,
+    quantity: quantityMt,
+    paymentId,
+    enabled: Boolean(offerIdForEstimate),
+  });
+
+  const requireLoginForPurchase = useCallback(() => {
+    if (!productId) return;
+    const search = new URLSearchParams();
+    search.set('qty', String(quantityMt));
+    if (rfqDestination.trim()) search.set('destination', rfqDestination.trim());
+    if (rfqNotes.trim()) search.set('notes', rfqNotes.trim());
+    const returnTo = `/(customer)/product/${productId}?${search.toString()}`;
+    Toast.show({
+      type: 'info',
+      text1: 'Sign in to continue',
+      text2: 'Your quantity will be restored after login.',
+      visibilityTime: 2200,
+    });
+    router.push(buildLoginHref(returnTo));
+  }, [productId, quantityMt, rfqDestination, rfqNotes, router]);
 
   const selectedTier = useMemo(() => {
     if (!product) {
@@ -298,6 +405,11 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
       return false;
     }
 
+    if (!isLoggedIn) {
+      requireLoginForPurchase();
+      return false;
+    }
+
     if (!canPurchase) {
       Toast.show({
         type: 'error',
@@ -345,7 +457,16 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
       addingLock.current = false;
       setAddingToCart(false);
     }
-  }, [canPurchase, matchingQuote?.offerId, paymentId, product, quantityMt, selectedTier]);
+  }, [
+    canPurchase,
+    isLoggedIn,
+    matchingQuote?.offerId,
+    paymentId,
+    product,
+    quantityMt,
+    requireLoginForPurchase,
+    selectedTier,
+  ]);
 
   const handleAddToCart = useCallback(async () => {
     if (!product) {
@@ -360,6 +481,58 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
     const cartName = product.name || buildBlindProductName(product.grade, product.nameLine2);
     setAddedBanner({ quantityMt, productName: cartName });
   }, [addCurrentItemToCart, product, quantityMt]);
+
+  const handleRequestQuote = useCallback(() => {
+    if (!product || !productId) {
+      return;
+    }
+    const search = new URLSearchParams();
+    search.set('qty', String(quantityMt));
+    search.set('rfq', '1');
+    if (rfqDestination.trim()) search.set('destination', rfqDestination.trim());
+    if (rfqNotes.trim()) search.set('notes', rfqNotes.trim());
+    const returnTo = `/(customer)/product/${productId}?${search.toString()}`;
+
+    if (!isLoggedIn) {
+      Toast.show({
+        type: 'info',
+        text1: 'Sign in to submit a purchase request',
+        text2: 'Your RFQ details will be available after you return.',
+      });
+      router.push(buildLoginHref(returnTo));
+      return;
+    }
+
+    if (matchingQuote) {
+      router.push({
+        pathname: ROUTES.CUSTOMER.CHECKOUT,
+        params: {
+          quoteId: matchingQuote.quoteId,
+          rfq: '1',
+          ...(rfqDestination.trim() ? { destination: rfqDestination.trim() } : {}),
+          ...(rfqNotes.trim() ? { notes: rfqNotes.trim() } : {}),
+        },
+      } as unknown as Href);
+      return;
+    }
+
+    pendingCheckout.current = true;
+    setAwaitingQuote(true);
+    Toast.show({
+      type: 'info',
+      text1: 'Preparing purchase request',
+      text2: 'Confirming latest pricing for your RFQ…',
+    });
+  }, [
+    isLoggedIn,
+    matchingQuote,
+    product,
+    productId,
+    quantityMt,
+    rfqDestination,
+    rfqNotes,
+    router,
+  ]);
 
   const handleOpenCart = useCallback(() => {
     router.push(ROUTES.CUSTOMER.CART as Href);
@@ -384,6 +557,11 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
   );
 
   const handleBuyNow = useCallback(() => {
+    if (!isLoggedIn) {
+      requireLoginForPurchase();
+      return;
+    }
+
     if (!canPurchase) {
       Toast.show({
         type: 'error',
@@ -414,11 +592,13 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
   }, [
     canPurchase,
     goToCheckout,
+    isLoggedIn,
     matchingQuote,
     product?.stock,
     quoteError,
     quoteLoading,
     quoteRefreshing,
+    requireLoginForPurchase,
   ]);
 
   useEffect(() => {
@@ -566,10 +746,20 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
             <ProductApplications applications={product.applications} industry={product.industry} />
             <ProductSpecs product={product} />
             <DocumentDownloads
-              documents={product.documents}
+              documents={apiDocuments.length > 0 ? apiDocuments : product.documents}
               productId={product.id}
+              emptyMessage={docsUnavailableMessage}
+              requireAuth={!isLoggedIn}
+              onRequireAuth={requireLoginForPurchase}
             />
-            {displaySpotPrice ? <SpotPriceCard spotPrice={displaySpotPrice} /> : null}
+            {displaySpotPrice ? (
+              <SpotPriceCard
+                spotPrice={displaySpotPrice}
+                unitPricePerMt={pricingEstimate?.unitPricePerMt}
+                unitPricePerKg={pricingEstimate?.unitPricePerKg}
+                currency={pricingEstimate?.currency}
+              />
+            ) : null}
             {product.pricingTiers.length > 0 ? (
               <PricingTiersCard
                 tiers={product.pricingTiers}
@@ -615,27 +805,62 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
               </View>
             </View>
             <BuyingSummary
-              summary={buyingSummary}
-              refreshing={confirmingPrice}
-              error={quoteError}
+              summary={
+                pricingEstimate?.currency?.toUpperCase() === 'INR' && pricingEstimate.inclusiveTotal
+                  ? buyingSummary
+                  : pricingEstimate?.currency &&
+                      pricingEstimate.currency.toUpperCase() !== 'INR'
+                    ? null
+                    : buyingSummary
+              }
+              unitPrices={
+                pricingEstimate
+                  ? {
+                      currency: pricingEstimate.currency,
+                      unitPricePerMt: pricingEstimate.unitPricePerMt,
+                      unitPricePerKg: pricingEstimate.unitPricePerKg,
+                      note: pricingEstimate.note,
+                    }
+                  : null
+              }
+              refreshing={confirmingPrice || estimateLoading}
+              error={estimateError ?? quoteError}
             />
-            {quoteError ? (
+            {estimateError || quoteError ? (
               <Typography
                 variant="caption"
                 className="mx-lg font-sans text-[12px] normal-case leading-[16px] tracking-normal text-red-600"
               >
-                {quoteError}
+                {estimateError ?? quoteError}
               </Typography>
             ) : (
               <Typography
                 variant="caption"
                 className="mx-lg font-sans text-[11px] normal-case leading-[16px] tracking-normal text-brand-muted"
               >
-                {confirmingPrice
+                {confirmingPrice || estimateLoading
                   ? 'Showing an estimated total while we confirm freight, GST, and the latest market price.'
-                  : 'Prices include platform freight and GST from the latest PetroTrade quote.'}
+                  : '₹/MT and ₹/kg come from the marketplace estimate API. Checkout totals are recalculated server-side.'}
               </Typography>
             )}
+            <View className="mx-lg rounded-xl border border-brand-border bg-brand-white p-lg shadow-sm">
+              <Typography variant="roleTitle" className="text-[15px] text-brand-heading">
+                Request a quote
+              </Typography>
+              <Typography
+                variant="caption"
+                className="mt-xs font-sans text-[12px] normal-case tracking-normal text-brand-muted"
+              >
+                Opens the purchase request flow with this grade and quantity
+                {rfqDestination ? ` · ${rfqDestination}` : ''}.
+              </Typography>
+              <SecondaryButton
+                label="Request quote (RFQ)"
+                variant="outline"
+                className="mt-md"
+                onPress={handleRequestQuote}
+              />
+            </View>
             <TrustCard product={product} />
             <Pressable
               onPress={handleContinueShopping}

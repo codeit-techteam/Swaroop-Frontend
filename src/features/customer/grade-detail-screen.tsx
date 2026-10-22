@@ -1,10 +1,11 @@
-import { memo, useCallback, useMemo } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 
-import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 
 import { isAxiosError } from 'axios';
+import Toast from 'react-native-toast-message';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EmptyState, ProductCard, liveOfferLabel } from '@/components/market';
@@ -20,7 +21,14 @@ import {
   useCustomerGradeProducts,
 } from '@/hooks/use-grade-master';
 import { useNotificationBadge } from '@/hooks/use-notifications';
+import { buildLoginHref } from '@/navigation/return-to';
 import { ROUTES } from '@/navigation/routes';
+import {
+  fetchGradeTdsDocuments,
+  fetchProductDocumentUrl,
+  type GradeTdsResponse,
+} from '@/services/catalog';
+import { selectIsLoggedIn, useAuthStore } from '@/store/auth-store';
 import type { BlindGradeOffer, CustomerGrade } from '@/types/grade-master';
 import type { MarketProduct } from '@/types/market';
 
@@ -156,9 +164,38 @@ export const CustomerGradeDetailScreen = memo(function CustomerGradeDetailScreen
   const gradeId = (Array.isArray(params.id) ? params.id[0] : params.id) ?? null;
   const unreadCount = useNotificationBadge();
 
+  const isLoggedIn = useAuthStore(selectIsLoggedIn);
   const gradeQuery = useCustomerGrade(gradeId);
   const productsQuery = useCustomerGradeProducts(gradeId);
   const offersQuery = useCustomerGradeOffers(gradeId);
+  const [tds, setTds] = useState<GradeTdsResponse | null>(null);
+  const [tdsLoading, setTdsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!gradeId) return;
+    let cancelled = false;
+    setTdsLoading(true);
+    void fetchGradeTdsDocuments(gradeId)
+      .then((payload) => {
+        if (!cancelled) setTds(payload);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setTds({
+            grade: { id: gradeId, code: '', name: '' },
+            available: false,
+            message: 'TDS unavailable',
+            items: [],
+          });
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setTdsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [gradeId]);
 
   const products = useMemo(() => productsQuery.data ?? [], [productsQuery.data]);
   const extraOffers = useMemo(() => {
@@ -191,6 +228,37 @@ export const CustomerGradeDetailScreen = memo(function CustomerGradeDetailScreen
       } as unknown as Href);
     },
     [router],
+  );
+
+  const handleTdsDownload = useCallback(
+    async (productId: string, documentId: string, title: string) => {
+      if (!isLoggedIn) {
+        Toast.show({
+          type: 'info',
+          text1: 'Sign in to download TDS',
+          text2: 'Technical data sheets require an authenticated session.',
+        });
+        router.push(
+          buildLoginHref(
+            gradeId ? `/(customer)/grades/${gradeId}` : ROUTES.CUSTOMER.GRADES,
+          ),
+        );
+        return;
+      }
+      try {
+        const { url } = await fetchProductDocumentUrl(productId, documentId);
+        if (!url) throw new Error('URL unavailable');
+        await Linking.openURL(url);
+        Toast.show({ type: 'success', text1: title, text2: 'Opening verified TDS…' });
+      } catch {
+        Toast.show({
+          type: 'error',
+          text1: 'TDS unavailable',
+          text2: 'Signed download URL could not be opened.',
+        });
+      }
+    },
+    [gradeId, isLoggedIn, router],
   );
 
   const handleProductPress = useCallback(
@@ -261,6 +329,48 @@ export const CustomerGradeDetailScreen = memo(function CustomerGradeDetailScreen
         ) : (
           <SkeletonCard className="mx-lg" />
         )}
+
+        <View className="mx-lg mt-lg rounded-xl border border-brand-border bg-brand-white p-lg shadow-sm">
+          <Typography variant="roleTitle" className="text-[15px] text-brand-heading">
+            Technical Data Sheet
+          </Typography>
+          {tdsLoading ? (
+            <Typography variant="subheadingLeft" className="mt-sm text-[13px] text-brand-muted">
+              Loading TDS…
+            </Typography>
+          ) : !tds?.available || tds.items.length === 0 ? (
+            <Typography variant="subheadingLeft" className="mt-sm text-[13px] text-brand-muted">
+              {tds?.message ?? 'TDS unavailable — no approved Technical Data Sheet is on file.'}
+            </Typography>
+          ) : (
+            <View className="mt-md" style={{ gap: 8 }}>
+              {tds.items.map((doc) => (
+                <Pressable
+                  key={doc.id}
+                  onPress={() =>
+                    void handleTdsDownload(
+                      doc.productId ?? '',
+                      doc.id,
+                      doc.title || doc.productName || 'TDS',
+                    )
+                  }
+                  className="rounded-lg border border-brand-border bg-brand-surface px-md py-md"
+                >
+                  <Typography variant="roleTitle" className="text-[13px] text-brand-heading">
+                    {doc.title || 'Technical Data Sheet'}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    className="mt-xs font-sans text-[11px] normal-case text-brand-muted"
+                  >
+                    {doc.productName ?? doc.productCode ?? 'Product document'}
+                    {isLoggedIn ? '' : ' · Sign in to download'}
+                  </Typography>
+                </Pressable>
+              ))}
+            </View>
+          )}
+        </View>
 
         <View className="flex-row items-center justify-between px-lg pb-sm pt-xl">
           <Typography variant="roleTitle" className="text-[16px]">

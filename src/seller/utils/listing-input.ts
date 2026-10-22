@@ -8,20 +8,46 @@ export const isBackendId = (value?: string | null): value is string =>
   Boolean(value && UUID_RE.test(value));
 
 const positiveNumber = (value: string): number => {
-  const n = Number(value);
-  return Number.isFinite(n) && n > 0 ? n : 0;
+  const n = Number(String(value).trim());
+  if (!Number.isFinite(n) || n <= 0) {
+    throw new Error(`Invalid positive number: ${value}`);
+  }
+  return n;
 };
 
 const nonNegativeNumber = (value: string): number => {
-  const n = Number(value);
-  return Number.isFinite(n) && n >= 0 ? n : 0;
+  const n = Number(String(value).trim());
+  if (!Number.isFinite(n) || n < 0) {
+    throw new Error(`Invalid non-negative number: ${value}`);
+  }
+  return n;
+};
+
+/** Safe parse for optional UI fields that may still be empty before publish. */
+const positiveNumberOrZero = (value: string): number => {
+  const trimmed = String(value).trim();
+  if (!trimmed) return 0;
+  const n = Number(trimmed);
+  return Number.isFinite(n) && n > 0 ? n : 0;
 };
 
 type ListingSource = Pick<SellerProductSnapshot, 'form' | 'pricing' | 'tiers' | 'technicalSpecs'>;
 
 /** The backend listing needs a Grade Master id and a selling price; drafts without them stay on the device. */
-export const canSaveListingToBackend = (snapshot: ListingSource): boolean =>
-  isBackendId(snapshot.form.catalogProductId) && positiveNumber(snapshot.pricing.sellingPrice) > 0;
+export const canSaveListingToBackend = (snapshot: ListingSource): boolean => {
+  if (!isBackendId(snapshot.form.catalogProductId)) return false;
+  const price = Number(String(snapshot.pricing.sellingPrice).trim());
+  const moq = Number(String(snapshot.form.moq).trim());
+  const stock = Number(String(snapshot.form.availableQty).trim() || '0');
+  return (
+    Number.isFinite(price) &&
+    price > 0 &&
+    Number.isFinite(moq) &&
+    moq > 0 &&
+    Number.isFinite(stock) &&
+    stock >= 0
+  );
+};
 
 export const buildListingInput = (
   snapshot: ListingSource,
@@ -30,12 +56,15 @@ export const buildListingInput = (
   const { form, technicalSpecs, tiers, pricing } = snapshot;
   const optional = (value: string) => value.trim() || undefined;
   const priceTiers = tiers
-    .map((tier) => ({
-      minQty: Number(tier.minQty),
-      maxQty: tier.maxQty.trim() ? Number(tier.maxQty) : null,
-      price: positiveNumber(tier.price),
-      label: optional(tier.discountLabel),
-    }))
+    .map((tier) => {
+      const price = positiveNumberOrZero(tier.price);
+      return {
+        minQty: Number(tier.minQty),
+        maxQty: tier.maxQty.trim() ? Number(tier.maxQty) : null,
+        price,
+        label: optional(tier.discountLabel),
+      };
+    })
     .filter(
       (tier) =>
         Number.isFinite(tier.minQty) &&
@@ -43,6 +72,12 @@ export const buildListingInput = (
         tier.price > 0 &&
         (tier.maxQty === null || Number.isFinite(tier.maxQty)),
     );
+
+  const moq = positiveNumber(form.moq);
+  const availableStock = nonNegativeNumber(form.availableQty || '0');
+  if (moq > availableStock && availableStock > 0) {
+    throw new Error('MOQ cannot exceed available stock');
+  }
 
   return {
     gradeId: form.catalogProductId,
@@ -58,14 +93,14 @@ export const buildListingInput = (
     application: optional(technicalSpecs.primaryApplication),
     polymerType: optional(form.polymerType),
     warehouseName: optional(form.warehouseLocation),
-    availableStock: nonNegativeNumber(form.availableQty),
-    reservedStock: nonNegativeNumber(form.reservedQty),
-    moq: nonNegativeNumber(form.moq),
+    availableStock,
+    reservedStock: nonNegativeNumber(form.reservedQty || '0'),
+    moq,
     sellingPrice: positiveNumber(pricing.sellingPrice),
     priceTiers: priceTiers.length ? priceTiers : undefined,
     description: optional(form.description),
     publishToMarketplace: publish,
     catalogProductId: form.catalogProductId,
-    gstPercent: positiveNumber(form.gstPercent) || undefined,
+    gstPercent: positiveNumberOrZero(form.gstPercent) || undefined,
   };
 };

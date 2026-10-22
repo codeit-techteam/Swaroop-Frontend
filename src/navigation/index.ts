@@ -13,4 +13,16 @@ export type {
   AuthRoute,
   CustomerRoute,
 } from '@/navigation/routes';
-export { PrivateRouteGuard, PublicRouteGuard } from '@/navigation/guards';
+export {
+  CustomerRouteGuard,
+  PrivateRouteGuard,
+  PublicRouteGuard,
+} from '@/navigation/guards';
+export {
+  buildLoginHref,
+  buildReturnToFromParts,
+  isGuestBrowsePath,
+  isSafeInternalReturnTo,
+  parseReturnToParam,
+  resolvePostAuthHref,
+} from '@/navigation/return-to';

@@ -1,8 +1,12 @@
-import { memo } from 'react';
+import { memo, useCallback } from 'react';
 
 import { Pressable, View } from 'react-native';
 
 import { Typography } from '@/components/ui/typography';
+import {
+  openPrivacyPolicy,
+  openTermsOfService,
+} from '@/services/legal-links';
 import { cn } from '@/utils/cn';
 
 type FooterLinksProps = {
@@ -18,16 +22,32 @@ export const FooterLinks = memo(function FooterLinks({
   onTermsPress,
   onPrivacyPress,
 }: FooterLinksProps) {
+  const handleTerms = useCallback(() => {
+    if (onTermsPress) {
+      onTermsPress();
+      return;
+    }
+    void openTermsOfService();
+  }, [onTermsPress]);
+
+  const handlePrivacy = useCallback(() => {
+    if (onPrivacyPress) {
+      onPrivacyPress();
+      return;
+    }
+    void openPrivacyPolicy();
+  }, [onPrivacyPress]);
+
   return (
     <View className={cn('w-full items-center', className)}>
       <View className="flex-row items-center gap-md">
-        <Pressable onPress={onTermsPress} accessibilityRole="link">
+        <Pressable onPress={handleTerms} accessibilityRole="link">
           <Typography variant="legal" className="underline">
             Terms of Service
           </Typography>
         </Pressable>
         <Typography variant="legal">·</Typography>
-        <Pressable onPress={onPrivacyPress} accessibilityRole="link">
+        <Pressable onPress={handlePrivacy} accessibilityRole="link">
           <Typography variant="legal" className="underline">
             Privacy Policy
           </Typography>

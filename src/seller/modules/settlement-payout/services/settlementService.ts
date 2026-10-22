@@ -61,21 +61,25 @@ export const formatSettlementAmount = (value: number, compact = false): string =
   }).format(value);
 };
 
-export const formatSettlementDate = (value: string): string =>
-  new Intl.DateTimeFormat('en-IN', {
+export const formatSettlementDate = (value: string): string => {
+  if (!value?.trim()) return '—';
+  return new Intl.DateTimeFormat('en-IN', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
   }).format(new Date(value));
+};
 
-export const formatSettlementDateTime = (value: string): string =>
-  new Intl.DateTimeFormat('en-IN', {
+export const formatSettlementDateTime = (value: string): string => {
+  if (!value?.trim()) return '—';
+  return new Intl.DateTimeFormat('en-IN', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(value));
+};
 
 const sortSettlements = (settlements: Settlement[]): Settlement[] =>
   [...settlements].sort((a, b) => b.expectedDate.localeCompare(a.expectedDate));

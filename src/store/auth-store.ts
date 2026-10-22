@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 
+import { verificationAccepted } from '@/services/customer-kyc';
 import {
   clearAll,
   getAppSettings,
@@ -199,9 +200,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     set({
       kycApproved: kycVerified,
       reviewSubmitted,
+      // Identity satisfied for checklist (VERIFIED or MANUAL_REVIEW) — not overall KYC approval.
       identityVerified: {
-        pan: verifications?.pan?.status === 'VERIFIED',
-        gst: verifications?.gst?.status === 'VERIFIED',
+        pan: verificationAccepted(verifications?.pan),
+        gst: verificationAccepted(verifications?.gst),
       },
     });
   },

@@ -56,7 +56,8 @@ const mapApiSettlement = (item: SellerSettlement): Settlement => ({
   tds: item.tdsAmount,
   netAmount: item.netAmount,
   status: mapApiStatus(item.status),
-  expectedDate: item.expectedSettlementDate || item.settlementDate || item.createdAt,
+  // Never fall back to createdAt — that made every pending settlement look past-due.
+  expectedDate: item.expectedSettlementDate || item.settlementDate || '',
   releasedDate: item.releasedAt ?? undefined,
   transactionReference: undefined,
   bankAccount: undefined,

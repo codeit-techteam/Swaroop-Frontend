@@ -162,6 +162,7 @@ export const CustomerCartScreen = memo(function CustomerCartScreen() {
     async (itemId: string) => {
       setSyncing(true);
       const item = useCartStore.getState().items.find((entry) => entry.id === itemId);
+      // Below MOQ: keep local state for validation UI; do not PATCH (backend rejects).
       if (!item?.backendItemId || item.quantityMt < item.moq) {
         setSyncing(false);
         return;
@@ -283,6 +284,9 @@ export const CustomerCartScreen = memo(function CustomerCartScreen() {
 
   const isEmpty = items.length === 0;
   const pricingReady = summary.fromQuote && summary.totalLandedCost != null;
+  // Checkout is only blocked for genuine invalid cart / in-flight work — not stale quote errors.
+  const checkoutEnabled =
+    summary.meetsMoq && !syncing && !checkingOut && (pricingReady || !error);
   const showPricingBanner = status === 'PRICE_CHANGED' && changes.length > 0 && !showPriceModal;
 
   return (
@@ -374,7 +378,7 @@ export const CustomerCartScreen = memo(function CustomerCartScreen() {
 
           <CheckoutBar
             totalPayable={summary.totalLandedCost}
-            enabled={summary.meetsMoq && pricingReady && !Boolean(error && !pricingReady)}
+            enabled={checkoutEnabled}
             loading={checkingOut || (quoting && !pricingReady)}
             loadingLabel={checkingOut ? 'Checking latest pricing...' : 'Checking...'}
             onCheckout={() => {

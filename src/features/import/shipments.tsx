@@ -112,7 +112,12 @@ export function ShipmentsSection({
   const [sheet, setSheet] = useState<SheetState>(null);
   const isSeller = deal.myParty === 'SELLER';
   const totals = shipmentTotals(deal);
-  const canBook = canManage && SHIPPABLE_DEALS.includes(deal.status) && totals.hasRemaining;
+  // Buyers may view tracking only — carrier booking is seller/admin owned.
+  const canBook =
+    canManage &&
+    isSeller &&
+    SHIPPABLE_DEALS.includes(deal.status) &&
+    totals.hasRemaining;
   const close = () => setSheet(null);
 
   return (

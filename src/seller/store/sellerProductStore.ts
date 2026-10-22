@@ -72,6 +72,25 @@ const buildFormErrors = (
   }
   if (!form.moq.trim()) {
     errors.moq = 'MOQ is required.';
+  } else {
+    const moq = Number(form.moq);
+    if (!Number.isFinite(moq) || moq <= 0) {
+      errors.moq = 'MOQ must be a number greater than zero.';
+    }
+  }
+
+  if (form.availableQty.trim()) {
+    const stock = Number(form.availableQty);
+    if (!Number.isFinite(stock) || stock < 0) {
+      errors.availableQty = 'Stock must be a valid non-negative number.';
+    }
+  }
+
+  if (pricingSellingPrice.trim()) {
+    const price = Number(pricingSellingPrice);
+    if (!Number.isFinite(price) || price <= 0) {
+      errors.sellingPrice = 'Selling price must be a valid positive number.';
+    }
   }
 
   if (mode === 'publish') {
@@ -80,6 +99,11 @@ const buildFormErrors = (
     }
     if (!form.availableQty.trim()) {
       errors.availableQty = 'Available quantity is required.';
+    } else {
+      const stock = Number(form.availableQty);
+      if (!Number.isFinite(stock) || stock < 0) {
+        errors.availableQty = 'Stock must be a valid non-negative number.';
+      }
     }
     if (!form.warehouseLocation.trim()) {
       errors.warehouseLocation = 'Warehouse location is required.';
@@ -93,8 +117,24 @@ const buildFormErrors = (
     if (!technicalSpecs.primaryApplication.trim()) {
       errors.primaryApplication = 'Primary application is required.';
     }
-    if (!pricingSellingPrice.trim() || Number(pricingSellingPrice) <= 0) {
+    if (!pricingSellingPrice.trim()) {
       errors.sellingPrice = 'Selling price is required.';
+    } else {
+      const price = Number(pricingSellingPrice);
+      if (!Number.isFinite(price) || price <= 0) {
+        errors.sellingPrice = 'Selling price must be a valid positive number.';
+      }
+    }
+    const moq = Number(form.moq);
+    const stock = Number(form.availableQty);
+    if (
+      Number.isFinite(moq) &&
+      moq > 0 &&
+      Number.isFinite(stock) &&
+      stock >= 0 &&
+      moq > stock
+    ) {
+      errors.moq = 'MOQ cannot exceed available stock.';
     }
   }
 

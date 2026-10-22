@@ -9,7 +9,7 @@ export type AuthState = {
   isHydrated: boolean;
   mobileNumber: string | null;
   kycApproved: boolean;
-  /** PAN / GSTIN verification recorded by the backend (VERIFIED only). */
+  /** PAN / GSTIN identity accepted by the backend (VERIFIED or MANUAL_REVIEW). Not overall KYC approval. */
   identityVerified: { pan: boolean; gst: boolean };
   reviewSubmitted: boolean;
   onboardingCompleted: boolean;

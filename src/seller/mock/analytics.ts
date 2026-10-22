@@ -12,17 +12,18 @@ export const SELLER_ANALYTICS_SEED: SellerAnalyticsSnapshot = {
     },
   },
   orders: {
-    completed: 124,
+    // Placeholder zeros — live screens must overlay API order summaries.
+    completed: 0,
     breakdown: [
-      { id: 'pending', label: 'Pending', count: 18, percentage: 12 },
-      { id: 'accepted', label: 'Accepted', count: 32, percentage: 22 },
-      { id: 'dispatch', label: 'Dispatch', count: 24, percentage: 16 },
-      { id: 'delivered', label: 'Delivered', count: 124, percentage: 84 },
-      { id: 'cancelled', label: 'Cancelled', count: 6, percentage: 4 },
+      { id: 'pending', label: 'Pending', count: 0, percentage: 0 },
+      { id: 'accepted', label: 'Accepted', count: 0, percentage: 0 },
+      { id: 'dispatch', label: 'Dispatch', count: 0, percentage: 0 },
+      { id: 'delivered', label: 'Delivered', count: 0, percentage: 0 },
+      { id: 'cancelled', label: 'Cancelled', count: 0, percentage: 0 },
     ],
   },
   products: {
-    active: 42,
+    active: 0,
     topSelling: [
       {
         id: 'prod-hdpe',

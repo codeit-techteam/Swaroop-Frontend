@@ -142,6 +142,8 @@ export const SellerDashboardScreen = memo(function SellerDashboardScreen() {
 
   const analytics = useMemo(() => getSellerAnalytics(), []);
   const sparklineValues = useMemo(() => getRevenueSeries('7d'), []);
+  // Prefer live delivered count over mock analytics seed (was hardcoded 124).
+  const liveCompletedOrders = orderSummary.delivered ?? analytics.orders.completed;
 
   const dashboardStats = useMemo(
     () => [
@@ -323,9 +325,9 @@ export const SellerDashboardScreen = memo(function SellerDashboardScreen() {
 
               <AnimatedSection entering={FadeInDown.duration(380).delay(240)}>
                 <AnalyticsPreviewCard
-                  completedOrders={analytics.orders.completed}
+                  completedOrders={liveCompletedOrders}
                   inventoryValue={analytics.inventory.value}
-                  liveShipments={analytics.shipments.live}
+                  liveShipments={dashboardShipments.length || analytics.shipments.live}
                   onPress={() => router.push(ROUTES.SELLER.ANALYTICS as Href)}
                 />
               </AnimatedSection>

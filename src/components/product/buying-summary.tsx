@@ -4,12 +4,21 @@ import { ActivityIndicator, View } from 'react-native';
 
 import { Typography } from '@/components/ui/typography';
 import { formatInr } from '@/constants/productDetails';
+import { formatEstimateMoney } from '@/services/marketplace-pricing';
 import { brandColors } from '@/theme/colors';
 import { cn } from '@/utils/cn';
 import type { ProductQuoteEstimate } from '@/utils/product-quote-estimate';
 
+type UnitPriceRow = {
+  currency: string;
+  unitPricePerMt: string;
+  unitPricePerKg: string;
+  note?: string | null;
+};
+
 type BuyingSummaryProps = {
   summary?: ProductQuoteEstimate | null;
+  unitPrices?: UnitPriceRow | null;
   refreshing?: boolean;
   error?: string | null;
   className?: string;
@@ -17,10 +26,14 @@ type BuyingSummaryProps = {
 
 export const BuyingSummary = memo(function BuyingSummary({
   summary,
+  unitPrices = null,
   refreshing = false,
   error = null,
   className,
 }: BuyingSummaryProps) {
+  const showForeignNote =
+    unitPrices && unitPrices.currency && unitPrices.currency.toUpperCase() !== 'INR';
+
   return (
     <View
       className={cn(
@@ -44,6 +57,47 @@ export const BuyingSummary = memo(function BuyingSummary({
           </View>
         ) : null}
       </View>
+
+      {unitPrices ? (
+        <View className="mt-md rounded-lg bg-brand-surface px-md py-md" style={{ gap: 6 }}>
+          <View className="flex-row items-center justify-between">
+            <Typography
+              variant="caption"
+              className="font-sans text-[12px] normal-case tracking-normal text-brand-muted"
+            >
+              Unit price / MT
+            </Typography>
+            <Typography variant="roleTitle" className="text-[14px] text-brand-heading">
+              {unitPrices.currency.toUpperCase() === 'INR'
+                ? formatEstimateMoney(unitPrices.unitPricePerMt)
+                : `${unitPrices.currency} ${unitPrices.unitPricePerMt}`}
+            </Typography>
+          </View>
+          <View className="flex-row items-center justify-between">
+            <Typography
+              variant="caption"
+              className="font-sans text-[12px] normal-case tracking-normal text-brand-muted"
+            >
+              Unit price / kg
+            </Typography>
+            <Typography variant="roleTitle" className="text-[14px] text-brand-primary">
+              {unitPrices.currency.toUpperCase() === 'INR'
+                ? formatEstimateMoney(unitPrices.unitPricePerKg)
+                : `${unitPrices.currency} ${unitPrices.unitPricePerKg}`}
+            </Typography>
+          </View>
+          {showForeignNote ? (
+            <Typography
+              variant="caption"
+              className="mt-xs font-sans text-[11px] normal-case tracking-normal text-brand-muted"
+            >
+              {unitPrices.note ??
+                'Offer currency is not INR. No foreign→INR conversion without a configured exchange rate.'}
+            </Typography>
+          ) : null}
+        </View>
+      ) : null}
+
       {error && !summary ? (
         <Typography
           variant="caption"

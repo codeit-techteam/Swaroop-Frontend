@@ -68,6 +68,7 @@ export const ROUTES = {
     NOTIFICATIONS: '/(customer)/notifications',
     SUPPORT: '/(customer)/profile/support',
     SUPPORT_RAISE: '/(customer)/profile/raise-ticket',
+    PRICE_ALERTS: '/(customer)/price-alerts',
   },
   SELLER: {
     LOGIN: '/(seller)/login',

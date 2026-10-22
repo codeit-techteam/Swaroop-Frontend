@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 
-import { FlatList, RefreshControl, Share, View } from 'react-native';
+import { FlatList, RefreshControl, View } from 'react-native';
 
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 
@@ -11,7 +11,6 @@ import {
   DocumentFilterTabs,
   DocumentFiltersRow,
   DocumentListCard,
-  DocumentPreviewModal,
   DocumentSearchBar,
 } from '@/components/documents';
 import { SkeletonRow } from '@/components/ui/skeleton';
@@ -23,6 +22,7 @@ import {
 } from '@/constants/documents';
 import { formatInr } from '@/constants/productDetails';
 import { ROUTES } from '@/navigation/routes';
+import { openProformaInvoiceDownload } from '@/services/invoice-download';
 import {
   filterInvoices,
   filterProformas,
@@ -31,13 +31,8 @@ import {
   useDocumentsStore,
 } from '@/store/documents-store';
 import { brandColors } from '@/theme/colors';
-import type { DocumentKind, DocumentPreviewState, DocumentTab } from '@/types/documents';
+import type { DocumentKind, DocumentTab } from '@/types/documents';
 import { formatDate } from '@/utils/date';
-import {
-  buildInvoiceDocumentContent,
-  buildPoDocumentContent,
-  buildProformaDocumentContent,
-} from '@/utils/document-content';
 
 const TAB_IDS: DocumentTab[] = ['purchase_orders', 'invoices', 'proforma'];
 
@@ -46,15 +41,25 @@ function parseTab(value?: string | string[]): DocumentTab {
   return TAB_IDS.includes(raw as DocumentTab) ? (raw as DocumentTab) : 'purchase_orders';
 }
 
-async function shareContent(title: string, content: string) {
-  await Share.share({ title, message: content });
+async function downloadAuthorizedDocument(
+  kind: DocumentKind,
+  id: string,
+): Promise<{ available: boolean; message?: string | null }> {
+  if (kind === 'invoice' || kind === 'proforma') {
+    const result = await openProformaInvoiceDownload(id);
+    return { available: result.available, message: result.message };
+  }
+  return {
+    available: false,
+    message:
+      'Authorized PDF download is not available for this document yet. The commercial record remains visible here.',
+  };
 }
 
 export const DocumentsScreen = memo(function DocumentsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ tab?: string | string[] }>();
   const [tab, setTab] = useState<DocumentTab>(() => parseTab(params.tab));
-  const [preview, setPreview] = useState<DocumentPreviewState | null>(null);
 
   const isHydrated = useDocumentsStore((state) => state.isHydrated);
   const isLoading = useDocumentsStore((state) => state.isLoading);
@@ -110,14 +115,22 @@ export const DocumentsScreen = memo(function DocumentsScreen() {
   );
 
   const handleDownload = useCallback(
-    async (kind: DocumentKind, id: string, title: string, content: string) => {
+    async (kind: DocumentKind, id: string, title: string) => {
       try {
-        await shareContent(title, content);
+        const result = await downloadAuthorizedDocument(kind, id);
+        if (!result.available) {
+          Toast.show({
+            type: 'info',
+            text1: 'Document unavailable',
+            text2: result.message ?? `${title} PDF is not available for download yet.`,
+          });
+          return;
+        }
         markDownloaded(kind, id);
         Toast.show({
           type: 'success',
           text1: 'Download started',
-          text2: `${title} is ready to save or share.`,
+          text2: `Opening authorized ${title}…`,
         });
       } catch {
         Toast.show({ type: 'error', text1: 'Unable to download', text2: 'Please try again.' });
@@ -126,9 +139,22 @@ export const DocumentsScreen = memo(function DocumentsScreen() {
     [markDownloaded],
   );
 
-  const handleShare = useCallback(async (title: string, content: string) => {
+  const handleShare = useCallback(async (kind: DocumentKind, id: string, title: string) => {
     try {
-      await shareContent(title, content);
+      const result = await downloadAuthorizedDocument(kind, id);
+      if (!result.available) {
+        Toast.show({
+          type: 'info',
+          text1: 'Document unavailable',
+          text2: result.message ?? `${title} PDF is not available to share yet.`,
+        });
+        return;
+      }
+      Toast.show({
+        type: 'success',
+        text1: 'Document opened',
+        text2: 'Use the system share sheet from the viewer if needed.',
+      });
     } catch {
       Toast.show({ type: 'error', text1: 'Unable to share', text2: 'Please try again.' });
     }
@@ -156,7 +182,6 @@ export const DocumentsScreen = memo(function DocumentsScreen() {
     ({ item }: { item: (typeof listData)[number] }) => {
       if (item.type === 'purchase_order') {
         const po = item.item;
-        const content = buildPoDocumentContent(po);
         return (
           <DocumentListCard
             title={po.poNumber}
@@ -165,8 +190,8 @@ export const DocumentsScreen = memo(function DocumentsScreen() {
             amount={formatInr(po.amount)}
             status={po.status}
             onView={() => openDetail('purchase_order', po.id)}
-            onDownload={() => void handleDownload('purchase_order', po.id, po.poNumber, content)}
-            onShare={() => void handleShare(po.poNumber, content)}
+            onDownload={() => void handleDownload('purchase_order', po.id, po.poNumber)}
+            onShare={() => void handleShare('purchase_order', po.id, po.poNumber)}
             onDuplicate={() => {
               const id = duplicatePurchaseOrder(po.id);
               if (id) {
@@ -180,7 +205,6 @@ export const DocumentsScreen = memo(function DocumentsScreen() {
 
       if (item.type === 'invoice') {
         const inv = item.item;
-        const content = buildInvoiceDocumentContent(inv);
         return (
           <DocumentListCard
             title={inv.invoiceNumber}
@@ -197,14 +221,13 @@ export const DocumentsScreen = memo(function DocumentsScreen() {
                   : 'sky'
             }
             onView={() => openDetail('invoice', inv.id)}
-            onDownload={() => void handleDownload('invoice', inv.id, inv.invoiceNumber, content)}
-            onShare={() => void handleShare(inv.invoiceNumber, content)}
+            onDownload={() => void handleDownload('invoice', inv.id, inv.invoiceNumber)}
+            onShare={() => void handleShare('invoice', inv.id, inv.invoiceNumber)}
           />
         );
       }
 
       const pi = item.item;
-      const content = buildProformaDocumentContent(pi);
       return (
         <DocumentListCard
           title={pi.proformaNumber}
@@ -222,18 +245,9 @@ export const DocumentsScreen = memo(function DocumentsScreen() {
                   ? 'slate'
                   : 'sky'
           }
-          onView={() => {
-            setPreview({
-              title: `Proforma ${pi.proformaNumber}`,
-              categoryLabel: 'Proforma Invoice',
-              fileName: `${pi.proformaNumber}.pdf`,
-              documentNumber: pi.proformaNumber,
-              orderNumber: pi.orderNumber,
-              content,
-            });
-          }}
-          onDownload={() => void handleDownload('proforma', pi.id, pi.proformaNumber, content)}
-          onShare={() => void handleShare(pi.proformaNumber, content)}
+          onView={() => void handleDownload('proforma', pi.id, pi.proformaNumber)}
+          onDownload={() => void handleDownload('proforma', pi.id, pi.proformaNumber)}
+          onShare={() => void handleShare('proforma', pi.id, pi.proformaNumber)}
           onConvert={() => {
             const invId = convertProformaToInvoice(pi.id);
             if (invId) {
@@ -328,11 +342,6 @@ export const DocumentsScreen = memo(function DocumentsScreen() {
         )}
       </View>
 
-      <DocumentPreviewModal
-        preview={preview}
-        onClose={() => setPreview(null)}
-        onShare={preview ? () => void handleShare(preview.title, preview.content) : undefined}
-      />
     </ScreenWrapper>
   );
 });

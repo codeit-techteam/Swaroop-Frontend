@@ -39,8 +39,35 @@ type BackendNotification = {
   status?: string;
   entityType?: string | null;
   entityId?: string | null;
+  displayReference?: string | null;
   metadata?: Record<string, unknown> | null;
 };
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function resolveHumanReference(
+  metadata: Record<string, unknown>,
+): string | undefined {
+  const keys = [
+    'displayReference',
+    'referenceNumber',
+    'reference',
+    'orderNumber',
+    'poNumber',
+    'invoiceNumber',
+    'ticketNumber',
+    'applicationNumber',
+    'requestNumber',
+    'settlementNumber',
+    'shipmentNumber',
+  ] as const;
+  for (const key of keys) {
+    const value = asString(metadata[key]);
+    if (value && !UUID_RE.test(value)) return value;
+  }
+  return undefined;
+}
 
 type NotificationsSource = NotificationsPage['source'];
 
@@ -159,6 +186,10 @@ export const getNotificationRoute = (notification: CustomerNotification): string
 
 const mapBackendNotification = (row: BackendNotification): CustomerNotification => {
   const metadata = row.metadata ?? {};
+  const humanRef =
+    (row.displayReference && !UUID_RE.test(row.displayReference)
+      ? row.displayReference
+      : undefined) ?? resolveHumanReference(metadata);
   const importTarget = importNotificationTarget('customer', row.entityType, row.entityId, metadata);
   if (importTarget) {
     const isRead = Boolean(row.readAt) || row.status === 'READ';
@@ -170,7 +201,7 @@ const mapBackendNotification = (row: BackendNotification): CustomerNotification 
       createdAt: row.createdAt,
       isRead,
       priority: inferPriority(isRead, row.title),
-      reference: asString(metadata.referenceNumber) ?? asString(row.entityId),
+      reference: humanRef,
       actionLabel: importTarget.label,
       route: importTarget.route,
     };
@@ -190,12 +221,8 @@ const mapBackendNotification = (row: BackendNotification): CustomerNotification 
     createdAt: row.createdAt,
     isRead,
     priority: inferPriority(isRead, row.title),
-    reference:
-      asString(metadata.reference) ??
-      asString(metadata.orderNumber) ??
-      asString(metadata.poNumber) ??
-      asString(metadata.invoiceNumber) ??
-      asString(row.entityId),
+    // Never fall back to entityId (UUID) — leave blank when no business ref exists.
+    reference: humanRef,
     actionLabel: ACTION_LABELS[action],
     route: asString(metadata.route) ?? ROUTE_BY_ACTION[action],
   };

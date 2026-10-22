@@ -111,10 +111,15 @@ export function useCartQuote({ items, enabled, shippingAddressId }: UseCartQuote
     return () => clearTimeout(handle);
   }, [enabled, refresh]);
 
-  const summary = useMemo(
-    () => quoteSummary(result?.quotes ?? [], items),
-    [items, result?.quotes],
-  );
+  const summary = useMemo(() => {
+    const next = quoteSummary(result?.quotes ?? [], items);
+    // Always derive MOQ eligibility from current local quantities so recovering
+    // to MOQ re-enables checkout even before the next quote round-trip finishes.
+    return {
+      ...next,
+      meetsMoq: items.length > 0 && items.every((item) => item.quantityMt >= item.moq),
+    };
+  }, [items, result?.quotes]);
 
   return {
     result,

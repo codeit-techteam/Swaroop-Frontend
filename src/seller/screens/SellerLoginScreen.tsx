@@ -21,6 +21,7 @@ import { ROUTES } from '@/navigation/routes';
 import { SellerPrimaryButton, SellerTextField } from '@/seller/components';
 import { getSellerInitialRoute } from '@/seller/navigation/getSellerInitialRoute';
 import { useSellerStore } from '@/seller/store/sellerStore';
+import { openContactSupport } from '@/services/legal-links';
 import { requestSellerOtpSend } from '@/services/seller-auth';
 import { phoneSchema } from '@/utils/validators';
 
@@ -136,7 +137,13 @@ export const SellerLoginScreen = () => {
           </View>
         ) : null}
 
-        <Pressable className="mt-xl rounded-2xl border border-brand-border px-lg py-md">
+        <Pressable
+          className="mt-xl rounded-2xl border border-brand-border px-lg py-md"
+          accessibilityRole="link"
+          onPress={() => {
+            void openContactSupport();
+          }}
+        >
           <Typography variant="body" className="text-center">
             Contact Support
           </Typography>

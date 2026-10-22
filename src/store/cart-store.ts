@@ -166,9 +166,11 @@ export const useCartStore = create<CartStore>((set, get) => ({
         return item;
       }
       const increment = item.quantityIncrement > 0 ? item.quantityIncrement : 1;
+      // Floor at 1 so users can dip below MOQ and see validation; checkout gates on meetsMoq.
+      const next = Math.max(1, item.quantityMt - increment);
       return {
         ...item,
-        quantityMt: Math.max(1, item.quantityMt - increment),
+        quantityMt: Number.isFinite(next) && next > 0 ? next : 1,
       };
     });
     persistItems(items);
@@ -180,9 +182,11 @@ export const useCartStore = create<CartStore>((set, get) => ({
       if (item.id !== itemId && item.backendItemId !== itemId) {
         return item;
       }
+      const parsed = Number(quantityMt);
+      const safe = Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : 1;
       return {
         ...item,
-        quantityMt: Math.max(1, quantityMt),
+        quantityMt: Math.max(1, safe),
       };
     });
     persistItems(items);

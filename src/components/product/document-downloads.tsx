@@ -13,6 +13,9 @@ import { cn } from '@/utils/cn';
 type DocumentDownloadsProps = {
   documents: ComplianceDocument[];
   productId?: string;
+  emptyMessage?: string | null;
+  requireAuth?: boolean;
+  onRequireAuth?: () => void;
   className?: string;
 };
 
@@ -28,6 +31,7 @@ const isProductTechnicalDoc = (doc: ComplianceDocument): boolean => {
     type === 'quality_report' ||
     type === 'technical_specification' ||
     type === 'other' ||
+    type === 'product_tds' ||
     title.includes('TDS') ||
     title.includes('MSDS') ||
     title.includes('DATA SHEET') ||
@@ -39,6 +43,9 @@ const isProductTechnicalDoc = (doc: ComplianceDocument): boolean => {
 export const DocumentDownloads = memo(function DocumentDownloads({
   documents,
   productId,
+  emptyMessage,
+  requireAuth = false,
+  onRequireAuth,
   className,
 }: DocumentDownloadsProps) {
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -49,6 +56,10 @@ export const DocumentDownloads = memo(function DocumentDownloads({
 
   const handleDownload = useCallback(
     async (doc: ComplianceDocument) => {
+      if (requireAuth) {
+        onRequireAuth?.();
+        return;
+      }
       const pid = productId ?? doc.productId;
       if (!pid) {
         Toast.show({
@@ -64,8 +75,6 @@ export const DocumentDownloads = memo(function DocumentDownloads({
         if (!url || typeof url !== 'string') {
           throw new Error('Document URL unavailable');
         }
-        // Skip canOpenURL for https signed URLs — iOS often returns false for
-        // query-heavy R2/S3 links even though openURL succeeds.
         await Linking.openURL(url);
         Toast.show({
           type: 'success',
@@ -77,13 +86,14 @@ export const DocumentDownloads = memo(function DocumentDownloads({
         Toast.show({
           type: 'error',
           text1: 'Unable to open document',
+          text2: 'Signed download requires an authenticated session.',
           visibilityTime: 2200,
         });
       } finally {
         setLoadingId(null);
       }
     },
-    [productId],
+    [onRequireAuth, productId, requireAuth],
   );
 
   if (visibleDocuments.length === 0) {
@@ -101,7 +111,7 @@ export const DocumentDownloads = memo(function DocumentDownloads({
           variant="caption"
           className="mt-sm font-sans text-[12px] normal-case tracking-normal text-brand-muted"
         >
-          No technical documents available yet.
+          {emptyMessage ?? 'TDS unavailable — no approved technical documents on file.'}
         </Typography>
       </View>
     );
@@ -121,7 +131,9 @@ export const DocumentDownloads = memo(function DocumentDownloads({
         variant="caption"
         className="mt-xs font-sans text-[12px] normal-case tracking-normal text-brand-muted"
       >
-        Verified product documents from PetroTrade
+        {requireAuth
+          ? 'Sign in to download verified TDS and product documents'
+          : 'Verified product documents from PetroTrade'}
       </Typography>
       <View className="mt-md" style={{ gap: 8 }}>
         {visibleDocuments.map((doc) => (
@@ -129,7 +141,7 @@ export const DocumentDownloads = memo(function DocumentDownloads({
             key={doc.id}
             onPress={() => void handleDownload(doc)}
             accessibilityRole="button"
-            accessibilityLabel={`Download ${doc.title}`}
+            accessibilityLabel={`${requireAuth ? 'Sign in to download' : 'Download'} ${doc.title}`}
             className="flex-row items-center rounded-lg border border-brand-border bg-brand-surface px-md py-md"
             style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
           >
