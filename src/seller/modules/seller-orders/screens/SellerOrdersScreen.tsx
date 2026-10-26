@@ -26,10 +26,10 @@ import { navigateSellerBottomTab } from '@/seller/navigation/useSellerBottomNavi
 import { cn } from '@/utils/cn';
 
 const ORDER_TABS: Array<{ label: string; value: SellerOrderTabFilter }> = [
-  { label: 'All Orders', value: 'all' },
+  { label: 'All', value: 'all' },
   { label: 'Pending', value: 'pending' },
   { label: 'Accepted', value: 'accepted' },
-  { label: 'Dispatch Pending', value: 'dispatch_pending' },
+  { label: 'Dispatch', value: 'dispatch_pending' },
   { label: 'Delivered', value: 'delivered' },
 ];
 
@@ -47,6 +47,7 @@ export const SellerOrdersScreen = memo(function SellerOrdersScreen() {
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<SellerOrderTabFilter>('all');
   const [showFilters, setShowFilters] = useState(false);
+  const [statusFilters, setStatusFilters] = useState<string[]>([]);
   const isLoading = useSkeletonLoading(ordersHydrated);
   const { isRefreshing, refresh } = usePullToRefresh(async () => {
     refreshSellerOrdersState();
@@ -60,10 +61,11 @@ export const SellerOrdersScreen = memo(function SellerOrdersScreen() {
     syncFromDispatch();
   }, [hydrateSellerOrdersState, ordersHydrated, syncFromDispatch]);
 
-  const filteredOrders = useMemo(
-    () => searchOrders(query, activeTab),
-    [activeTab, query, searchOrders],
-  );
+  const filteredOrders = useMemo(() => {
+    const base = searchOrders(query, activeTab);
+    if (statusFilters.length === 0) return base;
+    return base.filter((order) => statusFilters.includes(order.orderStatus));
+  }, [activeTab, query, searchOrders, statusFilters]);
 
   const { visibleItems, hasMore, isLoadingMore, loadMore } = usePaginatedList({
     items: filteredOrders,
@@ -115,7 +117,7 @@ export const SellerOrdersScreen = memo(function SellerOrdersScreen() {
             <SearchBar
               value={query}
               onChangeText={setQuery}
-              placeholder="Search by Order ID, Buyer, Material, Destination"
+              placeholder="Search order, buyer, material"
               showFilter
               onFilterPress={() => setShowFilters(true)}
             />
@@ -193,7 +195,25 @@ export const SellerOrdersScreen = memo(function SellerOrdersScreen() {
         visible={showFilters}
         module="orders"
         onClose={() => setShowFilters(false)}
-        onApply={() => undefined}
+        onApply={(prefs) => {
+          const statuses = prefs.status ?? [];
+          setStatusFilters(statuses);
+          if (statuses.length === 1) {
+            const next = statuses[0];
+            if (
+              next === 'pending' ||
+              next === 'accepted' ||
+              next === 'dispatch_pending' ||
+              next === 'delivered'
+            ) {
+              setActiveTab(next);
+            } else {
+              setActiveTab('all');
+            }
+          } else if (statuses.length === 0) {
+            setActiveTab('all');
+          }
+        }}
       />
     </ScreenWrapper>
   );

@@ -30,8 +30,10 @@ export const ActivityTimeline = memo(function ActivityTimeline({
               ) : null}
             </View>
             <View className={cn('mb-lg flex-1', index === activities.length - 1 && 'mb-0')}>
-              <Typography variant="roleTitle">{activity.title}</Typography>
-              <Typography variant="roleDescription" className="mt-xs">
+              <Typography variant="roleTitle" numberOfLines={1}>
+                {activity.title}
+              </Typography>
+              <Typography variant="roleDescription" numberOfLines={2} className="mt-xs">
                 {activity.subtitle}
               </Typography>
               <Typography variant="legal" className="mt-xs text-left text-brand-body">

@@ -9,6 +9,7 @@ import {
   formatQty,
   formatRemaining,
   importLabel,
+  isImportDraftIncomplete,
   listingTitle,
   portLabel,
 } from '@/features/import/format';
@@ -200,7 +201,16 @@ export function ListingRow({
             {listingTitle(l)}
           </Typography>
         </View>
-        <StatusPill status={l.status} />
+        <View className="items-end gap-xs">
+          <StatusPill status={l.status} />
+          {isImportDraftIncomplete(l) ? (
+            <View className="rounded-full bg-amber-50 px-sm py-xs">
+              <Typography variant="badge" className="text-[10px] text-amber-800">
+                Incomplete
+              </Typography>
+            </View>
+          ) : null}
+        </View>
       </View>
       <Typography variant="roleDescription" className="mt-sm font-semibold text-brand-heading">
         {formatPrice(c.price, c.currencyCode, c.priceUnit)} {c.incoterm?.code ?? ''}

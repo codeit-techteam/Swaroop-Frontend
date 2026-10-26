@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 
-import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
+import { type Href, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
@@ -41,6 +41,7 @@ import type { SellerPaymentPricing, SellerProductForm } from '@/seller/types';
 import { PETROTRADE_CREDIT_NOTE } from '@/seller/utils/pricing';
 import { getLiveCatalogProduct } from '@/services/catalog';
 import { fetchSellerGradeById } from '@/services/grade-master';
+import { showConfirmDialog } from '@/store/dialog-store';
 import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
 import type { MarketProduct } from '@/types/market';
@@ -95,6 +96,7 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
   mode?: 'create' | 'edit';
 }) {
   const router = useRouter();
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
   const { catalogId, materialType } = useLocalSearchParams<{
@@ -117,6 +119,8 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
   const saveDraftProduct = useSellerProductStore((state) => state.saveDraftProduct);
   const publishProduct = useSellerProductStore((state) => state.publishProduct);
   const applyCatalogGrade = useSellerProductStore((state) => state.applyCatalogGrade);
+  const validateProductForm = useSellerProductStore((state) => state.validateProductForm);
+  const clearSelection = useSellerProductStore((state) => state.clearSelection);
 
   const isEdit = mode === 'edit' || Boolean(selectedProductId);
   const [step, setStep] = useState<ListingStep>(isEdit || catalogId ? 2 : 1);
@@ -124,6 +128,77 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
   const [saving, setSaving] = useState(false);
   const [resolvedGrade, setResolvedGrade] = useState<MarketProduct | null>(null);
   const appliedCatalogRef = useRef<string | null>(null);
+  const leavingRef = useRef(false);
+  const baselineRef = useRef({
+    form: { ...form },
+    pricing: { ...pricing },
+    technicalSpecs: { ...technicalSpecs },
+  });
+
+  useEffect(() => {
+    baselineRef.current = {
+      form: { ...form },
+      pricing: { ...pricing },
+      technicalSpecs: { ...technicalSpecs },
+    };
+    // Capture editor baseline once on mount (and when switching edit target).
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional snapshot
+  }, [selectedProductId, catalogId]);
+
+  const hasEdits = () => {
+    const baseline = baselineRef.current;
+    const formDirty = (Object.keys(form) as (keyof typeof form)[]).some(
+      (key) => String(form[key] ?? '') !== String(baseline.form[key] ?? ''),
+    );
+    const pricingDirty = (Object.keys(pricing) as (keyof typeof pricing)[]).some(
+      (key) => String(pricing[key] ?? '') !== String(baseline.pricing[key] ?? ''),
+    );
+    const specsDirty = (Object.keys(technicalSpecs) as (keyof typeof technicalSpecs)[]).some(
+      (key) => String(technicalSpecs[key] ?? '') !== String(baseline.technicalSpecs[key] ?? ''),
+    );
+    return formDirty || pricingDirty || specsDirty;
+  };
+
+  const confirmLeave = (onLeave: () => void) => {
+    if (leavingRef.current || !hasEdits()) {
+      onLeave();
+      return;
+    }
+    showConfirmDialog({
+      title: 'Discard changes?',
+      message: 'You have unsaved listing edits. Leave without saving?',
+      confirmLabel: 'Discard',
+      cancelLabel: 'Keep editing',
+      variant: 'danger',
+      onConfirm: () => {
+        leavingRef.current = true;
+        clearSelection();
+        onLeave();
+      },
+    });
+  };
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (event) => {
+      if (leavingRef.current || !hasEdits()) {
+        return;
+      }
+      event.preventDefault();
+      showConfirmDialog({
+        title: 'Discard changes?',
+        message: 'You have unsaved listing edits. Leave without saving?',
+        confirmLabel: 'Discard',
+        cancelLabel: 'Keep editing',
+        variant: 'danger',
+        onConfirm: () => {
+          leavingRef.current = true;
+          clearSelection();
+          navigation.dispatch(event.data.action);
+        },
+      });
+    });
+    return unsubscribe;
+  }, [clearSelection, navigation, form, pricing, technicalSpecs]);
 
   const selectedCatalog = form.catalogProductId
     ? (getLiveCatalogProduct(form.catalogProductId) ??
@@ -199,16 +274,28 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
       goToStep(1);
       return;
     }
-    if (
-      !form.brand.trim() ||
-      !form.availableQty.trim() ||
-      !form.warehouseLocation.trim() ||
-      !form.moq.trim()
-    ) {
+    if (!form.warehouseLocation.trim()) {
+      Toast.show({
+        type: 'info',
+        text1: 'Select a warehouse',
+        text2: 'Warehouse is required before continuing.',
+      });
+      return;
+    }
+    if (!validateProductForm('draft')) {
       Toast.show({
         type: 'info',
         text1: 'Complete offer details',
-        text2: 'Brand, stock, warehouse, and MOQ are required.',
+        text2: 'Brand, stock, and a MOQ greater than zero are required.',
+      });
+      return;
+    }
+    const moq = Number(form.moq);
+    if (!Number.isFinite(moq) || moq <= 0) {
+      Toast.show({
+        type: 'info',
+        text1: 'MOQ must be greater than zero',
+        text2: 'Enter a valid minimum order quantity before continuing.',
       });
       return;
     }
@@ -221,6 +308,7 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
     const result = await saveDraftProduct();
     setSaving(false);
     if (result.success) {
+      leavingRef.current = true;
       router.replace(ROUTES.SELLER.PRODUCTS as Href);
       return;
     }
@@ -233,10 +321,29 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
 
   const handlePublish = async () => {
     if (saving) return;
+    const price = Number(pricing.sellingPrice);
+    if (!pricing.sellingPrice.trim() || !Number.isFinite(price) || price <= 0) {
+      Toast.show({
+        type: 'info',
+        text1: 'Enter a selling price',
+        text2: 'Price must be greater than zero before publishing.',
+      });
+      validateProductForm('publish');
+      return;
+    }
+    if (!validateProductForm('publish')) {
+      Toast.show({
+        type: 'info',
+        text1: 'Listing is incomplete',
+        text2: 'Check offer details, MOQ, stock, and price, then try again.',
+      });
+      return;
+    }
     setSaving(true);
     const result = await publishProduct();
     setSaving(false);
     if (result.success && result.productId) {
+      leavingRef.current = true;
       router.replace(
         `${ROUTES.SELLER.PRODUCT_PUBLISHED}?id=${encodeURIComponent(result.productId)}` as Href,
       );
@@ -254,6 +361,12 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
     goToStep(2);
   };
 
+  const sellingPriceValue = Number(pricing.sellingPrice);
+  const canPublish =
+    pricing.sellingPrice.trim().length > 0 &&
+    Number.isFinite(sellingPriceValue) &&
+    sellingPriceValue > 0;
+
   const renderPickerField = (picker: PickerKey, label: string, value: string, error?: string) => (
     <Pressable className="flex-1" onPress={() => setActivePicker(picker)}>
       <SellerTextField
@@ -268,7 +381,11 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
 
   return (
     <ScreenWrapper padded={false} className="bg-brand-background">
-      <SellerHeader showBack title={screenTitle} onBack={() => router.back()} />
+      <SellerHeader
+        showBack
+        title={screenTitle}
+        onBack={() => confirmLeave(() => router.back())}
+      />
 
       <View className="flex-row px-lg pb-sm pt-sm">
         {STEPS.map((item, index) => {
@@ -643,7 +760,7 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
             <SellerPrimaryButton
               label={saving ? 'Publishing…' : isEdit ? 'Publish changes' : 'Publish listing'}
               className="flex-1"
-              disabled={saving}
+              disabled={saving || !canPublish}
               onPress={handlePublish}
             />
           </View>

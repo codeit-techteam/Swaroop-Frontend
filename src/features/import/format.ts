@@ -110,6 +110,32 @@ export function importLabel(value?: string | null): string {
   );
 }
 
+/** Draft listings missing publish-critical fields — shown as Incomplete in lists. */
+export function isImportDraftIncomplete(listing: ImportListing): boolean {
+  if (listing.status !== 'DRAFT') return false;
+  const p = listing.product;
+  const c = listing.commercial;
+  const s = listing.shipping;
+  const qty = Number(p.quantity);
+  const price = Number(c.price);
+  const missingProduct =
+    !p.category ||
+    (!p.grade && !p.customGradeName?.trim()) ||
+    !p.brand ||
+    !p.originCountry ||
+    !Number.isFinite(qty) ||
+    qty <= 0;
+  const missingCommercial =
+    !Number.isFinite(price) ||
+    price <= 0 ||
+    !c.currencyCode ||
+    !c.incoterm ||
+    !(c.priceBasisPort || c.priceBasisLocation) ||
+    !c.paymentTerm;
+  const missingShipping = !s.pol || !s.pod || !s.esd || !s.lsd;
+  return missingProduct || missingCommercial || missingShipping;
+}
+
 export type Tone = 'neutral' | 'info' | 'success' | 'warning' | 'danger';
 
 const TONES: Record<string, Tone> = {

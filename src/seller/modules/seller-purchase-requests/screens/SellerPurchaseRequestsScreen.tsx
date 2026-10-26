@@ -154,7 +154,7 @@ export const SellerPurchaseRequestsScreen = memo(function SellerPurchaseRequests
             <SearchBar
               value={query}
               onChangeText={setQuery}
-              placeholder="Search by request, grade, buyer label"
+              placeholder="Search request, grade, buyer"
             />
           </View>
 
@@ -172,7 +172,7 @@ export const SellerPurchaseRequestsScreen = memo(function SellerPurchaseRequests
             <View className="mt-lg gap-md">
               {visibleItems.length === 0 ? (
                 <EmptyState
-                  variant="no_orders"
+                  variant="no_purchase_requests"
                   onCtaPress={() => router.push(ROUTES.SELLER.OFFERS as Href)}
                 />
               ) : (

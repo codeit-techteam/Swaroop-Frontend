@@ -202,8 +202,12 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       reviewSubmitted,
       // Identity satisfied for checklist (VERIFIED or MANUAL_REVIEW) — not overall KYC approval.
       identityVerified: {
-        pan: verificationAccepted(verifications?.pan),
-        gst: verificationAccepted(verifications?.gst),
+        pan: verificationAccepted(
+          verifications?.pan as Parameters<typeof verificationAccepted>[0],
+        ),
+        gst: verificationAccepted(
+          verifications?.gst as Parameters<typeof verificationAccepted>[0],
+        ),
       },
     });
   },

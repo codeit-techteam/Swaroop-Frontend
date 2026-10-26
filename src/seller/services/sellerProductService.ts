@@ -44,35 +44,14 @@ export const createEmptyProductForm = (): SellerProductForm => ({
   unit: 'MT',
   currency: 'INR',
   gstPercent: '18',
-  reservedQty: '0',
+  reservedQty: '',
   catalogProductId: '',
 });
 
 export { createEmptyPricing };
 
-export const createDefaultTiers = (): SellerPricingTier[] => [
-  {
-    id: 'tier-1',
-    minQty: '1',
-    maxQty: '10',
-    price: '145',
-    discountLabel: 'Standard',
-  },
-  {
-    id: 'tier-2',
-    minQty: '10',
-    maxQty: '50',
-    price: '142',
-    discountLabel: 'Save ₹3/MT',
-  },
-  {
-    id: 'tier-3',
-    minQty: '50',
-    maxQty: '',
-    price: '139',
-    discountLabel: 'Save ₹6/MT',
-  },
-];
+/** Empty by default — sellers add tiers explicitly (avoids bogus "1-0 MT"). */
+export const createDefaultTiers = (): SellerPricingTier[] => [];
 
 export const createEmptyTechnicalSpecs = (): SellerTechnicalSpecs => ({
   mfi: '',
@@ -93,39 +72,19 @@ export const buildDefaultSellerProductSnapshot = (): SellerProductSnapshot => {
     pricing: createEmptyPricing(),
     tiers: createDefaultTiers(),
     technicalSpecs: createEmptyTechnicalSpecs(),
+    // Empty defaults — live counts come from /seller/dashboard/summary and
+    // settlement APIs. Never ship sample financials or catalogue counts.
     dashboardStats: [
-      { id: 'new-orders', label: 'New Orders', value: 8 },
-      { id: 'pending-accept', label: 'Pending Accept', value: 3 },
-      { id: 'active-offers', label: 'Active Offers', value: 3 },
-      { id: 'dispatched', label: 'Dispatched', value: 5 },
+      { id: 'new-orders', label: 'Pending purchase requests', value: 0 },
+      { id: 'pending-accept', label: 'My Products', value: 0 },
+      { id: 'active-offers', label: 'Active Offers', value: 0 },
+      { id: 'dispatched', label: 'Low Stock', value: 0 },
     ],
-    shipments: [
-      {
-        id: 'shipment-1',
-        shipmentId: 'SHP-90214',
-        route: 'Mumbai -> Pune',
-        status: 'On Time',
-        eta: 'Today, 6:30 PM',
-      },
-      {
-        id: 'shipment-2',
-        shipmentId: 'SHP-88321',
-        route: 'Panipat -> Kandla',
-        status: 'In Transit',
-        eta: 'Tomorrow, 9:00 AM',
-      },
-      {
-        id: 'shipment-3',
-        shipmentId: 'SHP-77210',
-        route: 'Jamnagar -> Vizag',
-        status: 'On Time',
-        eta: 'Today, 11:45 PM',
-      },
-    ],
-    revenueToday: '₹24.5L',
-    revenueDelta: '+12%',
-    pendingSettlement: '₹1.2Cr',
-    overdueCount: 4,
+    shipments: [],
+    revenueToday: '₹0',
+    revenueDelta: '',
+    pendingSettlement: '₹0',
+    overdueCount: 0,
   };
 };
 

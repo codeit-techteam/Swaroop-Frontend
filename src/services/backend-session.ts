@@ -82,7 +82,17 @@ async function loginDemoSellerPhone(): Promise<boolean> {
     );
     return persistTokens(unwrapAuthPayload(response.data), 'dev');
   } catch {
-    return false;
+    // Remote API may have AUTH_STRICT_OTP on — use demo password instead.
+    try {
+      const response = await apiClient.post(
+        '/auth/login',
+        { phone: `+91${DEMO_PHONE}`, password: DEMO_PASSWORD },
+        { skipAuth: true, skipRefresh: true } as ApiRequestConfig,
+      );
+      return persistTokens(unwrapAuthPayload(response.data), 'dev');
+    } catch {
+      return false;
+    }
   }
 }
 

@@ -69,6 +69,7 @@ type BlindProduct = {
       id: string;
       code: string;
       name: string;
+      displayName?: string | null;
       parentGroup?: string | null;
     } | null;
   } | null;
@@ -125,31 +126,41 @@ export function mapBlindProduct(product: BlindProduct): MarketProduct {
     categoryIdFromGroup ??
     'polymers';
 
+  // Prefer human-readable category/group labels over raw enum codes (B-10 / N-05 / S-14).
+  const readableCategory =
+    product.grade?.category?.displayName?.trim() ||
+    product.grade?.category?.name?.trim() ||
+    product.grade?.gradeGroup?.replace(/_/g, ' ').trim() ||
+    String(specs.materialType ?? '').trim() ||
+    product.grade?.name ||
+    product.name;
+  const readableBadgeLabel =
+    product.grade?.gradeNo?.trim() ||
+    product.grade?.gradeGroup?.replace(/_/g, ' ').trim() ||
+    readableCategory;
+
   return {
     id: product.id,
     name: displayName,
-    grade: product.grade?.code ?? String(specs.materialType ?? product.code),
+    grade: readableBadgeLabel,
     price: num(listing?.price),
     origin: String(specs.origin ?? product.countryOfOrigin ?? ''),
     stock: num(listing?.quantityAvailable),
     moq: num(listing?.moq),
     eta: String(listing?.leadTime ?? specs.eta ?? ''),
-    category: String(
-      specs.materialType ?? product.grade?.category?.name ?? product.grade?.name ?? product.name,
-    ),
+    category: readableCategory,
     badge: (typeof specs.badge === 'string' ? specs.badge : 'Best Value') as MarketProduct['badge'],
     image: '',
-    gradeCode: product.grade?.code ?? product.code,
+    gradeCode: product.grade?.gradeNo ?? product.grade?.code ?? product.code,
     gradeId: product.grade?.id,
     gradeNo: product.grade?.gradeNo ?? undefined,
     manufacturer:
       product.manufacturer ?? product.brand ?? product.grade?.manufacturer ?? undefined,
     masterCategoryId: product.grade?.category?.id,
-    masterCategoryName: product.grade?.category?.name,
+    masterCategoryName:
+      product.grade?.category?.displayName ?? product.grade?.category?.name,
     categoryId,
-    materialType: String(
-      specs.materialType ?? product.grade?.category?.name ?? product.grade?.name ?? product.name,
-    ),
+    materialType: readableCategory,
     subCategory: typeof specs.subCategory === 'string' ? specs.subCategory : undefined,
     description: product.description ?? undefined,
     warehouseLabel: typeof specs.warehouseLabel === 'string' ? specs.warehouseLabel : undefined,

@@ -248,13 +248,21 @@ export function ImportMyListingsScreen({ mode }: { mode: ImportMode }) {
         <ErrorBlock message={state.error} onRetry={() => void state.reload()} />
       ) : !state.data?.items.length ? (
         <EmptyBlock
-          title={`No ${cfg.copy.ownPlural.toLowerCase()} here`}
+          title={
+            tab === 'draft'
+              ? `No draft ${cfg.copy.ownPlural.toLowerCase()}`
+              : `No ${cfg.copy.ownPlural.toLowerCase()} here`
+          }
           message={
             debounced
               ? 'Try a different search.'
-              : canManage
-                ? `Create a ${cfg.copy.own.toLowerCase()} to get started.`
-                : undefined
+              : tab === 'draft'
+                ? canManage
+                  ? `Start a ${cfg.copy.own.toLowerCase()} and save progress — incomplete drafts stay here until you publish.`
+                  : `Draft ${cfg.copy.ownPlural.toLowerCase()} will appear here when created.`
+                : canManage
+                  ? `Create a ${cfg.copy.own.toLowerCase()} to get started.`
+                  : undefined
           }
         />
       ) : (
@@ -565,11 +573,17 @@ export function ImportMarketScreen({ mode }: { mode: ImportMode }) {
         <ErrorBlock message={state.error} onRetry={() => void state.reload()} />
       ) : !state.data?.items.length ? (
         <EmptyBlock
-          title={`No open ${cfg.copy.marketPlural.toLowerCase()}`}
+          title={
+            cfg.marketSide === 'BUY'
+              ? 'No open buy requests'
+              : `No open ${cfg.copy.marketPlural.toLowerCase()}`
+          }
           message={
             activeFilters || debounced
-              ? 'No listings match these filters. Try widening them.'
-              : 'New listings appear here as soon as they are published.'
+              ? 'No buy or sell offers match these filters. Try widening them.'
+              : cfg.marketSide === 'BUY'
+                ? 'Open buy requests from importers will appear here when they are published.'
+                : 'Open USD/import sell offers will appear here when sellers publish them.'
           }
         />
       ) : (

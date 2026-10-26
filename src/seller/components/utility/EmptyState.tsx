@@ -16,6 +16,7 @@ import { cn } from '@/utils/cn';
 
 export type EmptyStateVariant =
   | 'no_orders'
+  | 'no_purchase_requests'
   | 'no_offers'
   | 'no_products'
   | 'no_inventory'
@@ -35,6 +36,13 @@ const EMPTY_STATE_CONFIG: Record<EmptyStateVariant, EmptyStateConfig> = {
   no_orders: {
     title: 'No Orders Yet',
     description: 'New buyer orders will appear here once they are placed against your offers.',
+    ctaLabel: 'View Offers',
+    icon: <OrdersTabIcon size={28} color={brandColors.primaryDark} />,
+  },
+  no_purchase_requests: {
+    title: 'No purchase requests yet',
+    description:
+      'When buyers submit purchase requests against your listings, they will show up here for accept, reject, or counter.',
     ctaLabel: 'View Offers',
     icon: <OrdersTabIcon size={28} color={brandColors.primaryDark} />,
   },

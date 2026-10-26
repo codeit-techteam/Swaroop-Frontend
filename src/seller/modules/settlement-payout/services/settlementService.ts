@@ -136,12 +136,19 @@ const computeSummary = (settlements: Settlement[]): SettlementSummary => {
   };
 };
 
+/** Empty defaults — live payouts come from the settlements API only (N-11 / S-07). */
 export const buildDefaultSettlementSnapshot = (): SettlementSnapshot => ({
-  settlements: sortSettlements(settlementSeed.settlements),
-  documents: settlementSeed.documents,
-  notifications: settlementSeed.notifications,
-  defaultBankAccount: settlementSeed.defaultBankAccount,
-  summary: computeSummary(settlementSeed.settlements),
+  settlements: [],
+  documents: [],
+  notifications: [],
+  defaultBankAccount: settlementSeed.defaultBankAccount || '',
+  summary: {
+    pendingSettlement: 0,
+    releasedToday: 0,
+    thisMonth: 0,
+    totalEarnings: 0,
+    nextReleaseLabel: 'No pending releases',
+  },
   selectedSettlementId: null,
 });
 
@@ -152,17 +159,30 @@ const loadPersistedSnapshot = (): SettlementSnapshot => {
     {},
   );
 
-  const settlements = persisted.settlements?.length
-    ? sortSettlements(persisted.settlements)
-    : fallback.settlements;
+  // Ignore legacy sample settlements persisted from older builds.
+  const looksLikeSample =
+    Array.isArray(persisted.settlements) &&
+    persisted.settlements.some(
+      (row) =>
+        typeof row?.invoiceNo === 'string' &&
+        (row.invoiceNo.includes('INV-PT-884') || row.settlementId?.includes('STL-2026-01')),
+    );
+
+  const settlements =
+    !looksLikeSample && persisted.settlements?.length
+      ? sortSettlements(persisted.settlements)
+      : fallback.settlements;
 
   return {
     settlements,
-    documents: persisted.documents?.length ? persisted.documents : fallback.documents,
-    notifications: persisted.notifications?.length ? persisted.notifications : fallback.notifications,
+    documents: !looksLikeSample && persisted.documents?.length ? persisted.documents : fallback.documents,
+    notifications:
+      !looksLikeSample && persisted.notifications?.length
+        ? persisted.notifications
+        : fallback.notifications,
     defaultBankAccount: persisted.defaultBankAccount ?? fallback.defaultBankAccount,
     summary: computeSummary(settlements),
-    selectedSettlementId: persisted.selectedSettlementId ?? null,
+    selectedSettlementId: looksLikeSample ? null : (persisted.selectedSettlementId ?? null),
   };
 };
 

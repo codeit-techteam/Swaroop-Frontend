@@ -7,6 +7,7 @@ import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg'
 
 import { Typography } from '@/components';
 import type { RevenueFilterPeriod } from '@/seller/types/analytics';
+import { brandColors } from '@/theme/colors';
 import { cn } from '@/utils/cn';
 
 const FILTER_OPTIONS: { id: RevenueFilterPeriod; label: string }[] = [
@@ -17,8 +18,9 @@ const FILTER_OPTIONS: { id: RevenueFilterPeriod; label: string }[] = [
 ];
 
 const CHART_WIDTH = 320;
-const CHART_HEIGHT = 140;
-const CHART_PADDING = 12;
+const CHART_HEIGHT = 148;
+const CHART_PADDING = 14;
+const NAVY = brandColors.navy;
 
 const buildPath = (values: number[]): string => {
   if (values.length === 0) {
@@ -90,6 +92,13 @@ export const RevenueChart = memo(function RevenueChart({
     return { x, y };
   }, [values]);
 
+  const rangeLabel = useMemo(() => {
+    if (values.length === 0) return null;
+    const max = Math.max(...values);
+    const min = Math.min(...values);
+    return { min: min.toFixed(1), max: max.toFixed(1) };
+  }, [values]);
+
   return (
     <View className="rounded-2xl border border-brand-border bg-brand-white px-md py-md">
       <View className="flex-row items-center justify-between">
@@ -108,14 +117,19 @@ export const RevenueChart = memo(function RevenueChart({
             <Pressable
               key={option.id}
               onPress={() => onPeriodChange(option.id)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
               className={cn(
                 'rounded-full px-md py-xs',
-                active ? 'bg-[#0B4A8B]' : 'bg-brand-surface',
+                active ? 'bg-brand-navy' : 'bg-brand-surface',
               )}
             >
               <Typography
                 variant="badge"
-                className={cn('text-[11px]', active ? 'text-brand-white' : 'text-brand-body')}
+                className={cn(
+                  'text-[11px] tracking-[0.3px]',
+                  active ? 'text-brand-white' : 'text-brand-body',
+                )}
               >
                 {option.label}
               </Typography>
@@ -124,17 +138,28 @@ export const RevenueChart = memo(function RevenueChart({
         })}
       </View>
 
-      <Animated.View key={chartKey} entering={FadeIn.duration(450)} className="mt-md items-center">
+      {rangeLabel ? (
+        <View className="mt-sm flex-row items-center justify-between">
+          <Typography variant="legal" className="text-left text-brand-body">
+            Low {rangeLabel.min}
+          </Typography>
+          <Typography variant="legal" className="text-right text-brand-body">
+            Peak {rangeLabel.max}
+          </Typography>
+        </View>
+      ) : null}
+
+      <Animated.View key={chartKey} entering={FadeIn.duration(450)} className="mt-sm items-center">
         <Svg width="100%" height={CHART_HEIGHT} viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}>
           <Defs>
             <LinearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor="#0B4A8B" stopOpacity="0.25" />
-              <Stop offset="1" stopColor="#0B4A8B" stopOpacity="0.02" />
+              <Stop offset="0" stopColor={NAVY} stopOpacity="0.22" />
+              <Stop offset="1" stopColor={NAVY} stopOpacity="0.02" />
             </LinearGradient>
           </Defs>
           <Path d={areaPath} fill="url(#areaGradient)" />
-          <Path d={linePath} stroke="#0B4A8B" strokeWidth={2.5} fill="none" />
-          {lastPoint ? <Circle cx={lastPoint.x} cy={lastPoint.y} r={4} fill="#0B4A8B" /> : null}
+          <Path d={linePath} stroke={NAVY} strokeWidth={2.5} fill="none" />
+          {lastPoint ? <Circle cx={lastPoint.x} cy={lastPoint.y} r={4} fill={NAVY} /> : null}
         </Svg>
       </Animated.View>
     </View>

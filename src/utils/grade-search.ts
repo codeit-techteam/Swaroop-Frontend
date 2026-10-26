@@ -16,37 +16,70 @@ export type GradeSearchSuggestionItem =
   | { type: 'product'; id: string; product: MarketProduct }
   | { type: 'view-all'; id: string };
 
-const tokenize = (query: string): string[] =>
-  query
-    .trim()
+/** Normalize chemical aliases so TIO2 / TiO₂ / titanium dioxide match (N-03). */
+const normalizeSearchText = (value: string): string =>
+  value
     .toLowerCase()
-    .split(/[\s,]+/)
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/tio₂|tiо2|titanium\s*dioxide|titaniumdioxide/gi, 'tio2')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+
+const SEARCH_ALIASES: Record<string, string[]> = {
+  tio2: ['tio2', 'titanium dioxide', 'white masterbatch', 'mb wh', 'mb-wh'],
+  masterbatch: ['masterbatch', 'mb', 'master batch'],
+};
+
+const tokenize = (query: string): string[] =>
+  normalizeSearchText(query)
+    .split(/\s+/)
     .filter((token) => token.length > 0);
+
+const expandTokens = (tokens: string[]): string[] => {
+  const expanded = new Set<string>();
+  for (const token of tokens) {
+    expanded.add(token);
+    const aliases = SEARCH_ALIASES[token];
+    if (aliases) {
+      for (const alias of aliases) {
+        for (const part of alias.split(/\s+/)) {
+          if (part) expanded.add(part);
+        }
+      }
+    }
+  }
+  return [...expanded];
+};
 
 const productSearchHaystack = (product: MarketProduct): string => {
   const specs = product.technicalSpecs
     ? Object.values(product.technicalSpecs).filter(Boolean).join(' ')
     : '';
 
-  return [
-    product.name,
-    product.grade,
-    product.gradeCode,
-    product.materialType,
-    product.subCategory,
-    product.category,
-    product.categoryId,
-    product.description,
-    product.origin,
-    product.warehouseLabel,
-    product.casNumber,
-    product.badge,
-    specs,
-    ...(product.applications ?? []),
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase();
+  return normalizeSearchText(
+    [
+      product.name,
+      product.grade,
+      product.gradeCode,
+      product.gradeNo,
+      product.manufacturer,
+      product.materialType,
+      product.subCategory,
+      product.category,
+      product.masterCategoryName,
+      product.categoryId,
+      product.description,
+      product.origin,
+      product.warehouseLabel,
+      product.casNumber,
+      product.badge,
+      specs,
+      ...(product.applications ?? []),
+    ]
+      .filter(Boolean)
+      .join(' '),
+  );
 };
 
 const fieldScore = (
@@ -80,7 +113,13 @@ export const matchesGradeQuery = (product: MarketProduct, query: string): boolea
     return true;
   }
   const haystack = productSearchHaystack(product);
-  return tokens.every((token) => haystack.includes(token));
+  // Every original token must match; aliases expand matching for chemical synonyms.
+  const aliases = expandTokens(tokens);
+  return tokens.every(
+    (token) =>
+      haystack.includes(token) ||
+      aliases.some((alias) => alias !== token && haystack.includes(alias) && token.length >= 3),
+  );
 };
 
 export const scoreProductMatch = (product: MarketProduct, query: string): number => {

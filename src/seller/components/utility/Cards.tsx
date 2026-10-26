@@ -4,7 +4,7 @@ import { Pressable, View } from 'react-native';
 
 import { Typography } from '@/components';
 import { SupportReplyPreview } from '@/components/support/SupportReplyPreview';
-import { LockIcon, PhoneIcon } from '@/icons';
+import { HeadsetIcon, LockIcon, PhoneIcon } from '@/icons';
 import { DEVICE_TYPE_LABELS } from '@/seller/mock/security';
 import { TICKET_STATUS_LABELS } from '@/seller/mock/support';
 import type { SupportTicket, TicketStatus } from '@/seller/types/support';
@@ -49,10 +49,19 @@ export const TicketCard = memo(function TicketCard({ ticket, onPress }: TicketCa
             {ticket.subject}
           </Typography>
         </View>
-        <View className={cn('rounded-full px-sm py-xs', statusStyle.bg)}>
-          <Typography variant="badge" className={cn('text-[10px]', statusStyle.text)}>
-            {TICKET_STATUS_LABELS[ticket.status]}
-          </Typography>
+        <View className="items-end gap-xs">
+          <View className={cn('rounded-full px-sm py-xs', statusStyle.bg)}>
+            <Typography variant="badge" className={cn('text-[10px]', statusStyle.text)}>
+              {ticket.apiStatus === 'WAITING_CUSTOMER'
+                ? 'Awaiting reply'
+                : TICKET_STATUS_LABELS[ticket.status]}
+            </Typography>
+          </View>
+          {onPress ? (
+            <Typography variant="badge" className="text-[10px] text-brand-primary">
+              Open chat
+            </Typography>
+          ) : null}
         </View>
       </View>
 
@@ -159,9 +168,10 @@ export const TrustedDeviceCard = memo(function TrustedDeviceCard({
 
 type QuickActionButtonProps = {
   label: string;
-  icon?: 'phone' | 'default';
+  icon?: 'phone' | 'headset' | 'default';
   onPress: () => void;
   disabled?: boolean;
+  highlight?: boolean;
 };
 
 export const QuickActionButton = memo(function QuickActionButton({
@@ -169,19 +179,34 @@ export const QuickActionButton = memo(function QuickActionButton({
   icon = 'default',
   onPress,
   disabled = false,
+  highlight = false,
 }: QuickActionButtonProps) {
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
       className={cn(
-        'flex-1 items-center rounded-2xl border border-brand-border bg-brand-white px-sm py-md',
+        'min-h-[76px] flex-1 items-center justify-center rounded-2xl border px-sm py-md',
+        highlight
+          ? 'border-brand-navy/20 bg-brand-navy'
+          : 'border-brand-border bg-brand-white',
         disabled && 'opacity-50',
       )}
       style={({ pressed }) => ({ opacity: pressed ? 0.88 : disabled ? 0.5 : 1 })}
     >
-      {icon === 'phone' ? <PhoneIcon size={20} color={brandColors.primaryDark} /> : null}
-      <Typography variant="badge" className="mt-xs text-center text-[11px] text-brand-heading">
+      {icon === 'phone' ? (
+        <PhoneIcon size={20} color={highlight ? '#fff' : brandColors.primaryDark} />
+      ) : null}
+      {icon === 'headset' ? (
+        <HeadsetIcon size={20} color={highlight ? '#fff' : brandColors.primaryDark} />
+      ) : null}
+      <Typography
+        variant="badge"
+        className={cn(
+          'mt-xs text-center text-[11px]',
+          highlight ? 'text-white' : 'text-brand-heading',
+        )}
+      >
         {label}
       </Typography>
     </Pressable>

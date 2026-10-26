@@ -6,8 +6,11 @@ import {
 } from '@/seller/mock/support';
 import type {
   RaiseTicketInput,
+  SupportApiStatus,
+  SupportMessageSender,
   SupportSnapshot,
   SupportTicket,
+  SupportTicketMessage,
   TicketCategory,
   TicketFilterTab,
   TicketPriority,
@@ -32,7 +35,14 @@ type BackendTicket = {
   attachmentName?: string | null;
   resolutionNote?: string | null;
   createdAt: string;
-  messages?: Array<{ sender: string; senderName: string; body: string }>;
+  updatedAt?: string;
+  messages?: Array<{
+    id?: string;
+    sender: string;
+    senderName: string;
+    body: string;
+    createdAt?: string;
+  }>;
 };
 
 const CATEGORY_TO_API: Record<TicketCategory, string> = {
@@ -89,12 +99,54 @@ function formatCreatedDate(iso: string): string {
   });
 }
 
+function mapApiStatus(status: string): SupportApiStatus {
+  if (
+    status === 'OPEN' ||
+    status === 'IN_PROGRESS' ||
+    status === 'WAITING_CUSTOMER' ||
+    status === 'RESOLVED' ||
+    status === 'CLOSED'
+  ) {
+    return status;
+  }
+  return 'OPEN';
+}
+
+function mapMessages(row: BackendTicket): SupportTicketMessage[] {
+  return (row.messages ?? []).map((m, index) => {
+    const sender: SupportMessageSender =
+      m.sender === 'AGENT' || m.sender === 'SYSTEM' ? m.sender : 'REQUESTER';
+    return {
+      id: m.id ?? `${row.id}-msg-${index}`,
+      sender,
+      senderName: m.senderName || (sender === 'AGENT' ? 'Support' : 'You'),
+      body: m.body,
+      createdAt: m.createdAt ?? row.createdAt,
+    };
+  });
+}
+
+function supportReplyFields(row: BackendTicket, messages: SupportTicketMessage[]) {
+  const lastAgent = [...messages].reverse().find((m) => m.sender === 'AGENT');
+  const terminal = row.status === 'RESOLVED' || row.status === 'CLOSED';
+  return {
+    awaitingReply: row.status === 'WAITING_CUSTOMER',
+    supportReply: lastAgent
+      ? { body: lastAgent.body, senderName: lastAgent.senderName }
+      : undefined,
+    resolutionNote: terminal ? row.resolutionNote ?? undefined : undefined,
+  };
+}
+
 function mapTicket(row: BackendTicket): SupportTicket {
   const category = CATEGORY_FROM_API[row.category] ?? 'other';
   const categoryLabel =
     row.categoryLabel ??
     TICKET_CATEGORY_OPTIONS.find((o) => o.value === category)?.label ??
     'Other';
+  const messages = mapMessages(row);
+  const createdAt = row.createdAt;
+  const updatedAt = row.updatedAt ?? row.createdAt;
 
   return {
     id: row.id,
@@ -103,25 +155,23 @@ function mapTicket(row: BackendTicket): SupportTicket {
     categoryLabel,
     priority: PRIORITY_FROM_API[row.priority] ?? 'medium',
     status: STATUS_FROM_API[row.status] ?? 'open',
+    apiStatus: mapApiStatus(row.status),
     subject: row.subject,
     description: row.description,
-    createdDate: formatCreatedDate(row.createdAt),
+    createdDate: formatCreatedDate(createdAt),
+    createdAt,
+    updatedAt,
     attachmentName: row.attachmentName ?? undefined,
-    ...supportReplyFields(row),
-  };
-}
-
-function supportReplyFields(row: BackendTicket) {
-  const lastAgent = [...(row.messages ?? [])].reverse().find((m) => m.sender === 'AGENT');
-  const terminal = row.status === 'RESOLVED' || row.status === 'CLOSED';
-  return {
-    awaitingReply: row.status === 'WAITING_CUSTOMER',
-    supportReply: lastAgent ? { body: lastAgent.body, senderName: lastAgent.senderName } : undefined,
-    resolutionNote: terminal ? row.resolutionNote ?? undefined : undefined,
+    messages,
+    ...supportReplyFields(row, messages),
   };
 }
 
 let ticketsCache: SupportTicket[] = [];
+
+function upsertTicket(ticket: SupportTicket) {
+  ticketsCache = [ticket, ...ticketsCache.filter((t) => t.id !== ticket.id)];
+}
 
 export function getSupportSnapshot(): SupportSnapshot {
   return {
@@ -144,12 +194,36 @@ export function filterTicketsByTab(
   return tickets.filter((t) => t.status === 'closed');
 }
 
+/** Prefer tickets that need a reply, then other open threads — used by Chat Support. */
+export function getPreferredChatTicket(
+  tickets: SupportTicket[] = ticketsCache,
+): SupportTicket | undefined {
+  const open = tickets.filter((t) => t.apiStatus !== 'CLOSED' && t.apiStatus !== 'RESOLVED');
+  const awaiting = open.find((t) => t.awaitingReply);
+  if (awaiting) return awaiting;
+  return [...open].sort(
+    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+  )[0];
+}
+
 export async function refreshSupportTickets(): Promise<SupportSnapshot> {
   const payload = await apiClient.get<Envelope<BackendTicket[]>>(
     '/seller/support/tickets?limit=100',
   );
   ticketsCache = (payload.data.data ?? []).map(mapTicket);
   return getSupportSnapshot();
+}
+
+export async function getSupportTicket(ticketId: string): Promise<SupportTicket> {
+  const payload = await apiClient.get<Envelope<BackendTicket>>(
+    `/seller/support/tickets/${ticketId}`,
+  );
+  if (!payload.data.data) {
+    throw new Error(payload.data.message || 'Support ticket not found');
+  }
+  const ticket = mapTicket(payload.data.data);
+  upsertTicket(ticket);
+  return ticket;
 }
 
 export async function createSupportTicket(
@@ -170,7 +244,23 @@ export async function createSupportTicket(
     throw new Error(payload.data.message || 'Failed to create support ticket');
   }
   const ticket = mapTicket(payload.data.data);
-  ticketsCache = [ticket, ...ticketsCache.filter((t) => t.id !== ticket.id)];
+  upsertTicket(ticket);
+  return ticket;
+}
+
+export async function replySupportTicket(
+  ticketId: string,
+  body: string,
+): Promise<SupportTicket> {
+  const payload = await apiClient.post<Envelope<BackendTicket>>(
+    `/seller/support/tickets/${ticketId}/reply`,
+    { body: body.trim() },
+  );
+  if (!payload.data.data) {
+    throw new Error(payload.data.message || 'Failed to send reply');
+  }
+  const ticket = mapTicket(payload.data.data);
+  upsertTicket(ticket);
   return ticket;
 }
 

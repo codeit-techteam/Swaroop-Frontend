@@ -19,7 +19,7 @@ import {
   SecondaryButton,
   Typography,
 } from '@/components';
-import { DEMO_PHONE, DEMO_OTP, DEMO_USER_NAME, DEVELOPMENT_MODE } from '@/config/development';
+import { DEVELOPMENT_MODE, DEMO_PHONE, DEMO_OTP, DEMO_USER_NAME } from '@/config/development';
 import { LockIcon } from '@/icons';
 import { useZodForm } from '@/lib/forms';
 import { parseReturnToParam } from '@/navigation/return-to';
@@ -31,10 +31,17 @@ import {
 } from '@/services/customer-auth';
 import { openContactSupport } from '@/services/legal-links';
 import { brandColors } from '@/theme/colors';
-import { phoneSchema } from '@/utils/validators';
+import {
+  indianMobileFieldError,
+  isCompleteIndianMobile,
+  sanitizeIndianMobileInput,
+} from '@/utils/phone-input';
 
 const loginSchema = z.object({
-  mobile: phoneSchema,
+  mobile: z
+    .string()
+    .transform(sanitizeIndianMobileInput)
+    .refine(isCompleteIndianMobile, 'Enter a valid 10-digit Indian mobile number'),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -45,17 +52,25 @@ export const CustomerLoginScreen = () => {
   const returnTo = parseReturnToParam(params.returnTo);
   const [isSending, setIsSending] = useState(false);
   const [sendError, setSendError] = useState<string | undefined>();
+  const [submitted, setSubmitted] = useState(false);
   const {
     control,
     handleSubmit,
-    formState: { isValid },
+    watch,
   } = useZodForm(loginSchema, {
-    defaultValues: { mobile: DEVELOPMENT_MODE ? DEMO_PHONE : '' },
+    defaultValues: { mobile: '' },
     mode: 'onChange',
   });
 
+  const mobileValue = watch('mobile');
+
   const onGetOtp = useCallback(
     async (values: LoginFormValues) => {
+      setSubmitted(true);
+      if (!isCompleteIndianMobile(values.mobile)) {
+        setSendError('Enter your 10-digit mobile number.');
+        return;
+      }
       setIsSending(true);
       setSendError(undefined);
       try {
@@ -79,6 +94,11 @@ export const CustomerLoginScreen = () => {
     },
     [returnTo, router],
   );
+
+  const onEmptyGetOtp = useCallback(() => {
+    setSubmitted(true);
+    setSendError('Enter your 10-digit mobile number.');
+  }, []);
 
   const onSignUp = useCallback(() => {
     router.push({
@@ -111,32 +131,50 @@ export const CustomerLoginScreen = () => {
           <Controller
             control={control}
             name="mobile"
-            render={({ field: { onChange, onBlur, value }, fieldState }) => (
-              <InputField
-                label="Mobile Number"
-                placeholder="98765 43210"
-                keyboardType="phone-pad"
-                maxLength={10}
-                value={value}
-                onChangeText={onChange}
-                onBlur={onBlur}
-                error={fieldState.error?.message ?? sendError}
-                leftSlot={<CountryPicker />}
-              />
-            )}
+            render={({ field: { onChange, onBlur, value }, fieldState }) => {
+              const liveError =
+                fieldState.error?.message ??
+                indianMobileFieldError(value, {
+                  touched: fieldState.isTouched,
+                  submitted,
+                }) ??
+                sendError;
+              return (
+                <InputField
+                  label="Mobile Number"
+                  placeholder="98765 43210"
+                  keyboardType="number-pad"
+                  maxLength={10}
+                  value={value}
+                  onChangeText={(text) => {
+                    onChange(sanitizeIndianMobileInput(text));
+                    setSendError(undefined);
+                  }}
+                  onBlur={onBlur}
+                  error={liveError}
+                  leftSlot={<CountryPicker />}
+                />
+              );
+            }}
           />
 
           <PrimaryButton
             label="GET OTP"
             className="mt-xl"
-            disabled={!isValid}
+            disabled={isSending}
             loading={isSending}
-            onPress={handleSubmit(onGetOtp)}
+            onPress={() => {
+              if (!mobileValue?.trim()) {
+                onEmptyGetOtp();
+                return;
+              }
+              void handleSubmit(onGetOtp)();
+            }}
           />
 
           {DEVELOPMENT_MODE ? (
             <Typography variant="legal" className="mt-md text-center">
-              Dev: {DEMO_USER_NAME} · {DEMO_PHONE} · OTP {DEMO_OTP}
+              Dev only: {DEMO_USER_NAME} · {DEMO_PHONE} · OTP {DEMO_OTP}
             </Typography>
           ) : null}
 
@@ -154,7 +192,7 @@ export const CustomerLoginScreen = () => {
           <View className="mt-xl items-center gap-sm">
             <View className="flex-row items-center gap-xs">
               <LockIcon />
-              <Typography variant="success">Authorized Personnel Only</Typography>
+              <Typography variant="success">Secure login for registered buyers</Typography>
             </View>
             <Pressable
               accessibilityRole="link"

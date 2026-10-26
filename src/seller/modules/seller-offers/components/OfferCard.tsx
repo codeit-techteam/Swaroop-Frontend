@@ -5,7 +5,7 @@ import { Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Typography } from '@/components';
-import { CopyIcon, EditIcon, LocationPinIcon, TrashIcon } from '@/icons';
+import { ChevronRightIcon, CopyIcon, EditIcon, LocationPinIcon, TrashIcon } from '@/icons';
 import { OfferAnalyticsCard } from '@/seller/modules/seller-offers/components/OfferAnalyticsCard';
 import { InventoryProgressCard } from '@/seller/modules/seller-offers/components/InventoryProgressCard';
 import { OfferStatusBadge } from '@/seller/modules/seller-offers/components/OfferStatusBadge';
@@ -68,100 +68,124 @@ export const OfferCard = memo(function OfferCard({
   );
 
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole={onPress ? 'button' : undefined}
-      accessibilityLabel={`${offer.product}, ${formatKgPrice(offer.basePrice)} per kg`}
+    <View
       className="mb-md overflow-hidden rounded-[24px] border border-brand-border bg-brand-white"
-      style={({ pressed }) => [
-        elevation.sm,
-        { opacity: pressed && onPress ? 0.97 : 1, transform: [{ scale: pressed && onPress ? 0.995 : 1 }] },
-      ]}
+      style={elevation.sm}
     >
       <View className={cn('absolute bottom-0 left-0 top-0 w-1', ACCENT[offer.status])} />
 
-      <View className="px-md pb-sm pt-md">
-        <View className="flex-row items-start justify-between">
-          <View className="flex-1 pr-md">
-            <View className="flex-row flex-wrap items-center gap-xs">
-              <View className="rounded-md bg-brand-primary-light px-sm py-xs">
-                <Typography variant="badge" className="text-[10px] tracking-[0.6px] text-brand-primary-dark">
-                  {offer.category}
+      <Pressable
+        onPress={onPress}
+        accessibilityRole={onPress ? 'button' : undefined}
+        accessibilityLabel={`View offer ${offer.product}, ${formatKgPrice(offer.basePrice)} per kg`}
+        style={({ pressed }) => [{ opacity: pressed && onPress ? 0.97 : 1 }]}
+      >
+        <View className="px-md pb-sm pt-md">
+          <View className="flex-row items-start justify-between">
+            <View className="flex-1 pr-sm">
+              <View className="flex-row flex-wrap items-center gap-xs">
+                <View className="rounded-md bg-brand-primary-light px-sm py-xs">
+                  <Typography
+                    variant="badge"
+                    className="text-[10px] tracking-[0.6px] text-brand-primary-dark"
+                  >
+                    {offer.category}
+                  </Typography>
+                </View>
+                <OfferStatusBadge status={offer.status} compact />
+                {lowStock && isActive ? (
+                  <View className="rounded-full bg-brand-error-light px-sm py-xs">
+                    <Typography variant="badge" className="text-[10px] text-brand-error">
+                      LOW STOCK
+                    </Typography>
+                  </View>
+                ) : null}
+              </View>
+              <Typography
+                variant="headingLeft"
+                className="mt-sm text-[18px] leading-[24px] text-brand-heading"
+                numberOfLines={2}
+              >
+                {offer.product}
+              </Typography>
+              <View className="mt-xs flex-row flex-wrap items-center gap-xs">
+                <Typography variant="legal" className="text-left text-[11px] text-brand-body">
+                  {offer.offerId}
+                </Typography>
+                <Typography variant="legal" className="text-[11px] text-brand-footer">
+                  ·
+                </Typography>
+                <LocationPinIcon size={11} color={brandColors.footer} />
+                <Typography
+                  variant="legal"
+                  className="flex-1 text-left text-[11px] text-brand-body"
+                  numberOfLines={1}
+                >
+                  {offer.warehouse}
                 </Typography>
               </View>
-              <OfferStatusBadge status={offer.status} compact />
-              {lowStock && isActive ? (
-                <View className="rounded-full bg-brand-error-light px-sm py-xs">
-                  <Typography variant="badge" className="text-[10px] text-brand-error">
-                    LOW STOCK
+            </View>
+
+            <View className="items-end">
+              <View className="items-end rounded-2xl bg-brand-primary-tint px-md py-sm">
+                <Typography
+                  variant="headingLeft"
+                  className="text-[20px] leading-[24px] text-brand-navy"
+                >
+                  {formatKgPrice(offer.basePrice)}
+                </Typography>
+                <Typography variant="legal" className="mt-[2px] text-right text-[10px] text-brand-body">
+                  /kg · MOQ {offer.moq} MT
+                </Typography>
+              </View>
+              {onPress ? (
+                <View className="mt-sm flex-row items-center self-end">
+                  <Typography variant="badge" className="text-[10px] text-brand-primary-dark">
+                    Details
                   </Typography>
+                  <ChevronRightIcon size={14} color={brandColors.primaryDark} />
                 </View>
               ) : null}
             </View>
+          </View>
+        </View>
+
+        {isDraft ? (
+          <View className="mx-md mb-md rounded-2xl bg-brand-primary-tint px-md py-sm">
+            <Typography variant="legal" className="text-left text-[12px] text-brand-primary-dark">
+              Draft saved. Finish pricing and submit to go live on the marketplace.
+            </Typography>
+          </View>
+        ) : (
+          <View className="px-md pb-md">
+            <OfferAnalyticsCard analytics={offer.analytics} compact />
+          </View>
+        )}
+
+        {offer.tiers.length > 0 ? (
+          <View className="px-md pb-md">
             <Typography
-              variant="headingLeft"
-              className="mt-sm text-[18px] leading-[24px] text-brand-heading"
-              numberOfLines={2}
+              variant="badge"
+              className="mb-xs text-[10px] tracking-[0.8px] text-brand-body"
             >
-              {offer.product}
+              BULK TIERS
             </Typography>
-            <View className="mt-xs flex-row flex-wrap items-center gap-xs">
-              <Typography variant="legal" className="text-left text-[11px] text-brand-body">
-                {offer.offerId}
-              </Typography>
-              <Typography variant="legal" className="text-[11px] text-brand-footer">
-                ·
-              </Typography>
-              <LocationPinIcon size={11} color={brandColors.footer} />
-              <Typography variant="legal" className="text-left text-[11px] text-brand-body" numberOfLines={1}>
-                {offer.warehouse}
-              </Typography>
-            </View>
+            <OfferTierList tiers={offer.tiers} highlightLast compact />
           </View>
+        ) : null}
 
-          <View className="items-end rounded-2xl bg-brand-primary-tint px-md py-sm">
-            <Typography variant="headingLeft" className="text-[20px] leading-[24px] text-brand-navy">
-              {formatKgPrice(offer.basePrice)}
-            </Typography>
-            <Typography variant="legal" className="mt-[2px] text-right text-[10px] text-brand-body">
-              /kg · MOQ {offer.moq} MT
-            </Typography>
-          </View>
-        </View>
-      </View>
-
-      {isDraft ? (
-        <View className="mx-md mb-md rounded-2xl bg-brand-primary-tint px-md py-sm">
-          <Typography variant="legal" className="text-left text-[12px] text-brand-primary-dark">
-            Draft saved. Finish pricing and submit to go live on the marketplace.
+        <View className="px-md pb-md">
+          <InventoryProgressCard
+            allocatedStock={offer.allocatedStock}
+            reservedStock={offer.reservedStock}
+            remainingStock={offer.remainingStock}
+            compact
+          />
+          <Typography variant="legal" className="mt-xs text-left text-[11px] text-brand-footer">
+            {expiryLabel}
           </Typography>
         </View>
-      ) : (
-        <View className="px-md pb-md">
-          <OfferAnalyticsCard analytics={offer.analytics} compact />
-        </View>
-      )}
-
-      {offer.tiers.length > 0 ? (
-        <View className="px-md pb-md">
-          <Typography variant="badge" className="mb-xs text-[10px] tracking-[0.8px] text-brand-body">
-            BULK TIERS
-          </Typography>
-          <OfferTierList tiers={offer.tiers} highlightLast compact />
-        </View>
-      ) : null}
-
-      <View className="px-md pb-md">
-        <InventoryProgressCard
-          allocatedStock={offer.allocatedStock}
-          reservedStock={offer.reservedStock}
-          remainingStock={offer.remainingStock}
-          compact
-        />
-        <Typography variant="legal" className="mt-xs text-left text-[11px] text-brand-footer">
-          {expiryLabel}
-        </Typography>
-      </View>
+      </Pressable>
 
       <View className="flex-row items-center gap-sm border-t border-brand-border px-md py-md">
         {isPaused ? (
@@ -211,7 +235,7 @@ export const OfferCard = memo(function OfferCard({
           <TrashIcon size={16} color={brandColors.error} />
         </Pressable>
       </View>
-    </Pressable>
+    </View>
   );
 });
 

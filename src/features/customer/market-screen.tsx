@@ -42,10 +42,11 @@ export const CustomerMarketScreen = () => {
   const params = useLocalSearchParams<{ focusSearch?: string | string[] }>();
   const { products: marketProducts, loading, error, refetch } = useMarketplaceCatalogQuery();
   const [promoBanners, setPromoBanners] = useState<HomeBanner[]>([]);
+  const [inStockOnly, setInStockOnly] = useState(false);
   const {
     query,
     selectedCategory,
-    filteredProducts,
+    filteredProducts: searchedProducts,
     expandedAcrossCategories,
     suggestions,
     recentSearches,
@@ -65,6 +66,10 @@ export const CustomerMarketScreen = () => {
     handleSelectCategory,
     handleDismissSuggestions,
   } = useMarketSearch(marketProducts);
+  const filteredProducts = useMemo(
+    () => (inStockOnly ? searchedProducts.filter((product) => product.stock > 0) : searchedProducts),
+    [inStockOnly, searchedProducts],
+  );
   const { data: gradeCategories } = useCustomerMarketplaceCategories();
   const categories = useMemo(
     () => marketCategoryChips(gradeCategories ?? [], marketProducts),
@@ -144,11 +149,17 @@ export const CustomerMarketScreen = () => {
   }, []);
 
   const handleFilterPress = useCallback(() => {
-    Toast.show({
-      type: 'info',
-      text1: 'Filters',
-      text2: 'Advanced filters will be available soon.',
-      visibilityTime: 2000,
+    setInStockOnly((prev) => {
+      const next = !prev;
+      Toast.show({
+        type: 'info',
+        text1: next ? 'Showing in-stock grades' : 'Showing all grades',
+        text2: next
+          ? 'Only grades with available stock are listed.'
+          : 'Stock filter cleared. Category chips still apply.',
+        visibilityTime: 1800,
+      });
+      return next;
     });
   }, []);
 
@@ -331,6 +342,7 @@ export const CustomerMarketScreen = () => {
             selectedCategory={selectedCategory}
             onSelectCategory={handleSelectCategory}
             onFilterPress={handleFilterPress}
+            filterLabel={inStockOnly ? 'In stock' : 'Filter'}
           />
 
           {promoBanners.length > 0 ? (

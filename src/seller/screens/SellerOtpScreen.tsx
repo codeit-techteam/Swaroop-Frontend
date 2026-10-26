@@ -5,19 +5,11 @@ import { Pressable, View } from 'react-native';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 
 import { AuthCard, FooterLinks, OtpInput, ScreenWrapper, Typography } from '@/components';
-import {
-  DEMO_OTP,
-  DEMO_USER_NAME,
-  DEVELOPMENT_MODE,
-  isOfflineBackendFallbackEnabled,
-} from '@/config/development';
+import { DEMO_OTP, DEMO_USER_NAME, DEVELOPMENT_MODE } from '@/config/development';
 import { SellerHeader, SellerPrimaryButton } from '@/seller/components';
 import { SELLER_RESEND_SECONDS } from '@/seller/constants';
 import { getSellerInitialRoute } from '@/seller/navigation/getSellerInitialRoute';
-import {
-  isKnownExistingDemoSeller,
-  resolveSellerHomeAccess,
-} from '@/seller/navigation/resolveSellerHome';
+import { resolveSellerHomeAccess } from '@/seller/navigation/resolveSellerHome';
 import { useSellerStore } from '@/seller/store/sellerStore';
 import { authenticateSellerFromOtp, requestSellerOtpSend } from '@/services/seller-auth';
 
@@ -48,32 +40,23 @@ export const SellerOtpScreen = () => {
 
   const handleVerify = useCallback(async () => {
     const mobile = params.mobile ?? '';
+    if (otp.length !== 6 || isVerifying) return;
     setIsVerifying(true);
     setOtpError(undefined);
     try {
       const result = await authenticateSellerFromOtp(mobile, otp);
       if (!result.ok) {
-        if (!isOfflineBackendFallbackEnabled()) {
-          setOtpError(result.message);
-          return;
-        }
-        // Offline DEV fallback: still mark local session so UI remains usable.
-        if (otp !== DEMO_OTP) {
-          setOtpError(result.message);
-          return;
-        }
+        setOtpError(result.message);
+        return;
       }
 
       setMobile(mobile);
       void useSellerStore.getState().refreshSellerAccount();
 
       const access = await resolveSellerHomeAccess();
-      const openHome =
-        access === 'home' || (access === 'unknown' && isKnownExistingDemoSeller(mobile, otp));
-
-      if (openHome && access !== 'home') {
+      if (access === 'home') {
         grantExistingSellerAccess();
-      } else if (!openHome) {
+      } else {
         markOtpVerified();
       }
 
@@ -81,7 +64,24 @@ export const SellerOtpScreen = () => {
     } finally {
       setIsVerifying(false);
     }
-  }, [grantExistingSellerAccess, markOtpVerified, otp, params.mobile, router, setMobile]);
+  }, [
+    grantExistingSellerAccess,
+    isVerifying,
+    markOtpVerified,
+    otp,
+    params.mobile,
+    router,
+    setMobile,
+  ]);
+
+  // Auto-submit when the sixth digit is entered (L-10).
+  useEffect(() => {
+    if (otp.length === 6 && !isVerifying && !otpError) {
+      void handleVerify();
+    }
+    // Only react to length completing — avoid loops on error.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional one-shot on 6 digits
+  }, [otp]);
 
   const handleResend = useCallback(async () => {
     if (secondsLeft > 0 || isResending) return;

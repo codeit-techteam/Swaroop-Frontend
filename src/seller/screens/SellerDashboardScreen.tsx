@@ -43,6 +43,7 @@ import { useSellerLocationStore } from '@/seller/store/sellerLocationStore';
 import { useSellerProductStore } from '@/seller/store/sellerProductStore';
 import { useSellerStore } from '@/seller/store/sellerStore';
 import type { SellerShipment } from '@/seller/types';
+import { formatSellerAddress } from '@/services/seller-profile';
 import { brandColors } from '@/theme/colors';
 
 const AnimatedSection = Animated.View;
@@ -95,10 +96,32 @@ export const SellerDashboardScreen = memo(function SellerDashboardScreen() {
   const { dashboardPreviews } = useSellerShipments();
   const revenueToday = useSellerProductStore((state) => state.revenueToday);
   const revenueDelta = useSellerProductStore((state) => state.revenueDelta);
-  const overdueCount = useSellerProductStore((state) => state.overdueCount);
-  const pendingSettlement = useSellerProductStore((state) => state.pendingSettlement);
+  const publishedProductsCount = useSellerProductStore(
+    (state) => state.publishedProducts.length,
+  );
   const clearSelection = useSellerProductStore((state) => state.clearSelection);
   const settlementSummary = useSettlementStore((state) => state.summary);
+  const settlements = useSettlementStore((state) => state.settlements);
+  // N-11: derive overdue banner from the same settlements the Payouts tab lists.
+  const { overdueCount, pendingSettlementLabel } = useMemo(() => {
+    const now = Date.now();
+    const open = settlements.filter(
+      (item) => item.status === 'pending' || item.status === 'processing',
+    );
+    const overdue = open.filter((item) => {
+      if (!item.expectedDate) return false;
+      const due = new Date(item.expectedDate).getTime();
+      return Number.isFinite(due) && due < now;
+    });
+    return {
+      overdueCount: overdue.length,
+      pendingSettlementLabel: formatSettlementAmount(
+        overdue.reduce((sum, item) => sum + (item.netAmount || 0), 0) ||
+          settlementSummary.pendingSettlement,
+        true,
+      ),
+    };
+  }, [settlementSummary.pendingSettlement, settlements]);
 
   useEffect(() => {
     if (!settlementHydrated) {
@@ -128,6 +151,13 @@ export const SellerDashboardScreen = memo(function SellerDashboardScreen() {
     s.locations.find((row) => row.id === s.currentLocationId),
   );
   const locationsHydrated = useSellerLocationStore((s) => s.isHydrated);
+  const account = useSellerStore((state) => state.account);
+  const businessAddressLabel = useMemo(() => formatSellerAddress(account), [account]);
+  const locationLabel = businessAddressLabel
+    ? businessAddressLabel
+    : currentLocation
+      ? `${currentLocation.city || currentLocation.name} · ${currentLocation.warehouse}`
+      : null;
 
   const goToAddProduct = () => {
     clearSelection();
@@ -149,13 +179,14 @@ export const SellerDashboardScreen = memo(function SellerDashboardScreen() {
     () => [
       {
         id: 'new-orders',
-        label: 'Pending PRs',
+        label: 'Pending purchase requests',
         value: dashboardSummary.pendingPurchaseRequests || orderSummary.pending,
       },
       {
         id: 'pending-accept',
+        // Prefer hydrated listing count so dashboard matches My listings (S-01).
         label: 'My Products',
-        value: dashboardSummary.products.active,
+        value: publishedProductsCount || dashboardSummary.products.active,
       },
       {
         id: 'active-offers',
@@ -175,6 +206,7 @@ export const SellerDashboardScreen = memo(function SellerDashboardScreen() {
       dashboardSummary.products.active,
       offerStats.active,
       orderSummary.pending,
+      publishedProductsCount,
     ],
   );
 
@@ -215,11 +247,17 @@ export const SellerDashboardScreen = memo(function SellerDashboardScreen() {
       router.push(ROUTES.SELLER.INVENTORY as Href);
       return;
     }
+    // "My Products" — catalog / listings (was wrongly routed to Purchase Requests)
     if (statId === 'pending-accept') {
+      router.push(ROUTES.SELLER.PRODUCTS as Href);
+      return;
+    }
+    // "Pending PRs"
+    if (statId === 'new-orders') {
       router.push(ROUTES.SELLER.PURCHASE_REQUESTS as Href);
       return;
     }
-    router.push(ROUTES.SELLER.PURCHASE_REQUESTS as Href);
+    router.push(ROUTES.SELLER.DASHBOARD as Href);
   };
 
   return (
@@ -242,26 +280,24 @@ export const SellerDashboardScreen = memo(function SellerDashboardScreen() {
 
           <DashboardSearchButton onPress={() => router.push(ROUTES.SELLER.SEARCH as Href)} />
 
-          {locationsHydrated ? (
+          {locationsHydrated || businessAddressLabel ? (
             <Pressable
               onPress={() => locationSheetRef.current?.present()}
               accessibilityRole="button"
-              accessibilityLabel="Change operating location"
+              accessibilityLabel="Business or operating location"
               className="mt-sm flex-row items-center self-start"
               hitSlop={6}
             >
               <LocationPinIcon color={brandColors.primary} />
               <Typography
                 variant="caption"
-                className="ml-xs font-sans text-[12px] normal-case tracking-normal text-brand-heading"
+                className="ml-xs max-w-[240px] font-sans text-[12px] normal-case tracking-normal text-brand-heading"
                 numberOfLines={1}
               >
-                {currentLocation
-                  ? `${currentLocation.city || currentLocation.name} · ${currentLocation.warehouse}`
-                  : 'Set operating location'}
+                {locationLabel ?? 'Set business address'}
               </Typography>
               <Typography variant="link" className="ml-xs font-semibold text-[12px]">
-                {currentLocation ? 'Change' : 'Add'}
+                {locationLabel ? 'Change' : 'Add'}
               </Typography>
             </Pressable>
           ) : null}
@@ -292,7 +328,7 @@ export const SellerDashboardScreen = memo(function SellerDashboardScreen() {
               <AnimatedSection entering={FadeInDown.duration(380).delay(90)}>
                 <OverdueBanner
                   overdueCount={overdueCount}
-                  pendingSettlement={pendingSettlement}
+                  pendingSettlement={pendingSettlementLabel}
                   onPress={() => router.push(ROUTES.SELLER.SETTLEMENTS as Href)}
                 />
               </AnimatedSection>

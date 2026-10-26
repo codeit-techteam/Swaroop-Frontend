@@ -64,16 +64,24 @@ const buildComplianceStatus = (params: {
 }): ComplianceStatus => {
   const { kycApproved, gstVerified, panVerified, documentsComplete } = params;
 
+  let summary: string;
+  if (kycApproved && documentsComplete) {
+    summary = 'All mandatory documents are verified and strictly compliant with regulations.';
+  } else if (kycApproved && !documentsComplete) {
+    summary = 'KYC is approved. Upload any remaining documents to finish compliance.';
+  } else if (documentsComplete || gstVerified || panVerified) {
+    summary = 'Verification is in progress. Finish any pending KYC steps to unlock full access.';
+  } else {
+    summary = 'Complete KYC verification to unlock full enterprise compliance status.';
+  }
+
   return {
     kycVerified: kycApproved,
     gstVerified,
     panVerified,
     documentsComplete,
     validTillLabel: getComplianceValidTillLabel(),
-    summary:
-      kycApproved && documentsComplete
-        ? 'All mandatory documents are verified and strictly compliant with regulations.'
-        : 'Complete KYC verification to unlock full enterprise compliance status.',
+    summary,
   };
 };
 

@@ -107,6 +107,7 @@ export const ROUTES = {
     DISPATCH_SUCCESS: '/(seller)/dispatch-success',
     ANALYTICS: '/(seller)/analytics',
     SUPPORT: '/(seller)/support',
+    TICKET_CHAT: '/(seller)/ticket-chat',
     SETTINGS: '/(seller)/settings',
     NOTIFICATIONS: '/(seller)/notifications',
     PROFILE: '/(seller)/profile',
@@ -252,6 +253,7 @@ export type SellerRoute =
   | typeof ROUTES.SELLER.DISPATCH_SUCCESS
   | typeof ROUTES.SELLER.ANALYTICS
   | typeof ROUTES.SELLER.SUPPORT
+  | typeof ROUTES.SELLER.TICKET_CHAT
   | typeof ROUTES.SELLER.SETTINGS
   | typeof ROUTES.SELLER.NOTIFICATIONS
   | typeof ROUTES.SELLER.PROFILE
@@ -282,7 +284,8 @@ export type SellerRoute =
   | typeof ROUTES.SELLER.PROCUREMENT_WORKBENCH
   | typeof ROUTES.SELLER.IMPORT_TRADING
   | typeof ROUTES.SELLER.SEARCH
-  | typeof ROUTES.SELLER.RAISE_TICKET;
+  | typeof ROUTES.SELLER.RAISE_TICKET
+  | typeof ROUTES.SELLER.TICKET_CHAT;
 
 export type PublicRoute = typeof ROUTES.PUBLIC.ROOT;
 

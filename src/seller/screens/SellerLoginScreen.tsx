@@ -18,51 +18,49 @@ import {
 import { DEMO_PHONE, DEVELOPMENT_MODE } from '@/config/development';
 import { useZodForm } from '@/lib/forms';
 import { ROUTES } from '@/navigation/routes';
-import { SellerPrimaryButton, SellerTextField } from '@/seller/components';
-import { getSellerInitialRoute } from '@/seller/navigation/getSellerInitialRoute';
+import { SellerHeader, SellerPrimaryButton, SellerTextField } from '@/seller/components';
 import { useSellerStore } from '@/seller/store/sellerStore';
 import { openContactSupport } from '@/services/legal-links';
 import { requestSellerOtpSend } from '@/services/seller-auth';
-import { phoneSchema } from '@/utils/validators';
+import {
+  indianMobileFieldError,
+  isCompleteIndianMobile,
+  sanitizeIndianMobileInput,
+} from '@/utils/phone-input';
 
 const sellerLoginSchema = z.object({
-  mobile: phoneSchema,
+  mobile: z
+    .string()
+    .transform(sanitizeIndianMobileInput)
+    .refine(isCompleteIndianMobile, 'Enter a valid 10-digit Indian mobile number'),
 });
 
 type SellerLoginValues = z.infer<typeof sellerLoginSchema>;
 
 export const SellerLoginScreen = () => {
   const router = useRouter();
-  const snapshot = useSellerStore((state) => state);
   const setMobile = useSellerStore((state) => state.setMobile);
   const [isSending, setIsSending] = useState(false);
   const [hint, setHint] = useState<string | undefined>();
+  const [submitted, setSubmitted] = useState(false);
   const {
     control,
     handleSubmit,
-    formState: { isValid },
+    watch,
   } = useZodForm(sellerLoginSchema, {
-    defaultValues: { mobile: snapshot.mobile || (DEVELOPMENT_MODE ? DEMO_PHONE : '') },
+    defaultValues: { mobile: '' },
     mode: 'onChange',
   });
 
+  const mobileValue = watch('mobile');
+
   const handleGetOtp = useCallback(
     async (values: SellerLoginValues) => {
+      setSubmitted(true);
       setMobile(values.mobile);
       setIsSending(true);
       setHint(undefined);
       try {
-        // Skip OTP for repeat demo sessions that already have dashboard access.
-        if (
-          DEVELOPMENT_MODE &&
-          values.mobile === DEMO_PHONE &&
-          snapshot.sellerLoggedIn &&
-          snapshot.dashboardAccess
-        ) {
-          router.replace(getSellerInitialRoute(useSellerStore.getState()) as Href);
-          return;
-        }
-
         const result = await requestSellerOtpSend(values.mobile);
         if (result.message) {
           setHint(result.message);
@@ -79,16 +77,22 @@ export const SellerLoginScreen = () => {
         setIsSending(false);
       }
     },
-    [router, setMobile, snapshot.dashboardAccess, snapshot.sellerLoggedIn],
+    [router, setMobile],
   );
 
   return (
     <ScreenWrapper scrollable className="bg-brand-background">
+      <SellerHeader showBack title="Seller Login" onBack={() => router.back()} />
+
       <View className="py-lg">
         <AppLogo className="self-start" />
       </View>
 
       <AuthCard className="rounded-2xl">
+        <View className="mb-lg flex-row items-center gap-xs self-start rounded-full bg-brand-badge px-md py-sm">
+          <Typography variant="badge">SECURE ENTERPRISE LOGIN</Typography>
+        </View>
+
         <Typography variant="headingLeft">Seller Login</Typography>
         <Typography variant="subheadingLeft" className="mt-sm">
           Enter your registered mobile number to continue to the seller console.
@@ -101,38 +105,49 @@ export const SellerLoginScreen = () => {
             <SellerTextField
               label="Mobile Number"
               placeholder="98765 43210"
-              keyboardType="phone-pad"
+              keyboardType="number-pad"
               maxLength={10}
               value={value}
-              onChangeText={onChange}
+              onChangeText={(text) => {
+                onChange(sanitizeIndianMobileInput(text));
+                setHint(undefined);
+              }}
               onBlur={onBlur}
-              error={fieldState.error?.message}
+              error={
+                fieldState.error?.message ??
+                indianMobileFieldError(value, {
+                  touched: fieldState.isTouched,
+                  submitted,
+                }) ??
+                hint
+              }
               leftSlot={<CountryPicker />}
               containerClassName="mt-xl"
             />
           )}
         />
 
-        {hint ? (
-          <Typography variant="legal" className="mt-sm text-left text-brand-muted">
-            {hint}
-          </Typography>
-        ) : null}
-
         <SellerPrimaryButton
-          label={isSending ? 'Sending…' : 'Get OTP'}
+          label={isSending ? 'Sending…' : 'GET OTP'}
           showArrow
           className="mt-xl"
-          disabled={!isValid || isSending}
-          onPress={handleSubmit((values) => {
-            void handleGetOtp(values);
-          })}
+          disabled={isSending}
+          onPress={() => {
+            if (!mobileValue?.trim()) {
+              setSubmitted(true);
+              setHint('Enter your 10-digit mobile number.');
+              return;
+            }
+            void handleSubmit((values) => {
+              void handleGetOtp(values);
+            })();
+          }}
         />
 
         {DEVELOPMENT_MODE ? (
           <View className="mt-xl rounded-2xl bg-brand-surface p-md">
             <Typography variant="legal" className="text-left">
-              Demo mobile: {DEMO_PHONE}
+              Dev only demo mobile: {DEMO_PHONE}
             </Typography>
           </View>
         ) : null}

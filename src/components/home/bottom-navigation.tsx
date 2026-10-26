@@ -3,7 +3,6 @@ import { memo, useCallback, type ReactElement } from 'react';
 import { Pressable, View } from 'react-native';
 
 import type { BottomTabBarProps } from 'expo-router/tabs';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Typography } from '@/components/ui/typography';
 import { TAB_BAR_HEIGHT } from '@/constants/dashboard';
@@ -88,33 +87,33 @@ const TabItem = memo(function TabItem({
 export const BottomNavigation = memo(function BottomNavigation({
   state,
   descriptors,
-  navigation,
+  emitter,
+  navigateToTab,
+  insets,
 }: BottomTabBarProps) {
-  const insets = useSafeAreaInsets();
-
   const handlePress = useCallback(
-    (routeKey: string, routeName: string, isFocused: boolean) => {
-      const event = navigation.emit({
+    (routeKey: string, isFocused: boolean) => {
+      const event = emitter.emit({
         type: 'tabPress',
         target: routeKey,
         canPreventDefault: true,
       });
 
       if (!isFocused && !event.defaultPrevented) {
-        navigation.navigate(routeName);
+        navigateToTab(routeKey);
       }
     },
-    [navigation],
+    [emitter, navigateToTab],
   );
 
   const handleLongPress = useCallback(
     (routeKey: string) => {
-      navigation.emit({
+      emitter.emit({
         type: 'tabLongPress',
         target: routeKey,
       });
     },
-    [navigation],
+    [emitter],
   );
 
   return (
@@ -136,7 +135,7 @@ export const BottomNavigation = memo(function BottomNavigation({
               routeName={route.name}
               label={label}
               focused={isFocused}
-              onPress={() => handlePress(route.key, route.name, isFocused)}
+              onPress={() => handlePress(route.key, isFocused)}
               onLongPress={() => handleLongPress(route.key)}
             />
           );

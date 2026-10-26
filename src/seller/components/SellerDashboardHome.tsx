@@ -337,10 +337,10 @@ const STAT_META: Record<string, { tint: string; color: string; icon: ReactNode; 
     hint: 'Review',
   },
   'pending-accept': {
-    tint: 'bg-[#FEF3E8]',
-    color: '#B45309',
-    icon: <ClipboardCheckIcon size={16} color="#B45309" />,
-    hint: 'Action',
+    tint: 'bg-brand-primary-tint',
+    color: brandColors.navy,
+    icon: <StoreIcon size={16} color={brandColors.navy} />,
+    hint: 'Catalog',
   },
   'active-offers': {
     tint: 'bg-brand-success-light',

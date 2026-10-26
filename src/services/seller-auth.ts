@@ -1,14 +1,9 @@
 import { isAxiosError } from 'axios';
 
 import { apiClient } from '@/api/client';
-import {
-  DEMO_OTP,
-  DEMO_PASSWORD,
-  DEMO_PHONE,
-  DEMO_SELLER_EMAIL,
-  DEVELOPMENT_MODE,
-} from '@/config/development';
+import { DEMO_PASSWORD, DEVELOPMENT_MODE } from '@/config/development';
 import { STORAGE_KEYS } from '@/constants';
+import { isDevAccount, validateDevOtp } from '@/services/dev-auth';
 import { clearCachedSellerAccount } from '@/services/seller-profile';
 import { useAuthStore } from '@/store/auth-store';
 import type { ApiRequestConfig } from '@/types/api';
@@ -135,12 +130,14 @@ export async function sendSellerOtp(mobile: string): Promise<{ sent: true; demoO
     skipRefresh: true,
   } as ApiRequestConfig);
   const data = (response.data as Envelope<{ devOtp?: string }>)?.data ?? response.data;
+  const exposed =
+    data && typeof data === 'object' && typeof (data as { devOtp?: string }).devOtp === 'string'
+      ? (data as { devOtp: string }).devOtp
+      : undefined;
   return {
     sent: true,
-    demoOtp:
-      data && typeof data === 'object' && 'devOtp' in data
-        ? ((data as { devOtp?: string }).devOtp ?? DEMO_OTP)
-        : DEMO_OTP,
+    // Only surface server-exposed dev OTP (non-production backend). Never invent 123456.
+    ...(exposed ? { demoOtp: exposed } : {}),
   };
 }
 
@@ -175,61 +172,49 @@ export async function loginSellerWithPassword(
   return unwrapSession(response.data);
 }
 
+function sessionRequiresPasswordChange(session: SellerAuthSession): boolean {
+  return Boolean(session.user?.mustChangePassword);
+}
+
 /**
  * Full seller login used by OTP screen.
- * Demo phone + OTP → seeded seller@test.local password session (same as Seller Web).
- * Otherwise tries OTP verify; falls back to demo password login when OTP is DEMO_OTP in DEV.
+ * Verifies against `/auth/otp/verify`. In Metro only, the shared demo phone +
+ * DEMO_OTP falls back to password login when the API has AUTH_STRICT_OTP on
+ * (fixed 123456 disabled on the remote backend).
  */
 export async function authenticateSellerFromOtp(
   mobile: string,
   otp: string,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const digits = mobile.replace(/\D/g, '').slice(-10);
-  const isDemoLogin = DEVELOPMENT_MODE && otp === DEMO_OTP && digits === DEMO_PHONE.slice(-10);
-
   if (otp.length !== 6) {
     return { ok: false, message: 'Enter the 6-digit OTP.' };
   }
 
-  try {
-    if (isDemoLogin) {
-      // Same order as Seller Web: the phone's own seller account first, then
-      // the seeded seller@test.local catalog account if OTP verify is unavailable.
-      try {
-        persistSellerAuthSession(await verifySellerOtpSession(mobile, otp));
-        return { ok: true };
-      } catch {
-        persistSellerAuthSession(await loginSellerWithPassword(DEMO_SELLER_EMAIL, DEMO_PASSWORD));
-        return { ok: true };
-      }
-    }
-
-    try {
-      const session = await verifySellerOtpSession(mobile, otp);
-      if (session.user?.mustChangePassword) {
-        return {
-          ok: false,
-          message:
-            'Your temporary password must be changed first. Sign in once on Seller Web to set a new password, then return to the app.',
-        };
-      }
-      persistSellerAuthSession(session);
-      return { ok: true };
-    } catch (error) {
-      if (DEVELOPMENT_MODE && otp === DEMO_OTP) {
-        const session = await loginSellerWithPassword(DEMO_SELLER_EMAIL, DEMO_PASSWORD);
-        persistSellerAuthSession(session);
-        return { ok: true };
-      }
+  const finish = (session: SellerAuthSession): { ok: true } | { ok: false; message: string } => {
+    if (sessionRequiresPasswordChange(session)) {
       return {
         ok: false,
-        message: sellerAuthErrorMessage(error, 'Invalid OTP. Please try again.'),
+        message:
+          'Your temporary password must be changed first. Sign in once on Seller Web to set a new password, then return to the app.',
       };
     }
+    persistSellerAuthSession(session);
+    return { ok: true };
+  };
+
+  try {
+    return finish(await verifySellerOtpSession(mobile, otp));
   } catch (error) {
+    if (DEVELOPMENT_MODE && isDevAccount(mobile) && validateDevOtp(otp)) {
+      try {
+        return finish(await loginSellerWithPassword(mobile, DEMO_PASSWORD));
+      } catch {
+        // Keep the original OTP error below.
+      }
+    }
     return {
       ok: false,
-      message: sellerAuthErrorMessage(error, 'Unable to authenticate. Please try again.'),
+      message: sellerAuthErrorMessage(error, 'Invalid OTP. Please try again.'),
     };
   }
 }
@@ -244,12 +229,6 @@ export async function requestSellerOtpSend(
     // An OTP issued moments ago is still valid; let the user enter it.
     if (isAxiosError(error) && error.response?.status === 429) {
       return { ok: true };
-    }
-    if (DEVELOPMENT_MODE) {
-      return {
-        ok: true,
-        message: sellerAuthErrorMessage(error, `OTP request failed — use demo OTP ${DEMO_OTP}.`),
-      };
     }
     return {
       ok: false,

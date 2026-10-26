@@ -35,7 +35,7 @@ export const Timeline = memo(function Timeline({ steps }: { steps: TimelineStep[
               ) : (
                 <CheckCircleIcon
                   size={14}
-                  color={step.status === 'current' ? '#0B4A8B' : brandColors.navy}
+                  color={brandColors.navy}
                 />
               )}
             </View>
@@ -60,12 +60,15 @@ export const Timeline = memo(function Timeline({ steps }: { steps: TimelineStep[
 export const AnalyticsSkeleton = memo(function AnalyticsSkeleton() {
   return (
     <View className="gap-md">
-      <View className="flex-row gap-md">
-        <View className="h-[88px] flex-1 rounded-2xl bg-brand-surface" />
-        <View className="h-[88px] flex-1 rounded-2xl bg-brand-surface" />
+      <View className="flex-row flex-wrap gap-md">
+        <View className="h-[92px] min-w-[46%] flex-1 basis-[46%] rounded-2xl bg-brand-surface" />
+        <View className="h-[92px] min-w-[46%] flex-1 basis-[46%] rounded-2xl bg-brand-surface" />
+        <View className="h-[92px] min-w-[46%] flex-1 basis-[46%] rounded-2xl bg-brand-surface" />
+        <View className="h-[92px] min-w-[46%] flex-1 basis-[46%] rounded-2xl bg-brand-surface" />
       </View>
-      <View className="h-[220px] rounded-2xl bg-brand-surface" />
-      <View className="h-[160px] rounded-2xl bg-brand-surface" />
+      <View className="h-[240px] rounded-2xl bg-brand-surface" />
+      <View className="h-[120px] rounded-2xl bg-brand-surface" />
+      <View className="h-[180px] rounded-2xl bg-brand-surface" />
     </View>
   );
 });
@@ -86,7 +89,7 @@ export const AnalyticsErrorState = memo(function AnalyticsErrorState({
         {message}
       </Typography>
       {onRetry ? (
-        <Pressable onPress={onRetry} className="mt-md rounded-xl bg-[#0B4A8B] px-lg py-md">
+        <Pressable onPress={onRetry} className="mt-md rounded-xl bg-brand-navy px-lg py-md">
           <Typography variant="button" className="text-brand-white">
             Retry
           </Typography>

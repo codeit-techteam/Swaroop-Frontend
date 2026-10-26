@@ -797,10 +797,31 @@ function ListingForm({
               />
             ) : isLast ? (
               <PrimaryButton
-                label={publishing ? 'Publishing…' : 'Publish'}
-                className="flex-1"
+                label={
+                  publishing
+                    ? isBuy
+                      ? 'Submitting…'
+                      : 'Publishing…'
+                    : isBuy
+                      ? 'Submit buy request'
+                      : 'Publish sell offer'
+                }
+                // I-06: visually distinct from Next — navy filled, different label.
+                className="flex-1 bg-brand-navy"
                 disabled={publishing || saveState === 'conflict'}
-                onPress={() => void handlePublish()}
+                onPress={() => {
+                  showConfirmDialog({
+                    title: isBuy ? 'Submit buy request?' : 'Publish sell offer?',
+                    message: isBuy
+                      ? 'This will publish your buy request to the import market.'
+                      : 'This will publish your USD/import sell offer to buyers.',
+                    confirmLabel: isBuy ? 'Submit' : 'Publish',
+                    cancelLabel: 'Review again',
+                    onConfirm: () => {
+                      void handlePublish();
+                    },
+                  });
+                }}
               />
             ) : (
               <PrimaryButton

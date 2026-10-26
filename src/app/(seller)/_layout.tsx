@@ -90,6 +90,7 @@ export default function SellerLayout() {
       <Stack.Screen name="import-trading/deal" />
       <Stack.Screen name="search" />
       <Stack.Screen name="raise-ticket" />
+      <Stack.Screen name="ticket-chat" />
     </Stack>
   );
 }

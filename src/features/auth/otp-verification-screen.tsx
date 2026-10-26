@@ -14,6 +14,7 @@ import {
 } from '@/components';
 import { ClockIcon, OtpIllustration } from '@/icons';
 import { parseReturnToParam, resolvePostAuthHref } from '@/navigation/return-to';
+import { DEMO_OTP, DEMO_USER_NAME, DEVELOPMENT_MODE } from '@/config/development';
 import {
   customerAuthErrorMessage,
   isOtpCooldownError,
@@ -21,6 +22,7 @@ import {
   verifyCustomerOtp,
   type CustomerOtpPurpose,
 } from '@/services/customer-auth';
+import { getInvalidOtpMessage, isDevAccount, validateDevOtp } from '@/services/dev-auth';
 import { refreshKycStatus } from '@/services/kyc-status-sync';
 import { resetUserScopedState } from '@/services/sign-out';
 import { useAuthStore } from '@/store/auth-store';
@@ -106,6 +108,13 @@ export const OtpVerificationScreen = () => {
 
     const mobileNumber = params.phone ?? '';
     const role = useAuthStore.getState().selectedRole === 'seller' ? 'seller' : 'customer';
+
+    // Local Metro only: reject wrong demo OTP early for the seeded account.
+    if (DEVELOPMENT_MODE && isDevAccount(mobileNumber) && !validateDevOtp(otp)) {
+      setOtpError(getInvalidOtpMessage());
+      return;
+    }
+
     setIsVerifying(true);
     try {
       await verifyCustomerOtp(
@@ -134,6 +143,14 @@ export const OtpVerificationScreen = () => {
     );
   }, [completeLogin, isOtpComplete, isVerifying, otp, params.phone, purpose, returnTo, router]);
 
+  // Auto-submit after the sixth digit (L-10).
+  useEffect(() => {
+    if (otp.length === 6 && !isVerifying && !otpError) {
+      void handleVerify();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot when OTP completes
+  }, [otp]);
+
   return (
     <ScreenWrapper className="bg-brand-white">
       <AppHeader variant="back" title="Verification" onBack={handleBack} />
@@ -149,6 +166,11 @@ export const OtpVerificationScreen = () => {
         <Typography variant="subheading" className="mt-sm px-md">
           Enter the 6-digit code sent to {phoneDisplay}
         </Typography>
+        {DEVELOPMENT_MODE ? (
+          <Typography variant="legal" className="mt-sm px-md text-center">
+            Dev: {DEMO_USER_NAME} · OTP {DEMO_OTP}
+          </Typography>
+        ) : null}
 
         <OtpInput value={otp} onChange={handleOtpChange} error={otpError} className="mt-2xl" />
 

@@ -21,12 +21,21 @@ function resolveAction(options: {
   if (action === 'OPEN_EXTERNAL_URL' && externalUrl) {
     return { type: 'url', url: externalUrl };
   }
-  if (
-    action === 'OPEN_MARKETPLACE' ||
-    action === 'OPEN_PURCHASE_REQUEST' ||
-    action === 'OPEN_OFFER'
-  ) {
+  if (action === 'OPEN_MARKETPLACE' || action === 'OPEN_OFFER') {
     return { type: 'route', href: ROUTES.CUSTOMER.MARKET as Href };
+  }
+  // Purchase request flow starts on a grade (RFQ) or cart/checkout — not a bare grade list.
+  if (action === 'OPEN_PURCHASE_REQUEST') {
+    if (targetId) {
+      return {
+        type: 'route',
+        href: {
+          pathname: ROUTES.CUSTOMER.PRODUCT_DETAILS,
+          params: { id: targetId, rfq: '1' },
+        } as unknown as Href,
+      };
+    }
+    return { type: 'route', href: ROUTES.CUSTOMER.CART as Href };
   }
   if (action === 'OPEN_ORDERS') {
     return { type: 'route', href: ROUTES.CUSTOMER.ORDERS as Href };

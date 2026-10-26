@@ -151,14 +151,23 @@ export const ProductCard = memo(function ProductCard({
         >
           {product.name}
         </Typography>
-        {product.gradeCode || product.technicalSpecs?.mfi ? (
+        {product.manufacturer ? (
+          <Typography
+            variant="caption"
+            className="mt-xs font-sans text-[12px] normal-case tracking-normal text-brand-body"
+            numberOfLines={1}
+          >
+            {product.manufacturer}
+          </Typography>
+        ) : null}
+        {product.gradeCode || product.gradeNo || product.technicalSpecs?.mfi ? (
           <View className="mt-xs flex-row flex-wrap items-center" style={{ gap: 8 }}>
-            {product.gradeCode ? (
+            {product.gradeNo || product.gradeCode ? (
               <Typography
                 variant="caption"
                 className="font-sans text-[12px] normal-case tracking-normal text-brand-muted"
               >
-                {product.gradeCode}
+                {product.gradeNo || product.gradeCode}
               </Typography>
             ) : null}
             {product.technicalSpecs?.mfi ? (
@@ -198,7 +207,7 @@ export const ProductCard = memo(function ProductCard({
             <Typography
               variant="roleTitle"
               className="mt-xs text-[13px] text-brand-heading"
-              numberOfLines={1}
+              numberOfLines={2}
             >
               {product.origin}
             </Typography>

@@ -11,7 +11,8 @@ export function navigateSellerBottomTab(
   const routeMap: Record<SellerBottomNavTarget, string> = {
     dashboard: ROUTES.SELLER.DASHBOARD,
     orders: ROUTES.SELLER.ORDERS,
-    products: ROUTES.SELLER.PRODUCTS,
+    // Products tab opens My Offers (live bulk pricing) — catalog stays at PRODUCTS via dashboard/profile.
+    products: ROUTES.SELLER.OFFERS,
     payouts: ROUTES.SELLER.SETTLEMENTS,
     profile: ROUTES.SELLER.PROFILE,
   };

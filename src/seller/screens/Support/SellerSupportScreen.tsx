@@ -14,11 +14,10 @@ import {
   NotificationSkeleton,
   QuickActionButton,
   SellerHeader,
-  StatusBottomSheet,
   TicketCard,
 } from '@/seller/components';
 import { useSellerSupport } from '@/seller/hooks/useSellerSupport';
-import type { TicketFilterTab } from '@/seller/types/support';
+import type { SupportTicket, TicketFilterTab } from '@/seller/types/support';
 
 const TAB_OPTIONS = [
   { label: 'Open', value: 'open' },
@@ -26,12 +25,17 @@ const TAB_OPTIONS = [
   { label: 'Closed', value: 'closed' },
 ];
 
+function ticketChatHref(ticketId: string): Href {
+  return `${ROUTES.SELLER.TICKET_CHAT}?ticketId=${encodeURIComponent(ticketId)}` as Href;
+}
+
 export const SellerSupportScreen = memo(function SellerSupportScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const {
     snapshot,
     filteredTickets,
+    preferredChatTicket,
     activeTab,
     setActiveTab,
     isLoading,
@@ -57,7 +61,19 @@ export const SellerSupportScreen = memo(function SellerSupportScreen() {
   );
 
   const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
-  const [statusSheet, setStatusSheet] = useState(false);
+
+  const openTicketChat = useCallback(
+    (ticket: SupportTicket) => {
+      router.push(ticketChatHref(ticket.id));
+    },
+    [router],
+  );
+
+  const handleChat = useCallback(() => {
+    if (preferredChatTicket) {
+      openTicketChat(preferredChatTicket);
+    }
+  }, [openTicketChat, preferredChatTicket]);
 
   const handleCall = () => {
     const phone = snapshot.contacts.find((c) => c.type === 'phone');
@@ -67,6 +83,11 @@ export const SellerSupportScreen = memo(function SellerSupportScreen() {
   const handleEmail = () => {
     const email = snapshot.contacts.find((c) => c.type === 'email');
     if (email) void Linking.openURL(`mailto:${email.value}`);
+  };
+
+  const handleContactPress = (type: string, value: string) => {
+    if (type === 'phone') void Linking.openURL(`tel:${value.replace(/\s/g, '')}`);
+    else if (type === 'email') void Linking.openURL(`mailto:${value}`);
   };
 
   return (
@@ -89,15 +110,53 @@ export const SellerSupportScreen = memo(function SellerSupportScreen() {
           Get help with orders, payments, dispatch, and account issues.
         </Typography>
 
-        <View className="mt-lg flex-row gap-sm">
-          <QuickActionButton
-            label="Create Ticket"
-            onPress={() => router.push(ROUTES.SELLER.RAISE_TICKET as Href)}
-          />
-          <QuickActionButton label="Call Support" icon="phone" onPress={handleCall} />
-          <QuickActionButton label="Chat Coming Soon" onPress={() => setStatusSheet(true)} disabled />
-          <QuickActionButton label="Email Support" onPress={handleEmail} />
+        <View className="mt-lg gap-sm">
+          <View className="flex-row gap-sm">
+            <QuickActionButton
+              label="Create Ticket"
+              onPress={() => router.push(ROUTES.SELLER.RAISE_TICKET as Href)}
+            />
+            {preferredChatTicket ? (
+              <QuickActionButton
+                label="Open ticket chat"
+                icon="headset"
+                highlight
+                onPress={handleChat}
+              />
+            ) : (
+              <QuickActionButton label="Email Support" onPress={handleEmail} />
+            )}
+          </View>
+          <View className="flex-row gap-sm">
+            <QuickActionButton label="Call Support" icon="phone" onPress={handleCall} />
+            {preferredChatTicket ? (
+              <QuickActionButton label="Email Support" onPress={handleEmail} />
+            ) : (
+              <QuickActionButton
+                label="Raise Ticket"
+                icon="headset"
+                onPress={() => router.push(ROUTES.SELLER.RAISE_TICKET as Href)}
+              />
+            )}
+          </View>
         </View>
+
+        {preferredChatTicket?.awaitingReply ? (
+          <Pressable
+            onPress={() => openTicketChat(preferredChatTicket)}
+            className="mt-lg rounded-2xl border border-orange-200 bg-orange-50 px-lg py-md"
+          >
+            <Typography variant="badge" className="text-[10px] uppercase text-orange-700">
+              Support needs your reply
+            </Typography>
+            <Typography variant="roleTitle" className="mt-xs" numberOfLines={1}>
+              {preferredChatTicket.ticketId} · {preferredChatTicket.subject}
+            </Typography>
+            <Typography variant="legal" className="mt-xs text-orange-800">
+              Tap to open chat and continue the conversation.
+            </Typography>
+          </Pressable>
+        ) : null}
 
         <View className="mt-xl">
           <Typography variant="badge" className="text-[11px] uppercase tracking-wide text-brand-body">
@@ -121,7 +180,7 @@ export const SellerSupportScreen = memo(function SellerSupportScreen() {
             <EmptyState
               variant="no_notifications"
               title="No tickets in this category"
-              description="Create a support ticket if you need assistance from the PetroTrade team."
+              description="Create a support ticket, or reach PetroTrade by email or phone from the contacts below."
               ctaLabel="Create Ticket"
               onCtaPress={() => router.push(ROUTES.SELLER.RAISE_TICKET as Href)}
             />
@@ -130,7 +189,7 @@ export const SellerSupportScreen = memo(function SellerSupportScreen() {
           <View className="mt-md gap-md">
             {filteredTickets.map((ticket, index) => (
               <Animated.View key={ticket.id} entering={FadeInDown.delay(index * 50).duration(280)}>
-                <TicketCard ticket={ticket} />
+                <TicketCard ticket={ticket} onPress={() => openTicketChat(ticket)} />
               </Animated.View>
             ))}
           </View>
@@ -164,15 +223,20 @@ export const SellerSupportScreen = memo(function SellerSupportScreen() {
           </Typography>
           <View className="mt-md rounded-[22px] border border-brand-border bg-brand-white px-lg py-lg">
             {snapshot.contacts.map((contact, index) => (
-              <View
+              <Pressable
                 key={contact.id}
-                className={index < snapshot.contacts.length - 1 ? 'mb-md border-b border-brand-border pb-md' : undefined}
+                onPress={() => handleContactPress(contact.type, contact.value)}
+                className={
+                  index < snapshot.contacts.length - 1
+                    ? 'mb-md border-b border-brand-border pb-md'
+                    : undefined
+                }
               >
                 <Typography variant="roleTitle">{contact.label}</Typography>
                 <Typography variant="legal" className="mt-xs text-brand-primary">
                   {contact.value}
                 </Typography>
-              </View>
+              </Pressable>
             ))}
           </View>
         </View>
@@ -184,14 +248,6 @@ export const SellerSupportScreen = memo(function SellerSupportScreen() {
           />
         </View>
       </ScrollView>
-
-      <StatusBottomSheet
-        visible={statusSheet}
-        variant="success"
-        title="Coming Soon"
-        message="Live chat support will be available in a future update."
-        onDismiss={() => setStatusSheet(false)}
-      />
     </ScreenWrapper>
   );
 });

@@ -18,8 +18,19 @@ import {
 import type { SellerProductForm, SellerProductStore, SellerTechnicalSpecs } from '@/seller/types';
 import { buildEditorFromCatalogId } from '@/seller/utils/catalog';
 import { canSaveListingToBackend } from '@/seller/utils/listing-input';
+import {
+  sanitizeDecimalInput,
+  sanitizeIntegerInput,
+} from '@/seller/utils/numeric-input';
 import { getLiveCatalogProduct } from '@/services/catalog';
 import { logger } from '@/utils/logger';
+
+const INTEGER_FORM_FIELDS = new Set<keyof SellerProductForm>([
+  'moq',
+  'availableQty',
+  'reservedQty',
+  'gstPercent',
+]);
 
 const listingErrorMessage = (error: unknown): string => {
   const data = (error as { response?: { data?: { message?: unknown } } })?.response?.data;
@@ -79,7 +90,10 @@ const buildFormErrors = (
     }
   }
 
-  if (form.availableQty.trim()) {
+  // Stock is required for draft continue and publish (S-02 / S-04).
+  if (!form.availableQty.trim()) {
+    errors.availableQty = 'Available quantity is required.';
+  } else {
     const stock = Number(form.availableQty);
     if (!Number.isFinite(stock) || stock < 0) {
       errors.availableQty = 'Stock must be a valid non-negative number.';
@@ -97,13 +111,8 @@ const buildFormErrors = (
     if (!form.description.trim()) {
       errors.description = 'Add a product description before publishing.';
     }
-    if (!form.availableQty.trim()) {
-      errors.availableQty = 'Available quantity is required.';
-    } else {
-      const stock = Number(form.availableQty);
-      if (!Number.isFinite(stock) || stock < 0) {
-        errors.availableQty = 'Stock must be a valid non-negative number.';
-      }
+    if (!pricingSellingPrice.trim()) {
+      errors.sellingPrice = 'Selling price is required.';
     }
     if (!form.warehouseLocation.trim()) {
       errors.warehouseLocation = 'Warehouse location is required.';
@@ -116,14 +125,6 @@ const buildFormErrors = (
     }
     if (!technicalSpecs.primaryApplication.trim()) {
       errors.primaryApplication = 'Primary application is required.';
-    }
-    if (!pricingSellingPrice.trim()) {
-      errors.sellingPrice = 'Selling price is required.';
-    } else {
-      const price = Number(pricingSellingPrice);
-      if (!Number.isFinite(price) || price <= 0) {
-        errors.sellingPrice = 'Selling price must be a valid positive number.';
-      }
     }
     const moq = Number(form.moq);
     const stock = Number(form.availableQty);
@@ -201,10 +202,13 @@ export const useSellerProductStore = create<SellerProductStore>((set, get) => ({
   },
 
   updateFormField: (field, value) => {
+    const nextValue = INTEGER_FORM_FIELDS.has(field)
+      ? sanitizeIntegerInput(value)
+      : value;
     set((state) => ({
       form: {
         ...state.form,
-        [field]: value,
+        [field]: nextValue,
       },
       formErrors: {
         ...state.formErrors,
@@ -215,10 +219,11 @@ export const useSellerProductStore = create<SellerProductStore>((set, get) => ({
   },
 
   updatePricingField: (field, value) => {
+    const nextValue = sanitizeDecimalInput(value);
     set((state) => ({
       pricing: {
         ...state.pricing,
-        [field]: value,
+        [field]: nextValue,
       },
     }));
     persist(get());
@@ -246,8 +251,18 @@ export const useSellerProductStore = create<SellerProductStore>((set, get) => ({
   },
 
   updateTier: (tierId, patch) => {
+    const nextPatch = { ...patch };
+    if (nextPatch.minQty !== undefined) {
+      nextPatch.minQty = sanitizeIntegerInput(nextPatch.minQty);
+    }
+    if (nextPatch.maxQty !== undefined) {
+      nextPatch.maxQty = sanitizeIntegerInput(nextPatch.maxQty);
+    }
+    if (nextPatch.price !== undefined) {
+      nextPatch.price = sanitizeDecimalInput(nextPatch.price);
+    }
     set((state) => ({
-      tiers: state.tiers.map((tier) => (tier.id === tierId ? { ...tier, ...patch } : tier)),
+      tiers: state.tiers.map((tier) => (tier.id === tierId ? { ...tier, ...nextPatch } : tier)),
     }));
     persist(get());
   },

@@ -231,6 +231,17 @@ export const OffersScreen = memo(function OffersScreen() {
               <Typography variant="legal" className="mt-xs text-left text-brand-body">
                 Live bulk pricing for verified buyers.
               </Typography>
+              <Pressable
+                onPress={() => router.push(ROUTES.SELLER.PRODUCTS as Href)}
+                accessibilityRole="button"
+                accessibilityLabel="Open catalog and listings"
+                className="mt-sm self-start"
+                hitSlop={8}
+              >
+                <Typography variant="link" className="text-[12px] text-brand-primary-dark">
+                  Catalog & listings →
+                </Typography>
+              </Pressable>
             </View>
             <Pressable
               onPress={openCreate}
@@ -239,8 +250,8 @@ export const OffersScreen = memo(function OffersScreen() {
               className="rounded-full bg-brand-navy px-md py-[10px]"
               style={({ pressed }) => [elevation.sm, { opacity: pressed ? 0.92 : 1 }]}
             >
-              <Typography variant="badge" className="text-[12px] text-brand-white">
-                New offer
+              <Typography variant="badge" className="text-[12px] tracking-[0.4px] text-brand-white">
+                NEW OFFER
               </Typography>
             </Pressable>
           </View>
@@ -349,8 +360,15 @@ export const OffersScreen = memo(function OffersScreen() {
           onPress={openCreate}
           accessibilityRole="button"
           accessibilityLabel="Create offer"
-          className="absolute bottom-[96px] right-lg h-14 w-14 items-center justify-center rounded-full bg-brand-navy"
-          style={({ pressed }) => [elevation.lg, { opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.96 : 1 }] }]}
+          className="absolute right-lg h-14 w-14 items-center justify-center rounded-full bg-brand-navy"
+          style={({ pressed }) => [
+            elevation.lg,
+            {
+              bottom: Math.max(insets.bottom, 8) + 72,
+              opacity: pressed ? 0.92 : 1,
+              transform: [{ scale: pressed ? 0.96 : 1 }],
+            },
+          ]}
         >
           <Typography variant="headingLeft" className="text-[28px] leading-[28px] text-brand-white">
             +

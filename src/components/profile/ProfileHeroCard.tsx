@@ -47,6 +47,7 @@ export const ProfileHeroCard = memo(function ProfileHeroCard({
   className,
 }: ProfileHeroCardProps) {
   const isKycVerified = kycStatus === 'verified';
+  const isKycPending = kycStatus === 'pending';
   const isTradingActive = tradingStatus === 'Active';
 
   return (
@@ -88,7 +89,16 @@ export const ProfileHeroCard = memo(function ProfileHeroCard({
                   KYC VERIFIED
                 </Typography>
               </View>
-            ) : null}
+            ) : (
+              <View className="flex-row items-center gap-xs rounded-full bg-brand-white/15 px-sm py-xs">
+                <Typography
+                  variant="badge"
+                  className="text-[10px] tracking-[0.8px] text-brand-white"
+                >
+                  {isKycPending ? 'KYC PENDING' : 'COMPLETE KYC'}
+                </Typography>
+              </View>
+            )}
           </View>
 
           <Typography

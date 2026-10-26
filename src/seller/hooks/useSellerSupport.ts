@@ -4,8 +4,11 @@ import { usePullToRefresh } from '@/seller/hooks/usePullToRefresh';
 import {
   createSupportTicket,
   filterTicketsByTab,
+  getPreferredChatTicket,
   getSupportSnapshot,
+  getSupportTicket,
   refreshSupportTickets,
+  replySupportTicket,
 } from '@/seller/services/supportService';
 import type { RaiseTicketInput, TicketFilterTab } from '@/seller/types/support';
 
@@ -17,6 +20,11 @@ export function useSellerSupport() {
   const filteredTickets = useMemo(
     () => filterTicketsByTab(snapshot.tickets, activeTab),
     [snapshot.tickets, activeTab],
+  );
+
+  const preferredChatTicket = useMemo(
+    () => getPreferredChatTicket(snapshot.tickets),
+    [snapshot.tickets],
   );
 
   const load = useCallback(async () => {
@@ -35,6 +43,18 @@ export function useSellerSupport() {
     return ticket;
   }, []);
 
+  const loadTicket = useCallback(async (ticketId: string) => {
+    const ticket = await getSupportTicket(ticketId);
+    setSnapshot(getSupportSnapshot());
+    return ticket;
+  }, []);
+
+  const sendReply = useCallback(async (ticketId: string, body: string) => {
+    const ticket = await replySupportTicket(ticketId, body);
+    setSnapshot(getSupportSnapshot());
+    return ticket;
+  }, []);
+
   const initialLoad = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -47,6 +67,7 @@ export function useSellerSupport() {
   return {
     snapshot,
     filteredTickets,
+    preferredChatTicket,
     activeTab,
     setActiveTab,
     isLoading,
@@ -55,5 +76,7 @@ export function useSellerSupport() {
     reload: load,
     pullRefresh: refresh,
     submitTicket,
+    loadTicket,
+    sendReply,
   };
 }

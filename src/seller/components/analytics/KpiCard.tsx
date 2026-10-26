@@ -9,6 +9,8 @@ type KpiCardProps = {
   label: string;
   value: string;
   accent?: 'default' | 'navy' | 'success';
+  /** Stretch to full row width (e.g. transit time). */
+  fullWidth?: boolean;
   className?: string;
 };
 
@@ -16,11 +18,12 @@ export const KpiCard = memo(function KpiCard({
   label,
   value,
   accent = 'default',
+  fullWidth = false,
   className,
 }: KpiCardProps) {
   const valueClass =
     accent === 'navy'
-      ? 'text-[#0B4A8B]'
+      ? 'text-brand-navy'
       : accent === 'success'
         ? 'text-brand-success'
         : 'text-brand-heading';
@@ -28,14 +31,25 @@ export const KpiCard = memo(function KpiCard({
   return (
     <View
       className={cn(
-        'min-h-[88px] flex-1 rounded-2xl border border-brand-border bg-brand-white px-md py-md',
+        'min-h-[92px] rounded-2xl border border-brand-border bg-brand-white px-md py-md',
+        fullWidth ? 'w-full' : 'min-w-[46%] flex-1 basis-[46%]',
         className,
       )}
     >
-      <Typography variant="badge" className="text-[10px] uppercase tracking-wide text-brand-body">
+      <Typography
+        variant="badge"
+        numberOfLines={2}
+        className="text-[10px] leading-[14px] tracking-[0.4px] text-brand-body"
+      >
         {label}
       </Typography>
-      <Typography variant="headingLeft" className={cn('mt-sm text-[22px]', valueClass)}>
+      <Typography
+        variant="headingLeft"
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.75}
+        className={cn('mt-sm text-[22px] leading-[28px]', valueClass)}
+      >
         {value}
       </Typography>
     </View>

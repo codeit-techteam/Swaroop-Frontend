@@ -6,30 +6,32 @@ export const SELLER_ANALYTICS_SEED: SellerAnalyticsSnapshot = {
     monthly: '₹3.8Cr',
     filters: {
       '7d': [18.2, 19.5, 21.0, 20.4, 22.8, 23.6, 24.5],
-      '30d': [12, 14, 13, 16, 18, 17, 19, 21, 20, 22, 24, 23, 25, 26, 24, 27, 28, 26, 29, 30, 28, 31, 32, 30, 33, 34, 32, 35, 36, 38],
+      '30d': [
+        12, 14, 13, 16, 18, 17, 19, 21, 20, 22, 24, 23, 25, 26, 24, 27, 28, 26, 29, 30, 28, 31, 32,
+        30, 33, 34, 32, 35, 36, 38,
+      ],
       '3m': [2.1, 2.4, 2.8, 3.0, 3.2, 3.5, 3.8, 3.6, 3.9, 4.1, 3.8, 4.2],
       '1y': [1.8, 2.0, 2.2, 2.5, 2.8, 3.0, 3.2, 3.5, 3.8, 4.0, 4.2, 4.5],
     },
   },
   orders: {
-    // Placeholder zeros — live screens must overlay API order summaries.
-    completed: 0,
+    completed: 128,
     breakdown: [
-      { id: 'pending', label: 'Pending', count: 0, percentage: 0 },
-      { id: 'accepted', label: 'Accepted', count: 0, percentage: 0 },
-      { id: 'dispatch', label: 'Dispatch', count: 0, percentage: 0 },
-      { id: 'delivered', label: 'Delivered', count: 0, percentage: 0 },
-      { id: 'cancelled', label: 'Cancelled', count: 0, percentage: 0 },
+      { id: 'pending', label: 'Pending', count: 14, percentage: 8 },
+      { id: 'accepted', label: 'Accepted', count: 22, percentage: 13 },
+      { id: 'dispatch', label: 'Dispatch', count: 31, percentage: 18 },
+      { id: 'delivered', label: 'Delivered', count: 96, percentage: 55 },
+      { id: 'cancelled', label: 'Cancelled', count: 11, percentage: 6 },
     ],
   },
   products: {
-    active: 0,
+    active: 24,
     topSelling: [
       {
         id: 'prod-hdpe',
         name: 'HDPE PE100',
         orders: 48,
-        revenue: '₹1.2Cr',
+        revenue: '₹0',
         growthPercent: 12.4,
       },
       {

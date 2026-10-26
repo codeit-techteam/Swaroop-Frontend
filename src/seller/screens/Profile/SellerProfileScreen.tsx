@@ -41,11 +41,19 @@ import {
 import { showConfirmDialog } from '@/store/dialog-store';
 import { brandColors } from '@/theme/colors';
 
+const isFullyVerified = (account: SellerAccountSummary): boolean =>
+  Boolean(
+    account.verified &&
+      account.gstin?.trim() &&
+      account.gstVerified &&
+      account.kycDocumentsCount > 0,
+  );
+
 const toProfileData = (account: SellerAccountSummary): SellerProfileData => ({
   name: account.ownerName,
   company: account.companyName,
   initials: account.initials,
-  verified: account.verified,
+  verified: isFullyVerified(account),
   badge: formatSellerTypeLabel(account),
   gst: account.gstin ?? 'Not added',
   profileImage: account.logoUrl,

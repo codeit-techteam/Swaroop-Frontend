@@ -22,6 +22,7 @@ export { SellerAppSettingsScreen } from '@/seller/screens/Settings/SellerAppSett
 export { SellerDocumentsScreen } from '@/seller/screens/Documents/SellerDocumentsScreen';
 export { SellerSupportScreen } from '@/seller/screens/Support/SellerSupportScreen';
 export { RaiseTicketScreen } from '@/seller/screens/Support/RaiseTicketScreen';
+export { TicketChatScreen } from '@/seller/screens/Support/TicketChatScreen';
 export { SellerSecurityScreen } from '@/seller/screens/Security/SellerSecurityScreen';
 export { SellerSearchScreen } from '@/seller/screens/Search/SellerSearchScreen';
 export { SellerNotificationsScreen } from '@/seller/screens/Notifications/SellerNotificationsScreen';

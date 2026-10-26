@@ -119,11 +119,12 @@ export function isPersistedAddressId(id?: string | null): boolean {
   );
 }
 
+/** Neutral prompt until the guest chooses or grants location (N-06). */
 export const FALLBACK_DELIVERY_LOCATION: DeliveryLocation = {
-  id: 'loc-mumbai',
-  city: 'Mumbai',
-  state: 'Maharashtra',
-  pincode: '400001',
-  label: 'Mumbai, MH 400001',
+  id: 'loc-unset',
+  city: '',
+  state: '',
+  pincode: '',
+  label: 'Set delivery location',
   source: 'preset',
 };

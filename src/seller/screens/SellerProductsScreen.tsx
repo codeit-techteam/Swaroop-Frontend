@@ -121,7 +121,7 @@ export const SellerProductsScreen = memo(function SellerProductsScreen() {
           className="flex-1 px-lg"
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ paddingTop: 16, paddingBottom: insets.bottom + 120 }}
+          contentContainerStyle={{ paddingTop: 16, paddingBottom: insets.bottom + 140 }}
           refreshControl={
             <RefreshControl refreshing={isRefreshing} onRefresh={() => void refresh()} />
           }
@@ -150,6 +150,26 @@ export const SellerProductsScreen = memo(function SellerProductsScreen() {
               );
             })}
           </View>
+
+          <Pressable
+            onPress={() => router.push(ROUTES.SELLER.OFFERS as Href)}
+            accessibilityRole="button"
+            accessibilityLabel="Open My Offers"
+            className="mt-md flex-row items-center justify-between rounded-2xl border border-brand-border bg-brand-white px-md py-md"
+            style={({ pressed }) => [elevation.sm, { opacity: pressed ? 0.96 : 1 }]}
+          >
+            <View className="flex-1 pr-md">
+              <Typography variant="roleTitle" className="text-[15px] text-brand-heading">
+                My Offers
+              </Typography>
+              <Typography variant="legal" className="mt-xs text-left text-[11px] text-brand-body">
+                Manage live bulk pricing and marketplace visibility.
+              </Typography>
+            </View>
+            <Typography variant="badge" className="text-[11px] text-brand-primary-dark">
+              Open →
+            </Typography>
+          </Pressable>
 
           {workspace === 'catalog' ? (
             <AnimatedSection entering={FadeInDown.duration(280)} className="mt-lg">
@@ -224,16 +244,52 @@ export const SellerProductsScreen = memo(function SellerProductsScreen() {
                 ) : (
                   <EmptyState
                     variant="no_products"
-                    title={`No ${listingTab} listings`}
-                    description="Pick a grade from the marketplace catalog to publish it with your stock and price."
-                    ctaLabel="Browse catalog"
-                    onCtaPress={() => setWorkspace('catalog')}
+                    title={
+                      listingTab === 'draft'
+                        ? 'No draft listings'
+                        : listingTab === 'inactive'
+                          ? 'No inactive listings'
+                          : 'No published listings'
+                    }
+                    description={
+                      listingTab === 'draft'
+                        ? 'Saved drafts appear here. Finish offer details and publish when you are ready.'
+                        : listingTab === 'inactive'
+                          ? 'Deactivated listings move here. Edit and republish to make them visible again.'
+                          : 'Published grades appear in the customer marketplace. Pick a catalog grade to list stock and price.'
+                    }
+                    ctaLabel={listingTab === 'published' ? 'Browse catalog' : 'Add listing'}
+                    onCtaPress={() =>
+                      listingTab === 'published'
+                        ? setWorkspace('catalog')
+                        : openAddProduct(undefined, selectedCategory?.code)
+                    }
                   />
                 )}
               </View>
             </AnimatedSection>
           )}
         </ScrollView>
+
+        <Pressable
+          onPress={() => openAddProduct(undefined, selectedCategory?.code)}
+          accessibilityRole="button"
+          accessibilityLabel="Add listing"
+          className="absolute right-lg h-14 w-14 items-center justify-center rounded-full bg-brand-navy"
+          style={({ pressed }) => [
+            elevation.lg,
+            {
+              // Sit above the bottom tab bar + home-indicator safe area.
+              bottom: Math.max(insets.bottom, 8) + 72,
+              opacity: pressed ? 0.92 : 1,
+              transform: [{ scale: pressed ? 0.96 : 1 }],
+            },
+          ]}
+        >
+          <Typography variant="headingLeft" className="text-[28px] leading-[28px] text-brand-white">
+            +
+          </Typography>
+        </Pressable>
 
         <SellerBottomNavigation
           active="products"
@@ -270,14 +326,6 @@ export const SellerProductsScreen = memo(function SellerProductsScreen() {
           </View>
         </View>
       </Modal>
-
-      <Pressable
-        onPress={() => openAddProduct(undefined, selectedCategory?.code)}
-        className="absolute bottom-24 right-6 rounded-2xl bg-brand-navy px-lg py-md"
-        style={elevation.md}
-      >
-        <Typography variant="button">Add listing</Typography>
-      </Pressable>
     </ScreenWrapper>
   );
 });

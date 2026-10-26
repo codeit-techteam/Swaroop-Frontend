@@ -1,5 +1,6 @@
 export const SELLER_PACKAGING_TYPES = ['25 kg bags', 'Jumbo bags', 'Palletized bags'] as const;
 
+/** Canonical origin labels — KSA maps to Saudi Arabia (S-13). */
 export const SELLER_ORIGIN_OPTIONS = [
   'India',
   'UAE',
@@ -7,7 +8,6 @@ export const SELLER_ORIGIN_OPTIONS = [
   'Singapore',
   'China',
   'Thailand',
-  'KSA',
   'USA',
 ] as const;
 

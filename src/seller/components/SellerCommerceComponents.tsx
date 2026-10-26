@@ -100,13 +100,13 @@ export const QuickActionCard = memo(function QuickActionCard({
   return (
     <Pressable
       onPress={onPress}
-      className="min-h-[96px] flex-1 rounded-2xl border border-brand-border bg-brand-white px-md py-lg"
+      className="min-h-[96px] min-w-[46%] flex-1 basis-[46%] rounded-2xl border border-brand-border bg-brand-white px-md py-lg"
       style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1 })}
     >
       <View className="h-11 w-11 items-center justify-center rounded-xl bg-brand-primary-light">
         <QuickActionIcon icon={icon} />
       </View>
-      <Typography variant="roleTitle" className="mt-md text-[14px]">
+      <Typography variant="roleTitle" numberOfLines={2} className="mt-md text-[14px]">
         {label}
       </Typography>
     </Pressable>
@@ -226,7 +226,11 @@ export const TierCard = memo(function TierCard({
   onMoveDown: () => void;
 }) {
   const tierTitle = `Tier ${index + 1}`;
-  const rangeLabel = `${tier.minQty || '0'}-${tier.maxQty || '+'} MT`;
+  const minLabel = tier.minQty?.trim() || '1';
+  const maxRaw = tier.maxQty?.trim();
+  const maxLabel =
+    !maxRaw || maxRaw === '0' ? '+' : maxRaw;
+  const rangeLabel = `${minLabel}-${maxLabel} MT`;
   return (
     <View
       className={cn(

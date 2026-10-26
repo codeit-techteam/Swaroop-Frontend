@@ -1,11 +1,18 @@
 /**
  * Frontend-only development authentication flags.
- * Tied to the Metro dev build so release APK/IPA builds never ship the demo
- * shortcuts below (local OTP, shared demo accounts, offline sessions).
+ *
+ * Enabled ONLY for Metro (`__DEV__`). Release/preview APKs must never enable
+ * demo OTP even if someone accidentally sets EXPO_PUBLIC_APP_ENV=development —
+ * production builds set EXPO_PUBLIC_APP_ENV=production explicitly.
+ *
+ * Demo credentials stay in this module for local Metro testing only; UI must
+ * gate every hint behind `isDevAuthEnabled()` so strings are not shown in
+ * production, and auth services must never fall back to password login against
+ * a production API.
  */
 export const DEVELOPMENT_MODE = __DEV__;
 
-/** Shared demo identity across Customer + Seller mobile panels. */
+/** Shared demo identity for local Metro only. Never prefill in release builds. */
 export const DEMO_PHONE = '8240890242';
 export const DEMO_OTP = '123456';
 export const DEMO_USER_NAME = 'Karan Veer';
@@ -27,16 +34,14 @@ export const DEV_AUTH = {
  * One-shot storage reset for development.
  *
  * Bump this number to force a single full wipe of persisted session data on the
- * next launch (clears any stranded half-finished login so the flow restarts at
- * onboarding). It only fires once per value, so normal demo-account persistence
- * testing is unaffected on later reloads. Set to 0 to disable.
+ * next launch. Set to 0 to disable.
  */
 export const DEV_RESET_VERSION = 1;
 
 export const DEV_FEATURES = {
-  /** Accept DEMO_OTP without SMS / API. */
+  /** Accept DEMO_OTP without SMS / API — Metro only. */
   localOtpValidation: true,
-  /** Persist login locally via AsyncStorage. KYC approval always comes from the backend. */
+  /** Persist login locally via AsyncStorage. */
   localStorageLogin: true,
   /** Allow local session when catalog backend is unreachable. */
   allowOfflineBackendFallback: true,

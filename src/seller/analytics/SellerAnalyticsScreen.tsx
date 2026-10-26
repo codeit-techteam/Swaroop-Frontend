@@ -1,6 +1,6 @@
 import { memo } from 'react';
 
-import { FlatList, RefreshControl, View } from 'react-native';
+import { FlatList, RefreshControl, ScrollView, View } from 'react-native';
 
 import { type Href, useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -21,6 +21,14 @@ import { QuickActionCard, SellerHeader } from '@/seller/components';
 import { useSellerAnalytics } from '@/seller/hooks/useSellerAnalytics';
 
 const AnimatedView = Animated.createAnimatedComponent(View);
+
+const FINANCIAL_ROWS = [
+  { key: 'pending', label: 'Pending Settlement' },
+  { key: 'released', label: 'Released' },
+  { key: 'tds', label: 'TDS' },
+  { key: 'platformFees', label: 'Platform Fees' },
+  { key: 'netEarnings', label: 'Net Earnings' },
+] as const;
 
 export const SellerAnalyticsScreen = memo(function SellerAnalyticsScreen() {
   const router = useRouter();
@@ -49,6 +57,14 @@ export const SellerAnalyticsScreen = memo(function SellerAnalyticsScreen() {
     { id: 'actions', type: 'actions' as const },
   ];
 
+  const settlementValues = {
+    pending: data.settlement.pending,
+    released: data.settlement.released,
+    tds: data.settlement.tds,
+    platformFees: data.settlement.platformFees,
+    netEarnings: data.settlement.netEarnings,
+  };
+
   const renderSection = ({ item }: { item: (typeof sections)[number] }) => {
     switch (item.type) {
       case 'kpis-1':
@@ -62,11 +78,22 @@ export const SellerAnalyticsScreen = memo(function SellerAnalyticsScreen() {
         );
       case 'kpis-2':
         return (
-          <AnimatedView entering={FadeInDown.delay(50).duration(300)} className="mt-lg flex-row flex-wrap gap-md">
-            <KpiCard label="Inventory Value" value={data.inventory.value} />
+          <AnimatedView
+            entering={FadeInDown.delay(50).duration(300)}
+            className="mt-lg flex-row flex-wrap gap-md"
+          >
+            <KpiCard label="Inventory Value" value={data.inventory.value} accent="navy" />
             <KpiCard label="Offers Live" value={String(data.inventory.offersLive)} />
-            <KpiCard label="Conversion Rate" value={data.inventory.conversionRate} accent="success" />
-            <KpiCard label="Customer Rating" value={data.inventory.customerRating} accent="success" />
+            <KpiCard
+              label="Conversion Rate"
+              value={data.inventory.conversionRate}
+              accent="success"
+            />
+            <KpiCard
+              label="Customer Rating"
+              value={data.inventory.customerRating}
+              accent="success"
+            />
           </AnimatedView>
         );
       case 'chart':
@@ -86,7 +113,11 @@ export const SellerAnalyticsScreen = memo(function SellerAnalyticsScreen() {
             <Typography variant="roleTitle" className="mb-md text-brand-heading">
               Orders Analytics
             </Typography>
-            <View className="flex-row flex-wrap gap-md">
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 12, paddingRight: 4 }}
+            >
               {data.orders.breakdown.map((order) => (
                 <OrderAnalyticsCard
                   key={order.id}
@@ -95,7 +126,7 @@ export const SellerAnalyticsScreen = memo(function SellerAnalyticsScreen() {
                   percentage={order.percentage}
                 />
               ))}
-            </View>
+            </ScrollView>
           </AnimatedView>
         );
       case 'products':
@@ -133,30 +164,47 @@ export const SellerAnalyticsScreen = memo(function SellerAnalyticsScreen() {
               <KpiCard label="Average ETA" value={data.shipments.averageEta} />
             </View>
             <View className="mt-md">
-              <KpiCard label="Average Transit Time" value={data.shipments.averageTransitTime} />
+              <KpiCard
+                label="Average Transit Time"
+                value={data.shipments.averageTransitTime}
+                fullWidth
+              />
             </View>
           </AnimatedView>
         );
       case 'financial':
         return (
-          <AnimatedView entering={FadeInDown.delay(350).duration(300)} className="mt-lg rounded-2xl border border-brand-border bg-brand-white px-md py-md">
+          <AnimatedView
+            entering={FadeInDown.delay(350).duration(300)}
+            className="mt-lg rounded-2xl border border-brand-border bg-brand-white px-md py-md"
+          >
             <Typography variant="roleTitle" className="text-brand-heading">
               Financial Summary
             </Typography>
-            {[
-              { label: 'Pending Settlement', value: data.settlement.pending },
-              { label: 'Released', value: data.settlement.released },
-              { label: 'TDS', value: data.settlement.tds },
-              { label: 'Platform Fees', value: data.settlement.platformFees },
-              { label: 'Net Earnings', value: data.settlement.netEarnings },
-            ].map((row) => (
-              <View key={row.label} className="mt-md flex-row items-center justify-between border-b border-brand-border pb-sm">
-                <Typography variant="roleDescription">{row.label}</Typography>
-                <Typography variant="roleTitle" className="text-[#0B4A8B]">
-                  {row.value}
-                </Typography>
-              </View>
-            ))}
+            {FINANCIAL_ROWS.map((row, index) => {
+              const isLast = index === FINANCIAL_ROWS.length - 1;
+              return (
+                <View
+                  key={row.key}
+                  className={
+                    isLast
+                      ? 'mt-md flex-row items-center justify-between pt-sm'
+                      : 'mt-md flex-row items-center justify-between border-b border-brand-border pb-sm'
+                  }
+                >
+                  <Typography
+                    variant="roleDescription"
+                    numberOfLines={1}
+                    className={isLast ? 'font-semibold text-brand-heading' : undefined}
+                  >
+                    {row.label}
+                  </Typography>
+                  <Typography variant="roleTitle" numberOfLines={1} className="text-brand-navy">
+                    {settlementValues[row.key]}
+                  </Typography>
+                </View>
+              );
+            })}
           </AnimatedView>
         );
       case 'activities':
@@ -214,8 +262,14 @@ export const SellerAnalyticsScreen = memo(function SellerAnalyticsScreen() {
           keyExtractor={(item) => item.id}
           renderItem={renderSection}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: insets.bottom + 32, paddingTop: 12 }}
-          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => void refresh()} />}
+          contentContainerStyle={{
+            paddingHorizontal: 16,
+            paddingBottom: insets.bottom + 32,
+            paddingTop: 12,
+          }}
+          refreshControl={
+            <RefreshControl refreshing={isRefreshing} onRefresh={() => void refresh()} />
+          }
         />
       )}
     </ScreenWrapper>

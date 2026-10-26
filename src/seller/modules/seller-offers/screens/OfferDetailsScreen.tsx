@@ -1,6 +1,6 @@
-import { memo, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 
-import { ScrollView, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,6 +23,7 @@ import { buildOfferDetailTimeline, calculateOfferRevenue } from '@/seller/mock/o
 import { createEditorFormFromOffer } from '@/seller/modules/seller-offers/services/sellerOffersService';
 import { useSellerOffersStore } from '@/seller/modules/seller-offers/store/sellerOffersStore';
 import { SellerHeader } from '@/seller/components';
+import { brandColors } from '@/theme/colors';
 
 type ConfirmAction = 'pause' | 'archive' | 'duplicate' | null;
 
@@ -30,15 +31,56 @@ export const OfferDetailsScreen = memo(function OfferDetailsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { offerId } = useLocalSearchParams<{ offerId?: string }>();
+  const resolvedOfferId = Array.isArray(offerId) ? offerId[0] : offerId;
   const getOffer = useSellerOffersStore((state) => state.getOffer);
+  const hydrateSellerOffersState = useSellerOffersStore((state) => state.hydrateSellerOffersState);
+  const refreshSellerOffersState = useSellerOffersStore((state) => state.refreshSellerOffersState);
+  const isHydrated = useSellerOffersStore((state) => state.isHydrated);
   const loadEditorFromOffer = useSellerOffersStore((state) => state.loadEditorFromOffer);
   const pauseOffer = useSellerOffersStore((state) => state.pauseOffer);
   const duplicateOffer = useSellerOffersStore((state) => state.duplicateOffer);
   const deleteOffer = useSellerOffersStore((state) => state.deleteOffer);
 
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
+  const [isResolving, setIsResolving] = useState(Boolean(resolvedOfferId));
 
-  const offer = offerId ? getOffer(offerId) : undefined;
+  const offer = resolvedOfferId ? getOffer(resolvedOfferId) : undefined;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const resolve = async () => {
+      if (!resolvedOfferId) {
+        setIsResolving(false);
+        return;
+      }
+      if (getOffer(resolvedOfferId)) {
+        setIsResolving(false);
+        return;
+      }
+      setIsResolving(true);
+      try {
+        if (!isHydrated) {
+          await hydrateSellerOffersState();
+        } else {
+          await refreshSellerOffersState();
+        }
+      } finally {
+        if (!cancelled) setIsResolving(false);
+      }
+    };
+
+    void resolve();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    getOffer,
+    hydrateSellerOffersState,
+    isHydrated,
+    refreshSellerOffersState,
+    resolvedOfferId,
+  ]);
 
   const timeline = useMemo(
     () => (offer ? buildOfferDetailTimeline(offer.id) : []),
@@ -50,10 +92,38 @@ export const OfferDetailsScreen = memo(function OfferDetailsScreen() {
     [offer],
   );
 
+  if (isResolving && !offer) {
+    return (
+      <ScreenWrapper padded={false} className="bg-brand-background">
+        <SellerHeader title="Offer Detail" showBack onBack={() => router.back()} />
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator color={brandColors.primary} />
+        </View>
+      </ScreenWrapper>
+    );
+  }
+
   if (!offer) {
     return (
-      <ScreenWrapper className="bg-brand-background">
-        <Typography variant="roleTitle">Offer not found</Typography>
+      <ScreenWrapper padded={false} className="bg-brand-background">
+        <SellerHeader title="Offer Detail" showBack onBack={() => router.back()} />
+        <View className="flex-1 items-center justify-center px-lg">
+          <Typography variant="headingLeft" className="text-center text-[22px]">
+            Offer not found
+          </Typography>
+          <Typography variant="legal" className="mt-sm text-center text-brand-body">
+            This offer may have been archived or is no longer available.
+          </Typography>
+          <Pressable
+            onPress={() => router.replace(ROUTES.SELLER.OFFERS as Href)}
+            accessibilityRole="button"
+            className="mt-lg rounded-full bg-brand-navy px-lg py-md"
+          >
+            <Typography variant="badge" className="text-brand-white">
+              Back to My Offers
+            </Typography>
+          </Pressable>
+        </View>
       </ScreenWrapper>
     );
   }

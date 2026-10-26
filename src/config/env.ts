@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 
+import { isRunningInExpoGo } from 'expo';
 import Constants from 'expo-constants';
 
 import { z } from 'zod';
@@ -192,7 +193,8 @@ export const appConfig = {
     projectId: env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
   },
   oneSignalAppId: env.EXPO_PUBLIC_ONESIGNAL_APP_ID,
-  isExpoGo: Constants.appOwnership === 'expo',
+  // Prefer Expo's helper — Constants.appOwnership is deprecated and can be null on SDK 58.
+  isExpoGo: isRunningInExpoGo() || Constants.appOwnership === 'expo',
   isDev: env.EXPO_PUBLIC_APP_ENV === 'development',
 } as const;
 

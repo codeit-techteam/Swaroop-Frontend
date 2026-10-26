@@ -31,30 +31,9 @@ const FILTER_GROUPS: Record<FilterModule, FilterGroup[]> = {
       options: [
         { label: 'Pending', value: 'pending' },
         { label: 'Accepted', value: 'accepted' },
+        { label: 'Dispatch', value: 'dispatch_pending' },
+        { label: 'Delivered', value: 'delivered' },
         { label: 'Rejected', value: 'rejected' },
-        { label: 'Dispatched', value: 'dispatched' },
-      ],
-      multi: true,
-    },
-    {
-      id: 'warehouse',
-      label: 'Warehouse',
-      options: [
-        { label: 'Hazira', value: 'hazira' },
-        { label: 'JNPT', value: 'jnpt' },
-        { label: 'Bhiwandi', value: 'bhiwandi' },
-        { label: 'Mundra', value: 'mundra' },
-      ],
-      multi: true,
-    },
-    {
-      id: 'paymentMethod',
-      label: 'Payment Method',
-      options: [
-        { label: 'Advance', value: 'advance' },
-        { label: 'Credit — PetroTrade Managed', value: 'credit_15' },
-        { label: 'On Delivery', value: 'on_delivery' },
-        { label: 'On Loading', value: 'on_loading' },
       ],
       multi: true,
     },

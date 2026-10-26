@@ -7,6 +7,7 @@ import type {
   SellerProductForm,
   SellerTechnicalSpecs,
 } from '@/seller/types';
+import { positiveOrEmpty } from '@/seller/utils/numeric-input';
 import { getLiveCatalogProduct } from '@/services/catalog';
 import type { MarketParentCategoryId, MarketProduct } from '@/types/market';
 
@@ -17,7 +18,7 @@ const ORIGIN_MAP: Array<{ match: string; value: string }> = [
   { match: 'singapore', value: 'Singapore' },
   { match: 'china', value: 'China' },
   { match: 'thailand', value: 'Thailand' },
-  { match: 'ksa', value: 'KSA' },
+  { match: 'ksa', value: 'Saudi Arabia' },
   { match: 'usa', value: 'USA' },
 ];
 
@@ -84,7 +85,8 @@ export type CatalogEditorPatch = {
 };
 
 export function buildEditorFromCatalog(product: MarketProduct): CatalogEditorPatch {
-  const sellingPrice = String(product.price);
+  const sellingPrice = positiveOrEmpty(product.price);
+  const moq = positiveOrEmpty(product.moq);
   const family = getMaterialFamilyByName(
     product.materialType || product.category,
     materialsFromCatalog([product]),
@@ -99,7 +101,7 @@ export function buildEditorFromCatalog(product: MarketProduct): CatalogEditorPat
       polymerType: family?.code === 'PP' ? 'PP' : product.grade || product.materialType || '',
       origin: catalogOriginToSeller(product.origin),
       description: product.description || '',
-      moq: String(product.moq),
+      moq,
     },
     pricing: {
       sellingPrice,
@@ -113,7 +115,7 @@ export function buildEditorFromCatalog(product: MarketProduct): CatalogEditorPat
       {
         id: 'tier-1',
         minQty: '1',
-        maxQty: String(product.moq),
+        maxQty: moq || '10',
         price: sellingPrice,
         discountLabel: 'Standard',
       },

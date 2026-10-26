@@ -11,4 +11,5 @@ export const validateDevOtp = (otp: string): boolean => {
 
 export const getInvalidOtpMessage = (): string => DEV_AUTH.invalidOtpMessage;
 
-export const isDevAccount = (mobileNumber: string): boolean => mobileNumber === DEMO_PHONE;
+export const isDevAccount = (mobileNumber: string): boolean =>
+  mobileNumber.replace(/\D/g, '').slice(-10) === DEMO_PHONE.slice(-10);

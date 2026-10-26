@@ -3,7 +3,8 @@ import { ExpoConfig, ConfigContext } from 'expo/config';
 const APP_ENV = process.env.EXPO_PUBLIC_APP_ENV ?? 'development';
 // Plain-HTTP (LAN backend on the dev machine) is only allowed in development builds.
 const ALLOW_CLEARTEXT = APP_ENV === 'development';
-const APP_VERSION = process.env.EXPO_PUBLIC_APP_VERSION ?? '1.0.0';
+const APP_VERSION = process.env.EXPO_PUBLIC_APP_VERSION ?? '3.1.1';
+const ANDROID_VERSION_CODE = Number(process.env.ANDROID_VERSION_CODE ?? 3111);
 const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID ?? '8fa5420d-cb2b-4656-bc7a-411b977c9d7b';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
@@ -37,6 +38,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       backgroundColor: '#ffffff',
     },
     package: 'com.swaroop.app',
+    versionCode: ANDROID_VERSION_CODE,
+    allowBackup: false,
     permissions: [
       'android.permission.INTERNET',
       'android.permission.ACCESS_NETWORK_STATE',
@@ -49,6 +52,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'android.permission.USE_FINGERPRINT',
       'android.permission.VIBRATE',
       'android.permission.RECEIVE_BOOT_COMPLETED',
+      'android.permission.POST_NOTIFICATIONS',
     ],
   },
   web: {
@@ -66,6 +70,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-font',
     'expo-secure-store',
     'expo-local-authentication',
+    'expo-image',
+    'expo-sharing',
+    'expo-status-bar',
+    '@react-native-community/datetimepicker',
     [
       'expo-splash-screen',
       {

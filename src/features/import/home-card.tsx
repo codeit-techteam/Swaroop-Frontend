@@ -419,7 +419,7 @@ export function ImportTradingHomeSection({
                 variant="roleDescription"
                 className="ml-sm flex-1 text-[12px] text-brand-white"
               >
-                {plural(drafts, 'draft')} ready to publish
+                {plural(drafts, 'draft')} saved — review before publishing
               </Typography>
               <Ionicons name="chevron-forward" size={14} color="#FFFFFF" />
             </Pressable>

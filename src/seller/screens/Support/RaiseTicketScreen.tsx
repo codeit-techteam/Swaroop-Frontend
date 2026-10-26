@@ -30,6 +30,7 @@ export const RaiseTicketScreen = memo(function RaiseTicketScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successSheet, setSuccessSheet] = useState(false);
   const [errorSheet, setErrorSheet] = useState(false);
+  const [createdTicketId, setCreatedTicketId] = useState<string | null>(null);
 
   const handleSubmit = async () => {
     if (!subject.trim() || !description.trim()) {
@@ -39,7 +40,14 @@ export const RaiseTicketScreen = memo(function RaiseTicketScreen() {
 
     setIsSubmitting(true);
     try {
-      await submitTicket({ category, priority, subject, description, attachmentName });
+      const ticket = await submitTicket({
+        category,
+        priority,
+        subject,
+        description,
+        attachmentName,
+      });
+      setCreatedTicketId(ticket.id);
       setSuccessSheet(true);
     } catch {
       setErrorSheet(true);
@@ -146,9 +154,15 @@ export const RaiseTicketScreen = memo(function RaiseTicketScreen() {
         visible={successSheet}
         variant="success"
         title="Ticket Created Successfully"
-        message="Your support ticket has been submitted. Our team will respond shortly."
+        message="Your support ticket has been submitted. Open chat to continue the conversation."
         onDismiss={() => {
           setSuccessSheet(false);
+          if (createdTicketId) {
+            router.replace(
+              `${ROUTES.SELLER.TICKET_CHAT}?ticketId=${encodeURIComponent(createdTicketId)}` as Href,
+            );
+            return;
+          }
           router.replace(ROUTES.SELLER.SUPPORT as Href);
         }}
       />

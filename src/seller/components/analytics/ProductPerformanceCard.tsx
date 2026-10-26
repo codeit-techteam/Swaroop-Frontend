@@ -15,7 +15,9 @@ export const ProductPerformanceCard = memo(function ProductPerformanceCard({
 
   return (
     <View className="mb-md rounded-2xl border border-brand-border bg-brand-white px-md py-md">
-      <Typography variant="roleTitle">{product.name}</Typography>
+      <Typography variant="roleTitle" numberOfLines={1}>
+        {product.name}
+      </Typography>
       <View className="mt-md flex-row flex-wrap">
         <View className="mb-sm w-1/2 pr-sm">
           <Typography variant="legal" className="text-left text-brand-body">
@@ -29,7 +31,7 @@ export const ProductPerformanceCard = memo(function ProductPerformanceCard({
           <Typography variant="legal" className="text-left text-brand-body">
             Revenue
           </Typography>
-          <Typography variant="roleTitle" className="mt-xs">
+          <Typography variant="roleTitle" className="mt-xs text-brand-navy">
             {product.revenue}
           </Typography>
         </View>
@@ -54,17 +56,32 @@ export const OrderAnalyticsCard = memo(function OrderAnalyticsCard({
   label,
   count,
   percentage,
+  className,
 }: {
   label: string;
   count: number;
   percentage: number;
+  className?: string;
 }) {
   return (
-    <View className="min-h-[88px] flex-1 rounded-2xl border border-brand-border bg-brand-white px-md py-md">
-      <Typography variant="badge" className="text-[10px] uppercase text-brand-body">
+    <View
+      className={cn(
+        'min-h-[104px] w-[112px] rounded-2xl border border-brand-border bg-brand-white px-md py-md',
+        className,
+      )}
+    >
+      <Typography
+        variant="badge"
+        numberOfLines={1}
+        className="text-[10px] tracking-[0.4px] text-brand-body"
+      >
         {label}
       </Typography>
-      <Typography variant="headingLeft" className="mt-sm text-[24px] text-brand-heading">
+      <Typography
+        variant="headingLeft"
+        numberOfLines={1}
+        className="mt-sm text-[24px] leading-[30px] text-brand-heading"
+      >
         {count}
       </Typography>
       <Typography variant="legal" className="mt-xs text-left text-brand-body">
