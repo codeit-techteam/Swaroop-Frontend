@@ -2,6 +2,11 @@ import { Stack } from 'expo-router';
 
 import { brandColors } from '@/theme/colors';
 
+// SDK 58: keep role-selection under deep-linked auth screens so back works.
+export const unstable_settings = {
+  anchor: 'role-selection',
+};
+
 export default function AuthLayout() {
   return (
     <Stack
@@ -15,7 +20,7 @@ export default function AuthLayout() {
         gestureEnabled: true,
       }}
     >
-      <Stack.Screen name="role-selection" />
+      <Stack.Screen name="role-selection" options={{ gestureEnabled: false }} />
       <Stack.Screen name="customer-login" />
       <Stack.Screen name="customer-register" />
       <Stack.Screen name="otp-verification" />

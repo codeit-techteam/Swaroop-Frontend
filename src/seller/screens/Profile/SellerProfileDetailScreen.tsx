@@ -2,8 +2,6 @@ import { useEffect } from 'react';
 
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
-import { useRouter } from 'expo-router';
-
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScreenWrapper, Typography } from '@/components';
@@ -18,13 +16,7 @@ import {
 import { brandColors } from '@/theme/colors';
 
 export type SellerProfileSection =
-  | 'company'
-  | 'gst'
-  | 'address'
-  | 'bank'
-  | 'contact'
-  | 'kyc'
-  | 'licenses';
+  'company' | 'gst' | 'address' | 'bank' | 'contact' | 'kyc' | 'licenses';
 
 type SellerProfileDetailScreenProps = {
   section: SellerProfileSection;
@@ -113,7 +105,7 @@ function rowsFor(section: SellerProfileSection, account: SellerAccountSummary): 
 }
 
 const FOOTNOTES: Partial<Record<SellerProfileSection, string>> = {
-  gst: 'Verified GST and PAN are locked. Contact PetroTrade support to request re-verification.',
+  gst: 'Verified GST and PAN are locked. Contact PolyStoreX support to request re-verification.',
   bank: 'Settlements are paid to this account. Contact support to change verified bank details.',
   contact: 'Profile changes made on Seller Web appear here after you pull to refresh.',
   licenses: 'Upload and manage licenses from the Documents Center.',
@@ -124,7 +116,6 @@ export const SellerProfileDetailScreen = ({
   title,
   subtitle,
 }: SellerProfileDetailScreenProps) => {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const account = useSellerStore((state) => state.account);
   const accountStatus = useSellerStore((state) => state.accountStatus);
@@ -143,7 +134,7 @@ export const SellerProfileDetailScreen = ({
 
   return (
     <ScreenWrapper padded={false} className="bg-brand-background">
-      <SellerHeader showBack title={title} subtitle={subtitle} onBack={() => router.back()} />
+      <SellerHeader showBack title={title} subtitle={subtitle} />
       <ScrollView
         className="flex-1 px-xl"
         contentContainerStyle={{ paddingTop: 12, paddingBottom: insets.bottom + 32 }}

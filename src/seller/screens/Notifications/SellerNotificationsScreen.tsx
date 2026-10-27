@@ -3,8 +3,10 @@ import { memo, useCallback } from 'react';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
 import { type Href, useRouter } from 'expo-router';
+
+import { RectButton } from 'react-native-gesture-handler';
+import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { RectButton, Swipeable } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScreenWrapper, Typography } from '@/components';
@@ -75,7 +77,6 @@ export const SellerNotificationsScreen = memo(function SellerNotificationsScreen
         showBack
         showBell
         rightActionLabel="Support"
-        onBack={() => router.back()}
         onBellPress={() => undefined}
         onRightActionPress={() => router.push(ROUTES.SELLER.SUPPORT as Href)}
       />
@@ -84,7 +85,9 @@ export const SellerNotificationsScreen = memo(function SellerNotificationsScreen
         className="flex-1 px-lg"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => void refresh()} />}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={() => void refresh()} />
+        }
       >
         <View className="mt-md">
           <NotificationFilterTabs selected={selectedCategory} onSelect={setSelectedCategory} />
@@ -102,7 +105,10 @@ export const SellerNotificationsScreen = memo(function SellerNotificationsScreen
           <>
             {filteredCriticalActions.length > 0 ? (
               <View className="mt-lg">
-                <Typography variant="badge" className="text-[11px] uppercase tracking-wide text-brand-body">
+                <Typography
+                  variant="badge"
+                  className="text-[11px] uppercase tracking-wide text-brand-body"
+                >
                   Critical Actions Required
                 </Typography>
                 <View className="mt-md gap-md">
@@ -123,7 +129,10 @@ export const SellerNotificationsScreen = memo(function SellerNotificationsScreen
 
             {filteredRecentActivity.length > 0 ? (
               <View className="mt-xl">
-                <Typography variant="badge" className="text-[11px] uppercase tracking-wide text-brand-body">
+                <Typography
+                  variant="badge"
+                  className="text-[11px] uppercase tracking-wide text-brand-body"
+                >
                   Recent Activity
                 </Typography>
                 <View className="mt-md overflow-hidden rounded-2xl border border-brand-border bg-brand-white">

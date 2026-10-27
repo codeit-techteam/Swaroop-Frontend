@@ -2,6 +2,10 @@ import { apiClient } from '@/api/client';
 import { ensureDevBackendSession } from '@/services/backend-session';
 import { useAuthStore } from '@/store/auth-store';
 import type { MarketProduct } from '@/types/market';
+import {
+  formatCategoryDisplayName,
+  isInternalMasterCode,
+} from '@/utils/master-label';
 
 /** Guest browse uses public marketplace; signed-in customers keep customer paths. */
 function productsApiBase(): '/public/marketplace/products' | '/customer/products' {
@@ -94,6 +98,19 @@ const PARENT_FROM_GROUP: Record<string, MarketProduct['categoryId']> = {
   BASE_OILS: 'base-oils',
 };
 
+function firstReadable(...candidates: Array<string | null | undefined>): string {
+  for (const candidate of candidates) {
+    const value = candidate?.trim();
+    if (value && !isInternalMasterCode(value)) return value;
+  }
+  // Fall back to a humanized snake_case label (S-14) when nothing else is readable.
+  for (const candidate of candidates) {
+    const value = candidate?.trim();
+    if (value) return formatCategoryDisplayName(value);
+  }
+  return '';
+}
+
 export function mapBlindProduct(product: BlindProduct): MarketProduct {
   const specs = (product.technicalSpecs ?? {}) as Record<string, unknown>;
   const listing = product.listing;
@@ -113,10 +130,23 @@ export function mapBlindProduct(product: BlindProduct): MarketProduct {
         })
       : undefined;
 
+  const materialFromSpecs =
+    typeof specs.materialType === 'string' ? specs.materialType.trim() : '';
+  const subFromSpecs =
+    typeof specs.subCategory === 'string' ? specs.subCategory.trim() : '';
+
+  // Prefer commercial product name / specs over generic grade labels (B-05 / B-10 / N-05).
+  const gradeFull = product.grade?.fullGradeName?.trim() || '';
+  const gradeDisplay = product.grade?.displayName?.trim() || '';
+  const productName = product.name?.trim() || '';
   const displayName =
-    product.grade?.fullGradeName?.trim() ||
-    product.grade?.displayName?.trim() ||
-    product.name;
+    gradeFull ||
+    (productName && (!gradeDisplay || productName.length > gradeDisplay.length)
+      ? productName
+      : '') ||
+    firstReadable(gradeDisplay, product.grade?.name, productName) ||
+    productName;
+
   const categoryIdFromGroup =
     PARENT_FROM_GROUP[product.grade?.category?.parentGroup ?? ''] ?? undefined;
   const categoryId =
@@ -128,16 +158,28 @@ export function mapBlindProduct(product: BlindProduct): MarketProduct {
 
   // Prefer human-readable category/group labels over raw enum codes (B-10 / N-05 / S-14).
   const readableCategory =
-    product.grade?.category?.displayName?.trim() ||
-    product.grade?.category?.name?.trim() ||
-    product.grade?.gradeGroup?.replace(/_/g, ' ').trim() ||
-    String(specs.materialType ?? '').trim() ||
-    product.grade?.name ||
-    product.name;
+    firstReadable(
+      product.grade?.category?.displayName,
+      product.grade?.category?.name,
+      materialFromSpecs,
+      product.grade?.gradeGroup?.replace(/_/g, ' '),
+      product.grade?.name,
+      productName,
+    ) || productName;
+
+  // B-05: white MB must not show MASTERBATCH_BLACK — prefer White + Masterbatch from specs.
+  const materialLabel = firstReadable(materialFromSpecs) || '';
   const readableBadgeLabel =
-    product.grade?.gradeNo?.trim() ||
-    product.grade?.gradeGroup?.replace(/_/g, ' ').trim() ||
-    readableCategory;
+    firstReadable(
+      subFromSpecs && materialLabel ? `${subFromSpecs} ${materialLabel}` : undefined,
+      subFromSpecs,
+      product.grade?.gradeNo,
+      materialLabel,
+      product.grade?.gradeGroup?.replace(/_/g, ' '),
+      readableCategory,
+    ) || readableCategory;
+
+  const gradeCode = firstReadable(product.grade?.gradeNo, product.code) || product.code;
 
   return {
     id: product.id,
@@ -151,17 +193,20 @@ export function mapBlindProduct(product: BlindProduct): MarketProduct {
     category: readableCategory,
     badge: (typeof specs.badge === 'string' ? specs.badge : 'Best Value') as MarketProduct['badge'],
     image: '',
-    gradeCode: product.grade?.gradeNo ?? product.grade?.code ?? product.code,
+    gradeCode,
     gradeId: product.grade?.id,
     gradeNo: product.grade?.gradeNo ?? undefined,
     manufacturer:
       product.manufacturer ?? product.brand ?? product.grade?.manufacturer ?? undefined,
     masterCategoryId: product.grade?.category?.id,
-    masterCategoryName:
-      product.grade?.category?.displayName ?? product.grade?.category?.name,
+    masterCategoryName: formatCategoryDisplayName(
+      product.grade?.category?.displayName,
+      product.grade?.category?.name,
+      product.grade?.category?.code,
+    ),
     categoryId,
-    materialType: readableCategory,
-    subCategory: typeof specs.subCategory === 'string' ? specs.subCategory : undefined,
+    materialType: firstReadable(materialFromSpecs, readableCategory) || readableCategory,
+    subCategory: subFromSpecs || undefined,
     description: product.description ?? undefined,
     warehouseLabel: typeof specs.warehouseLabel === 'string' ? specs.warehouseLabel : undefined,
     casNumber: typeof specs.casNumber === 'string' ? specs.casNumber : undefined,
@@ -176,6 +221,32 @@ export function mapBlindProduct(product: BlindProduct): MarketProduct {
     bulkPricing,
     documents: product.documents ?? [],
   };
+}
+
+/** B-06: one card per commercially distinct listing (grade + price + MOQ + origin + ETA). */
+export function dedupeMarketProducts(products: MarketProduct[]): MarketProduct[] {
+  const byId = new Map<string, MarketProduct>();
+  for (const product of products) {
+    if (!byId.has(product.id)) byId.set(product.id, product);
+  }
+  const unique = [...byId.values()];
+  const best = new Map<string, MarketProduct>();
+  for (const product of unique) {
+    const key = [
+      product.gradeId || product.gradeCode || product.id,
+      product.price,
+      product.moq,
+      (product.origin ?? '').trim().toLowerCase(),
+      (product.warehouseLabel ?? '').trim().toLowerCase(),
+      (product.eta ?? '').trim().toLowerCase().replace(/\s+/g, ''),
+    ].join('::');
+    const previous = best.get(key);
+    if (!previous || product.stock > previous.stock) {
+      best.set(key, product);
+    }
+  }
+  const keep = new Set([...best.values()].map((product) => product.id));
+  return unique.filter((product) => keep.has(product.id));
 }
 
 export async function fetchCustomerMarketplaceProducts(): Promise<MarketProduct[]> {
@@ -193,7 +264,7 @@ export async function fetchCustomerMarketplaceProducts(): Promise<MarketProduct[
     totalPages = body.meta?.totalPages ?? 1;
     page += 1;
   } while (page <= totalPages && page <= 10);
-  const products = pages.map(mapBlindProduct);
+  const products = dedupeMarketProducts(pages.map(mapBlindProduct));
   setLiveCatalogCache(products);
   return products;
 }

@@ -1,3 +1,4 @@
+import { normalizeSellerOrigin } from '@/seller/constants/grade-options';
 import type { SellerProductSnapshot } from '@/seller/types';
 import type { CreateMarketplaceListingInput } from '@/services/seller-products';
 
@@ -58,9 +59,14 @@ export const buildListingInput = (
   const priceTiers = tiers
     .map((tier) => {
       const price = positiveNumberOrZero(tier.price);
+      const maxParsed = tier.maxQty.trim() ? Number(tier.maxQty) : null;
       return {
         minQty: Number(tier.minQty),
-        maxQty: tier.maxQty.trim() ? Number(tier.maxQty) : null,
+        // Never persist maxQty 0 — it renders as "1-0 MT" and breaks open-ended tiers.
+        maxQty:
+          maxParsed !== null && Number.isFinite(maxParsed) && maxParsed > 0
+            ? maxParsed
+            : null,
         price,
         label: optional(tier.discountLabel),
       };
@@ -89,7 +95,9 @@ export const buildListingInput = (
     density: optional(technicalSpecs.density),
     packaging: optional(form.packagingType),
     unit: form.unit || 'MT',
-    countryOfOrigin: optional(form.origin),
+    countryOfOrigin: optional(
+      form.origin ? normalizeSellerOrigin(form.origin) : form.origin,
+    ),
     application: optional(technicalSpecs.primaryApplication),
     polymerType: optional(form.polymerType),
     warehouseName: optional(form.warehouseLocation),

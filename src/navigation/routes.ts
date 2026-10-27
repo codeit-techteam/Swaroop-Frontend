@@ -53,6 +53,7 @@ export const ROUTES = {
     SHIPMENT_TRACKING: '/(customer)/shipment-tracking',
     ORDER_DETAIL: '/(customer)/order-detail',
     ORDER_CONFIRMATION: '/(customer)/order-confirmation',
+    PURCHASE_REQUEST_CREATE: '/(customer)/purchase-requests/create',
     PURCHASE_REQUEST_SUCCESS: '/(customer)/purchase-request-success',
     DASHBOARD: '/(customer)/(tabs)/home',
     PROFILE_EDIT: '/(customer)/profile/edit',
@@ -200,6 +201,7 @@ export type CustomerRoute =
   | typeof ROUTES.CUSTOMER.SHIPMENT_TRACKING
   | typeof ROUTES.CUSTOMER.ORDER_DETAIL
   | typeof ROUTES.CUSTOMER.ORDER_CONFIRMATION
+  | typeof ROUTES.CUSTOMER.PURCHASE_REQUEST_CREATE
   | typeof ROUTES.CUSTOMER.PURCHASE_REQUEST_SUCCESS
   | typeof ROUTES.CUSTOMER.DASHBOARD
   | typeof ROUTES.CUSTOMER.PROFILE_EDIT

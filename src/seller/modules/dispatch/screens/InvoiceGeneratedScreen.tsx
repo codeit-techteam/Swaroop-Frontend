@@ -26,7 +26,7 @@ export const InvoiceGeneratedScreen = memo(function InvoiceGeneratedScreen() {
 
   return (
     <View className="flex-1 bg-brand-background">
-      <SellerHeader title="Invoice Generated" showBack onBack={() => router.back()} />
+      <SellerHeader title="Invoice Generated" showBack />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 132 }}

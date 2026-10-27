@@ -10,19 +10,20 @@ import {
   View,
 } from 'react-native';
 
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
+
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
 import { ScreenWrapper, Typography } from '@/components';
 import { SendIcon } from '@/icons';
+import { SellerHeader } from '@/seller/components';
+import { TICKET_STATUS_LABELS } from '@/seller/mock/support';
 import {
   getTicketById,
   getSupportTicket,
   replySupportTicket,
 } from '@/seller/services/supportService';
-import { SellerHeader } from '@/seller/components';
-import { TICKET_STATUS_LABELS } from '@/seller/mock/support';
 import type { SupportTicket, SupportTicketMessage } from '@/seller/types/support';
 import { brandColors } from '@/theme/colors';
 import { cn } from '@/utils/cn';
@@ -40,7 +41,7 @@ function formatMessageTime(iso: string) {
 
 function senderLabel(message: SupportTicketMessage) {
   if (message.sender === 'AGENT') {
-    return `${message.senderName} · PetroTrade Support`;
+    return `${message.senderName} · PolyStoreX Support`;
   }
   if (message.sender === 'SYSTEM') return message.senderName || 'System';
   return 'You';
@@ -88,13 +89,12 @@ const MessageBubble = memo(function MessageBubble({ message }: { message: Suppor
 });
 
 export const TicketChatScreen = memo(function TicketChatScreen() {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { ticketId } = useLocalSearchParams<{ ticketId?: string }>();
   const listRef = useRef<FlatList<SupportTicketMessage>>(null);
 
   const [ticket, setTicket] = useState<SupportTicket | null>(() =>
-    ticketId ? getTicketById(ticketId) ?? null : null,
+    ticketId ? (getTicketById(ticketId) ?? null) : null,
   );
   const [loading, setLoading] = useState(true);
   const [replyDraft, setReplyDraft] = useState('');
@@ -170,16 +170,12 @@ export const TicketChatScreen = memo(function TicketChatScreen() {
   const statusLabel = ticket
     ? ticket.apiStatus === 'WAITING_CUSTOMER'
       ? 'Awaiting your reply'
-      : TICKET_STATUS_LABELS[ticket.status] ?? ticket.status
+      : (TICKET_STATUS_LABELS[ticket.status] ?? ticket.status)
     : '';
 
   return (
     <ScreenWrapper padded={false} className="bg-brand-background">
-      <SellerHeader
-        title={ticket?.ticketId ?? 'Support Chat'}
-        showBack
-        onBack={() => router.back()}
-      />
+      <SellerHeader title={ticket?.ticketId ?? 'Support Chat'} showBack />
 
       <KeyboardAvoidingView
         className="flex-1"
@@ -236,7 +232,7 @@ export const TicketChatScreen = memo(function TicketChatScreen() {
                     {ticket.resolutionNote}
                   </Typography>
                 </View>
-              ) : null
+              ) : undefined
             }
             ListEmptyComponent={
               <Typography variant="subheading" className="mt-xl text-center text-brand-body">

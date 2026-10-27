@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import Toast from 'react-native-toast-message';
 
+import { getApiErrorMessage } from '@/utils/api-error-message';
 import { persistSellerProductSnapshot } from '@/seller/services/sellerProductService';
 import { useInventoryStore } from '@/seller/store/inventoryStore';
 import { useSellerProductStore } from '@/seller/store/sellerProductStore';
@@ -19,6 +20,7 @@ import {
   syncOfferInventory,
   updateOfferOnBackend,
 } from '@/seller/modules/seller-offers/services/sellerOffersService';
+import { resolveOfferBackendId } from '@/seller/modules/seller-offers/services/offer-id';
 import type {
   CreateOfferInput,
   OfferEditorForm,
@@ -29,13 +31,18 @@ import type {
 } from '@/seller/modules/seller-offers/types/offers';
 
 const showOfferError = (error: unknown, fallback: string): void => {
-  const message = error instanceof Error ? error.message : fallback;
+  const message = getApiErrorMessage(error) || fallback;
   Toast.show({
     type: 'error',
     text1: 'Offers',
-    text2: message,
+    text2: message || fallback,
   });
 };
+
+const resolveMutationId = (
+  offerId: string,
+  offers: SellerOffer[],
+): string => resolveOfferBackendId(offerId, offers);
 
 const syncDashboardStats = (stats: SellerOffersStore['stats']): void => {
   const productStore = useSellerProductStore.getState();
@@ -270,6 +277,8 @@ export const useSellerOffersStore = create<SellerOffersStore>((set, get) => ({
       if (!targetId) {
         const created = await createOfferOnBackend(get().editorForm, { status: 'draft' });
         targetId = created.id;
+      } else {
+        targetId = resolveMutationId(targetId, get().offers);
       }
 
       const activated = await activateOfferOnBackend(targetId);
@@ -288,7 +297,8 @@ export const useSellerOffersStore = create<SellerOffersStore>((set, get) => ({
 
   pauseOffer: async (offerId) => {
     try {
-      const paused = await pauseOfferOnBackend(offerId);
+      const backendId = resolveMutationId(offerId, get().offers);
+      const paused = await pauseOfferOnBackend(backendId);
       await get().refreshSellerOffersState();
       return get().getOffer(paused.id) ?? paused;
     } catch (error) {
@@ -299,7 +309,8 @@ export const useSellerOffersStore = create<SellerOffersStore>((set, get) => ({
 
   resumeOffer: async (offerId) => {
     try {
-      const resumed = await activateOfferOnBackend(offerId);
+      const backendId = resolveMutationId(offerId, get().offers);
+      const resumed = await activateOfferOnBackend(backendId);
       await get().refreshSellerOffersState();
       return get().getOffer(resumed.id) ?? resumed;
     } catch (error) {
@@ -336,7 +347,8 @@ export const useSellerOffersStore = create<SellerOffersStore>((set, get) => ({
 
   deleteOffer: async (offerId) => {
     try {
-      await deleteOfferOnBackend(offerId);
+      const backendId = resolveMutationId(offerId, get().offers);
+      await deleteOfferOnBackend(backendId);
       await get().refreshSellerOffersState();
       return true;
     } catch (error) {
@@ -347,7 +359,8 @@ export const useSellerOffersStore = create<SellerOffersStore>((set, get) => ({
 
   approveOffer: async (offerId) => {
     try {
-      const activated = await activateOfferOnBackend(offerId);
+      const backendId = resolveMutationId(offerId, get().offers);
+      const activated = await activateOfferOnBackend(backendId);
       await get().refreshSellerOffersState();
       return get().getOffer(activated.id) ?? activated;
     } catch (error) {
@@ -358,7 +371,8 @@ export const useSellerOffersStore = create<SellerOffersStore>((set, get) => ({
 
   rejectOffer: async (offerId, _comments) => {
     try {
-      const cancelled = await cancelOfferOnBackend(offerId);
+      const backendId = resolveMutationId(offerId, get().offers);
+      const cancelled = await cancelOfferOnBackend(backendId);
       await get().refreshSellerOffersState();
       return get().getOffer(cancelled.id) ?? cancelled;
     } catch (error) {
@@ -369,7 +383,8 @@ export const useSellerOffersStore = create<SellerOffersStore>((set, get) => ({
 
   expireOffer: async (offerId) => {
     try {
-      const cancelled = await cancelOfferOnBackend(offerId);
+      const backendId = resolveMutationId(offerId, get().offers);
+      const cancelled = await cancelOfferOnBackend(backendId);
       await get().refreshSellerOffersState();
       return get().getOffer(cancelled.id) ?? cancelled;
     } catch (error) {

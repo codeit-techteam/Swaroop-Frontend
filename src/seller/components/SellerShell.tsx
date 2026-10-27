@@ -51,7 +51,7 @@ export const SellerShell = memo(function SellerShell({
     <ScreenWrapper padded={false} className="bg-brand-background">
       <SellerHeader
         title="Seller Dashboard"
-        subtitle={companyName || 'PetroTrade Seller'}
+        subtitle={companyName || 'PolyStoreX Seller'}
         showMenu
         showBell
         onMenuPress={() => setDrawerOpen(true)}
@@ -93,7 +93,7 @@ export const SellerShell = memo(function SellerShell({
         <View className="absolute inset-0 flex-row">
           <View className="w-[78%] bg-brand-white px-lg pb-xl pt-2xl shadow-lg">
             <Typography variant="headingLeft" className="mb-sm text-[20px]">
-              PetroTrade Seller
+              PolyStoreX Seller
             </Typography>
             <Typography variant="subheadingLeft" className="mb-lg">
               Enterprise operations workspace

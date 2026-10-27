@@ -60,7 +60,7 @@ export function sellerAuthErrorMessage(error: unknown, fallback: string): string
     if (typeof message === 'string' && message) return message;
     if (Array.isArray(message) && message[0]) return message[0];
     if (!error.response) {
-      return 'Unable to reach PetroTrade. Check your internet connection and try again.';
+      return 'Unable to reach PolyStoreX. Check your internet connection and try again.';
     }
   }
   if (error instanceof Error && error.message) return error.message;

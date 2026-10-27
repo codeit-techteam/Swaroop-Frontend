@@ -67,7 +67,7 @@ const COPY: Record<string, Omit<CommerceErrorCopy, 'code'>> = {
   },
   CREDIT_LIMIT_EXCEEDED: {
     title: 'Credit limit exceeded',
-    message: 'Requested amount exceeds your available PetroTrade credit.',
+    message: 'Requested amount exceeds your available PolyStoreX credit.',
   },
   NETWORK_ERROR: {
     title: 'Unable to refresh pricing',

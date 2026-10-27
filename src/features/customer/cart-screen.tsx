@@ -79,6 +79,8 @@ export const CustomerCartScreen = memo(function CustomerCartScreen() {
     refresh,
   } = useCartQuote({
     items,
+    // Keep quoting enabled while quantity is below MOQ so recovering to MOQ
+    // refreshes pricing and re-enables checkout (does not stay stuck disabled).
     enabled: isHydrated && backendReady && items.length > 0 && !syncing,
     shippingAddressId,
   });
@@ -155,7 +157,8 @@ export const CustomerCartScreen = memo(function CustomerCartScreen() {
   }, []);
 
   const handleBrowseMarketplace = useCallback(() => {
-    router.replace(ROUTES.CUSTOMER.MARKET as Href);
+    // Prefer PR creation entry over dumping into the grade catalogue (B-02).
+    router.replace(ROUTES.CUSTOMER.PURCHASE_REQUEST_CREATE as Href);
   }, [router]);
 
   const persistQuantity = useCallback(
@@ -284,9 +287,12 @@ export const CustomerCartScreen = memo(function CustomerCartScreen() {
 
   const isEmpty = items.length === 0;
   const pricingReady = summary.fromQuote && summary.totalLandedCost != null;
-  // Checkout is only blocked for genuine invalid cart / in-flight work — not stale quote errors.
+  // Re-enable as soon as MOQ is met; allow in-flight quote refresh after recovery.
   const checkoutEnabled =
-    summary.meetsMoq && !syncing && !checkingOut && (pricingReady || !error);
+    summary.meetsMoq &&
+    !syncing &&
+    !checkingOut &&
+    (pricingReady || !error || quoting);
   const showPricingBanner = status === 'PRICE_CHANGED' && changes.length > 0 && !showPriceModal;
 
   return (

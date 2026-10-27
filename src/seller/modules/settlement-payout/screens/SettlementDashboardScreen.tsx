@@ -3,18 +3,13 @@ import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, View } from 'react-native';
 
 import { type Href, useRouter } from 'expo-router';
+
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
 import { ScreenWrapper, Typography } from '@/components';
-import {
-  CheckCircleIcon,
-  ClockIcon,
-  CurrencyIcon,
-  ShieldCheckIcon,
-  WalletIcon,
-} from '@/icons';
+import { CheckCircleIcon, ClockIcon, CurrencyIcon, ShieldCheckIcon, WalletIcon } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
 import {
   EmptyState,
@@ -31,7 +26,10 @@ import {
 } from '@/seller/modules/settlement-payout/components';
 import { formatSettlementAmount } from '@/seller/modules/settlement-payout/services/settlementService';
 import { useSettlementStore } from '@/seller/modules/settlement-payout/store/settlementStore';
-import type { Settlement, SettlementTabFilter } from '@/seller/modules/settlement-payout/types/settlement';
+import type {
+  Settlement,
+  SettlementTabFilter,
+} from '@/seller/modules/settlement-payout/types/settlement';
 import { navigateSellerBottomTab } from '@/seller/navigation/useSellerBottomNavigation';
 import { brandColors } from '@/theme/colors';
 import { elevation } from '@/theme/shadows';
@@ -79,7 +77,9 @@ export const SettlementDashboardScreen = memo(function SettlementDashboardScreen
   );
 
   const pendingCount = useMemo(
-    () => settlements.filter((item) => item.status === 'pending' || item.status === 'processing').length,
+    () =>
+      settlements.filter((item) => item.status === 'pending' || item.status === 'processing')
+        .length,
     [settlements],
   );
 
@@ -121,7 +121,7 @@ export const SettlementDashboardScreen = memo(function SettlementDashboardScreen
         Payouts
       </Typography>
       <Typography variant="legal" className="mt-xs text-left text-brand-body">
-        Escrow-protected settlements from PetroTrade
+        Escrow-protected settlements from PolyStoreX
       </Typography>
 
       <AnimatedSection entering={FadeInDown.duration(320)} className="mt-lg">
@@ -146,7 +146,7 @@ export const SettlementDashboardScreen = memo(function SettlementDashboardScreen
                 </Typography>
               </View>
             </View>
-            <View className="flex-row items-center rounded-full bg-white/12 px-sm py-xs">
+            <View className="bg-white/12 flex-row items-center rounded-full px-sm py-xs">
               <ShieldCheckIcon size={12} color={brandColors.white} />
               <Typography variant="badge" className="ml-xs text-[9px] text-brand-white">
                 Protected
@@ -154,7 +154,10 @@ export const SettlementDashboardScreen = memo(function SettlementDashboardScreen
             </View>
           </View>
 
-          <Typography variant="legal" className="mt-lg text-left text-[11px] text-brand-primary-light">
+          <Typography
+            variant="legal"
+            className="mt-lg text-left text-[11px] text-brand-primary-light"
+          >
             Pending settlement
           </Typography>
           <Typography
@@ -169,18 +172,32 @@ export const SettlementDashboardScreen = memo(function SettlementDashboardScreen
 
           <View className="mt-lg flex-row gap-sm">
             <View className="flex-1 rounded-2xl bg-white/10 px-md py-sm">
-              <Typography variant="legal" className="text-left text-[10px] uppercase tracking-wide text-brand-primary-light">
+              <Typography
+                variant="legal"
+                className="text-left text-[10px] uppercase tracking-wide text-brand-primary-light"
+              >
                 Next release
               </Typography>
-              <Typography variant="roleTitle" numberOfLines={1} className="mt-xs text-[13px] text-brand-white">
+              <Typography
+                variant="roleTitle"
+                numberOfLines={1}
+                className="mt-xs text-[13px] text-brand-white"
+              >
                 {summary.nextReleaseLabel || '—'}
               </Typography>
             </View>
             <View className="flex-1 rounded-2xl bg-white/10 px-md py-sm">
-              <Typography variant="legal" className="text-left text-[10px] uppercase tracking-wide text-brand-primary-light">
+              <Typography
+                variant="legal"
+                className="text-left text-[10px] uppercase tracking-wide text-brand-primary-light"
+              >
                 This month
               </Typography>
-              <Typography variant="roleTitle" numberOfLines={1} className="mt-xs text-[13px] text-brand-white">
+              <Typography
+                variant="roleTitle"
+                numberOfLines={1}
+                className="mt-xs text-[13px] text-brand-white"
+              >
                 {formatSettlementAmount(summary.thisMonth, true)}
               </Typography>
             </View>
@@ -231,7 +248,8 @@ export const SettlementDashboardScreen = memo(function SettlementDashboardScreen
 
       <View className="mt-lg flex-row items-center justify-between">
         <Typography variant="roleTitle" className="text-[15px]">
-          {filteredSettlements.length} {filteredSettlements.length === 1 ? 'settlement' : 'settlements'}
+          {filteredSettlements.length}{' '}
+          {filteredSettlements.length === 1 ? 'settlement' : 'settlements'}
         </Typography>
         <Pressable
           onPress={() => router.push(ROUTES.SELLER.SETTLEMENT_HISTORY as Href)}
@@ -260,7 +278,7 @@ export const SettlementDashboardScreen = memo(function SettlementDashboardScreen
     <ScreenWrapper padded={false} className="bg-brand-background">
       <View className="flex-1">
         <SellerModuleTopBar
-          title="PetroTrade"
+          title="PolyStoreX"
           showSearch={false}
           onBellPress={() => setShowNotifications((value) => !value)}
         />
@@ -279,7 +297,10 @@ export const SettlementDashboardScreen = memo(function SettlementDashboardScreen
               paddingBottom: insets.bottom + 120,
             }}
             refreshControl={
-              <RefreshControl refreshing={isRefreshing} onRefresh={() => void refreshSettlementState()} />
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={() => void refreshSettlementState()}
+              />
             }
             ListHeaderComponent={listHeader}
             ItemSeparatorComponent={() => <View className="h-md" />}
@@ -331,7 +352,7 @@ export const SettlementDashboardScreen = memo(function SettlementDashboardScreen
                     Open
                   </Typography>
                 </Pressable>
-              ) : null
+              ) : undefined
             }
           />
         )}

@@ -37,7 +37,7 @@ export const PriceUpdatedModal = memo(function PriceUpdatedModal({
           Price Updated
         </Typography>
         <Typography variant="subheading" className="mt-sm text-[14px] leading-[21px]">
-          The latest PetroTrade price for this product has changed. Your cart has been updated with
+          The latest PolyStoreX price for this product has changed. Your cart has been updated with
           the current market price.
         </Typography>
       </View>

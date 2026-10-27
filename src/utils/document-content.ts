@@ -9,7 +9,7 @@ const inr = (amount: number) => `₹ ${amount.toLocaleString('en-IN')}`;
 
 export function buildPoDocumentContent(po: PurchaseOrderDocument): string {
   return [
-    'PETROTRADE — PURCHASE ORDER',
+    'POLYSTOREX — PURCHASE ORDER',
     '===========================',
     '',
     `PO Number     : ${po.poNumber}`,
@@ -46,7 +46,7 @@ export function buildPoDocumentContent(po: PurchaseOrderDocument): string {
     `Payment Terms : ${po.paymentTerms}`,
     `Delivery Terms: ${po.deliveryTerms}`,
     '',
-    '© PetroTrade Customer Portal',
+    '© PolyStoreX Customer Portal',
   ].join('\n');
 }
 
@@ -76,9 +76,9 @@ export function buildInvoiceDocumentContent(inv: InvoiceDocument): string {
     '',
     `Payment       : ${inv.paymentInfo.method}`,
     `UTR           : ${inv.paymentInfo.utr ?? '—'}`,
-    `Payment To    : PetroTrade`,
+    `Payment To    : PolyStoreX`,
     '',
-    '© PetroTrade Customer Portal',
+    '© PolyStoreX Customer Portal',
   ].join('\n');
 }
 
@@ -136,7 +136,7 @@ export function buildGenericDocumentContent(meta: {
   extraLines?: string[];
 }): string {
   return [
-    `PETROTRADE CUSTOMER PORTAL — ${meta.title.toUpperCase()}`,
+    `POLYSTOREX CUSTOMER PORTAL — ${meta.title.toUpperCase()}`,
     '='.repeat(48),
     '',
     `Document No.  : ${meta.documentNumber}`,
@@ -147,7 +147,7 @@ export function buildGenericDocumentContent(meta: {
     '',
     ...(meta.extraLines ?? []),
     '',
-    '© PetroTrade Customer Portal',
+    '© PolyStoreX Customer Portal',
   ]
     .filter(Boolean)
     .join('\n');

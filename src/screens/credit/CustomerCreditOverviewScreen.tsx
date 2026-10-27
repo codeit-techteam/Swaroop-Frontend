@@ -20,7 +20,7 @@ import { formatCurrency } from '@/utils/currency';
 
 const BENEFITS = [
   'Buy now and pay on Net-15 or Net-30 terms.',
-  'Limits are reviewed by PetroTrade Credit Management.',
+  'Limits are reviewed by PolyStoreX Credit Management.',
   'Approved limits unlock credit options at checkout.',
 ];
 
@@ -80,7 +80,7 @@ export const CustomerCreditOverviewScreen = memo(function CustomerCreditOverview
 
   return (
     <ScreenWrapper padded={false} className="bg-brand-background">
-      <AppHeader variant="back" title="Trading Credit" onBack={() => router.back()} />
+      <AppHeader variant="back" title="Trading Credit" />
 
       <ScrollView
         className="flex-1 px-lg"

@@ -61,7 +61,7 @@ export const SettlementHistoryScreen = memo(function SettlementHistoryScreen() {
 
   return (
     <ScreenWrapper padded={false} className="bg-brand-background">
-      <SellerHeader title="Settlement history" showBack onBack={() => router.back()} />
+      <SellerHeader title="Settlement history" showBack />
       <FlatList
         data={historyItems}
         keyExtractor={(item) => item.id}

@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { Pressable, View } from 'react-native';
 
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 
 import {
   AppHeader,
@@ -12,9 +12,11 @@ import {
   ScreenWrapper,
   Typography,
 } from '@/components';
+import { DEMO_OTP, DEMO_USER_NAME, DEVELOPMENT_MODE } from '@/config/development';
 import { ClockIcon, OtpIllustration } from '@/icons';
 import { parseReturnToParam, resolvePostAuthHref } from '@/navigation/return-to';
-import { DEMO_OTP, DEMO_USER_NAME, DEVELOPMENT_MODE } from '@/config/development';
+import { ROUTES } from '@/navigation/routes';
+import { safeGoBack } from '@/navigation/safe-back';
 import {
   customerAuthErrorMessage,
   isOtpCooldownError,
@@ -58,6 +60,7 @@ export const OtpVerificationScreen = () => {
   const [otpError, setOtpError] = useState<string | undefined>();
   const [secondsLeft, setSecondsLeft] = useState(RESEND_SECONDS);
   const [isVerifying, setIsVerifying] = useState(false);
+  const verifyingRef = useRef(false);
   const purpose: CustomerOtpPurpose = params.source === 'register' ? 'SIGNUP' : 'LOGIN';
 
   const phoneDisplay = useMemo(() => formatPhone(params.phone), [params.phone]);
@@ -75,7 +78,7 @@ export const OtpVerificationScreen = () => {
   }, [secondsLeft]);
 
   const handleBack = useCallback(() => {
-    router.back();
+    safeGoBack(router, ROUTES.AUTH.CUSTOMER_LOGIN as Href);
   }, [router]);
 
   const handleResend = useCallback(async () => {
@@ -96,60 +99,67 @@ export const OtpVerificationScreen = () => {
     }
   }, [canResend, params.phone, purpose]);
 
-  const handleOtpChange = useCallback((value: string) => {
-    setOtp(value);
-    setOtpError(undefined);
-  }, []);
+  const handleVerify = useCallback(
+    async (code: string) => {
+      // L-10: auto-submit (6th digit) and the Verify button can fire in the same
+      // tick; the ref closes that window before `isVerifying` has re-rendered.
+      if (code.length !== 6 || verifyingRef.current) {
+        return;
+      }
+      verifyingRef.current = true;
 
-  const handleVerify = useCallback(async () => {
-    if (!isOtpComplete || isVerifying) {
-      return;
-    }
+      const mobileNumber = params.phone ?? '';
+      const role = useAuthStore.getState().selectedRole === 'seller' ? 'seller' : 'customer';
 
-    const mobileNumber = params.phone ?? '';
-    const role = useAuthStore.getState().selectedRole === 'seller' ? 'seller' : 'customer';
+      // Local Metro only: reject wrong demo OTP early for the seeded account.
+      if (DEVELOPMENT_MODE && isDevAccount(mobileNumber) && !validateDevOtp(code)) {
+        setOtpError(getInvalidOtpMessage());
+        verifyingRef.current = false;
+        return;
+      }
 
-    // Local Metro only: reject wrong demo OTP early for the seeded account.
-    if (DEVELOPMENT_MODE && isDevAccount(mobileNumber) && !validateDevOtp(otp)) {
-      setOtpError(getInvalidOtpMessage());
-      return;
-    }
+      setIsVerifying(true);
+      try {
+        await verifyCustomerOtp(
+          mobileNumber,
+          code,
+          purpose,
+          role === 'seller' ? 'SELLER' : 'CUSTOMER',
+        );
+      } catch (error) {
+        setOtpError(customerAuthErrorMessage(error, 'Invalid OTP. Please try again.'));
+        setIsVerifying(false);
+        verifyingRef.current = false;
+        return;
+      }
 
-    setIsVerifying(true);
-    try {
-      await verifyCustomerOtp(
-        mobileNumber,
-        otp,
-        purpose,
-        role === 'seller' ? 'SELLER' : 'CUSTOMER',
-      );
-    } catch (error) {
-      setOtpError(customerAuthErrorMessage(error, 'Invalid OTP. Please try again.'));
+      const previousMobile = useAuthStore.getState().mobileNumber;
+      if (previousMobile && previousMobile !== mobileNumber) resetUserScopedState();
+      completeLogin(mobileNumber);
+      if (role === 'customer') {
+        await refreshKycStatus();
+      }
       setIsVerifying(false);
-      return;
-    }
+      verifyingRef.current = false;
 
-    const previousMobile = useAuthStore.getState().mobileNumber;
-    if (previousMobile && previousMobile !== mobileNumber) resetUserScopedState();
-    completeLogin(mobileNumber);
-    if (role === 'customer') {
-      await refreshKycStatus();
-    }
-    setIsVerifying(false);
+      const { kycApproved, reviewSubmitted } = useAuthStore.getState();
+      router.replace(resolvePostAuthHref({ returnTo, kycApproved, reviewSubmitted }));
+    },
+    [completeLogin, params.phone, purpose, returnTo, router],
+  );
 
-    const { kycApproved, reviewSubmitted } = useAuthStore.getState();
-    router.replace(
-      resolvePostAuthHref({ returnTo, kycApproved, reviewSubmitted }),
-    );
-  }, [completeLogin, isOtpComplete, isVerifying, otp, params.phone, purpose, returnTo, router]);
-
-  // Auto-submit after the sixth digit (L-10).
-  useEffect(() => {
-    if (otp.length === 6 && !isVerifying && !otpError) {
-      void handleVerify();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot when OTP completes
-  }, [otp]);
+  // Auto-submit as soon as the sixth digit lands (L-10) — driven by the input
+  // event rather than an effect so it cannot re-fire on unrelated re-renders.
+  const handleOtpChange = useCallback(
+    (value: string) => {
+      setOtp(value);
+      setOtpError(undefined);
+      if (value.length === 6) {
+        void handleVerify(value);
+      }
+    },
+    [handleVerify],
+  );
 
   return (
     <ScreenWrapper className="bg-brand-white">
@@ -203,11 +213,11 @@ export const OtpVerificationScreen = () => {
           disabled={!isOtpComplete}
           loading={isVerifying}
           onPress={() => {
-            void handleVerify();
+            void handleVerify(otp);
           }}
         />
         <Typography variant="legal" className="mt-lg px-md">
-          Secure multi-factor authentication for authorized PetroTrade personnel only.
+          Secure multi-factor authentication for authorized PolyStoreX personnel only.
         </Typography>
       </View>
     </ScreenWrapper>

@@ -35,7 +35,7 @@ export const SellerUpdateStockScreen = memo(function SellerUpdateStockScreen() {
 
   return (
     <ScreenWrapper padded={false} className="bg-brand-background">
-      <SellerHeader showBack showBell title="Update Stock" onBack={() => router.back()} />
+      <SellerHeader showBack showBell title="Update Stock" />
 
       <View className="flex-1">
         <ScrollView

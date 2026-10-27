@@ -47,7 +47,7 @@ export const DOCUMENT_TABS: {
   {
     id: 'purchase_orders',
     title: 'Purchase Orders',
-    description: 'Formal POs linked to approved purchase requests and PetroTrade confirmations.',
+    description: 'Formal POs linked to approved purchase requests and PolyStoreX confirmations.',
   },
   {
     id: 'invoices',
@@ -101,7 +101,7 @@ export const BLIND_SUPPLY_SOURCE = 'ANONYMOUS SUPPLIER';
 export const BLIND_WAREHOUSE = 'Assigned hub';
 
 export const PLATFORM_PARTY = {
-  name: 'PetroTrade Technologies Pvt Ltd',
+  name: 'PolyStoreX Technologies Pvt Ltd',
   gstin: '27AABCP4821Q1ZV',
   address: '12th Floor, One BKC, Bandra Kurla Complex',
   city: 'Mumbai',

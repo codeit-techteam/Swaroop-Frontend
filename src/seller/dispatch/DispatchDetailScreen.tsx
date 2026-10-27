@@ -60,7 +60,7 @@ export const DispatchDetailScreen = memo(function DispatchDetailScreen() {
   if (!order) {
     return (
       <ScreenWrapper padded={false} className="bg-brand-background">
-        <SellerHeader title="Dispatch Detail" showBack onBack={() => router.back()} />
+        <SellerHeader title="Dispatch Detail" showBack />
         <View className="flex-1 items-center justify-center px-lg">
           <Typography variant="roleTitle">Dispatch not found</Typography>
         </View>
@@ -75,7 +75,7 @@ export const DispatchDetailScreen = memo(function DispatchDetailScreen() {
 
   return (
     <ScreenWrapper padded={false} className="bg-brand-background">
-      <SellerHeader title="Dispatch Detail" showBack onBack={() => router.back()} />
+      <SellerHeader title="Dispatch Detail" showBack />
 
       <ScrollView
         className="flex-1 px-lg"

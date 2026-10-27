@@ -22,7 +22,7 @@ export const VERIFICATION_SCREEN_COPY = {
   progressHeading: 'Verification Progress',
   transactionHeading: 'Transaction Details',
   infoMessage:
-    'After verification your order will automatically be forwarded to PetroTrade Procurement Team.',
+    'After verification your order will automatically be forwarded to PolyStoreX Procurement Team.',
   financeInProgress: 'Verification in progress...',
   orderSubmissionPending: 'Scheduled after verification',
   illustrationLabel: 'Secure B2B Payment Verification & Trust',

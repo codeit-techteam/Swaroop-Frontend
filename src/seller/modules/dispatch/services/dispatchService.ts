@@ -682,7 +682,7 @@ export const mapDispatchOrderToOrder = (dispatchOrder: DispatchOrder): Order =>
               : dispatchOrder.stage === 'in_transit' || dispatchOrder.stage === 'delayed'
                 ? 'On route to destination'
                 : dispatchOrder.loadingPoint,
-          transportPartner: 'PetroTrade Fleet',
+          transportPartner: 'PolyStoreX Fleet',
         }
       : null,
     loadingStatus: dispatchOrder.loadingCompletedAt ? 'completed' : 'scheduled',

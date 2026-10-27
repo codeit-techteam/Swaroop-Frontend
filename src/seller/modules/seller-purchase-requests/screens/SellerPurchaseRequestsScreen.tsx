@@ -172,8 +172,12 @@ export const SellerPurchaseRequestsScreen = memo(function SellerPurchaseRequests
             <View className="mt-lg gap-md">
               {visibleItems.length === 0 ? (
                 <EmptyState
-                  variant="no_purchase_requests"
-                  onCtaPress={() => router.push(ROUTES.SELLER.OFFERS as Href)}
+                  variant={query.trim() ? 'no_search_results' : 'no_purchase_requests'}
+                  onCtaPress={
+                    query.trim()
+                      ? undefined
+                      : () => router.push(ROUTES.SELLER.OFFERS as Href)
+                  }
                 />
               ) : (
                 visibleItems.map((request) => (

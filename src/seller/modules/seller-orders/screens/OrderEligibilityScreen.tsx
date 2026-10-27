@@ -2,11 +2,13 @@ import { memo, useEffect, useState } from 'react';
 
 import { ActivityIndicator, ScrollView, View } from 'react-native';
 
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
+
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScreenWrapper, Typography } from '@/components';
 import { InfoIcon } from '@/icons';
+import { SellerHeader } from '@/seller/components';
 import {
   CreditAssessmentCard,
   DestinationCard,
@@ -15,13 +17,12 @@ import {
   TradeBehaviourCard,
 } from '@/seller/modules/seller-orders/components';
 import { useSellerOrdersStore } from '@/seller/modules/seller-orders/store/sellerOrdersStore';
-import { SellerHeader } from '@/seller/components';
+import type { SellerOrder } from '@/seller/modules/seller-orders/types/sellerOrders';
 import {
   fetchSellerOrderById,
   fetchSellerOrderTimeline,
   type SellerOrderTimelineEvent,
 } from '@/services/seller-orders-api';
-import type { SellerOrder } from '@/seller/modules/seller-orders/types/sellerOrders';
 import { brandColors } from '@/theme/colors';
 
 const formatDate = (value: string): string =>
@@ -32,7 +33,6 @@ const formatDate = (value: string): string =>
   }).format(new Date(value));
 
 export const OrderEligibilityScreen = memo(function OrderEligibilityScreen() {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { orderId } = useLocalSearchParams<{ orderId?: string }>();
   const getOrder = useSellerOrdersStore((state) => state.getOrder);
@@ -82,7 +82,7 @@ export const OrderEligibilityScreen = memo(function OrderEligibilityScreen() {
 
   return (
     <ScreenWrapper padded={false} className="bg-brand-background">
-      <SellerHeader title="Order Details" showBack onBack={() => router.back()} />
+      <SellerHeader title="Order Details" showBack />
 
       <ScrollView
         className="flex-1 px-lg"
@@ -121,7 +121,7 @@ export const OrderEligibilityScreen = memo(function OrderEligibilityScreen() {
                     <Typography variant="legal" className="mt-0.5 text-brand-body">
                       {event.occurredAt || event.at
                         ? formatDate(String(event.occurredAt ?? event.at))
-                        : event.status ?? ''}
+                        : (event.status ?? '')}
                     </Typography>
                   </View>
                 ))}

@@ -104,7 +104,7 @@ export const DispatchManagementScreen = memo(function DispatchManagementScreen()
 
   return (
     <View className="flex-1 bg-brand-background">
-      <SellerHeader title="Dispatch Management" showBack onBack={() => router.back()} />
+      <SellerHeader title="Dispatch Management" showBack />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 132 }}

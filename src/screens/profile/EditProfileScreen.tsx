@@ -104,7 +104,7 @@ export const EditProfileScreen = memo(function EditProfileScreen() {
     Toast.show({
       type: 'success',
       text1: 'Profile updated',
-      text2: 'Your business details were saved to your PetroTrade account.',
+      text2: 'Your business details were saved to your PolyStoreX account.',
       visibilityTime: 2000,
     });
 

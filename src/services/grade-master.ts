@@ -24,6 +24,7 @@ import type {
   MarketplaceGradeCategory,
 } from '@/types/grade-master';
 import type { MarketProduct } from '@/types/market';
+import { formatCategoryDisplayName } from '@/utils/master-label';
 
 type Envelope<T> = {
   success: boolean;
@@ -71,7 +72,7 @@ const normalizeFacets = (data: Partial<GradeFacets> | null | undefined): GradeFa
   ...data,
   categories: (data?.categories ?? []).map((category) => ({
     ...category,
-    displayName: category.displayName || category.name,
+    displayName: formatCategoryDisplayName(category.displayName, category.name, category.code),
   })),
 });
 
@@ -84,7 +85,14 @@ const normalizeCustomerGrade = (grade: CustomerGrade): CustomerGrade => ({
   manufacturer: grade.manufacturer ?? null,
   fullGradeName: grade.fullGradeName ?? null,
   category: grade.category
-    ? { ...grade.category, displayName: grade.category.displayName || grade.category.name }
+    ? {
+        ...grade.category,
+        displayName: formatCategoryDisplayName(
+          grade.category.displayName,
+          grade.category.name,
+          grade.category.code,
+        ),
+      }
     : null,
 });
 
@@ -166,7 +174,7 @@ export async function fetchCustomerMarketplaceCategories(): Promise<MarketplaceG
   );
   return (response.data.data ?? []).map((category) => ({
     ...category,
-    displayName: category.displayName || category.name,
+    displayName: formatCategoryDisplayName(category.displayName, category.name, category.code),
   }));
 }
 

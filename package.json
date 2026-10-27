@@ -14,6 +14,7 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "test:seller-blind": "npx tsx --test src/services/__tests__/seller-blind-mappers.test.ts",
+    "test:cms-banner": "npx tsx --test src/lib/__tests__/cms-banner.test.ts",
     "build:android:preview": "eas build -p android --profile preview",
     "build:android:production-apk": "eas build -p android --profile production-apk"
   },
@@ -31,6 +32,7 @@
     "clsx": "^2.1.1",
     "dayjs": "^1.11.19",
     "expo": "^58.0.0",
+    "expo-application": "~58.1.2",
     "expo-build-properties": "~58.0.11",
     "expo-clipboard": "~58.0.4",
     "expo-constants": "~58.0.13",

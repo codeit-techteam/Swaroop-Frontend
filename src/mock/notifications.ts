@@ -95,7 +95,7 @@ export const CUSTOMER_NOTIFICATIONS_SEED: CustomerNotification[] = [
     id: 'ntf-credit-limit',
     category: 'credit',
     title: 'Credit Limit Increased',
-    description: 'Your PetroTrade credit limit has been revised. Review the updated terms in your profile.',
+    description: 'Your PolyStoreX credit limit has been revised. Review the updated terms in your profile.',
     createdAt: hoursAgo(52),
     isRead: true,
     priority: 'low',

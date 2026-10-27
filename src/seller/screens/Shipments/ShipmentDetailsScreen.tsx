@@ -44,7 +44,7 @@ export const ShipmentDetailsScreen = memo(function ShipmentDetailsScreen() {
   if (!shipment) {
     return (
       <ScreenWrapper padded={false} className="bg-brand-background">
-        <SellerHeader title="Shipment Detail" showBack onBack={() => router.back()} />
+        <SellerHeader title="Shipment Detail" showBack />
         <View className="flex-1 items-center justify-center px-lg">
           <Typography variant="roleTitle">Shipment not found</Typography>
           <Pressable onPress={() => router.back()} className="mt-md">
@@ -69,7 +69,7 @@ export const ShipmentDetailsScreen = memo(function ShipmentDetailsScreen() {
 
   return (
     <ScreenWrapper padded={false} className="bg-brand-background">
-      <SellerHeader title="Shipment Detail" showBack onBack={() => router.back()} />
+      <SellerHeader title="Shipment Detail" showBack />
 
       <ScrollView
         className="flex-1 px-lg"

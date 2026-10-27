@@ -129,7 +129,6 @@ export const SellerAppSettingsScreen = memo(function SellerAppSettingsScreen() {
       <SellerHeader
         title="App Settings"
         showBack
-        onBack={() => router.back()}
       />
 
       <ScrollView
@@ -235,7 +234,7 @@ export const SellerAppSettingsScreen = memo(function SellerAppSettingsScreen() {
             <SettingsGroup title="About">
               <SettingsInfo label="Version" value={appVersion} />
               <SettingsAction label="Licenses" onPress={() => undefined} />
-              <SettingsAction label="About PetroTrade" onPress={() => undefined} isLast />
+              <SettingsAction label="About PolyStoreX" onPress={() => undefined} isLast />
             </SettingsGroup>
 
             <SettingsGroup title="Business">

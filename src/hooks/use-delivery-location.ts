@@ -2,7 +2,11 @@ import { useCallback, useEffect } from 'react';
 
 import { type Href, useRouter } from 'expo-router';
 
-import { FALLBACK_DELIVERY_LOCATION, isPersistedAddressId } from '@/constants/locations';
+import {
+  isDeliveryLocationChosen,
+  isPersistedAddressId,
+  resolveDeliveryLocation,
+} from '@/constants/locations';
 import { ROUTES } from '@/navigation/routes';
 import {
   applyDeliveryLocation,
@@ -11,7 +15,7 @@ import {
   toDeliveryLocation,
   useAddressStore,
 } from '@/store/address-store';
-import { selectLocation, useAuthStore } from '@/store/auth-store';
+import { selectIsLoggedIn, selectLocation, useAuthStore } from '@/store/auth-store';
 import type { ResolvedGeoAddress } from '@/types/address';
 import type { DeliveryLocation } from '@/types/home';
 
@@ -50,6 +54,8 @@ export function pushAddressForm(
 
 export function useDeliveryLocation() {
   const persisted = useAuthStore(selectLocation);
+  const isLoggedIn = useAuthStore(selectIsLoggedIn);
+  const setLocation = useAuthStore((state) => state.setLocation);
   const addresses = useAddressStore(selectSavedAddresses);
   const selectedAddressId = useAddressStore(selectSelectedAddressId);
   const hydrate = useAddressStore((state) => state.hydrate);
@@ -63,20 +69,33 @@ export function useDeliveryLocation() {
     }
   }, [hydrate, isHydrated]);
 
+  // Guests must not pull account addresses (or a dev demo session) into Market.
   useEffect(() => {
-    if (!isHydrated) {
+    if (!isHydrated || !isLoggedIn) {
       return;
     }
     void fetchRemote();
-  }, [fetchRemote, isHydrated]);
+  }, [fetchRemote, isHydrated, isLoggedIn]);
 
-  const selectedLocation: DeliveryLocation =
-    persisted ??
-    (addresses.find((row) => row.id === selectedAddressId)
-      ? toDeliveryLocation(addresses.find((row) => row.id === selectedAddressId)!)
-      : addresses.find((row) => row.isDefault)
-        ? toDeliveryLocation(addresses.find((row) => row.isDefault)!)
-        : FALLBACK_DELIVERY_LOCATION);
+  // Drop legacy sample pins (Mumbai/Chennai presets) left in app settings (N-06).
+  useEffect(() => {
+    if (persisted && !isDeliveryLocationChosen(persisted)) {
+      setLocation(null);
+    }
+  }, [persisted, setLocation]);
+
+  const fromAddressBook = isLoggedIn
+    ? addresses.find((row) => row.id === selectedAddressId) ??
+      addresses.find((row) => row.isDefault)
+    : undefined;
+
+  const selectedLocation: DeliveryLocation = resolveDeliveryLocation(
+    isDeliveryLocationChosen(persisted)
+      ? persisted
+      : fromAddressBook
+        ? toDeliveryLocation(fromAddressBook)
+        : null,
+  );
 
   const selectLocationValue = useCallback((location: DeliveryLocation) => {
     applyDeliveryLocation(location);

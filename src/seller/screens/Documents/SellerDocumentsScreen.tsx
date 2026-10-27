@@ -3,6 +3,7 @@ import { memo, useCallback, useState } from 'react';
 import { FlatList, RefreshControl, Share, View } from 'react-native';
 
 import { type Href, useRouter } from 'expo-router';
+
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -20,9 +21,9 @@ import {
   SellerHeader,
   StatusBottomSheet,
 } from '@/seller/components';
-import { DOCUMENT_FILTER_LABELS } from '@/seller/mock/documents';
 import { useSellerDocuments } from '@/seller/hooks/useSellerDocuments';
 import { useSellerOffline } from '@/seller/hooks/useSellerOffline';
+import { DOCUMENT_FILTER_LABELS } from '@/seller/mock/documents';
 import type { DocumentFilterTab, SellerDocumentItem } from '@/seller/types/documents';
 
 const FILTER_OPTIONS = Object.entries(DOCUMENT_FILTER_LABELS).map(([value, label]) => ({
@@ -49,7 +50,11 @@ export const SellerDocumentsScreen = memo(function SellerDocumentsScreen() {
   } = useSellerDocuments();
 
   const [previewDoc, setPreviewDoc] = useState<SellerDocumentItem | null>(null);
-  const [statusSheet, setStatusSheet] = useState<{ visible: boolean; title: string; message: string }>({
+  const [statusSheet, setStatusSheet] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+  }>({
     visible: false,
     title: '',
     message: '',
@@ -102,17 +107,12 @@ export const SellerDocumentsScreen = memo(function SellerDocumentsScreen() {
         title="Documents Center"
         showBack
         showBell
-        onBack={() => router.back()}
         onBellPress={() => router.push(ROUTES.SELLER.NOTIFICATIONS as Href)}
       />
 
       <View className="flex-1 px-lg" style={{ paddingBottom: insets.bottom }}>
         <View className="mt-md">
-          <SearchBar
-            value={query}
-            onChangeText={setQuery}
-            placeholder="Search document..."
-          />
+          <SearchBar value={query} onChangeText={setQuery} placeholder="Search document..." />
         </View>
 
         <View className="mt-md">
@@ -134,7 +134,9 @@ export const SellerDocumentsScreen = memo(function SellerDocumentsScreen() {
             renderItem={renderItem}
             contentContainerStyle={{ paddingTop: 16, paddingBottom: 24, gap: 12 }}
             showsVerticalScrollIndicator={false}
-            refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => void refresh()} />}
+            refreshControl={
+              <RefreshControl refreshing={isRefreshing} onRefresh={() => void refresh()} />
+            }
             onEndReached={() => void loadMore()}
             onEndReachedThreshold={0.3}
             ListEmptyComponent={
@@ -143,7 +145,7 @@ export const SellerDocumentsScreen = memo(function SellerDocumentsScreen() {
                 onCtaPress={() => router.push(ROUTES.SELLER.VERIFICATION as Href)}
               />
             }
-            ListFooterComponent={hasMore || isLoadingMore ? <ListFooterLoader /> : null}
+            ListFooterComponent={hasMore || isLoadingMore ? <ListFooterLoader /> : undefined}
           />
         )}
       </View>

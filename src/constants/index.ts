@@ -1,4 +1,5 @@
-export const APP_NAME = 'PetroTrade';
+export const APP_NAME = 'PolyStoreX';
+
 
 export const SPLASH_DURATION_MS = 2000;
 

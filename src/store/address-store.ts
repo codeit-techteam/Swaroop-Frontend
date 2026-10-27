@@ -2,11 +2,11 @@ import { create } from 'zustand';
 
 import { STORAGE_KEYS } from '@/constants';
 import {
-  FALLBACK_DELIVERY_LOCATION,
   formatDeliveryLabel,
   GPS_LOCATION_ID,
   isPersistedAddressId,
   PINCODE_REGEX,
+  resolveDeliveryLocation,
 } from '@/constants/locations';
 import {
   createSavedAddress,
@@ -148,6 +148,10 @@ export const useAddressStore = create<AddressStore>((set, get) => ({
       ...persisted,
       isHydrated: true,
     });
+    // Guests must not inherit a leftover address book pin on Market (N-06).
+    if (!useAuthStore.getState().isLoggedIn) {
+      return;
+    }
     const selected = persisted.addresses.find((row) => row.id === persisted.selectedAddressId);
     if (selected) {
       applyDeliveryLocation(toDeliveryLocation(selected));
@@ -278,13 +282,13 @@ export const useAddressStore = create<AddressStore>((set, get) => ({
   getSelectedLocation: () => {
     const persistedLocation = selectLocation(useAuthStore.getState());
     if (persistedLocation) {
-      return persistedLocation;
+      return resolveDeliveryLocation(persistedLocation);
     }
     const selected = get().addresses.find((row) => row.id === get().selectedAddressId);
     if (selected) {
       return toDeliveryLocation(selected);
     }
-    return FALLBACK_DELIVERY_LOCATION;
+    return resolveDeliveryLocation(null);
   },
 }));
 

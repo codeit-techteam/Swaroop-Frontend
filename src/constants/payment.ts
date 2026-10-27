@@ -39,7 +39,7 @@ export const PAYMENT_METHODS: PaymentMethod[] = [
   },
   {
     id: 'credit_15',
-    title: 'PetroTrade Credit — 15 Days',
+    title: 'PolyStoreX Credit — 15 Days',
     description: '',
     badge: { label: 'Credit Available', variant: 'credit' },
     discount: 0,
@@ -47,12 +47,12 @@ export const PAYMENT_METHODS: PaymentMethod[] = [
     creditLimit: undefined,
     availableCredit: undefined,
     timing: 'Net 15 days',
-    bestFor: 'Short-term working capital via PetroTrade Credit',
+    bestFor: 'Short-term working capital via PolyStoreX Credit',
     hasCredit: true,
   },
   {
     id: 'credit_30',
-    title: 'PetroTrade Credit — 30 Days',
+    title: 'PolyStoreX Credit — 30 Days',
     description: '',
     badge: { label: 'Premium Credit', variant: 'premium' },
     discount: 0,
@@ -60,7 +60,7 @@ export const PAYMENT_METHODS: PaymentMethod[] = [
     creditLimit: undefined,
     availableCredit: undefined,
     timing: 'Net 30 days',
-    bestFor: 'Extended payment flexibility via PetroTrade Credit',
+    bestFor: 'Extended payment flexibility via PolyStoreX Credit',
     hasCredit: true,
   },
 ];
@@ -73,7 +73,7 @@ export const PAYMENT_COMPARISON_ROWS: PaymentComparisonRow[] = PAYMENT_METHODS.m
   credit: method.hasCredit
     ? method.availableCredit
       ? `₹${method.availableCredit.toLocaleString('en-IN')}`
-      : 'PetroTrade managed'
+      : 'PolyStoreX managed'
     : 'Not required',
   bestFor: method.bestFor,
 }));

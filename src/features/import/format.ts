@@ -110,30 +110,72 @@ export function importLabel(value?: string | null): string {
   );
 }
 
-/** Draft listings missing publish-critical fields — shown as Incomplete in lists. */
-export function isImportDraftIncomplete(listing: ImportListing): boolean {
-  if (listing.status !== 'DRAFT') return false;
+/**
+ * Draft publish-readiness. Prefers backend `completeness` (I-02); falls back to a
+ * local subset of publish rules when the API has not yet returned that block.
+ */
+export function importDraftCompleteness(listing: ImportListing): {
+  incomplete: boolean;
+  missingLabels: string[];
+} {
+  if (listing.status !== 'DRAFT') return { incomplete: false, missingLabels: [] };
+  if (listing.completeness) {
+    return {
+      incomplete: !listing.completeness.canPublish,
+      missingLabels: listing.completeness.missingFieldLabels,
+    };
+  }
   const p = listing.product;
   const c = listing.commercial;
   const s = listing.shipping;
   const qty = Number(p.quantity);
   const price = Number(c.price);
-  const missingProduct =
-    !p.category ||
-    (!p.grade && !p.customGradeName?.trim()) ||
-    !p.brand ||
-    !p.originCountry ||
-    !Number.isFinite(qty) ||
-    qty <= 0;
-  const missingCommercial =
-    !Number.isFinite(price) ||
-    price <= 0 ||
-    !c.currencyCode ||
-    !c.incoterm ||
-    !(c.priceBasisPort || c.priceBasisLocation) ||
-    !c.paymentTerm;
-  const missingShipping = !s.pol || !s.pod || !s.esd || !s.lsd;
-  return missingProduct || missingCommercial || missingShipping;
+  const missing: string[] = [];
+  if (!p.category) missing.push('Product / material');
+  if (!p.grade && !p.customGradeName?.trim()) missing.push('Grade');
+  if (!p.brand) missing.push('Brand / manufacturer');
+  if (!p.originCountry) missing.push('Country of origin');
+  if (!Number.isFinite(qty) || qty <= 0) missing.push('Quantity');
+  if (!Number.isFinite(price) || price <= 0) {
+    missing.push(listing.side === 'BUY' ? 'Target price' : 'Offer price');
+  }
+  if (!c.currencyCode) missing.push('Currency');
+  if (!c.incoterm) missing.push('Incoterm');
+  if (!(c.priceBasisPort || c.priceBasisLocation)) missing.push('Price basis location');
+  if (!c.paymentTerm) missing.push('Payment term');
+  if (!s.pol) missing.push('Port of loading');
+  if (!s.pod) missing.push('Port of discharge');
+  if (!s.esd) missing.push('Earliest shipment date');
+  if (!s.lsd) missing.push('Latest shipment date');
+  if (listing.side === 'SELL') {
+    const moq = Number(listing.sellTerms?.moq);
+    if (!Number.isFinite(moq) || moq <= 0) missing.push('MOQ');
+    if (!listing.sellTerms?.readyStockType) missing.push('Ready stock / shipment type');
+    if (!listing.validity.validUntil) missing.push('Offer validity');
+  }
+  return { incomplete: missing.length > 0, missingLabels: missing };
+}
+
+/** @deprecated Prefer `importDraftCompleteness` — kept for call-site compatibility. */
+export function isImportDraftIncomplete(listing: ImportListing): boolean {
+  return importDraftCompleteness(listing).incomplete;
+}
+
+/** Concise missing-field line for list cards (collapses POL+POD → shipping route). */
+export function formatImportMissingSummary(labels: string[]): string {
+  if (!labels.length) return '';
+  const hasPol = labels.includes('Port of loading');
+  const hasPod = labels.includes('Port of discharge');
+  const rest = labels.filter(
+    (l) => l !== 'Port of loading' && l !== 'Port of discharge',
+  );
+  if (hasPol && hasPod) rest.push('Shipping route');
+  else {
+    if (hasPol) rest.push('Port of loading');
+    if (hasPod) rest.push('Port of discharge');
+  }
+  if (rest.length <= 2) return rest.join(' and ');
+  return `${rest.slice(0, -1).join(', ')} and ${rest[rest.length - 1]}`;
 }
 
 export type Tone = 'neutral' | 'info' | 'success' | 'warning' | 'danger';

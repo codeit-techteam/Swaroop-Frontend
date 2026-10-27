@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 
+import { isDeliveryLocationChosen } from '@/constants/locations';
 import { verificationAccepted } from '@/services/customer-kyc';
 import {
   clearAll,
@@ -75,6 +76,11 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     const current = getCurrentUser();
     const settings = getAppSettings();
     const userProfile = getUser();
+    // Never restore hard-coded sample cities as the delivery pin (N-06).
+    const location = isDeliveryLocationChosen(settings.location) ? settings.location : null;
+    if (settings.location && !location) {
+      saveAppSettings({ ...settings, location: null });
+    }
 
     set({
       isLoggedIn: current.isLoggedIn,
@@ -84,7 +90,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       reviewSubmitted: current.reviewCompleted || current.applicationSubmitted,
       referenceId: current.referenceId,
       onboardingCompleted: settings.onboardingCompleted,
-      location: settings.location,
+      location,
       selectedRole: userProfile?.selectedRole ?? null,
       userProfile,
       isHydrated: true,
@@ -214,9 +220,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   setLocation: (location) => {
     const settings = getAppSettings();
-    const nextSettings = { ...settings, location };
-    saveAppSettings(nextSettings);
-    set({ location });
+    const next = isDeliveryLocationChosen(location) ? location : null;
+    saveAppSettings({ ...settings, location: next });
+    set({ location: next });
   },
 
   updateUserProfile: (patch) => {

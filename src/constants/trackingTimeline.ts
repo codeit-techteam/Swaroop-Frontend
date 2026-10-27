@@ -67,7 +67,7 @@ export const TRACKING_COPY = {
   liveTrackingHeading: 'LIVE TRACKING STATUS',
   orderInformationHeading: 'ORDER INFORMATION',
   blindMarketplaceMessage:
-    'PetroTrade manages procurement, transportation and delivery while maintaining supplier confidentiality.',
+    'PolyStoreX manages procurement, transportation and delivery while maintaining supplier confidentiality.',
   downloadToastMessage:
     'Authorized PDF is not available yet. The commercial record remains visible in Documents.',
   documentToastTitle: 'Document Unavailable',

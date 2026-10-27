@@ -5,11 +5,12 @@ import { Card, KeyValues, StatusPill } from '@/features/import/components';
 import {
   formatDate,
   formatDateTime,
+  formatImportMissingSummary,
   formatPrice,
   formatQty,
   formatRemaining,
+  importDraftCompleteness,
   importLabel,
-  isImportDraftIncomplete,
   listingTitle,
   portLabel,
 } from '@/features/import/format';
@@ -17,6 +18,7 @@ import type { ImportListing } from '@/features/import/types';
 
 export function ListingHeader({ listing: l }: { listing: ImportListing }) {
   const c = l.commercial;
+  const draft = importDraftCompleteness(l);
   return (
     <Card>
       <View className="flex-row items-start justify-between gap-sm">
@@ -29,8 +31,28 @@ export function ListingHeader({ listing: l }: { listing: ImportListing }) {
             {listingTitle(l)}
           </Typography>
         </View>
-        <StatusPill status={l.status} />
+        <View className="items-end gap-xs">
+          <StatusPill status={l.status} />
+          {draft.incomplete ? (
+            <View className="rounded-full bg-amber-50 px-sm py-xs">
+              <Typography variant="badge" className="text-[10px] text-amber-800">
+                Incomplete
+              </Typography>
+            </View>
+          ) : l.status === 'DRAFT' && l.completeness?.canPublish ? (
+            <View className="rounded-full bg-emerald-50 px-sm py-xs">
+              <Typography variant="badge" className="text-[10px] text-emerald-800">
+                Ready to publish
+              </Typography>
+            </View>
+          ) : null}
+        </View>
       </View>
+      {draft.incomplete && draft.missingLabels.length ? (
+        <Typography variant="roleDescription" className="mt-sm text-[12px] text-amber-800">
+          Missing: {formatImportMissingSummary(draft.missingLabels)}
+        </Typography>
+      ) : null}
       <Typography variant="headingLeft" className="mt-md text-[20px] text-brand-navy">
         {formatPrice(c.price, c.currencyCode, c.priceUnit)}
       </Typography>
@@ -203,10 +225,16 @@ export function ListingRow({
         </View>
         <View className="items-end gap-xs">
           <StatusPill status={l.status} />
-          {isImportDraftIncomplete(l) ? (
+          {importDraftCompleteness(l).incomplete ? (
             <View className="rounded-full bg-amber-50 px-sm py-xs">
               <Typography variant="badge" className="text-[10px] text-amber-800">
                 Incomplete
+              </Typography>
+            </View>
+          ) : l.status === 'DRAFT' && l.completeness?.canPublish ? (
+            <View className="rounded-full bg-emerald-50 px-sm py-xs">
+              <Typography variant="badge" className="text-[10px] text-emerald-800">
+                Ready to publish
               </Typography>
             </View>
           ) : null}
@@ -219,6 +247,15 @@ export function ListingRow({
         {formatQty(l.product.quantity, l.product.quantityUnit)} · {l.shipping.pol?.code ?? '—'} →{' '}
         {l.shipping.pod?.code ?? '—'} · {formatDate(l.shipping.esd)}
       </Typography>
+      {(() => {
+        const draft = importDraftCompleteness(l);
+        if (!draft.incomplete || !draft.missingLabels.length) return null;
+        return (
+          <Typography variant="roleDescription" className="mt-xs text-[12px] text-amber-800">
+            Missing: {formatImportMissingSummary(draft.missingLabels)}
+          </Typography>
+        );
+      })()}
       {l.status !== 'DRAFT' && l.validity.validUntil ? (
         <Typography variant="roleDescription" className="mt-xs text-[12px] text-brand-muted">
           {formatRemaining(l.validity.secondsRemaining)}

@@ -17,6 +17,11 @@ import type {
   NotificationsPage,
 } from '@/types/notifications';
 import { logger } from '@/utils/logger';
+import {
+  formatNotificationDescription,
+  resolveNotificationCategoryHint,
+  sanitizeNotificationReference,
+} from '@/utils/notification-copy';
 
 type Envelope<T> = {
   success: boolean;
@@ -149,7 +154,7 @@ const inferCategoryFromTitle = (title: string): NotificationCategory => {
   if (normalized.includes('shipment') || normalized.includes('dispatch') || normalized.includes('truck')) {
     return 'shipment';
   }
-  if (normalized.includes('payment') || normalized.includes('invoice') || normalized.includes('utr')) {
+  if (normalized.includes('payment') || normalized.includes('utr')) {
     return 'payments';
   }
   if (normalized.includes('credit')) {
@@ -158,7 +163,15 @@ const inferCategoryFromTitle = (title: string): NotificationCategory => {
   if (normalized.includes('offer') || normalized.includes('sale') || normalized.includes('pricing')) {
     return 'offers';
   }
-  if (normalized.includes('document') || normalized.includes('gst') || normalized.includes('certificate')) {
+  if (
+    normalized.includes('kyc') ||
+    normalized.includes('document') ||
+    normalized.includes('gst') ||
+    normalized.includes('pan') ||
+    normalized.includes('aadhaar') ||
+    normalized.includes('certificate') ||
+    normalized.includes('invoice')
+  ) {
     return 'documents';
   }
   if (normalized.includes('request')) {
@@ -186,10 +199,12 @@ export const getNotificationRoute = (notification: CustomerNotification): string
 
 const mapBackendNotification = (row: BackendNotification): CustomerNotification => {
   const metadata = row.metadata ?? {};
-  const humanRef =
+  const humanRef = sanitizeNotificationReference(
     (row.displayReference && !UUID_RE.test(row.displayReference)
       ? row.displayReference
-      : undefined) ?? resolveHumanReference(metadata);
+      : undefined) ?? resolveHumanReference(metadata),
+  );
+  const description = formatNotificationDescription(row.title, row.body, metadata);
   const importTarget = importNotificationTarget('customer', row.entityType, row.entityId, metadata);
   if (importTarget) {
     const isRead = Boolean(row.readAt) || row.status === 'READ';
@@ -197,7 +212,7 @@ const mapBackendNotification = (row: BackendNotification): CustomerNotification 
       id: row.id,
       category: 'marketplace',
       title: row.title,
-      description: row.body,
+      description,
       createdAt: row.createdAt,
       isRead,
       priority: inferPriority(isRead, row.title),
@@ -206,25 +221,31 @@ const mapBackendNotification = (row: BackendNotification): CustomerNotification 
       route: importTarget.route,
     };
   }
+  const categoryHint = resolveNotificationCategoryHint(metadata, row.title, row.entityType);
   const category =
     asCategory(metadata.category) ??
+    asCategory(categoryHint) ??
     ENTITY_CATEGORY_MAP[row.entityType ?? ''] ??
     inferCategoryFromTitle(row.title);
   const action = resolveAction(category);
   const isRead = Boolean(row.readAt) || row.status === 'READ';
+  const kycRoute =
+    typeof metadata.type === 'string' && metadata.type.toUpperCase().startsWith('KYC')
+      ? ROUTES.CUSTOMER.PROFILE_TAX_DOCUMENTS
+      : null;
 
   return {
     id: row.id,
     category,
     title: row.title,
-    description: row.body,
+    description,
     createdAt: row.createdAt,
     isRead,
     priority: inferPriority(isRead, row.title),
     // Never fall back to entityId (UUID) — leave blank when no business ref exists.
     reference: humanRef,
     actionLabel: ACTION_LABELS[action],
-    route: asString(metadata.route) ?? ROUTE_BY_ACTION[action],
+    route: asString(metadata.route) ?? kycRoute ?? ROUTE_BY_ACTION[action],
   };
 };
 

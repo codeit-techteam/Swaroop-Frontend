@@ -17,6 +17,7 @@ import type {
   SettlementStatus,
   SettlementTimelineStep,
 } from '@/seller/modules/settlement-payout/types/settlement';
+import { buildSettlementSummary } from '@/seller/modules/settlement-payout/utils/settlement-summary';
 import {
   fetchSellerSettlementSummary,
   fetchSellerSettlementsPage,
@@ -85,22 +86,7 @@ export const useSettlementStore = create<SettlementStore>((set, get) => ({
         ]);
         const settlements = page.items.map(mapApiSettlement);
         const fallback = buildDefaultSettlementSnapshot();
-        const summary = apiSummary
-          ? {
-              pendingSettlement: apiSummary.pendingSettlementAmount,
-              releasedToday: apiSummary.settledAmount,
-              thisMonth: apiSummary.settledAmount,
-              totalEarnings: apiSummary.totalSales,
-              nextReleaseLabel: apiSummary.nextSettlementNumber
-                ? `Next: ${apiSummary.nextSettlementNumber}`
-                : 'No pending releases',
-            }
-          : {
-              ...fallback.summary,
-              pendingSettlement: settlements
-                .filter((s) => s.status === 'pending' || s.status === 'processing')
-                .reduce((sum, s) => sum + s.netAmount, 0),
-            };
+        const summary = buildSettlementSummary(apiSummary, settlements);
         const snapshot = {
           settlements,
           documents: fallback.documents,
@@ -130,17 +116,7 @@ export const useSettlementStore = create<SettlementStore>((set, get) => ({
       ]);
       const settlements = page.items.map(mapApiSettlement);
       const fallback = buildDefaultSettlementSnapshot();
-      const summary = apiSummary
-        ? {
-            pendingSettlement: apiSummary.pendingSettlementAmount,
-            releasedToday: apiSummary.settledAmount,
-            thisMonth: apiSummary.settledAmount,
-            totalEarnings: apiSummary.totalSales,
-            nextReleaseLabel: apiSummary.nextSettlementNumber
-              ? `Next: ${apiSummary.nextSettlementNumber}`
-              : 'No pending releases',
-          }
-        : fallback.summary;
+      const summary = buildSettlementSummary(apiSummary, settlements);
       const snapshot = {
         settlements,
         documents: fallback.documents,

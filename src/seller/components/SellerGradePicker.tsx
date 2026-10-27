@@ -88,8 +88,8 @@ export const SellerGradePicker = memo(function SellerGradePicker({
         onChangeText={setQuery}
         placeholder={
           category
-            ? `Search ${category.displayName} grades, grade no. or manufacturer`
-            : 'Search grade, grade no. or manufacturer'
+            ? `Search ${category.displayName} grades`
+            : 'Search grade, code, or maker'
         }
       />
 

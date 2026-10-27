@@ -3,6 +3,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
+import { ROUTES } from '@/navigation/routes';
+import { safeGoBack } from '@/navigation/safe-back';
 
 import { AuthCard, FooterLinks, OtpInput, ScreenWrapper, Typography } from '@/components';
 import { DEMO_OTP, DEMO_USER_NAME, DEVELOPMENT_MODE } from '@/config/development';
@@ -99,10 +101,10 @@ export const SellerOtpScreen = () => {
 
   return (
     <ScreenWrapper scrollable className="bg-brand-background">
-      <SellerHeader showBack title="Seller OTP Verification" onBack={() => router.back()} />
+      <SellerHeader showBack title="Seller OTP Verification" />
 
       <AuthCard className="mt-md rounded-2xl">
-        <Pressable onPress={() => router.back()}>
+        <Pressable onPress={() => safeGoBack(router, ROUTES.SELLER.LOGIN as Href)}>
           <Typography variant="link">Back to Login</Typography>
         </Pressable>
 

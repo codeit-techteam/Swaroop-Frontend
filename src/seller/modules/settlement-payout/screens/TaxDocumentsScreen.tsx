@@ -2,7 +2,6 @@ import { memo, useMemo } from 'react';
 
 import { ScrollView, View } from 'react-native';
 
-import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
@@ -12,7 +11,7 @@ import { DocumentCard } from '@/seller/modules/settlement-payout/components';
 import { useSettlementStore } from '@/seller/modules/settlement-payout/store/settlementStore';
 import type { SettlementDocumentType } from '@/seller/modules/settlement-payout/types/settlement';
 
-const SECTIONS: Array<{ type: SettlementDocumentType; title: string; blurb: string }> = [
+const SECTIONS: { type: SettlementDocumentType; title: string; blurb: string }[] = [
   { type: 'invoice', title: 'Invoices', blurb: 'Tax invoices for completed orders' },
   { type: 'credit_note', title: 'Credit notes', blurb: 'Adjustments against invoices' },
   { type: 'settlement_advice', title: 'Settlement advice', blurb: 'Payout confirmations' },
@@ -21,7 +20,6 @@ const SECTIONS: Array<{ type: SettlementDocumentType; title: string; blurb: stri
 ];
 
 export const TaxDocumentsScreen = memo(function TaxDocumentsScreen() {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const documents = useSettlementStore((state) => state.documents);
   const downloadDocument = useSettlementStore((state) => state.downloadDocument);
@@ -42,7 +40,7 @@ export const TaxDocumentsScreen = memo(function TaxDocumentsScreen() {
 
   return (
     <ScreenWrapper padded={false} className="bg-brand-background">
-      <SellerHeader title="Tax & documents" showBack onBack={() => router.back()} />
+      <SellerHeader title="Tax & documents" showBack />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 24 }}

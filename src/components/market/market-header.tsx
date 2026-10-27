@@ -5,9 +5,11 @@ import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { NotificationBadge } from '@/components/home/notification-badge';
+import { AppLogo } from '@/components/ui/app-logo';
 import { Typography } from '@/components/ui/typography';
-import { MARKET_LOCATION_LABEL } from '@/constants/marketProducts';
-import { CartIcon, FactoryLogo, LocationPinIcon } from '@/icons';
+import { APP_NAME } from '@/constants';
+import { FALLBACK_DELIVERY_LOCATION } from '@/constants/locations';
+import { CartIcon, LocationPinIcon } from '@/icons';
 import { selectCartCount, useCartStore } from '@/store/cart-store';
 import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
@@ -21,7 +23,7 @@ type MarketHeaderProps = {
 };
 
 export const MarketHeader = memo(function MarketHeader({
-  locationLabel = MARKET_LOCATION_LABEL,
+  locationLabel = FALLBACK_DELIVERY_LOCATION.label,
   onLocationPress,
   onCartPress,
   className,
@@ -38,12 +40,9 @@ export const MarketHeader = memo(function MarketHeader({
         <View
           className="flex-row items-center gap-sm"
           accessibilityRole="header"
-          accessibilityLabel="PetroTrade India"
+          accessibilityLabel={`${APP_NAME} India`}
         >
-          <FactoryLogo size={iconSizes.logoSmall} color={brandColors.primary} />
-          <Typography variant="logo" className="text-[15px] text-brand-primary">
-            PetroTrade India
-          </Typography>
+          <AppLogo size={iconSizes.logoSmall} />
         </View>
 
         <View className="flex-row items-center gap-sm">

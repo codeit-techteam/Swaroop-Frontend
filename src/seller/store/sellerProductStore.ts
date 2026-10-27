@@ -19,8 +19,8 @@ import type { SellerProductForm, SellerProductStore, SellerTechnicalSpecs } from
 import { buildEditorFromCatalogId } from '@/seller/utils/catalog';
 import { canSaveListingToBackend } from '@/seller/utils/listing-input';
 import {
-  sanitizeDecimalInput,
   sanitizeIntegerInput,
+  sanitizePriceInput,
 } from '@/seller/utils/numeric-input';
 import { getLiveCatalogProduct } from '@/services/catalog';
 import { logger } from '@/utils/logger';
@@ -103,7 +103,7 @@ const buildFormErrors = (
   if (pricingSellingPrice.trim()) {
     const price = Number(pricingSellingPrice);
     if (!Number.isFinite(price) || price <= 0) {
-      errors.sellingPrice = 'Selling price must be a valid positive number.';
+      errors.sellingPrice = 'Selling price must be greater than zero.';
     }
   }
 
@@ -113,6 +113,11 @@ const buildFormErrors = (
     }
     if (!pricingSellingPrice.trim()) {
       errors.sellingPrice = 'Selling price is required.';
+    } else {
+      const price = Number(pricingSellingPrice);
+      if (!Number.isFinite(price) || price <= 0) {
+        errors.sellingPrice = 'Selling price must be greater than zero.';
+      }
     }
     if (!form.warehouseLocation.trim()) {
       errors.warehouseLocation = 'Warehouse location is required.';
@@ -219,11 +224,15 @@ export const useSellerProductStore = create<SellerProductStore>((set, get) => ({
   },
 
   updatePricingField: (field, value) => {
-    const nextValue = sanitizeDecimalInput(value);
+    const nextValue = sanitizePriceInput(value);
     set((state) => ({
       pricing: {
         ...state.pricing,
         [field]: nextValue,
+      },
+      formErrors: {
+        ...state.formErrors,
+        sellingPrice: undefined,
       },
     }));
     persist(get());
@@ -259,7 +268,7 @@ export const useSellerProductStore = create<SellerProductStore>((set, get) => ({
       nextPatch.maxQty = sanitizeIntegerInput(nextPatch.maxQty);
     }
     if (nextPatch.price !== undefined) {
-      nextPatch.price = sanitizeDecimalInput(nextPatch.price);
+      nextPatch.price = sanitizePriceInput(nextPatch.price);
     }
     set((state) => ({
       tiers: state.tiers.map((tier) => (tier.id === tierId ? { ...tier, ...nextPatch } : tier)),

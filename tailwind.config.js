@@ -2,6 +2,9 @@
 module.exports = {
   content: ['./src/**/*.{js,jsx,ts,tsx}'],
   presets: [require('nativewind/preset')],
+  // Required so NativeWind/css-interop can toggle light/dark without throwing on web.
+  // Matches the `.dark { ... }` variables already defined in global.css.
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {

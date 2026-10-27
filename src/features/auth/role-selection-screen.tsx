@@ -61,7 +61,7 @@ export const RoleSelectionScreen = () => {
           </View>
           <Typography variant="sectionTitle">Choose Your Role</Typography>
           <Typography variant="subheading" className="mt-sm max-w-[300px]">
-            Select how you will use PetroTrade so we can open the right workspace.
+            Select how you will use PolyStoreX so we can open the right workspace.
           </Typography>
         </View>
 

@@ -7,7 +7,7 @@ import * as Clipboard from 'expo-clipboard';
 import Toast from 'react-native-toast-message';
 
 import { Typography } from '@/components/ui/typography';
-import { PETROTRADE_TRANSFER_BANK, type TransferBankDetails } from '@/constants/paymentBanks';
+import { POLYSTOREX_TRANSFER_BANK, type TransferBankDetails } from '@/constants/paymentBanks';
 import { BankIcon, CopyIcon } from '@/icons';
 import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
@@ -79,7 +79,7 @@ const BankDetailRow = memo(function BankDetailRow({
 });
 
 export const TransferBankCard = memo(function TransferBankCard({
-  details = PETROTRADE_TRANSFER_BANK,
+  details = POLYSTOREX_TRANSFER_BANK,
   className,
 }: TransferBankCardProps) {
   return (

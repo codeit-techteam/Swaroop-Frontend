@@ -101,8 +101,11 @@ export const requestSellerOtp = (mobile: string): { requiresOtp: boolean } => {
   };
 };
 
-export const verifySellerOtp = (mobile: string, otp: string): boolean =>
-  mobile === SELLER_DEMO_MOBILE && otp === SELLER_DEMO_OTP;
+/** Local mock only — never accept demo OTP outside Metro. */
+export const verifySellerOtp = (mobile: string, otp: string): boolean => {
+  if (!__DEV__) return false;
+  return mobile === SELLER_DEMO_MOBILE && otp === SELLER_DEMO_OTP;
+};
 
 export const isSellerOnboardingComplete = (snapshot: SellerSnapshot): boolean =>
   snapshot.sellerProfileCompleted && snapshot.dashboardAccess;

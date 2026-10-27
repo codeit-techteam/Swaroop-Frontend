@@ -73,12 +73,12 @@ export const VALIDATION_STEP_DEFINITIONS: Record<ValidationStepId, ValidationSte
 export const ORDER_CONFIRMATION_COPY = {
   headerTitle: 'Order Status',
   submittedTitle: 'Order Successfully Submitted',
-  submittedChip: 'Pending PetroTrade Confirmation',
+  submittedChip: 'Pending PolyStoreX Confirmation',
   priceLockHeading: 'Market Price Locked',
   priceLockSubtitle: 'Price expires after countdown. Secured inventory hold active.',
   priceLockExpired: 'Expired',
   infoMessage:
-    'PetroTrade is securing inventory and validating today\'s market price before confirming your order.',
+    'PolyStoreX is securing inventory and validating today\'s market price before confirming your order.',
   orderDetailsHeading: 'Order Details',
   grandTotalLabel: 'Grand Total',
   validationTimelineHeading: 'Validation Timeline',

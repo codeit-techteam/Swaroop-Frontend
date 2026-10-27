@@ -81,7 +81,7 @@ export const SELLER_NOTIFICATIONS_SEED: SellerNotificationsSnapshot = {
       type: 'activity',
       category: 'credit',
       title: 'Settlement update',
-      description: 'PetroTrade payout batch is ready for review in Settlements.',
+      description: 'PolyStoreX payout batch is ready for review in Settlements.',
       time: 'Yesterday',
       isRead: true,
     },

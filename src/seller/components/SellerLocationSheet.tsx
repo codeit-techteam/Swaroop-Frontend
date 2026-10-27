@@ -32,6 +32,7 @@ import {
   type LocationSuggestion,
 } from '@/services/location-search';
 import { brandColors } from '@/theme/colors';
+import { formatSellerOperatingLocationLabel } from '@/utils/seller-location-label';
 import { iconSizes } from '@/theme/icons';
 import { LocationAccessError, type ResolvedGeoAddress } from '@/types/address';
 import { cn } from '@/utils/cn';
@@ -551,16 +552,21 @@ export const SellerLocationSheet = memo(
                           )}
                           numberOfLines={1}
                         >
-                          {location.city || location.name}
+                          {formatSellerOperatingLocationLabel(location) ||
+                            location.city ||
+                            location.name}
                         </Typography>
-                        <Typography
-                          variant="caption"
-                          className="mt-0.5 font-sans text-[12px] normal-case tracking-normal text-brand-muted"
-                          numberOfLines={1}
-                        >
-                          {location.warehouse}
-                          {location.state ? ` · ${location.state}` : ''}
-                        </Typography>
+                        {location.state &&
+                        location.state.toLowerCase() !==
+                          String(location.city || '').toLowerCase() ? (
+                          <Typography
+                            variant="caption"
+                            className="mt-0.5 font-sans text-[12px] normal-case tracking-normal text-brand-muted"
+                            numberOfLines={1}
+                          >
+                            {location.state}
+                          </Typography>
+                        ) : null}
                       </View>
                       {selected ? (
                         <View className="ml-sm h-2.5 w-2.5 rounded-full bg-brand-primary" />

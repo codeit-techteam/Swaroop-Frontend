@@ -1,5 +1,6 @@
-export { PetroTradeLogo } from '@/icons/petrotrade-logo';
+export { PolyStoreXLogo } from '@/icons/polystorex-logo';
 export { FactoryLogo } from '@/icons/factory-logo';
+
 export { ArrowRightIcon } from '@/icons/arrow-right';
 export { ShieldSmallIcon } from '@/icons/shield-small';
 export { TradingIllustration } from '@/icons/trading-illustration';

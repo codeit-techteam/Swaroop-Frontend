@@ -119,7 +119,7 @@ export const TrackOrderScreen = memo(function TrackOrderScreen() {
               <TrackingStatusCard items={timelineItems} />
             ) : !timelineLoading ? (
               <Typography variant="subheadingLeft" className="mb-md text-brand-muted">
-                No confirmed tracking events yet. Status updates appear here once PetroTrade records them — GPS and ETA are not invented.
+                No confirmed tracking events yet. Status updates appear here once PolyStoreX records them — GPS and ETA are not invented.
               </Typography>
             ) : null}
             <OrderInformationCard order={order} className="mt-lg" />

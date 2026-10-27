@@ -159,7 +159,6 @@ export const SellerVerificationScreen = () => {
         showBack
         title="Seller Onboarding"
         rightActionLabel="Save & Exit"
-        onBack={() => router.back()}
         onRightActionPress={() =>
           router.replace(
             (resubmission ? ROUTES.SELLER.DASHBOARD : ROUTES.AUTH.ROLE_SELECTION) as Href,
@@ -226,7 +225,7 @@ export const SellerVerificationScreen = () => {
       <SellerCard className="mt-lg">
         <Typography variant="legal" className="text-left">
           PDF, JPG, PNG or WEBP up to 10 MB. Files are stored securely and reviewed by the
-          PetroTrade compliance team before your seller account is approved.
+          PolyStoreX compliance team before your seller account is approved.
         </Typography>
       </SellerCard>
 

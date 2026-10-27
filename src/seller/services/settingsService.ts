@@ -1,6 +1,7 @@
 import { STORAGE_KEYS } from '@/constants';
-import { APP_VERSION, DEFAULT_APP_SETTINGS } from '@/seller/mock/settings';
+import { DEFAULT_APP_SETTINGS } from '@/seller/mock/settings';
 import type { SellerAppSettings } from '@/seller/types/settings';
+import { getAppVersionLabel } from '@/utils/app-version';
 import { getStorageItem, setStorageItem } from '@/utils/storage';
 
 function delay(ms: number): Promise<void> {
@@ -34,8 +35,9 @@ export async function clearAppCache(): Promise<void> {
   // Mock cache clear — settings persist
 }
 
+/** Real binary version (versionName + versionCode), never a mock label. */
 export function getAppVersion(): string {
-  return APP_VERSION;
+  return getAppVersionLabel();
 }
 
 export function isMockOffline(): boolean {

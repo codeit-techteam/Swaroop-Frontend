@@ -385,7 +385,7 @@ export const StockHistoryCard = memo(function StockHistoryCard({
 });
 
 export const SellerModuleTopBar = memo(function SellerModuleTopBar({
-  title = 'PetroTrade',
+  title = 'PolyStoreX',
   showSearch = true,
   onSearchPress,
   onBellPress,

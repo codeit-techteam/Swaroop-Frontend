@@ -46,7 +46,7 @@ export const SettingsMenu = memo(function SettingsMenu({
     showConfirmDialog({
       variant: 'danger',
       title: 'Logout Account',
-      message: 'You will need to sign in again to access your PetroTrade account.',
+      message: 'You will need to sign in again to access your PolyStoreX account.',
       confirmLabel: 'Logout',
       cancelLabel: 'Cancel',
       onConfirm: onLogout,

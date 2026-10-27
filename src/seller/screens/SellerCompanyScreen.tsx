@@ -282,7 +282,6 @@ export const SellerCompanyScreen = () => {
         showBack
         title="Seller Onboarding"
         rightActionLabel="Save & Exit"
-        onBack={() => router.back()}
         onRightActionPress={() => router.replace(ROUTES.AUTH.ROLE_SELECTION as Href)}
       />
 
@@ -573,7 +572,7 @@ export const SellerCompanyScreen = () => {
           showArrow
           loading={saving}
           disabled={!isValid || !identityAccepted}
-          onPress={handleSubmit(handleContinue)}
+          onPress={() => void handleSubmit(handleContinue)()}
         />
       </View>
     </ScreenWrapper>

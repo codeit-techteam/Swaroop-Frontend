@@ -12,6 +12,8 @@ export const images = {
   notificationIcon: require('./images/notification-icon.png'),
   /** Default Customer Home hero creative (CMS / R2 overrides when uploaded). */
   homeHeroBanner: require('./images/home-hero-banner.png'),
+  /** PolyStoreX brand logo (mark + wordmark). */
+  brandLogo: require('./logo/polystorex-logo.png'),
 } as const;
 
 export const assetPaths = {

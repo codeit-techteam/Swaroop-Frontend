@@ -83,7 +83,7 @@ export const SellerOrdersScreen = memo(function SellerOrdersScreen() {
   return (
     <ScreenWrapper padded={false} className="bg-brand-background">
       <View className="flex-1">
-        <SellerModuleTopBar title="PetroTrade" showSearch={false} />
+        <SellerModuleTopBar title="PolyStoreX" showSearch={false} />
 
         <ScrollView
           className="flex-1 px-lg"
@@ -95,12 +95,16 @@ export const SellerOrdersScreen = memo(function SellerOrdersScreen() {
             horizontal
             showsHorizontalScrollIndicator={false}
             className="mt-md"
-            contentContainerStyle={{ gap: 20 }}
+            contentContainerStyle={{ gap: 20, paddingRight: 8 }}
           >
             {ORDER_TABS.map((tab) => {
               const selected = activeTab === tab.value;
               return (
-                <Pressable key={tab.value} onPress={() => setActiveTab(tab.value)} className="pb-sm">
+                <Pressable
+                  key={tab.value}
+                  onPress={() => setActiveTab(tab.value)}
+                  className="shrink-0 pb-sm"
+                >
                   <Typography
                     variant="roleTitle"
                     className={cn(selected ? 'text-brand-primary' : 'text-brand-body')}

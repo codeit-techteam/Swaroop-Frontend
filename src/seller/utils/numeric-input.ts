@@ -14,11 +14,33 @@ export function sanitizeDecimalInput(value: string): string {
       cleaned.slice(0, firstDot + 1) + cleaned.slice(firstDot + 1).replace(/\./g, '');
   }
   if (!cleaned) return '';
+  // Never show a leading-dot price like ".50" — always "0.50".
   if (cleaned.startsWith('.')) return `0${cleaned}`;
 
   const [intPart, decPart] = cleaned.split('.');
   const intSanitized = intPart.replace(/^0+(?=\d)/, '') || (decPart !== undefined ? '0' : '');
   return decPart !== undefined ? `${intSanitized}.${decPart}` : intSanitized;
+}
+
+/**
+ * Selling-price sanitizer: decimals only, no sign characters.
+ * A minus/plus attempt clears the field so "-5" never becomes publishable "5".
+ */
+export function sanitizePriceInput(value: string): string {
+  const raw = String(value);
+  // ASCII hyphen, Unicode minus, en/em dashes, plus — reject rather than flip sign.
+  if (/[-−–—+]/.test(raw)) {
+    return '';
+  }
+  return sanitizeDecimalInput(raw);
+}
+
+/** True when the string is a finite amount strictly greater than zero (publish-ready). */
+export function isPublishablePrice(value: string | null | undefined): boolean {
+  const trimmed = String(value ?? '').trim();
+  if (!trimmed || trimmed === '.' || trimmed.endsWith('.')) return false;
+  const n = Number(trimmed);
+  return Number.isFinite(n) && n > 0;
 }
 
 /** Prefer empty string over a catalog/API zero so fields stay clear until the seller types. */

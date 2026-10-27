@@ -9,6 +9,10 @@ import { brandColors } from '@/theme/colors';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
+export const unstable_settings = {
+  anchor: 'index',
+};
+
 const RootLayoutNav = () => {
   return (
     <>
@@ -20,9 +24,10 @@ const RootLayoutNav = () => {
           contentStyle: {
             backgroundColor: brandColors.white,
           },
+          gestureEnabled: false,
         }}
       >
-        <Stack.Screen name="index" options={{ animation: 'none' }} />
+        <Stack.Screen name="index" options={{ animation: 'none', gestureEnabled: false }} />
         <Stack.Screen name="(onboarding)" options={{ animation: 'fade' }} />
         <Stack.Screen name="(auth)" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="(customer)" options={{ animation: 'none' }} />

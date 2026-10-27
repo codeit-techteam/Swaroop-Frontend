@@ -1,12 +1,11 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 
-import { FlatList, Keyboard, View, type TextInput } from 'react-native';
+import { FlatList, Keyboard, View, type TextInputInstance } from 'react-native';
 
 import { type Href, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Toast from 'react-native-toast-message';
 
 import { LocationBottomSheet } from '@/components/home';
 import { HeroCarousel } from '@/components/home/hero-carousel';
@@ -14,6 +13,7 @@ import {
   CategoryFilter,
   EmptyState,
   GradeMasterEntry,
+  MarketFilterSheet,
   MarketHeader,
   ProductCard,
   SearchBar,
@@ -32,17 +32,26 @@ import { ROUTES } from '@/navigation/routes';
 import { fetchCustomerMarketplaceBanners, trackCmsBannerEvent } from '@/services/cms';
 import type { HomeBanner } from '@/types/home';
 import type { MarketProduct } from '@/types/market';
+import {
+  EMPTY_MARKET_FILTERS,
+  applyMarketFilters,
+  buildMarketFacets,
+  countActiveMarketFilters,
+  type MarketFilters,
+} from '@/utils/market-filters';
 
 export const CustomerMarketScreen = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const searchInputRef = useRef<TextInput>(null);
+  const searchInputRef = useRef<TextInputInstance>(null);
   const locationSheetRef = useRef<BottomSheetModal>(null);
+  const filterSheetRef = useRef<BottomSheetModal>(null);
   const { selectedLocation, openAddressForm } = useDeliveryLocation();
   const params = useLocalSearchParams<{ focusSearch?: string | string[] }>();
   const { products: marketProducts, loading, error, refetch } = useMarketplaceCatalogQuery();
   const [promoBanners, setPromoBanners] = useState<HomeBanner[]>([]);
-  const [inStockOnly, setInStockOnly] = useState(false);
+  // B-07: real catalogue filters (stock, credit, price, MOQ, manufacturer, origin, sort).
+  const [filters, setFilters] = useState<MarketFilters>(EMPTY_MARKET_FILTERS);
   const {
     query,
     selectedCategory,
@@ -67,8 +76,15 @@ export const CustomerMarketScreen = () => {
     handleDismissSuggestions,
   } = useMarketSearch(marketProducts);
   const filteredProducts = useMemo(
-    () => (inStockOnly ? searchedProducts.filter((product) => product.stock > 0) : searchedProducts),
-    [inStockOnly, searchedProducts],
+    () => applyMarketFilters(searchedProducts, filters),
+    [filters, searchedProducts],
+  );
+  const activeFilterCount = useMemo(() => countActiveMarketFilters(filters), [filters]);
+  // Facets come from the whole buyable catalogue so the sheet only offers real values.
+  const facets = useMemo(() => buildMarketFacets(marketProducts), [marketProducts]);
+  const previewFilterCount = useCallback(
+    (draft: MarketFilters) => applyMarketFilters(searchedProducts, draft).length,
+    [searchedProducts],
   );
   const { data: gradeCategories } = useCustomerMarketplaceCategories();
   const categories = useMemo(
@@ -149,18 +165,17 @@ export const CustomerMarketScreen = () => {
   }, []);
 
   const handleFilterPress = useCallback(() => {
-    setInStockOnly((prev) => {
-      const next = !prev;
-      Toast.show({
-        type: 'info',
-        text1: next ? 'Showing in-stock grades' : 'Showing all grades',
-        text2: next
-          ? 'Only grades with available stock are listed.'
-          : 'Stock filter cleared. Category chips still apply.',
-        visibilityTime: 1800,
-      });
-      return next;
-    });
+    Keyboard.dismiss();
+    filterSheetRef.current?.present();
+  }, []);
+
+  const handleApplyFilters = useCallback((next: MarketFilters) => {
+    setFilters(next);
+    filterSheetRef.current?.dismiss();
+  }, []);
+
+  const handleClearFilters = useCallback(() => {
+    setFilters(EMPTY_MARKET_FILTERS);
   }, []);
 
   const openProduct = useCallback(
@@ -342,7 +357,7 @@ export const CustomerMarketScreen = () => {
             selectedCategory={selectedCategory}
             onSelectCategory={handleSelectCategory}
             onFilterPress={handleFilterPress}
-            filterLabel={inStockOnly ? 'In stock' : 'Filter'}
+            filterLabel={activeFilterCount > 0 ? `Filters · ${activeFilterCount}` : 'Filter'}
           />
 
           {promoBanners.length > 0 ? (
@@ -365,7 +380,18 @@ export const CustomerMarketScreen = () => {
                 : selectedCategoryLabel
                   ? `${filteredProducts.length} ${resultLabel} in ${selectedCategoryLabel}`
                   : `${filteredProducts.length} ${resultLabel}`}
+              {activeFilterCount > 0 ? ' · filtered' : ''}
             </Typography>
+            {activeFilterCount > 0 ? (
+              <Typography
+                variant="caption"
+                className="ml-sm font-sans text-[11px] normal-case tracking-normal text-brand-primary"
+                onPress={handleClearFilters}
+                accessibilityRole="button"
+              >
+                Clear filters
+              </Typography>
+            ) : null}
             {expandedAcrossCategories ? (
               <Typography
                 variant="caption"
@@ -391,36 +417,45 @@ export const CustomerMarketScreen = () => {
               />
             }
             ListEmptyComponent={
-              <EmptyState
-                title={
-                  trimmedQuery
-                    ? `No live listings match “${trimmedQuery}”`
-                    : selectedCategoryLabel
-                      ? `No live listings in ${selectedCategoryLabel}`
-                      : 'No materials found'
-                }
-                description={
-                  trimmedQuery
-                    ? 'Try a grade number or manufacturer, or search all grades above.'
-                    : selectedCategory
-                      ? 'Switch to All or pick another category to keep browsing.'
-                      : 'Try a different grade, category, or search term.'
-                }
-                actionLabel={
-                  trimmedQuery
-                    ? 'Clear search'
-                    : selectedCategory
-                      ? 'Show all materials'
-                      : undefined
-                }
-                onActionPress={
-                  trimmedQuery
-                    ? handleClearSearch
-                    : selectedCategory
-                      ? handleShowAllCategories
-                      : undefined
-                }
-              />
+              activeFilterCount > 0 ? (
+                <EmptyState
+                  title="No live listings match your filters"
+                  description="Loosen the price, MOQ, manufacturer or origin filters to see more listings."
+                  actionLabel="Clear filters"
+                  onActionPress={handleClearFilters}
+                />
+              ) : (
+                <EmptyState
+                  title={
+                    trimmedQuery
+                      ? `No live listings match “${trimmedQuery}”`
+                      : selectedCategoryLabel
+                        ? `No live listings in ${selectedCategoryLabel}`
+                        : 'No materials found'
+                  }
+                  description={
+                    trimmedQuery
+                      ? 'Try a grade number or manufacturer, or search all grades above.'
+                      : selectedCategory
+                        ? 'Switch to All or pick another category to keep browsing.'
+                        : 'Try a different grade, category, or search term.'
+                  }
+                  actionLabel={
+                    trimmedQuery
+                      ? 'Clear search'
+                      : selectedCategory
+                        ? 'Show all materials'
+                        : undefined
+                  }
+                  onActionPress={
+                    trimmedQuery
+                      ? handleClearSearch
+                      : selectedCategory
+                        ? handleShowAllCategories
+                        : undefined
+                  }
+                />
+              )
             }
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{
@@ -430,6 +465,13 @@ export const CustomerMarketScreen = () => {
           />
         </>
       )}
+      <MarketFilterSheet
+        ref={filterSheetRef}
+        filters={filters}
+        facets={facets}
+        previewCount={previewFilterCount}
+        onApply={handleApplyFilters}
+      />
       <LocationBottomSheet
         ref={locationSheetRef}
         selectedId={selectedLocation.id}

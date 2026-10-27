@@ -20,6 +20,7 @@ import { getKycStepperSteps } from '@/constants/documents';
 import { useDocumentUpload } from '@/hooks/use-document-upload';
 import { LockIcon, TrustIllustration } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
+import { safeGoBack } from '@/navigation/safe-back';
 import { toBackendKycSlot } from '@/services/customer-kyc';
 import { useKycStore } from '@/store/kyc-store';
 import { brandColors } from '@/theme/colors';
@@ -45,7 +46,7 @@ export const KycDocumentsScreen = () => {
   const requestedSlots = new Set(overview?.changeRequest?.slots ?? []);
 
   const handleBack = useCallback(() => {
-    router.back();
+    safeGoBack(router, ROUTES.AUTH.BUSINESS_INFORMATION as Href);
   }, [router]);
 
   const handleEditBusiness = useCallback(() => {

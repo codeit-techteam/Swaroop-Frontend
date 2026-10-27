@@ -62,7 +62,7 @@ export const RaiseTicketScreen = memo(function RaiseTicketScreen() {
 
   return (
     <ScreenWrapper padded={false} className="bg-brand-background">
-      <SellerHeader title="Raise Ticket" showBack onBack={() => router.back()} />
+      <SellerHeader title="Raise Ticket" showBack />
 
       <ScrollView
         className="flex-1 px-lg"

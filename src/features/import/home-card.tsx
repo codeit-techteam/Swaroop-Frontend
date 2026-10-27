@@ -254,12 +254,33 @@ export function ImportTradingHomeSection({
   const side = state.side;
   const countsKnown = state.status === 'ready' && side != null;
   const liveListings = sumStatuses(side?.listings, LIVE_STATUSES);
-  const drafts = side?.listings?.DRAFT ?? 0;
+  const draftTotal = side?.drafts?.total ?? side?.listings?.DRAFT ?? 0;
+  const readyDrafts = side?.drafts?.readyToPublish ?? 0;
+  const incompleteDrafts =
+    side?.drafts?.incomplete ?? Math.max(0, draftTotal - readyDrafts);
   const openNegotiations = side?.openNegotiations ?? 0;
   const pendingDeals = side?.pendingDeals ?? 0;
   const totalListings = Object.values(side?.listings ?? {}).reduce((a, b) => a + b, 0);
   const hasActivity = totalListings > 0 || openNegotiations > 0 || pendingDeals > 0;
   const showStats = state.status === 'loading' || hasActivity;
+
+  const draftBannerLabel = (() => {
+    if (readyDrafts > 0 && incompleteDrafts > 0) {
+      return `${plural(readyDrafts, 'draft')} ready to publish · ${incompleteDrafts} need details`;
+    }
+    if (readyDrafts > 0) {
+      return `${plural(readyDrafts, 'draft')} ready to publish`;
+    }
+    if (incompleteDrafts > 0) {
+      return incompleteDrafts === 1
+        ? '1 draft needs details'
+        : `${incompleteDrafts} drafts need details`;
+    }
+    if (draftTotal > 0) {
+      return `${plural(draftTotal, 'draft')} in progress`;
+    }
+    return null;
+  })();
 
   return (
     <View className={className}>
@@ -407,10 +428,11 @@ export function ImportTradingHomeSection({
               </Typography>
               <Ionicons name="chevron-forward" size={14} color={ATTENTION} />
             </Pressable>
-          ) : drafts > 0 ? (
+          ) : draftBannerLabel ? (
             <Pressable
               onPress={() => go(cfg.routes.mine)}
               accessibilityRole="button"
+              accessibilityLabel={draftBannerLabel}
               className="mt-md flex-row items-center rounded-xl bg-white/10 px-md py-sm"
               style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1 })}
             >
@@ -419,7 +441,7 @@ export function ImportTradingHomeSection({
                 variant="roleDescription"
                 className="ml-sm flex-1 text-[12px] text-brand-white"
               >
-                {plural(drafts, 'draft')} saved — review before publishing
+                {draftBannerLabel}
               </Typography>
               <Ionicons name="chevron-forward" size={14} color="#FFFFFF" />
             </Pressable>

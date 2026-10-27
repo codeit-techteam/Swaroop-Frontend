@@ -25,7 +25,7 @@ export function isOtpCooldownError(error: unknown): boolean {
 export function customerAuthErrorMessage(error: unknown, fallback: string): string {
   if (isAxiosError<AuthErrorBody>(error)) {
     if (!error.response) {
-      return 'Unable to reach PetroTrade. Check your internet connection and try again.';
+      return 'Unable to reach PolyStoreX. Check your internet connection and try again.';
     }
     const message = error.response.data?.message;
     if (typeof message === 'string' && message) return message;

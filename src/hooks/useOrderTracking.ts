@@ -269,7 +269,7 @@ export const useOrderTracking = (): UseOrderTrackingResult => {
             text1: 'Order timeline',
             text2:
               events.length > 0
-                ? `${events.length} confirmed events from PetroTrade.`
+                ? `${events.length} confirmed events from PolyStoreX.`
                 : 'No confirmed tracking events yet.',
           });
           break;

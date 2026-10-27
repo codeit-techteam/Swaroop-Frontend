@@ -8,7 +8,7 @@ import { Controller } from 'react-hook-form';
 import { z } from 'zod';
 
 import { CountryPicker, InputField, PrimaryButton, ScreenWrapper, Typography } from '@/components';
-import { LockIcon, PetroTradeLogo } from '@/icons';
+import { LockIcon, PolyStoreXLogo } from '@/icons';
 import { useZodForm } from '@/lib/forms';
 import { ROUTES } from '@/navigation/routes';
 import {
@@ -16,12 +16,21 @@ import {
   isOtpCooldownError,
   sendCustomerOtp,
 } from '@/services/customer-auth';
-import { gstSchema, phoneSchema, requiredString } from '@/utils/validators';
+import { openPrivacyPolicy, openTermsOfService } from '@/services/legal-links';
+import {
+  indianMobileFieldError,
+  isCompleteIndianMobile,
+  sanitizeIndianMobileInput,
+} from '@/utils/phone-input';
+import { gstSchema, requiredString } from '@/utils/validators';
 
 const registerSchema = z.object({
   fullName: requiredString('Full name'),
   companyName: requiredString('Company name'),
-  mobile: phoneSchema,
+  mobile: z
+    .string()
+    .transform(sanitizeIndianMobileInput)
+    .refine(isCompleteIndianMobile, 'Enter a valid 10-digit Indian mobile number'),
   gstNumber: gstSchema,
 });
 
@@ -31,10 +40,14 @@ export const CustomerRegisterScreen = () => {
   const router = useRouter();
   const [isSending, setIsSending] = useState(false);
   const [sendError, setSendError] = useState<string | undefined>();
+  const [editingMobile, setEditingMobile] = useState(false);
+  const [mobileSubmitted, setMobileSubmitted] = useState(false);
 
   const {
     control,
     handleSubmit,
+    watch,
+    clearErrors,
     formState: { isValid },
   } = useZodForm(registerSchema, {
     defaultValues: {
@@ -45,6 +58,9 @@ export const CustomerRegisterScreen = () => {
     },
     mode: 'onChange',
   });
+
+  const mobileValue = watch('mobile');
+  const mobileReady = isCompleteIndianMobile(mobileValue ?? '');
 
   const onRegister = useCallback(
     async (values: RegisterFormValues) => {
@@ -75,9 +91,9 @@ export const CustomerRegisterScreen = () => {
   return (
     <ScreenWrapper scrollable className="bg-brand-white">
       <View className="items-center pt-lg">
-        <PetroTradeLogo size={48} />
+        <PolyStoreXLogo size={48} />
         <Typography variant="logo" className="mt-md">
-          PetroTrade
+          PolyStoreX
         </Typography>
         <Typography variant="subheading" className="mt-xs">
           Create an Enterprise Account
@@ -124,12 +140,30 @@ export const CustomerRegisterScreen = () => {
             <InputField
               label="Mobile Number"
               placeholder="98765 43210"
-              keyboardType="phone-pad"
+              keyboardType="number-pad"
               maxLength={10}
               value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
-              error={fieldState.error?.message ?? sendError}
+              onChangeText={(text) => {
+                const next = sanitizeIndianMobileInput(text);
+                setEditingMobile(true);
+                onChange(next);
+                clearErrors('mobile');
+                setSendError(undefined);
+                if (!next) {
+                  setMobileSubmitted(false);
+                }
+              }}
+              onBlur={() => {
+                setEditingMobile(false);
+                onBlur();
+              }}
+              error={
+                indianMobileFieldError(value, {
+                  touched: fieldState.isTouched,
+                  submitted: mobileSubmitted,
+                  editing: editingMobile,
+                }) ?? (editingMobile ? undefined : sendError)
+              }
               leftSlot={<CountryPicker />}
             />
           )}
@@ -155,9 +189,13 @@ export const CustomerRegisterScreen = () => {
       <PrimaryButton
         label="Register & Continue"
         className="mt-2xl"
-        disabled={!isValid}
+        disabled={!isValid || !mobileReady || isSending}
         loading={isSending}
-        onPress={handleSubmit(onRegister)}
+        onPress={() => {
+          setEditingMobile(false);
+          setMobileSubmitted(true);
+          void handleSubmit(onRegister)();
+        }}
       />
 
       <View className="mt-lg flex-row items-center justify-center gap-xs">
@@ -172,13 +210,25 @@ export const CustomerRegisterScreen = () => {
             <Typography variant="link">Login</Typography>
           </Pressable>
         </View>
-        <Typography variant="legal" className="mt-md px-md">
+        <Typography variant="legal" className="mt-md px-md text-center">
           By registering, you agree to our{' '}
-          <Typography variant="legal" className="underline">
+          <Typography
+            variant="link"
+            className="underline"
+            onPress={() => {
+              void openTermsOfService();
+            }}
+          >
             Terms of Service
           </Typography>{' '}
           and{' '}
-          <Typography variant="legal" className="underline">
+          <Typography
+            variant="link"
+            className="underline"
+            onPress={() => {
+              void openPrivacyPolicy();
+            }}
+          >
             Privacy Policy
           </Typography>
           .

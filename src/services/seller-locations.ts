@@ -57,10 +57,15 @@ async function withSellerSession<T>(fn: () => Promise<T>): Promise<T> {
 
 function mapLocation(row: BackendLocation): SellerLocation {
   const city = row.city?.trim() || '';
-  const warehouse = row.name?.trim() || 'Warehouse';
+  const warehouseName = row.name?.trim() || '';
+  // Prefer a distinct warehouse nickname; fall back without repeating the city (S-09).
+  const warehouse =
+    warehouseName && city && warehouseName.toLowerCase() === city.toLowerCase()
+      ? city
+      : warehouseName || (city ? `${city} Warehouse` : 'Warehouse');
   return {
     id: row.id,
-    name: city || warehouse,
+    name: warehouse,
     city: city || warehouse,
     state: row.state ?? '',
     warehouse,
@@ -73,10 +78,12 @@ function mapLocation(row: BackendLocation): SellerLocation {
   };
 }
 
+export { formatSellerOperatingLocationLabel } from '@/utils/seller-location-label';
+
 function locationsApiError(error: unknown, fallback: string): Error {
   if (isAxiosError<{ message?: string | string[] }>(error)) {
     if (!error.response) {
-      return new Error('Unable to reach PetroTrade API. Confirm the backend is running.');
+      return new Error('Unable to reach PolyStoreX API. Confirm the backend is running.');
     }
     const message = error.response.data?.message;
     if (typeof message === 'string' && message.trim()) {

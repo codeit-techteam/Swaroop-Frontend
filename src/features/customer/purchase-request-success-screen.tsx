@@ -172,7 +172,7 @@ export const CustomerPurchaseRequestSuccessScreen = memo(
                   variant="caption"
                   className="mt-xs text-[12px] leading-[18px] normal-case text-brand-body"
                 >
-                  Seller identity stays confidential until commercial acceptance. PetroTrade manages
+                  Seller identity stays confidential until commercial acceptance. PolyStoreX manages
                   matching and negotiation on your behalf.
                 </Typography>
               </View>

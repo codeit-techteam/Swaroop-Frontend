@@ -39,9 +39,10 @@ type TypographyProps = TextProps & {
 };
 
 const variantClasses: Record<TypographyVariant, string> = {
-  splashTitle: 'font-bold text-[28px] tracking-[2.4px] text-brand-title uppercase',
-  splashTagline: 'font-sans text-[11px] tracking-[1.6px] text-brand-tagline uppercase text-center',
-  splashStatus: 'font-sans text-[11px] tracking-[1.4px] text-brand-muted uppercase text-center',
+  splashTitle: 'font-bold text-[28px] tracking-[1.2px] text-brand-title',
+  splashTagline:
+    'font-medium text-[13px] leading-[20px] tracking-[0.4px] text-brand-tagline text-center',
+  splashStatus: 'font-medium text-[12px] tracking-[0.3px] text-brand-body text-center',
   heading: 'font-bold text-[22px] leading-[28px] text-brand-heading text-center',
   headingLeft: 'font-bold text-[22px] leading-[28px] text-brand-heading',
   subheading: 'font-sans text-[14px] leading-[22px] text-brand-body text-center',

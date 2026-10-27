@@ -1,4 +1,5 @@
 import { getMaterialFamilyByName, materialsFromCatalog } from '@/constants/materials-taxonomy';
+import { normalizeSellerOrigin } from '@/seller/constants/grade-options';
 import type {
   InventoryCategory,
   SellerPaymentPricing,
@@ -7,20 +8,10 @@ import type {
   SellerProductForm,
   SellerTechnicalSpecs,
 } from '@/seller/types';
+import { defaultBulkTierMaxQty } from '@/seller/utils/bulk-tier-range';
 import { positiveOrEmpty } from '@/seller/utils/numeric-input';
 import { getLiveCatalogProduct } from '@/services/catalog';
 import type { MarketParentCategoryId, MarketProduct } from '@/types/market';
-
-const ORIGIN_MAP: Array<{ match: string; value: string }> = [
-  { match: 'india', value: 'India' },
-  { match: 'uae', value: 'UAE' },
-  { match: 'saudi', value: 'Saudi Arabia' },
-  { match: 'singapore', value: 'Singapore' },
-  { match: 'china', value: 'China' },
-  { match: 'thailand', value: 'Thailand' },
-  { match: 'ksa', value: 'Saudi Arabia' },
-  { match: 'usa', value: 'USA' },
-];
 
 export function formatCatalogPrice(price: number): string {
   return `₹${price.toLocaleString('en-IN')}`;
@@ -34,9 +25,7 @@ export function formatCatalogKgPrice(price: number): string {
 }
 
 export function catalogOriginToSeller(origin: string): string {
-  const normalized = origin.toLowerCase();
-  const match = ORIGIN_MAP.find((item) => normalized.includes(item.match));
-  return match?.value ?? 'India';
+  return normalizeSellerOrigin(origin);
 }
 
 export function catalogParentToInventoryCategory(
@@ -111,11 +100,12 @@ export function buildEditorFromCatalog(product: MarketProduct): CatalogEditorPat
       density: stripSpecUnit(product.technicalSpecs?.density),
       primaryApplication: product.applications?.slice(0, 2).join(', ') || product.subCategory || '',
     },
+    // Sensible closed range — never seed maxQty 0 / empty which rendered as "1-0 MT".
     tiers: [
       {
         id: 'tier-1',
         minQty: '1',
-        maxQty: moq || '10',
+        maxQty: defaultBulkTierMaxQty(moq),
         price: sellingPrice,
         discountLabel: 'Standard',
       },

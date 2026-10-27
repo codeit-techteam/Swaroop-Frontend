@@ -2,7 +2,6 @@ import axios, {
   AxiosError,
   AxiosHeaders,
   create,
-  isAxiosError,
   type AxiosInstance,
   type AxiosResponse,
   type InternalAxiosRequestConfig,
@@ -213,12 +212,4 @@ apiClient.interceptors.response.use(responseInterceptor, responseErrorIntercepto
 
 export const createApiClient = (): AxiosInstance => apiClient;
 
-export const getApiErrorMessage = (error: unknown): string => {
-  if (isAxiosError<ApiErrorResponse>(error)) {
-    return error.response?.data?.message ?? error.message;
-  }
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return 'An unexpected error occurred';
-};
+export { getApiErrorMessage } from '@/utils/api-error-message';

@@ -20,7 +20,7 @@ import {
   Typography,
 } from '@/components';
 import { DEVELOPMENT_MODE, DEMO_PHONE, DEMO_OTP, DEMO_USER_NAME } from '@/config/development';
-import { LockIcon } from '@/icons';
+import { BackArrowIcon, LockIcon } from '@/icons';
 import { useZodForm } from '@/lib/forms';
 import { parseReturnToParam } from '@/navigation/return-to';
 import { ROUTES } from '@/navigation/routes';
@@ -32,6 +32,7 @@ import {
 import { openContactSupport } from '@/services/legal-links';
 import { brandColors } from '@/theme/colors';
 import {
+  EMPTY_MOBILE_MESSAGE,
   indianMobileFieldError,
   isCompleteIndianMobile,
   sanitizeIndianMobileInput,
@@ -53,13 +54,16 @@ export const CustomerLoginScreen = () => {
   const [isSending, setIsSending] = useState(false);
   const [sendError, setSendError] = useState<string | undefined>();
   const [submitted, setSubmitted] = useState(false);
+  const [editingMobile, setEditingMobile] = useState(false);
   const {
     control,
     handleSubmit,
     watch,
+    clearErrors,
   } = useZodForm(loginSchema, {
     defaultValues: { mobile: '' },
-    mode: 'onChange',
+    mode: 'onSubmit',
+    reValidateMode: 'onSubmit',
   });
 
   const mobileValue = watch('mobile');
@@ -68,7 +72,9 @@ export const CustomerLoginScreen = () => {
     async (values: LoginFormValues) => {
       setSubmitted(true);
       if (!isCompleteIndianMobile(values.mobile)) {
-        setSendError('Enter your 10-digit mobile number.');
+        setSendError(
+          indianMobileFieldError(values.mobile, { submitted: true }) ?? EMPTY_MOBILE_MESSAGE,
+        );
         return;
       }
       setIsSending(true);
@@ -95,10 +101,13 @@ export const CustomerLoginScreen = () => {
     [returnTo, router],
   );
 
-  const onEmptyGetOtp = useCallback(() => {
+  const onInvalidGetOtp = useCallback(() => {
     setSubmitted(true);
-    setSendError('Enter your 10-digit mobile number.');
-  }, []);
+    setEditingMobile(false);
+    setSendError(
+      indianMobileFieldError(mobileValue ?? '', { submitted: true }) ?? EMPTY_MOBILE_MESSAGE,
+    );
+  }, [mobileValue]);
 
   const onSignUp = useCallback(() => {
     router.push({
@@ -111,9 +120,29 @@ export const CustomerLoginScreen = () => {
     router.replace(ROUTES.CUSTOMER.MARKET as Href);
   }, [router]);
 
+  const handleBack = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+    router.replace(ROUTES.AUTH.ROLE_SELECTION as Href);
+  }, [router]);
+
   return (
     <ScreenWrapper scrollable className="bg-brand-background">
       <View className="flex-1 justify-center py-xl">
+        <View className="mb-md flex-row items-center">
+          <Pressable
+            onPress={handleBack}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+            className="h-10 w-10 items-center justify-center"
+          >
+            <BackArrowIcon />
+          </Pressable>
+        </View>
+
         <AuthCard>
           <AppLogo className="mb-xl" />
 
@@ -133,12 +162,12 @@ export const CustomerLoginScreen = () => {
             name="mobile"
             render={({ field: { onChange, onBlur, value }, fieldState }) => {
               const liveError =
-                fieldState.error?.message ??
                 indianMobileFieldError(value, {
                   touched: fieldState.isTouched,
                   submitted,
+                  editing: editingMobile,
                 }) ??
-                sendError;
+                (editingMobile ? undefined : sendError);
               return (
                 <InputField
                   label="Mobile Number"
@@ -147,10 +176,19 @@ export const CustomerLoginScreen = () => {
                   maxLength={10}
                   value={value}
                   onChangeText={(text) => {
-                    onChange(sanitizeIndianMobileInput(text));
+                    const next = sanitizeIndianMobileInput(text);
+                    setEditingMobile(true);
+                    onChange(next);
+                    clearErrors('mobile');
                     setSendError(undefined);
+                    if (!next) {
+                      setSubmitted(false);
+                    }
                   }}
-                  onBlur={onBlur}
+                  onBlur={() => {
+                    setEditingMobile(false);
+                    onBlur();
+                  }}
                   error={liveError}
                   leftSlot={<CountryPicker />}
                 />
@@ -164,8 +202,10 @@ export const CustomerLoginScreen = () => {
             disabled={isSending}
             loading={isSending}
             onPress={() => {
-              if (!mobileValue?.trim()) {
-                onEmptyGetOtp();
+              setEditingMobile(false);
+              // Keep the button pressable when empty/incomplete so L-06 shows a clear message.
+              if (!isCompleteIndianMobile(mobileValue ?? '')) {
+                onInvalidGetOtp();
                 return;
               }
               void handleSubmit(onGetOtp)();
@@ -192,7 +232,7 @@ export const CustomerLoginScreen = () => {
           <View className="mt-xl items-center gap-sm">
             <View className="flex-row items-center gap-xs">
               <LockIcon />
-              <Typography variant="success">Secure login for registered buyers</Typography>
+              <Typography variant="success">Secure login for registered businesses</Typography>
             </View>
             <Pressable
               accessibilityRole="link"

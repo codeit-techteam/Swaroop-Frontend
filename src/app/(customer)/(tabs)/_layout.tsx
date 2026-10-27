@@ -3,6 +3,10 @@ import { Tabs } from 'expo-router';
 import { BottomNavigation } from '@/components/home';
 import { brandColors } from '@/theme/colors';
 
+export const unstable_settings = {
+  anchor: 'home',
+};
+
 export default function CustomerTabsLayout() {
   return (
     <Tabs
@@ -13,6 +17,7 @@ export default function CustomerTabsLayout() {
           backgroundColor: brandColors.white,
         },
       }}
+      backBehavior="initialRoute"
     >
       <Tabs.Screen
         name="home"

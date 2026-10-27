@@ -208,6 +208,22 @@ export type ImportListing = {
   } | null;
   createdAt: string;
   updatedAt: string;
+  /** Present on owner DRAFT listings — publish readiness from backend validation. */
+  completeness?: ImportListingCompleteness;
+};
+
+export type ImportListingCompleteness = {
+  isComplete: boolean;
+  canPublish: boolean;
+  missingFields: string[];
+  missingFieldLabels: string[];
+  validationErrors: { field: string; code: string; message: string }[];
+};
+
+export type ImportDraftSummary = {
+  total: number;
+  readyToPublish: number;
+  incomplete: number;
 };
 
 export type ImportCriterionEvidence = {
@@ -436,11 +452,13 @@ export type ImportSummary = {
     listings: Record<string, number>;
     openNegotiations: number;
     pendingDeals: number;
+    drafts?: ImportDraftSummary;
   };
   sell?: {
     listings: Record<string, number>;
     openNegotiations: number;
     pendingDeals: number;
+    drafts?: ImportDraftSummary;
   };
 };
 

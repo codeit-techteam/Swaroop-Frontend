@@ -6,13 +6,14 @@ export type TransferBankDetails = {
   upiId: string;
 };
 
-export const PETROTRADE_TRANSFER_BANK: TransferBankDetails = {
-  transferTo: 'PetroTrade Technologies Pvt Ltd',
+export const POLYSTOREX_TRANSFER_BANK: TransferBankDetails = {
+  transferTo: 'PolyStoreX Technologies Pvt Ltd',
   bankName: 'HDFC Bank',
   ifscCode: 'HDFC0002231',
   accountNumber: 'XXXXXXXXX3421',
-  upiId: 'payments@petrotrade',
+  upiId: 'payments@polystorex.in',
 };
+
 
 export const INDIAN_BANKS = [
   'HDFC Bank',

@@ -97,7 +97,7 @@ export const CreateOfferScreen = memo(function CreateOfferScreen() {
 
   return (
     <ScreenWrapper padded={false} className="bg-brand-background">
-      <SellerHeader title="PetroTrade Seller" showBack showBell onBack={() => router.back()} />
+      <SellerHeader title="PolyStoreX Seller" showBack showBell />
 
       <ScrollView
         className="flex-1 px-lg"

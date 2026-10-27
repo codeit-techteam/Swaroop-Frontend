@@ -15,7 +15,8 @@ import {
   simulateProductDocumentDownload,
 } from '@/seller/services/productDetailService';
 import { useSellerProductStore } from '@/seller/store/sellerProductStore';
-import { formatSellerSellingPrice, PETROTRADE_CREDIT_NOTE } from '@/seller/utils/pricing';
+import { formatBulkTierRangeLabel } from '@/seller/utils/bulk-tier-range';
+import { formatSellerSellingPrice, POLYSTOREX_CREDIT_NOTE } from '@/seller/utils/pricing';
 
 const DetailRow = ({ label, value }: { label: string; value: string }) => (
   <View className="mb-md w-1/2 pr-sm">
@@ -45,7 +46,7 @@ export const SellerProductDetailScreen = memo(function SellerProductDetailScreen
   if (!product) {
     return (
       <ScreenWrapper padded={false} className="bg-brand-background">
-        <SellerHeader title="Product Detail" showBack onBack={() => router.back()} />
+        <SellerHeader title="Product Detail" showBack />
         <View className="flex-1 items-center justify-center px-lg">
           <Typography variant="roleTitle">Product not found</Typography>
           <Pressable onPress={() => router.back()} className="mt-md">
@@ -63,7 +64,7 @@ export const SellerProductDetailScreen = memo(function SellerProductDetailScreen
 
   return (
     <ScreenWrapper padded={false} className="bg-brand-background">
-      <SellerHeader title="Product Detail" showBack showBell onBack={() => router.back()} />
+      <SellerHeader title="Product Detail" showBack showBell />
 
       <ScrollView
         className="flex-1 px-lg"
@@ -130,7 +131,7 @@ export const SellerProductDetailScreen = memo(function SellerProductDetailScreen
             <DetailRow label="Currency" value={product.form.currency || 'INR'} />
           </View>
           <Typography variant="legal" className="mt-sm text-left text-brand-body">
-            Payment: Platform-managed. {PETROTRADE_CREDIT_NOTE}
+            Payment: Platform-managed. {POLYSTOREX_CREDIT_NOTE}
           </Typography>
         </SellerCard>
 
@@ -140,8 +141,11 @@ export const SellerProductDetailScreen = memo(function SellerProductDetailScreen
               {product.tiers.map((tier) => (
                 <View key={tier.id} className="mb-sm flex-row items-center justify-between">
                   <Typography variant="roleDescription">
-                    {tier.minQty}
-                    {tier.maxQty ? `-${tier.maxQty}` : '+'} {product.form.unit || 'MT'}
+                    {formatBulkTierRangeLabel(
+                      tier.minQty,
+                      tier.maxQty,
+                      product.form.unit || 'MT',
+                    )}
                     {tier.discountLabel ? ` · ${tier.discountLabel}` : ''}
                   </Typography>
                   <Typography variant="roleTitle">

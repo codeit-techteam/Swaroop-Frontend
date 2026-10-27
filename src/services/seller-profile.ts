@@ -1,5 +1,6 @@
 import { apiClient } from '@/api/client';
 import { STORAGE_KEYS } from '@/constants';
+import { formatSellerBusinessAddressLabel } from '@/utils/seller-address-label';
 import { getStorageItem, removeStorageItem, setStorageItem } from '@/utils/storage';
 
 type Envelope<T> = {
@@ -102,11 +103,9 @@ export function clearCachedSellerAccount(): void {
   removeStorageItem(STORAGE_KEYS.SELLER_ACCOUNT);
 }
 
+/** Compact business-address label for dashboard / profile (S-09). */
 export function formatSellerAddress(summary: SellerAccountSummary | null): string | null {
-  const address = summary?.address;
-  if (!address) return summary?.registeredAddress ?? null;
-  const region = [address.state, address.postalCode].filter(Boolean).join(' ');
-  return [address.city, region].filter(Boolean).join(', ') || address.line1;
+  return formatSellerBusinessAddressLabel(summary?.address, summary?.registeredAddress);
 }
 
 const SELLER_TYPE_LABELS: Record<string, string> = {

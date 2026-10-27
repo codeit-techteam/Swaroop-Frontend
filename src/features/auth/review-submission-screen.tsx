@@ -18,6 +18,7 @@ import { generateKycReferenceId, getKycStepperSteps } from '@/constants/document
 import { useCustomerKycStatus } from '@/hooks/use-customer-kyc-status';
 import { TrustIllustration } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
+import { safeGoBack } from '@/navigation/safe-back';
 import {
   customerKycErrorMessage,
   fetchCustomerKyc,
@@ -47,7 +48,7 @@ export const ReviewSubmissionScreen = () => {
   );
 
   const handleBack = useCallback(() => {
-    router.back();
+    safeGoBack(router, ROUTES.AUTH.KYC_DOCUMENTS as Href);
   }, [router]);
 
   const handleEditBusiness = useCallback(() => {

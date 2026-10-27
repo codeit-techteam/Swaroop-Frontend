@@ -82,12 +82,12 @@ export const ApplicationSubmittedScreen = () => {
       ? 'KYC Needs Correction'
       : 'Application Submitted';
   const subheading = kycApproved
-    ? `${companyName} is verified. You now have full access to PetroTrade.`
+    ? `${companyName} is verified. You now have full access to PolyStoreX.`
     : needsAction
       ? 'Our compliance team reviewed your KYC and needs a few corrections before approval.'
       : notSubmitted
         ? 'Your KYC has not been submitted yet. Complete the remaining steps to submit it for review.'
-        : `Your KYC for ${companyName} is under review by the PetroTrade compliance team.`;
+        : `Your KYC for ${companyName} is under review by the PolyStoreX compliance team.`;
 
   return (
     <ScreenWrapper scrollable className="bg-brand-white" contentClassName="pb-xl">
@@ -123,7 +123,7 @@ export const ApplicationSubmittedScreen = () => {
         </Typography>
       ) : !overview ? (
         <Typography variant="legal" className="mt-xl text-center">
-          Couldn&apos;t reach PetroTrade to check your status. Tap &quot;Check status&quot; to
+          Couldn&apos;t reach PolyStoreX to check your status. Tap &quot;Check status&quot; to
           retry.
         </Typography>
       ) : null}

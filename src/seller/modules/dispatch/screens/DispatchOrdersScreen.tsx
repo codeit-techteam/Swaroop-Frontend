@@ -96,7 +96,7 @@ export const DispatchOrdersScreen = memo(function DispatchOrdersScreen() {
 
   return (
     <ScreenWrapper padded={false} className="bg-brand-background">
-      <SellerHeader title="Dispatch Orders" showBack onBack={() => router.back()} showBell />
+      <SellerHeader title="Dispatch Orders" showBack showBell />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 32 }}

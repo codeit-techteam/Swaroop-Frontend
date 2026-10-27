@@ -113,7 +113,7 @@ export const CustomerCreditStatusScreen = memo(function CustomerCreditStatusScre
 
   return (
     <ScreenWrapper padded={false} className="bg-brand-background">
-      <AppHeader variant="back" title="Credit Application" onBack={() => router.back()} />
+      <AppHeader variant="back" title="Credit Application" />
 
       <ScrollView
         className="flex-1 px-lg"

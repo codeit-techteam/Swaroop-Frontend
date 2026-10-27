@@ -40,11 +40,11 @@ const EMPTY_STATE_CONFIG: Record<EmptyStateVariant, EmptyStateConfig> = {
     icon: <OrdersTabIcon size={28} color={brandColors.primaryDark} />,
   },
   no_purchase_requests: {
-    title: 'No purchase requests yet',
+    title: 'No Purchase Requests Yet',
     description:
-      'When buyers submit purchase requests against your listings, they will show up here for accept, reject, or counter.',
+      'New buyer purchase requests will appear here for you to accept, reject, or counter.',
     ctaLabel: 'View Offers',
-    icon: <OrdersTabIcon size={28} color={brandColors.primaryDark} />,
+    icon: <DocumentFileIcon size={28} color={brandColors.primaryDark} />,
   },
   no_offers: {
     title: 'No Active Offers',

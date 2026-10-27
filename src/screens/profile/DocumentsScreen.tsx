@@ -336,12 +336,11 @@ export const DocumentsScreen = memo(function DocumentsScreen() {
                 <Typography variant="legal" className="mt-sm text-left text-brand-muted">
                   Showing {listData.length} of {totalCount} {activeTab.title.toLowerCase()}
                 </Typography>
-              ) : null
+              ) : undefined
             }
           />
         )}
       </View>
-
     </ScreenWrapper>
   );
 });

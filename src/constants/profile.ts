@@ -1,8 +1,7 @@
-export const PROFILE_APP_VERSION = 'v1.0.0';
+// App version is read from the installed binary via `@/utils/app-version` (N-02).
+export const PROFILE_APP_NAME = 'PolyStoreX Enterprise';
 
-export const PROFILE_APP_NAME = 'PetroTrade Enterprise';
-
-export const PROFILE_COPYRIGHT = '© PetroTrade Industrial Markets';
+export const PROFILE_COPYRIGHT = '© PolyStoreX Industrial Markets';
 
 const formatComplianceValidTill = (): string => {
   const now = new Date();

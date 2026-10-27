@@ -31,6 +31,7 @@ import type {
   SellerStat,
   SellerTechnicalSpecs,
 } from '@/seller/types';
+import { formatBulkTierRangeLabel } from '@/seller/utils/bulk-tier-range';
 import { formatSellerSellingPrice, getSellerSellingPrice } from '@/seller/utils/pricing';
 import { readSellerAccess } from '@/services/seller-auth';
 import { brandColors } from '@/theme/colors';
@@ -55,7 +56,7 @@ export const SellerDashboardHeader = memo(function SellerDashboardHeader({
             <BuildingIcon size={16} color={brandColors.primaryDark} />
           </View>
           <Typography variant="logo" className="text-[18px] text-brand-heading">
-            PetroTrade
+            PolyStoreX
           </Typography>
         </View>
         <Pressable className="rounded-full p-sm" onPress={onNotificationPress}>
@@ -226,11 +227,7 @@ export const TierCard = memo(function TierCard({
   onMoveDown: () => void;
 }) {
   const tierTitle = `Tier ${index + 1}`;
-  const minLabel = tier.minQty?.trim() || '1';
-  const maxRaw = tier.maxQty?.trim();
-  const maxLabel =
-    !maxRaw || maxRaw === '0' ? '+' : maxRaw;
-  const rangeLabel = `${minLabel}-${maxLabel} MT`;
+  const rangeLabel = formatBulkTierRangeLabel(tier.minQty, tier.maxQty);
   return (
     <View
       className={cn(

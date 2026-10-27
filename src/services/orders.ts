@@ -44,7 +44,7 @@ export type BackendCustomerOrder = {
     paymentStatus?: string;
     amountPaid?: string;
     amountDue?: string;
-    verifiedByPetroTrade?: boolean;
+    verifiedByPolyStoreX?: boolean;
     creditStatus?: string | null;
   };
   progress?: {
@@ -115,7 +115,7 @@ function mapLifecycleFromBackend(order: BackendCustomerOrder): Order['status'] {
 function mapPaymentStatus(
   payment?: BackendCustomerOrder['payment'],
 ): Order['paymentStatus'] {
-  if (payment?.verifiedByPetroTrade) return 'verified';
+  if (payment?.verifiedByPolyStoreX) return 'verified';
   const key = (payment?.paymentStatus ?? '').toUpperCase();
   if (key === 'VERIFIED' || key === 'PAID' || key === 'AUTHORIZED') return 'verified';
   if (key === 'SUBMITTED' || key === 'UNDER_VERIFICATION') return 'submitted';

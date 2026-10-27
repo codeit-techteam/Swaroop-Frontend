@@ -2,7 +2,6 @@ import { memo, useState } from 'react';
 
 import { Pressable, ScrollView, View } from 'react-native';
 
-import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScreenWrapper, Typography } from '@/components';
@@ -21,7 +20,6 @@ import { useSellerSecurity } from '@/seller/hooks/useSellerSecurity';
 import { brandColors } from '@/theme/colors';
 
 export const SellerSecurityScreen = memo(function SellerSecurityScreen() {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { snapshot, isLoading, updateSetting, handleLogoutAll } = useSellerSecurity();
   const [logoutSheet, setLogoutSheet] = useState(false);
@@ -35,11 +33,7 @@ export const SellerSecurityScreen = memo(function SellerSecurityScreen() {
 
   return (
     <ScreenWrapper padded={false} className="bg-brand-background">
-      <SellerHeader
-        title="Security"
-        showBack
-        onBack={() => router.back()}
-      />
+      <SellerHeader title="Security" showBack />
 
       <ScrollView
         className="flex-1 px-lg"
@@ -68,7 +62,9 @@ export const SellerSecurityScreen = memo(function SellerSecurityScreen() {
                 </Typography>
               </Pressable>
               <Pressable
-                onPress={() => updateSetting({ twoFactorEnabled: !snapshot.settings.twoFactorEnabled })}
+                onPress={() =>
+                  updateSetting({ twoFactorEnabled: !snapshot.settings.twoFactorEnabled })
+                }
                 className="flex-1 rounded-[22px] border border-brand-border bg-brand-white p-lg"
               >
                 <View className="h-10 w-10 items-center justify-center rounded-xl bg-brand-primary-light">
@@ -105,7 +101,10 @@ export const SellerSecurityScreen = memo(function SellerSecurityScreen() {
             </SettingsGroup>
 
             <View className="mt-lg">
-              <Typography variant="badge" className="mb-sm text-[11px] uppercase tracking-wide text-brand-body">
+              <Typography
+                variant="badge"
+                className="mb-sm text-[11px] uppercase tracking-wide text-brand-body"
+              >
                 Trusted Devices
               </Typography>
               <View className="gap-sm">
@@ -116,7 +115,10 @@ export const SellerSecurityScreen = memo(function SellerSecurityScreen() {
             </View>
 
             <View className="mt-lg">
-              <Typography variant="badge" className="mb-sm text-[11px] uppercase tracking-wide text-brand-body">
+              <Typography
+                variant="badge"
+                className="mb-sm text-[11px] uppercase tracking-wide text-brand-body"
+              >
                 Active Sessions
               </Typography>
               <View className="gap-sm">

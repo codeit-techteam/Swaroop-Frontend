@@ -133,7 +133,7 @@ export const DocumentDownloads = memo(function DocumentDownloads({
       >
         {requireAuth
           ? 'Sign in to download verified TDS and product documents'
-          : 'Verified product documents from PetroTrade'}
+          : 'Verified product documents from PolyStoreX'}
       </Typography>
       <View className="mt-md" style={{ gap: 8 }}>
         {visibleDocuments.map((doc) => (

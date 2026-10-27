@@ -645,7 +645,7 @@ export const OverdueBanner = memo(function OverdueBanner({
           {overdueCount} overdue settlements
         </Typography>
         <Typography variant="legal" className="text-left text-[#B45309]">
-          {pendingSettlement} awaiting PetroTrade payout
+          {pendingSettlement} awaiting PolyStoreX payout
         </Typography>
       </View>
       <ChevronRightIcon size={14} color="#B45309" />

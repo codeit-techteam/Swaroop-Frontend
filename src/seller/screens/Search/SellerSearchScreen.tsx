@@ -88,7 +88,6 @@ export const SellerSearchScreen = memo(function SellerSearchScreen() {
       <SellerHeader
         title="Search"
         showBack
-        onBack={() => router.back()}
       />
 
       <View className="flex-1 px-lg" style={{ paddingBottom: insets.bottom }}>

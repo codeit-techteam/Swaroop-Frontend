@@ -34,7 +34,7 @@ export const SettlementReleasedScreen = memo(function SettlementReleasedScreen()
 
   return (
     <View className="flex-1 bg-brand-background">
-      <SellerHeader title="Settlement Released" showBack onBack={() => router.back()} />
+      <SellerHeader title="Settlement Released" showBack />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 132 }}

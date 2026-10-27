@@ -1,11 +1,14 @@
-import { memo } from 'react';
+import { memo, useCallback } from 'react';
 
 import { Pressable, View } from 'react-native';
 
+import { type Href, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppLogo, Typography } from '@/components';
 import { BackArrowIcon, BellIcon, MenuIcon } from '@/icons';
+import { ROUTES } from '@/navigation/routes';
+import { safeGoBack } from '@/navigation/safe-back';
 import { cn } from '@/utils/cn';
 
 type SellerHeaderProps = {
@@ -36,6 +39,15 @@ export const SellerHeader = memo(function SellerHeader({
   className,
 }: SellerHeaderProps) {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+
+  const handleBack = useCallback(() => {
+    if (onBack) {
+      onBack();
+      return;
+    }
+    safeGoBack(router, ROUTES.SELLER.DASHBOARD as Href);
+  }, [onBack, router]);
 
   return (
     <View
@@ -46,7 +58,7 @@ export const SellerHeader = memo(function SellerHeader({
         <View className="w-12 items-start justify-center">
           {showBack ? (
             <Pressable
-              onPress={onBack}
+              onPress={handleBack}
               hitSlop={10}
               accessibilityRole="button"
               accessibilityLabel="Go back"

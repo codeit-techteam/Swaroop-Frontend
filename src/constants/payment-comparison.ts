@@ -4,7 +4,7 @@ export const PAYMENT_MATRIX_INFO =
   'This comparison helps buyers select the most suitable payment method based on payment timing, discount, interest rate and eligibility.';
 
 export const PAYMENT_COMPARISON_DISCLAIMER =
-  'By selecting a payment method, you agree to the PetroTrade Industrial Service Terms and Credit Agreement protocols.';
+  'By selecting a payment method, you agree to the PolyStoreX Industrial Service Terms and Credit Agreement protocols.';
 
 export const PAYMENT_COMPARISON_OPTIONS: PaymentComparisonOption[] = [
   {

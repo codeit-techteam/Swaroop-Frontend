@@ -14,6 +14,7 @@ import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
 import type { MarketAvailabilityBadge, MarketProduct, StockLevel } from '@/types/market';
 import { cn } from '@/utils/cn';
+import { isInternalMasterCode } from '@/utils/master-label';
 
 const STOCK_TEXT_CLASS: Record<StockLevel, string> = {
   high: 'text-brand-success',
@@ -96,6 +97,12 @@ export const ProductCard = memo(function ProductCard({
 }: ProductCardProps) {
   const stockLevel = getStockLevel(product.stock);
   const badgeStyle = BADGE_STYLES[product.badge];
+  // B-10 / N-05: show the manufacturer grade number; never leak internal
+  // master codes such as MASTERBATCH_BLACK into the buyer-facing caption.
+  const gradeLabel =
+    [product.gradeNo, product.gradeCode].find(
+      (value) => Boolean(value) && !isInternalMasterCode(value),
+    ) ?? null;
 
   const handleOpenDetails = useCallback(() => {
     onBookNow(product);
@@ -160,14 +167,14 @@ export const ProductCard = memo(function ProductCard({
             {product.manufacturer}
           </Typography>
         ) : null}
-        {product.gradeCode || product.gradeNo || product.technicalSpecs?.mfi ? (
+        {gradeLabel || product.technicalSpecs?.mfi ? (
           <View className="mt-xs flex-row flex-wrap items-center" style={{ gap: 8 }}>
-            {product.gradeNo || product.gradeCode ? (
+            {gradeLabel ? (
               <Typography
                 variant="caption"
                 className="font-sans text-[12px] normal-case tracking-normal text-brand-muted"
               >
-                {product.gradeNo || product.gradeCode}
+                {gradeLabel}
               </Typography>
             ) : null}
             {product.technicalSpecs?.mfi ? (
@@ -196,24 +203,24 @@ export const ProductCard = memo(function ProductCard({
           </Typography>
         </View>
 
-        <View className="mt-md flex-row">
-          <View className="flex-1">
-            <Typography
-              variant="fieldLabel"
-              className="text-[10px] tracking-[0.8px] text-brand-muted"
-            >
-              Origin
-            </Typography>
-            <Typography
-              variant="roleTitle"
-              className="mt-xs text-[13px] text-brand-heading"
-              numberOfLines={2}
-            >
-              {product.origin}
-            </Typography>
-          </View>
+        {/* Origin on its own row so long regions (e.g. "Northern India Region") are never clipped (B-11). */}
+        <View className="mt-md">
+          <Typography
+            variant="fieldLabel"
+            className="text-[10px] tracking-[0.8px] text-brand-muted"
+          >
+            Origin
+          </Typography>
+          <Typography
+            variant="roleTitle"
+            className="mt-xs text-[13px] leading-[18px] text-brand-heading"
+          >
+            {product.origin}
+          </Typography>
+        </View>
 
-          <View className="flex-1 items-center">
+        <View className="mt-sm flex-row">
+          <View className="flex-1">
             <Typography
               variant="fieldLabel"
               className="text-[10px] tracking-[0.8px] text-brand-muted"

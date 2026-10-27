@@ -14,7 +14,7 @@ export default function SellerLayout() {
         },
       }}
     >
-      <Stack.Screen name="login" />
+      <Stack.Screen name="login" options={{ gestureEnabled: false }} />
       <Stack.Screen name="otp" />
       <Stack.Screen name="company" />
       <Stack.Screen name="verification" />

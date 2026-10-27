@@ -2,8 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { Pressable, View } from 'react-native';
 
-import { type Href, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import { type Href, useLocalSearchParams, usePreventRemove, useRouter } from 'expo-router';
 
+import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 
 import { InputField, PrimaryButton, SecondaryButton, Typography } from '@/components';
@@ -58,6 +59,7 @@ import type {
   ImportSide,
 } from '@/features/import/types';
 import { showConfirmDialog } from '@/store/dialog-store';
+import { brandColors } from '@/theme/colors';
 import { cn } from '@/utils/cn';
 
 type Values = Required<Pick<ImportListingInput, 'documentRequirementIds'>> &
@@ -335,6 +337,12 @@ function validateImportStep(
   return errors;
 }
 
+/** Full publish gate — same required fields as backend `mode: 'publish'`. */
+function validateImportPublish(values: Values, isBuy: boolean): Record<string, string> {
+  const steps: StepId[] = ['product', 'commercial', 'shipping', 'review'];
+  return Object.assign({}, ...steps.map((s) => validateImportStep(s, values, isBuy)));
+}
+
 /** New drafts start from the Admin-configured default import currency. */
 function initialValues(
   side: ImportSide,
@@ -417,7 +425,6 @@ function ListingForm({
 }) {
   const cfg = IMPORT_MODES[mode];
   const router = useRouter();
-  const navigation = useNavigation();
   const isBuy = side === 'BUY';
   const live = Boolean(initial && initial.status !== 'DRAFT');
   const STEPS = useMemo(() => stepsFor(side), [side]);
@@ -563,34 +570,40 @@ function ListingForm({
     return () => clearTimeout(timer);
   }, [values, savedSnapshot, live, conflicted, save]);
 
-  // Confirm before leaving with unsaved edits.
-  const leavingRef = useRef(false);
-  useEffect(() => {
-    return navigation.addListener('beforeRemove', (event) => {
-      if (leavingRef.current || !Object.keys(diff(savedRef.current, valuesRef.current)).length) {
-        return;
-      }
-      event.preventDefault();
-      showConfirmDialog({
-        title: 'Discard unsaved changes?',
-        message: live
-          ? 'Your edits to this live listing have not been saved.'
-          : 'Some edits have not been saved to the draft yet.',
-        confirmLabel: 'Discard',
-        cancelLabel: 'Keep editing',
-        onConfirm: () => {
-          leavingRef.current = true;
-          navigation.dispatch(event.data.action);
-        },
-      });
+  // Confirm before leaving with unsaved edits (S-17). `usePreventRemove` is the
+  // supported replacement for the untyped `beforeRemove` listener.
+  const hasUnsavedEdits = Object.keys(diff(savedSnapshot, values)).length > 0;
+  const disableLeaveGuard = usePreventRemove(hasUnsavedEdits, ({ repeat }) => {
+    showConfirmDialog({
+      title: 'Discard unsaved changes?',
+      message: live
+        ? 'Your edits to this live listing have not been saved.'
+        : 'Some edits have not been saved to the draft yet.',
+      confirmLabel: 'Discard',
+      cancelLabel: 'Keep editing',
+      onConfirm: repeat,
     });
-  }, [navigation, live]);
+  });
 
   async function handleSaveLive() {
     if (await save()) Toast.show({ type: 'success', text1: 'Changes saved' });
   }
 
   async function handlePublish() {
+    const publishErrors = validateImportPublish(values, isBuy);
+    if (Object.keys(publishErrors).length > 0) {
+      setFieldErrors((prev) => ({ ...prev, ...publishErrors }));
+      const firstField = Object.keys(publishErrors)[0];
+      const firstStep = firstField ? FIELD_STEP[firstField] : undefined;
+      if (firstStep) setStep(firstStep);
+      Toast.show({
+        type: 'error',
+        text1: `Please fix ${Object.keys(publishErrors).length} field${
+          Object.keys(publishErrors).length > 1 ? 's' : ''
+        } before publishing.`,
+      });
+      return;
+    }
     setPublishing(true);
     try {
       const ok = await save();
@@ -599,7 +612,7 @@ function ListingForm({
       const result = await publishListing(side, idRef.current, publishKeyRef.current);
       publishKeyRef.current = null;
       Toast.show({ type: 'success', text1: `${result.referenceNumber ?? 'Listing'} published` });
-      leavingRef.current = true;
+      disableLeaveGuard();
       router.replace({
         pathname: cfg.routes.listing,
         params: { id: result.id },
@@ -765,6 +778,8 @@ function ListingForm({
   else statusLine = live ? 'No changes' : 'Draft saves automatically';
 
   const isLast = stepIndex === STEPS.length - 1;
+  const publishGateErrors = !live ? validateImportPublish(values, isBuy) : {};
+  const canPublishLocally = Object.keys(publishGateErrors).length === 0;
 
   return (
     <ImportScreen
@@ -780,22 +795,38 @@ function ListingForm({
           >
             {statusLine}
           </Typography>
-          <View className="flex-row gap-sm">
-            <SecondaryButton
-              variant="outline"
-              label="Back"
-              className="flex-1"
-              disabled={stepIndex === 0}
-              onPress={() => goToStep(stepIndex - 1)}
-            />
-            {live ? (
-              <PrimaryButton
-                label={saveState === 'saving' ? 'Saving…' : 'Save changes'}
-                className="flex-1"
-                disabled={!hasPending || saveState === 'saving' || saveState === 'conflict'}
-                onPress={() => void handleSaveLive()}
+          {/* I-06: Publish is not a same-slot Next swap — own row, success colour, confirm first. */}
+          {live ? (
+            <View className="gap-sm">
+              <View className="flex-row gap-sm">
+                <SecondaryButton
+                  variant="outline"
+                  label="Back"
+                  className="flex-1"
+                  disabled={stepIndex === 0}
+                  onPress={() => goToStep(stepIndex - 1)}
+                />
+                <PrimaryButton
+                  label={saveState === 'saving' ? 'Saving…' : 'Save changes'}
+                  className="flex-1"
+                  disabled={!hasPending || saveState === 'saving' || saveState === 'conflict'}
+                  onPress={() => void handleSaveLive()}
+                />
+              </View>
+              {!isLast ? (
+                <Pressable onPress={() => goToStep(stepIndex + 1)} className="items-center py-xs">
+                  <Typography variant="link">Next section ›</Typography>
+                </Pressable>
+              ) : null}
+            </View>
+          ) : isLast ? (
+            <View className="gap-sm">
+              <SecondaryButton
+                variant="outline"
+                label="Back"
+                disabled={stepIndex === 0}
+                onPress={() => goToStep(stepIndex - 1)}
               />
-            ) : isLast ? (
               <PrimaryButton
                 label={
                   publishing
@@ -806,16 +837,24 @@ function ListingForm({
                       ? 'Submit buy request'
                       : 'Publish sell offer'
                 }
-                // I-06: visually distinct from Next — navy filled, different label.
-                className="flex-1 bg-brand-navy"
-                disabled={publishing || saveState === 'conflict'}
+                backgroundColor={brandColors.success}
+                leftIcon={<Ionicons name="checkmark-circle" size={18} color={brandColors.white} />}
+                disabled={publishing || saveState === 'conflict' || !canPublishLocally}
                 onPress={() => {
+                  if (!canPublishLocally) {
+                    setFieldErrors((prev) => ({ ...prev, ...publishGateErrors }));
+                    Toast.show({
+                      type: 'error',
+                      text1: 'Complete required fields before publishing.',
+                    });
+                    return;
+                  }
                   showConfirmDialog({
-                    title: isBuy ? 'Submit buy request?' : 'Publish sell offer?',
+                    title: isBuy ? 'Submit buy request?' : 'Publish this offer?',
                     message: isBuy
                       ? 'This will publish your buy request to the import market.'
-                      : 'This will publish your USD/import sell offer to buyers.',
-                    confirmLabel: isBuy ? 'Submit' : 'Publish',
+                      : 'This will publish your sell offer to matched buyers. You can pause it later if needed.',
+                    confirmLabel: isBuy ? 'Submit' : 'Publish offer',
                     cancelLabel: 'Review again',
                     onConfirm: () => {
                       void handlePublish();
@@ -823,19 +862,24 @@ function ListingForm({
                   });
                 }}
               />
-            ) : (
+            </View>
+          ) : (
+            <View className="flex-row gap-sm">
+              <SecondaryButton
+                variant="outline"
+                label="Back"
+                className="flex-1"
+                disabled={stepIndex === 0}
+                onPress={() => goToStep(stepIndex - 1)}
+              />
               <PrimaryButton
                 label="Next"
                 className="flex-1"
+                showArrow
                 onPress={() => goToStep(stepIndex + 1)}
               />
-            )}
-          </View>
-          {live && !isLast ? (
-            <Pressable onPress={() => goToStep(stepIndex + 1)} className="items-center py-xs">
-              <Typography variant="link">Next section ›</Typography>
-            </Pressable>
-          ) : null}
+            </View>
+          )}
         </View>
       }
     >
@@ -1417,16 +1461,18 @@ function ListingForm({
               </Card>
             );
           })}
-          {Object.keys(fieldErrors).length ? (
+          {Object.keys({ ...publishGateErrors, ...fieldErrors }).length ? (
             <Card title="Fix these before publishing">
               <View className="gap-xs">
-                {Object.entries(fieldErrors).map(([field, message]) => (
-                  <Pressable key={field} onPress={() => setStep(FIELD_STEP[field] ?? 'review')}>
-                    <Typography variant="error" className="text-[13px] underline">
-                      {message}
-                    </Typography>
-                  </Pressable>
-                ))}
+                {Object.entries({ ...publishGateErrors, ...fieldErrors }).map(
+                  ([field, message]) => (
+                    <Pressable key={field} onPress={() => setStep(FIELD_STEP[field] ?? 'review')}>
+                      <Typography variant="error" className="text-[13px] underline">
+                        {message}
+                      </Typography>
+                    </Pressable>
+                  ),
+                )}
               </View>
             </Card>
           ) : null}

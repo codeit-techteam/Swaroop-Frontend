@@ -14,7 +14,7 @@ export const DELIVERY_COMPLETED_COPY = {
   headerTitle: 'Delivery Completed',
   successTitle: 'Shipment Delivered Successfully',
   successSubtitle:
-    'Your shipment has been successfully delivered and received.\nThank you for choosing PetroTrade.',
+    'Your shipment has been successfully delivered and received.\nThank you for choosing PolyStoreX.',
   deliveredBadge: 'DELIVERED',
   deliveryInfoHeading: 'DELIVERY INFORMATION',
   receiverHeading: 'RECEIVER DETAILS',
@@ -69,7 +69,7 @@ export const formatDeliveryTime = (isoDate: string): string =>
 const deriveCompanyName = (order: Order): string => {
   const destination = order.destination.trim();
   if (!destination) {
-    return `PetroTrade Buyer ${DEFAULT_COMPANY_SUFFIX}`;
+    return `PolyStoreX Buyer ${DEFAULT_COMPANY_SUFFIX}`;
   }
 
   const cityPart = destination.split(',')[0]?.trim() ?? destination;

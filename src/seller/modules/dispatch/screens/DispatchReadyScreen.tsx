@@ -24,7 +24,7 @@ export const DispatchReadyScreen = memo(function DispatchReadyScreen() {
 
   return (
     <View className="flex-1 bg-brand-background">
-      <SellerHeader title="Dispatch Ready" showBack onBack={() => router.back()} />
+      <SellerHeader title="Dispatch Ready" showBack />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 132 }}

@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -111,11 +111,10 @@ export function ImportScreen({
   onRefresh?: () => void;
   footer?: ReactNode;
 }) {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   return (
     <ScreenWrapper padded={false} className="bg-brand-background">
-      <AppHeader variant="back" title={title} onBack={() => router.back()} />
+      <AppHeader variant="back" title={title} />
       <ScrollView
         className="flex-1 px-lg"
         showsVerticalScrollIndicator={false}

@@ -6,7 +6,7 @@ export const PAYMENT_WORKFLOW_COPY = {
   creditApproval: {
     headerTitle: 'Credit Eligibility',
     title: 'Credit Eligibility Check',
-    subtitle: 'PetroTrade is verifying your credit facility against this order value.',
+    subtitle: 'PolyStoreX is verifying your credit facility against this order value.',
     approvedTitle: 'Credit Approved',
     approvedSubtitle: 'Your credit line is active. Proceed to submit your order.',
     continueLabel: 'Continue to Order',

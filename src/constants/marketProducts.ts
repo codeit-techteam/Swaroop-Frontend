@@ -3,8 +3,6 @@ import type { MarketProduct, StockLevel } from '@/types/market';
 
 export const MARKET_SEARCH_PLACEHOLDER = 'Search GST, invoices, grades, materials, orders…';
 
-export const MARKET_LOCATION_LABEL = 'Mumbai, MH';
-
 /**
  * Market chips: backend Grade Master categories (in admin sort order) that currently have at
  * least one live listing in the loaded catalog.

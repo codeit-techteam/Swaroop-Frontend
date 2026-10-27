@@ -43,5 +43,3 @@ export const SESSION_TIMEOUT_OPTIONS = [
   { label: '1 hour', value: 60 },
   { label: 'Never', value: 0 },
 ] as const;
-
-export const APP_VERSION = 'PetroTrade Pro v2.4.1 (Build 241)';

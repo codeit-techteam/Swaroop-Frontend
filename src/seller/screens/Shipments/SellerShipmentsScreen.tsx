@@ -42,7 +42,6 @@ export const SellerShipmentsScreen = memo(function SellerShipmentsScreen() {
         title="Active Shipments"
         showBack
         showBell
-        onBack={() => router.back()}
         onBellPress={() => router.push(ROUTES.SELLER.NOTIFICATIONS as Href)}
       />
 

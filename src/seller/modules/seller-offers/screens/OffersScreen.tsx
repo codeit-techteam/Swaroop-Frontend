@@ -99,6 +99,8 @@ export const OffersScreen = memo(function OffersScreen() {
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<OfferTabFilter>('active');
   const [deleteTarget, setDeleteTarget] = useState<SellerOffer | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [mutatingOfferId, setMutatingOfferId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState<FilterPreferences>(() =>
     getFilterPreferences('offers'),
@@ -179,23 +181,44 @@ export const OffersScreen = memo(function OffersScreen() {
   };
 
   const handlePause = async (offer: SellerOffer) => {
-    const paused = await pauseOffer(offer.id);
-    if (paused) {
-      router.push(`${ROUTES.SELLER.OFFER_PAUSED}?offerId=${offer.id}` as Href);
+    if (mutatingOfferId) {
+      return;
+    }
+    setMutatingOfferId(offer.id);
+    try {
+      const paused = await pauseOffer(offer.id);
+      if (paused) {
+        router.push(`${ROUTES.SELLER.OFFER_PAUSED}?offerId=${paused.id}` as Href);
+      }
+    } finally {
+      setMutatingOfferId(null);
     }
   };
 
   const handleResume = async (offer: SellerOffer) => {
-    await resumeOffer(offer.id);
+    if (mutatingOfferId) {
+      return;
+    }
+    setMutatingOfferId(offer.id);
+    try {
+      await resumeOffer(offer.id);
+    } finally {
+      setMutatingOfferId(null);
+    }
   };
 
   const handleDeleteConfirm = async () => {
-    if (!deleteTarget) {
+    if (!deleteTarget || isDeleting) {
       return;
     }
-    const ok = await deleteOffer(deleteTarget.id);
-    if (ok) {
-      setDeleteTarget(null);
+    setIsDeleting(true);
+    try {
+      const ok = await deleteOffer(deleteTarget.id);
+      if (ok) {
+        setDeleteTarget(null);
+      }
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -211,7 +234,7 @@ export const OffersScreen = memo(function OffersScreen() {
     <ScreenWrapper padded={false} className="bg-brand-background">
       <View className="flex-1">
         <SellerModuleTopBar
-          title="PetroTrade"
+          title="PolyStoreX"
           showSearch={false}
           onBellPress={() => router.push(ROUTES.SELLER.NOTIFICATIONS as Href)}
         />
@@ -405,8 +428,15 @@ export const OffersScreen = memo(function OffersScreen() {
       <DeleteOfferBottomSheet
         visible={Boolean(deleteTarget)}
         offerLabel={deleteTarget?.product ?? 'this offer'}
-        onCancel={() => setDeleteTarget(null)}
-        onConfirm={handleDeleteConfirm}
+        loading={isDeleting}
+        onCancel={() => {
+          if (!isDeleting) {
+            setDeleteTarget(null);
+          }
+        }}
+        onConfirm={() => {
+          void handleDeleteConfirm();
+        }}
       />
     </ScreenWrapper>
   );

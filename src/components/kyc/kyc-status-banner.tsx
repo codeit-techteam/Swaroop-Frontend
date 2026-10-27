@@ -50,7 +50,7 @@ export const KycStatusBanner = memo(function KycStatusBanner({
     box = 'border-amber-300 bg-amber-50';
     titleClass = 'text-amber-900';
     buttonClass = 'bg-amber-600';
-    title = 'PetroTrade requested changes';
+    title = 'PolyStoreX requested changes';
     message = overview.changeRequest?.reason ?? overview.reviewNotes;
     const labels = (overview.changeRequest?.slots ?? []).map((slot) => SLOT_LABELS[slot] ?? slot);
     const requestedOn = formatDate(overview.changeRequest?.requestedAt);
@@ -78,7 +78,7 @@ export const KycStatusBanner = memo(function KycStatusBanner({
     box = 'border-green-300 bg-brand-success-light';
     titleClass = 'text-green-900';
     title = 'KYC verified';
-    message = 'Your business documents have been verified by PetroTrade.';
+    message = 'Your business documents have been verified by PolyStoreX.';
   } else {
     return null;
   }

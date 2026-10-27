@@ -269,7 +269,7 @@ export const CustomerGradeBrowseScreen = memo(function CustomerGradeBrowseScreen
               <View className="py-lg">
                 <ActivityIndicator />
               </View>
-            ) : null
+            ) : undefined
           }
           ListEmptyComponent={
             <EmptyState

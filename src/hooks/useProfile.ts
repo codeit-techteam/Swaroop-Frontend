@@ -2,7 +2,11 @@ import { useCallback, useMemo } from 'react';
 
 import { getComplianceValidTillLabel } from '@/constants/profile';
 import { toCompanyProfile } from '@/services/company-profile';
-import { updateCustomerBusinessProfile, type CustomerKycOverview } from '@/services/customer-kyc';
+import {
+  updateCustomerBusinessProfile,
+  verificationAccepted,
+  type CustomerKycOverview,
+} from '@/services/customer-kyc';
 import { selectSavedAddresses, useAddressStore } from '@/store/address-store';
 import { selectKycApproved, selectMobileNumber, useAuthStore } from '@/store/auth-store';
 import { useCustomerKycOverviewStore } from '@/store/customer-kyc-overview-store';
@@ -35,7 +39,7 @@ const deriveDisplayName = (
     return companyName.trim();
   }
 
-  return mobileNumber ? `+91 ${mobileNumber}` : 'PetroTrade User';
+  return mobileNumber ? `+91 ${mobileNumber}` : 'PolyStoreX User';
 };
 
 const deriveKycStatus = (kycApproved: boolean, docsReady: boolean): KycVerificationStatus => {
@@ -56,6 +60,37 @@ const deriveMembership = (kycApproved: boolean): MembershipTier =>
 const deriveTradingStatus = (kycApproved: boolean): TradingStatus =>
   kycApproved ? 'Active' : 'Inactive';
 
+/** Prefer the backend KYC overview so admin approval matches the hero badge. */
+const deriveEffectiveKycApproved = (
+  overview: CustomerKycOverview | null,
+  kycApproved: boolean,
+): boolean => overview?.kycVerified ?? kycApproved;
+
+const deriveDocumentsComplete = (
+  overview: CustomerKycOverview | null,
+  docsReady: boolean,
+): boolean => {
+  if (!overview) return docsReady;
+  if (overview.kycVerified) return true;
+  const documents = overview.checklist.find((item) => item.key === 'documents');
+  if (documents) return documents.state === 'done';
+  return overview.missingRequired.length === 0;
+};
+
+const deriveIdentityFlags = (
+  overview: CustomerKycOverview | null,
+  identityVerified: { pan: boolean; gst: boolean },
+): { gstVerified: boolean; panVerified: boolean } => {
+  if (!overview) {
+    return { gstVerified: identityVerified.gst, panVerified: identityVerified.pan };
+  }
+
+  return {
+    gstVerified: overview.kycVerified || verificationAccepted(overview.verifications.gst),
+    panVerified: overview.kycVerified || verificationAccepted(overview.verifications.pan),
+  };
+};
+
 const buildComplianceStatus = (params: {
   kycApproved: boolean;
   gstVerified: boolean;
@@ -65,10 +100,9 @@ const buildComplianceStatus = (params: {
   const { kycApproved, gstVerified, panVerified, documentsComplete } = params;
 
   let summary: string;
-  if (kycApproved && documentsComplete) {
+  // Admin-approved KYC is fully compliant — never keep asking to "Complete KYC".
+  if (kycApproved) {
     summary = 'All mandatory documents are verified and strictly compliant with regulations.';
-  } else if (kycApproved && !documentsComplete) {
-    summary = 'KYC is approved. Upload any remaining documents to finish compliance.';
   } else if (documentsComplete || gstVerified || panVerified) {
     summary = 'Verification is in progress. Finish any pending KYC steps to unlock full access.';
   } else {
@@ -79,7 +113,7 @@ const buildComplianceStatus = (params: {
     kycVerified: kycApproved,
     gstVerified,
     panVerified,
-    documentsComplete,
+    documentsComplete: kycApproved ? true : documentsComplete,
     validTillLabel: getComplianceValidTillLabel(),
     summary,
   };
@@ -99,6 +133,9 @@ export const useProfile = () => {
 
   const profile = useMemo<ProfileData>(() => {
     const company = toCompanyProfile(overview, mobileNumber);
+    const effectiveKycApproved = deriveEffectiveKycApproved(overview, kycApproved);
+    const documentsComplete = deriveDocumentsComplete(overview, docsReady);
+    const { gstVerified, panVerified } = deriveIdentityFlags(overview, identityVerified);
     const savedAddresses: ProfileData['savedAddresses'] =
       savedDeliveryAddresses.length > 0
         ? savedDeliveryAddresses.map((address) => ({
@@ -128,14 +165,14 @@ export const useProfile = () => {
       companyLogoUri: userProfile?.companyLogoUri ?? null,
       kycStatus: overview
         ? deriveBackendKycStatus(overview)
-        : deriveKycStatus(kycApproved, docsReady),
-      membership: deriveMembership(kycApproved),
-      tradingStatus: deriveTradingStatus(kycApproved),
+        : deriveKycStatus(effectiveKycApproved, docsReady),
+      membership: deriveMembership(effectiveKycApproved),
+      tradingStatus: deriveTradingStatus(effectiveKycApproved),
       compliance: buildComplianceStatus({
-        kycApproved,
-        gstVerified: identityVerified.gst,
-        panVerified: identityVerified.pan,
-        documentsComplete: docsReady,
+        kycApproved: effectiveKycApproved,
+        gstVerified,
+        panVerified,
+        documentsComplete,
       }),
       companySource: overview ? 'backend' : 'none',
       savedAddresses,

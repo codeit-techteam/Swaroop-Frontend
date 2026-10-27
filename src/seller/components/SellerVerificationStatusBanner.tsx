@@ -70,7 +70,7 @@ export const SellerVerificationStatusBanner = memo(function SellerVerificationSt
 
   if (changeRequest) {
     tone = 'warning';
-    title = 'PetroTrade requested changes';
+    title = 'PolyStoreX requested changes';
     message = changeRequest.reason;
     const labels = changeRequest.slots
       .map((slot) => documents.find((doc) => doc.id === slot)?.title ?? slot)

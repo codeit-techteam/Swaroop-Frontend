@@ -110,7 +110,7 @@ export const PURCHASE_ORDER_COPY = {
   workflowHeading: 'Workflow Verification',
   documentsHeading: 'Regulatory Documentation',
   blindMarketplaceMessage:
-    'PetroTrade will now coordinate logistics with the selected verified supplier. Supplier identity remains confidential to maintain market neutrality and secure bilateral trade terms.',
+    'PolyStoreX will now coordinate logistics with the selected verified supplier. Supplier identity remains confidential to maintain market neutrality and secure bilateral trade terms.',
   trackShipment: 'Track Shipment',
   goToOrders: 'Go to Orders',
   documentToastTitle: 'Document Unavailable',

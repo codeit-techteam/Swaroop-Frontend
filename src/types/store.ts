@@ -39,7 +39,7 @@ export type AuthActions = {
       gst: { status: string } | null;
     };
   }) => void;
-  setLocation: (location: DeliveryLocation) => void;
+  setLocation: (location: DeliveryLocation | null) => void;
   updateUserProfile: (patch: Partial<UserProfilePayload>) => void;
   logout: () => Promise<void>;
   resetDemoAccount: () => Promise<void>;

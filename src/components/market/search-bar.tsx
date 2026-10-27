@@ -1,6 +1,6 @@
 import { forwardRef, memo, useCallback, useState } from 'react';
 
-import { Pressable, TextInput, View, type TextInput as TextInputType } from 'react-native';
+import { Pressable, TextInput, View, type TextInputInstance } from 'react-native';
 
 import { MARKET_SEARCH_PLACEHOLDER } from '@/constants/marketProducts';
 import { SearchIcon } from '@/icons';
@@ -21,7 +21,7 @@ type SearchBarProps = {
 };
 
 export const SearchBar = memo(
-  forwardRef<TextInputType, SearchBarProps>(function SearchBar(
+  forwardRef<TextInputInstance, SearchBarProps>(function SearchBar(
     {
       value,
       onChangeText,

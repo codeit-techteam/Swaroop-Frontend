@@ -24,7 +24,7 @@ export const DispatchSuccessScreen = memo(function DispatchSuccessScreen() {
 
   return (
     <View className="flex-1 bg-brand-background">
-      <SellerHeader title="Dispatch Success" showBack onBack={() => router.back()} />
+      <SellerHeader title="Dispatch Success" showBack />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 132 }}

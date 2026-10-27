@@ -149,3 +149,26 @@ export const SHIPMENT_TIMELINE: { label: string; statuses: ImportShipmentStatus[
 /** API path segment for a listing side. */
 export const sidePath = (side: ImportSide): string =>
   side === 'BUY' ? '/import/buy' : '/import/sell';
+
+/**
+ * Empty-state copy for the Import market list (I-07).
+ * Never say "listings" on the buy-requests market — buyers/sellers expect request/offer language.
+ */
+export function importMarketEmptyCopy(marketSide: ImportSide): {
+  title: string;
+  message: string;
+} {
+  if (marketSide === 'BUY') {
+    return {
+      title: 'No open buy requests',
+      message: 'No open buy requests — new requests appear here when they are published.',
+    };
+  }
+  return {
+    title: 'No open sell offers',
+    message: 'No open sell offers — new offers appear here when sellers publish them.',
+  };
+}
+
+export const IMPORT_MARKET_EMPTY_FILTERED =
+  'No buy requests or sell offers match these filters. Try widening them.';

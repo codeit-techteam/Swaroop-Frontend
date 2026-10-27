@@ -80,7 +80,7 @@ export const SellerSettingsScreen = memo(function SellerSettingsScreen() {
           </Typography>
 
           <View className="mt-lg rounded-[24px] border border-brand-border bg-brand-white px-lg py-lg">
-            <Typography variant="roleTitle">{companyName || 'PetroTrade Seller'}</Typography>
+            <Typography variant="roleTitle">{companyName || 'PolyStoreX Seller'}</Typography>
             <Typography variant="legal" className="mt-xs text-left text-brand-body">
               Enterprise seller account
             </Typography>

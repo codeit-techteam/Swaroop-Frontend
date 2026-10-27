@@ -5,8 +5,8 @@ import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Typography } from '@/components/ui/typography';
-import { DEFAULT_DELIVERY_LOCATION } from '@/constants/dashboard';
 import { AppLogo } from '@/components/ui/app-logo';
+import { resolveDeliveryLocation } from '@/constants/locations';
 import { LocationPinIcon, ProfileIcon } from '@/icons';
 import { selectLocation, useAuthStore } from '@/store/auth-store';
 import { brandColors } from '@/theme/colors';
@@ -26,7 +26,7 @@ export const OrdersAppHeader = memo(function OrdersAppHeader({
 }: OrdersAppHeaderProps) {
   const insets = useSafeAreaInsets();
   const persistedLocation = useAuthStore(selectLocation);
-  const location = persistedLocation ?? DEFAULT_DELIVERY_LOCATION;
+  const location = resolveDeliveryLocation(persistedLocation);
 
   return (
     <View

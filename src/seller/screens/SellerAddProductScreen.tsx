@@ -5,11 +5,12 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  type ScrollViewInstance,
   TextInput,
   View,
 } from 'react-native';
 
-import { type Href, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import { type Href, useLocalSearchParams, usePreventRemove, useRouter } from 'expo-router';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
@@ -17,6 +18,7 @@ import Toast from 'react-native-toast-message';
 import { ScreenWrapper, Typography } from '@/components';
 import { ChevronDownIcon } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
+import { safeGoBack } from '@/navigation/safe-back';
 import {
   BuyerPreviewCard,
   SellerBottomSheet,
@@ -38,10 +40,11 @@ import {
 import { INVENTORY_WAREHOUSES } from '@/seller/services/inventoryService';
 import { useSellerProductStore } from '@/seller/store/sellerProductStore';
 import type { SellerPaymentPricing, SellerProductForm } from '@/seller/types';
-import { PETROTRADE_CREDIT_NOTE } from '@/seller/utils/pricing';
+import { isPublishablePrice } from '@/seller/utils/numeric-input';
+import { POLYSTOREX_CREDIT_NOTE } from '@/seller/utils/pricing';
 import { getLiveCatalogProduct } from '@/services/catalog';
 import { fetchSellerGradeById } from '@/services/grade-master';
-import { showConfirmDialog } from '@/store/dialog-store';
+import { showAppDialog } from '@/store/dialog-store';
 import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
 import type { MarketProduct } from '@/types/market';
@@ -70,17 +73,18 @@ const PriceRow = memo(function PriceRow({
       <Typography variant="roleDescription" className="flex-1 text-brand-body">
         {label.replace(' (₹/MT)', '')}
       </Typography>
-      <View className="min-w-[132px] flex-row items-center rounded-xl bg-brand-surface px-sm">
+      <View className="min-w-[148px] flex-row items-center rounded-xl bg-brand-surface px-sm">
         <Typography variant="legal" className="text-brand-body">
           ₹
         </Typography>
         <TextInput
           value={value}
           onChangeText={onChange}
-          keyboardType="numeric"
+          keyboardType="decimal-pad"
+          inputMode="decimal"
           placeholder="0"
           placeholderTextColor={brandColors.footer}
-          className="flex-1 py-sm text-right font-bold font-sans text-[16px] text-brand-heading"
+          className="min-w-[80px] flex-1 py-sm text-right font-bold font-sans text-[16px] text-brand-heading"
         />
         <Typography variant="legal" className="ml-xs text-brand-footer">
           /MT
@@ -96,9 +100,8 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
   mode?: 'create' | 'edit';
 }) {
   const router = useRouter();
-  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const { catalogId, materialType } = useLocalSearchParams<{
     catalogId?: string;
     materialType?: string;
@@ -159,46 +162,79 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
     return formDirty || pricingDirty || specsDirty;
   };
 
-  const confirmLeave = (onLeave: () => void) => {
-    if (leavingRef.current || !hasEdits()) {
-      onLeave();
+  /** S-17: also prompt after picking a grade (pre-filled step 2), not only after typing. */
+  const shouldPromptOnLeave = () => {
+    if (leavingRef.current) return false;
+    if (hasEdits()) return true;
+    if (!isEdit && (step > 1 || Boolean(form.catalogProductId))) return true;
+    return false;
+  };
+
+  const saveDraftAndExit = async () => {
+    if (saving) return;
+    setSaving(true);
+    const result = await saveDraftProduct();
+    setSaving(false);
+    if (result.success) {
+      leavingRef.current = true;
+      router.replace(ROUTES.SELLER.PRODUCTS as Href);
       return;
     }
-    showConfirmDialog({
-      title: 'Discard changes?',
-      message: 'You have unsaved listing edits. Leave without saving?',
-      confirmLabel: 'Discard',
-      cancelLabel: 'Keep editing',
-      variant: 'danger',
-      onConfirm: () => {
-        leavingRef.current = true;
-        clearSelection();
-        onLeave();
-      },
+    if (result.error) {
+      Toast.show({ type: 'error', text1: 'Could not save draft', text2: result.error });
+      return;
+    }
+    Toast.show({
+      type: 'info',
+      text1: 'Complete offer details',
+      text2: 'Fill required fields, then save draft or discard.',
     });
   };
 
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('beforeRemove', (event) => {
-      if (leavingRef.current || !hasEdits()) {
-        return;
-      }
-      event.preventDefault();
-      showConfirmDialog({
-        title: 'Discard changes?',
-        message: 'You have unsaved listing edits. Leave without saving?',
-        confirmLabel: 'Discard',
-        cancelLabel: 'Keep editing',
-        variant: 'danger',
-        onConfirm: () => {
-          leavingRef.current = true;
-          clearSelection();
-          navigation.dispatch(event.data.action);
+  const promptLeave = (onLeave: () => void) => {
+    if (!shouldPromptOnLeave()) {
+      onLeave();
+      return;
+    }
+    showAppDialog({
+      title: 'Leave listing?',
+      message: 'Save a draft to continue later, or discard these changes.',
+      variant: 'warning',
+      cancelLabel: 'Keep editing',
+      choices: [
+        {
+          id: 'save-draft',
+          label: 'Save draft',
+          description: 'Keep this listing and exit',
+          onPress: () => {
+            void saveDraftAndExit();
+          },
         },
-      });
+        {
+          id: 'discard',
+          label: 'Discard',
+          description: 'Leave without saving',
+          onPress: () => {
+            leavingRef.current = true;
+            clearSelection();
+            onLeave();
+          },
+        },
+      ],
     });
-    return unsubscribe;
-  }, [clearSelection, navigation, form, pricing, technicalSpecs]);
+  };
+
+  // Hardware back / header back / gesture: `usePreventRemove` re-evaluates on every
+  // render, so the guard tracks wizard progress and form snapshot automatically.
+  // `leavingRef` short-circuits inside the callback for programmatic exits
+  // (draft saved / published) that happen before the next render.
+  usePreventRemove(shouldPromptOnLeave(), ({ repeat }) => {
+    if (!shouldPromptOnLeave()) {
+      repeat();
+      return;
+    }
+    promptLeave(repeat);
+  });
 
   const selectedCatalog = form.catalogProductId
     ? (getLiveCatalogProduct(form.catalogProductId) ??
@@ -303,26 +339,12 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
   };
 
   const handleSaveDraft = async () => {
-    if (saving) return;
-    setSaving(true);
-    const result = await saveDraftProduct();
-    setSaving(false);
-    if (result.success) {
-      leavingRef.current = true;
-      router.replace(ROUTES.SELLER.PRODUCTS as Href);
-      return;
-    }
-    if (result.error) {
-      Toast.show({ type: 'error', text1: 'Could not save draft', text2: result.error });
-      return;
-    }
-    Toast.show({ type: 'info', text1: 'Add a grade name before saving draft' });
+    await saveDraftAndExit();
   };
 
   const handlePublish = async () => {
     if (saving) return;
-    const price = Number(pricing.sellingPrice);
-    if (!pricing.sellingPrice.trim() || !Number.isFinite(price) || price <= 0) {
+    if (!isPublishablePrice(pricing.sellingPrice)) {
       Toast.show({
         type: 'info',
         text1: 'Enter a selling price',
@@ -361,11 +383,7 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
     goToStep(2);
   };
 
-  const sellingPriceValue = Number(pricing.sellingPrice);
-  const canPublish =
-    pricing.sellingPrice.trim().length > 0 &&
-    Number.isFinite(sellingPriceValue) &&
-    sellingPriceValue > 0;
+  const canPublish = isPublishablePrice(pricing.sellingPrice);
 
   const renderPickerField = (picker: PickerKey, label: string, value: string, error?: string) => (
     <Pressable className="flex-1" onPress={() => setActivePicker(picker)}>
@@ -384,7 +402,7 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
       <SellerHeader
         showBack
         title={screenTitle}
-        onBack={() => confirmLeave(() => router.back())}
+        onBack={() => promptLeave(() => safeGoBack(router, ROUTES.SELLER.PRODUCTS as Href))}
       />
 
       <View className="flex-row px-lg pb-sm pt-sm">
@@ -649,7 +667,7 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
                     </Typography>
                   ) : null}
                   <Typography variant="legal" className="mt-md text-left text-brand-body">
-                    {PETROTRADE_CREDIT_NOTE}
+                    {POLYSTOREX_CREDIT_NOTE}
                   </Typography>
                 </SpecificationCard>
               </View>

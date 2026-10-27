@@ -40,7 +40,7 @@ export const CustomQuoteCard = memo(function CustomQuoteCard({ className }: Cust
             variant="subheadingLeft"
             className="mt-sm max-w-[90%] text-[13px] leading-5 text-brand-white/85"
           >
-            Connect with PetroTrade logistics experts for customized enterprise shipments across
+            Connect with PolyStoreX logistics experts for customized enterprise shipments across
             India.
           </Typography>
 

@@ -53,7 +53,7 @@ export const PROCUREMENT_SCREEN_COPY = {
   engineChecksHeading: 'Engine Checks',
   blindMarketplaceTitle: 'Seller identity remains confidential.',
   blindMarketplaceMessage:
-    'PetroTrade manages all procurement on your behalf to ensure neutral market pricing, verified inventory allocation and secure enterprise transactions.',
+    'PolyStoreX manages all procurement on your behalf to ensure neutral market pricing, verified inventory allocation and secure enterprise transactions.',
   continueTracking: 'Continue Tracking',
   supplierMatchingInProgress: 'In Progress...',
   inventoryAllocationPending: 'Scheduled after supplier matching',

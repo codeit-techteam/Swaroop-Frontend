@@ -1,7 +1,7 @@
 export type ThemeMode = 'light' | 'dark' | 'system';
 
 export type ApiErrorResponse = {
-  message: string;
+  message: string | string[];
   code?: string;
   errors?: Record<string, string[]>;
 };

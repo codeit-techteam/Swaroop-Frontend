@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useRef } from 'react';
 
-import { Pressable, TextInput, View } from 'react-native';
+import { Pressable, TextInput, View, type TextInputInstance } from 'react-native';
 
 import Animated, {
   useAnimatedStyle,
@@ -23,6 +23,53 @@ type OtpInputProps = {
   className?: string;
 };
 
+type OtpBoxProps = {
+  digit: string;
+  isActive: boolean;
+  isFilled: boolean;
+  hasError: boolean;
+};
+
+/**
+ * Each cell is always the same `Animated.View` and owns its shared value, so the
+ * active cell never swaps component type (unmount/remount) while a Reanimated
+ * `withSequence` is still writing to it — the source of
+ * "synchronouslyUpdateUIProps failed for tag …" (N-04).
+ */
+const OtpBox = memo(function OtpBox({ digit, isActive, isFilled, hasError }: OtpBoxProps) {
+  const scale = useSharedValue(1);
+
+  useEffect(() => {
+    if (!isActive) {
+      scale.value = withTiming(1, { duration: 80 });
+      return;
+    }
+    scale.value = withSequence(
+      withTiming(1.06, { duration: 120 }),
+      withTiming(1, { duration: 120 }),
+    );
+  }, [isActive, scale]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Animated.View
+      className={cn(
+        'h-12 w-12 items-center justify-center rounded-md border-2 bg-brand-white',
+        isActive || isFilled ? 'border-brand-primary' : 'border-brand-border',
+        hasError && 'border-brand-error',
+      )}
+      style={animatedStyle}
+    >
+      <Typography variant="headingLeft" className="text-[20px]">
+        {digit}
+      </Typography>
+    </Animated.View>
+  );
+});
+
 export const OtpInput = memo(function OtpInput({
   value,
   onChange,
@@ -30,8 +77,7 @@ export const OtpInput = memo(function OtpInput({
   autoFocus = true,
   className,
 }: OtpInputProps) {
-  const inputRef = useRef<TextInput>(null);
-  const focusScale = useSharedValue(1);
+  const inputRef = useRef<TextInputInstance>(null);
   const digits = value.padEnd(OTP_LENGTH, ' ').slice(0, OTP_LENGTH).split('');
   const activeIndex = Math.min(value.length, OTP_LENGTH - 1);
 
@@ -43,13 +89,6 @@ export const OtpInput = memo(function OtpInput({
     return undefined;
   }, [autoFocus]);
 
-  useEffect(() => {
-    focusScale.value = withSequence(
-      withTiming(1.06, { duration: 120 }),
-      withTiming(1, { duration: 120 }),
-    );
-  }, [activeIndex, focusScale]);
-
   const handleChange = useCallback(
     (text: string) => {
       const sanitized = text.replace(/\D/g, '').slice(0, OTP_LENGTH);
@@ -57,10 +96,6 @@ export const OtpInput = memo(function OtpInput({
     },
     [onChange],
   );
-
-  const activeBoxStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: focusScale.value }],
-  }));
 
   return (
     <View className={cn('w-full items-center', className)}>
@@ -70,27 +105,15 @@ export const OtpInput = memo(function OtpInput({
         accessibilityRole="keyboardkey"
         accessibilityLabel="OTP input"
       >
-        {digits.map((digit, index) => {
-          const isActive = index === activeIndex && value.length < OTP_LENGTH;
-          const isFilled = digit.trim().length > 0;
-          const Box = isActive ? Animated.View : View;
-
-          return (
-            <Box
-              key={`otp-${index}`}
-              className={cn(
-                'h-12 w-12 items-center justify-center rounded-md border-2 bg-brand-white',
-                isActive || isFilled ? 'border-brand-primary' : 'border-brand-border',
-                error && 'border-brand-error',
-              )}
-              style={isActive ? activeBoxStyle : undefined}
-            >
-              <Typography variant="headingLeft" className="text-[20px]">
-                {digit.trim()}
-              </Typography>
-            </Box>
-          );
-        })}
+        {digits.map((digit, index) => (
+          <OtpBox
+            key={`otp-${index}`}
+            digit={digit.trim()}
+            isActive={index === activeIndex && value.length < OTP_LENGTH}
+            isFilled={digit.trim().length > 0}
+            hasError={Boolean(error)}
+          />
+        ))}
       </Pressable>
 
       <TextInput

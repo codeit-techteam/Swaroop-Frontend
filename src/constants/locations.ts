@@ -128,3 +128,33 @@ export const FALLBACK_DELIVERY_LOCATION: DeliveryLocation = {
   label: 'Set delivery location',
   source: 'preset',
 };
+
+/**
+ * Hard-coded city presets from older builds. Never show these as a real
+ * delivery address — guests saw them as a fake "Chennai / Mumbai" pin (N-06).
+ */
+const LEGACY_SAMPLE_LOCATION_IDS = new Set([
+  'loc-mumbai',
+  'loc-delhi',
+  'loc-ahmedabad',
+  'loc-chennai',
+  'loc-pune',
+  'loc-surat',
+]);
+
+/** True when the user (or GPS / pincode search) actually chose a place. */
+export function isDeliveryLocationChosen(
+  location?: DeliveryLocation | null,
+): location is DeliveryLocation {
+  if (!location) return false;
+  if (location.id === FALLBACK_DELIVERY_LOCATION.id) return false;
+  if (LEGACY_SAMPLE_LOCATION_IDS.has(location.id)) return false;
+  return Boolean(location.city?.trim());
+}
+
+/** Prefer a real choice; otherwise the neutral "Set delivery location" prompt. */
+export function resolveDeliveryLocation(
+  location?: DeliveryLocation | null,
+): DeliveryLocation {
+  return isDeliveryLocationChosen(location) ? location : FALLBACK_DELIVERY_LOCATION;
+}

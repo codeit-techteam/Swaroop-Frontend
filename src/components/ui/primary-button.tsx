@@ -11,6 +11,8 @@ type PrimaryButtonProps = {
   label: string;
   onPress: (event: GestureResponderEvent) => void;
   className?: string;
+  /** Overrides the default primary fill (e.g. success for publish actions). */
+  backgroundColor?: string;
   showArrow?: boolean;
   leftIcon?: ReactNode;
   disabled?: boolean;
@@ -22,6 +24,7 @@ export const PrimaryButton = memo(function PrimaryButton({
   label,
   onPress,
   className,
+  backgroundColor,
   showArrow = false,
   leftIcon,
   disabled = false,
@@ -39,10 +42,13 @@ export const PrimaryButton = memo(function PrimaryButton({
       accessibilityLabel={accessibilityLabel ?? label}
       className={cn(
         'w-full flex-row items-center justify-center rounded-md px-xl py-lg shadow-sm',
-        isDisabled ? 'bg-brand-disabled' : 'bg-brand-primary',
+        isDisabled ? 'bg-brand-disabled' : backgroundColor ? undefined : 'bg-brand-primary',
         className,
       )}
-      style={({ pressed }) => ({ opacity: !isDisabled && pressed ? 0.85 : 1 })}
+      style={({ pressed }) => ({
+        opacity: !isDisabled && pressed ? 0.85 : 1,
+        ...(!isDisabled && backgroundColor ? { backgroundColor } : null),
+      })}
     >
       {loading ? (
         <ActivityIndicator color={brandColors.white} />

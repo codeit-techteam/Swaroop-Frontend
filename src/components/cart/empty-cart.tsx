@@ -28,18 +28,18 @@ export const EmptyCart = memo(function EmptyCart({ onBrowsePress, className }: E
         variant="subheadingLeft"
         className="mt-sm text-center text-[14px] leading-[22px] text-brand-body"
       >
-        Browse industrial materials and add products to start your order.
+        Select a marketplace grade to build a purchase request, then review cart and checkout.
       </Typography>
 
       <Pressable
         onPress={onBrowsePress}
         accessibilityRole="button"
-        accessibilityLabel="Browse marketplace"
+        accessibilityLabel="Create purchase request"
         className="mt-xl h-12 items-center justify-center rounded-xl bg-brand-heading px-xl"
         style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
       >
         <Typography variant="button" className="text-[14px] tracking-normal">
-          Browse Marketplace
+          Create Purchase Request
         </Typography>
       </Pressable>
     </View>

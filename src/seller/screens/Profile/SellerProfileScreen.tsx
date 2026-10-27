@@ -7,7 +7,6 @@ import { type Href, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScreenWrapper, Typography } from '@/components';
-import { appConfig } from '@/config/env';
 import {
   BankIcon,
   BellIcon,
@@ -40,13 +39,14 @@ import {
 } from '@/services/seller-profile';
 import { showConfirmDialog } from '@/store/dialog-store';
 import { brandColors } from '@/theme/colors';
+import { getAppVersionLabel } from '@/utils/app-version';
 
 const isFullyVerified = (account: SellerAccountSummary): boolean =>
   Boolean(
     account.verified &&
-      account.gstin?.trim() &&
-      account.gstVerified &&
-      account.kycDocumentsCount > 0,
+    account.gstin?.trim() &&
+    account.gstVerified &&
+    account.kycDocumentsCount > 0,
   );
 
 const toProfileData = (account: SellerAccountSummary): SellerProfileData => ({
@@ -61,7 +61,7 @@ const toProfileData = (account: SellerAccountSummary): SellerProfileData => ({
   bankVerified: account.bankVerified,
   kycStatus: account.verificationStatus,
   kycDocumentsCount: account.kycDocumentsCount,
-  appVersion: `Version ${appConfig.version}`,
+  appVersion: getAppVersionLabel(),
 });
 
 const PROFILE_ROUTE_MAP = {
@@ -323,7 +323,7 @@ export const SellerProfileScreen = memo(function SellerProfileScreen() {
           </Pressable>
 
           <Typography variant="legal" className="mt-lg text-center text-brand-footer">
-            {`Version ${appConfig.version}`}
+            {getAppVersionLabel()}
           </Typography>
         </ScrollView>
 

@@ -96,7 +96,6 @@ export const SellerSupportScreen = memo(function SellerSupportScreen() {
         title="Support Center"
         showBack
         showBell
-        onBack={() => router.back()}
         onBellPress={() => router.push(ROUTES.SELLER.NOTIFICATIONS as Href)}
       />
 
@@ -180,7 +179,7 @@ export const SellerSupportScreen = memo(function SellerSupportScreen() {
             <EmptyState
               variant="no_notifications"
               title="No tickets in this category"
-              description="Create a support ticket, or reach PetroTrade by email or phone from the contacts below."
+              description="Create a support ticket, or reach PolyStoreX by email or phone from the contacts below."
               ctaLabel="Create Ticket"
               onCtaPress={() => router.push(ROUTES.SELLER.RAISE_TICKET as Href)}
             />
@@ -219,7 +218,7 @@ export const SellerSupportScreen = memo(function SellerSupportScreen() {
 
         <View className="mt-xl">
           <Typography variant="badge" className="text-[11px] uppercase tracking-wide text-brand-body">
-            Contact PetroTrade
+            Contact PolyStoreX
           </Typography>
           <View className="mt-md rounded-[22px] border border-brand-border bg-brand-white px-lg py-lg">
             {snapshot.contacts.map((contact, index) => (

@@ -134,7 +134,7 @@ const ProcurementPaymentGate = memo(function ProcurementPaymentGate({
             variant="subheadingLeft"
             className="mt-sm text-center text-[14px] leading-[22px] text-brand-body"
           >
-            Upload your payment proof so PetroTrade can verify funds and start procurement for this
+            Upload your payment proof so PolyStoreX can verify funds and start procurement for this
             order.
           </Typography>
         </Animated.View>
@@ -182,7 +182,7 @@ const ProcurementPaymentGate = memo(function ProcurementPaymentGate({
             },
             {
               icon: <ClipboardCheckIcon size={iconSizes.md} color={brandColors.primary} />,
-              title: 'PetroTrade verifies',
+              title: 'PolyStoreX verifies',
               body: 'Our finance team confirms payment against your order.',
             },
             {

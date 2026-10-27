@@ -325,7 +325,7 @@ export const CustomerCreditRequestScreen = memo(function CustomerCreditRequestSc
               Review & Submit
             </Typography>
             <Typography variant="subheadingLeft" className="mt-xs">
-              Confirm the details below. PetroTrade Credit Management reviews every application
+              Confirm the details below. PolyStoreX Credit Management reviews every application
               before a limit is issued.
             </Typography>
 

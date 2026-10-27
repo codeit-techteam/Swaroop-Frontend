@@ -100,16 +100,30 @@ export const DeleteOfferBottomSheet = memo(function DeleteOfferBottomSheet({
   offerLabel,
   onCancel,
   onConfirm,
+  loading = false,
 }: {
   visible: boolean;
   offerLabel: string;
   onCancel: () => void;
   onConfirm: () => void;
+  loading?: boolean;
 }) {
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
-      <Pressable className="flex-1 justify-end bg-black/40" onPress={onCancel}>
-        <Pressable className="rounded-t-[28px] bg-brand-white px-lg pb-2xl pt-lg" onPress={() => undefined}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={loading ? undefined : onCancel}
+    >
+      <Pressable
+        className="flex-1 justify-end bg-black/40"
+        onPress={loading ? undefined : onCancel}
+      >
+        <Pressable
+          className="rounded-t-[28px] bg-brand-white px-lg pb-2xl pt-lg"
+          onPress={() => undefined}
+          style={{ paddingBottom: 28 }}
+        >
           <View className="mb-lg h-1 w-12 self-center rounded-full bg-brand-border" />
           <Typography variant="headingLeft" className="text-[22px]">
             Delete Offer
@@ -119,10 +133,15 @@ export const DeleteOfferBottomSheet = memo(function DeleteOfferBottomSheet({
           </Typography>
           <View className="mt-xl flex-row gap-sm">
             <View className="flex-1">
-              <SecondaryButton label="Cancel" variant="outline" onPress={onCancel} />
+              <SecondaryButton
+                label="Cancel"
+                variant="outline"
+                onPress={onCancel}
+                disabled={loading}
+              />
             </View>
             <View className="flex-1">
-              <PrimaryButton label="Delete" onPress={onConfirm} />
+              <PrimaryButton label="Delete" onPress={onConfirm} loading={loading} />
             </View>
           </View>
         </Pressable>

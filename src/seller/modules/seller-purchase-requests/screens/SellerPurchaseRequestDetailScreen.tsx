@@ -80,7 +80,7 @@ export const SellerPurchaseRequestDetailScreen = memo(
     if (!request) {
       return (
         <ScreenWrapper className="bg-brand-background">
-          <SellerHeader title="Purchase Request" showBack onBack={() => router.back()} />
+          <SellerHeader title="Purchase Request" showBack />
           <Typography variant="roleTitle" className="mt-lg px-lg">
             Request not found.
           </Typography>
@@ -105,7 +105,7 @@ export const SellerPurchaseRequestDetailScreen = memo(
 
     return (
       <ScreenWrapper padded={false} className="bg-brand-background">
-        <SellerHeader title="Request Details" showBack onBack={() => router.back()} />
+        <SellerHeader title="Request Details" showBack />
 
         <ScrollView
           className="flex-1 px-lg"

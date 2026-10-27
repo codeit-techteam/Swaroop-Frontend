@@ -20,6 +20,7 @@ import { useCustomerKycStatus } from '@/hooks/use-customer-kyc-status';
 import { TrustIllustration } from '@/icons';
 import { useZodForm } from '@/lib/forms';
 import { ROUTES } from '@/navigation/routes';
+import { safeGoBack } from '@/navigation/safe-back';
 import {
   customerKycErrorMessage,
   formatPanDateInput,
@@ -139,7 +140,7 @@ export const BusinessInformationScreen = () => {
   }, [getValues, overview, setValue]);
 
   const handleBack = useCallback(() => {
-    router.back();
+    safeGoBack(router, ROUTES.AUTH.CUSTOMER_REGISTER as Href);
   }, [router]);
 
   const onContinue = useCallback(
@@ -291,7 +292,7 @@ export const BusinessInformationScreen = () => {
         }
         className="mt-2xl"
         disabled={!isValid || verifying !== null}
-        onPress={handleSubmit(onContinue)}
+        onPress={() => void handleSubmit(onContinue)()}
       />
     </ScreenWrapper>
   );

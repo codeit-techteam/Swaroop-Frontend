@@ -250,7 +250,7 @@ export const SellerAnalyticsScreen = memo(function SellerAnalyticsScreen() {
 
   return (
     <ScreenWrapper padded={false} className="bg-brand-background">
-      <SellerHeader title="Analytics" showBack showBell onBack={() => router.back()} />
+      <SellerHeader title="Analytics" showBack showBell />
 
       {isLoading ? (
         <View className="flex-1 px-lg pt-md">

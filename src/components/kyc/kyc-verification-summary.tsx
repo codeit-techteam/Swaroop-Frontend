@@ -57,7 +57,7 @@ function verifiedByLine(verification: KycVerification): string {
   const at = verification.reviewedAt ?? verification.verifiedAt;
   const by =
     verification.method === 'MANUAL'
-      ? 'Verified by the PetroTrade compliance team'
+      ? 'Verified by the PolyStoreX compliance team'
       : verification.provider === 'surepass'
         ? 'Verified via Surepass'
         : 'Verified';

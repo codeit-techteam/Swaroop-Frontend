@@ -75,7 +75,7 @@ export const DISPATCH_DETAIL_EXTENSIONS: Record<string, DispatchDetailExtension>
 
 export const buildDefaultDispatchDetail = (orderId: string): DispatchDetailExtension => ({
   orderId,
-  transportCompany: 'PetroTrade Logistics Partner',
+  transportCompany: 'PolyStoreX Logistics Partner',
   checklist: {
     invoice: false,
     lr: false,

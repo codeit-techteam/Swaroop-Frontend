@@ -31,7 +31,7 @@ export const OfferPausedScreen = memo(function OfferPausedScreen() {
 
   return (
     <ScreenWrapper padded={false} className="bg-brand-background">
-      <SellerHeader title="PetroTrade Seller" showBack onBack={() => router.back()} />
+      <SellerHeader title="PolyStoreX Seller" showBack />
 
       <View
         className="flex-1 px-lg"

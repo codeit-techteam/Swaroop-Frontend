@@ -25,7 +25,7 @@ export const BankAccountsScreen = memo(function BankAccountsScreen() {
           <ProfileDataState
             variant="empty"
             title="No bank accounts linked"
-            message="Bank accounts verified by PetroTrade will appear here."
+            message="Bank accounts verified by PolyStoreX will appear here."
           />
         ) : null}
         {profile.bankAccounts.map((account) => (

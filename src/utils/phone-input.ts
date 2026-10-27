@@ -3,31 +3,31 @@ export function sanitizeIndianMobileInput(value: string): string {
   return String(value).replace(/\D/g, '').slice(0, 10);
 }
 
+/** Shown when GET OTP is tapped with an empty mobile field (L-06). */
+export const EMPTY_MOBILE_MESSAGE = 'Please enter your mobile number';
+
 /**
  * Phone field validation for login forms.
- * - Empty: no error while typing; submit path shows a clear required message.
- * - Incomplete (1–9 digits): soft hint only after blur / submit attempt.
- * - Invalid start digit or non-digit already stripped: full format error.
+ * - Empty / incomplete (1–9 digits): never show while typing; only after submit.
+ * - 10 digits but invalid start: format error as soon as length is complete.
  */
 export function indianMobileFieldError(
   value: string,
-  options?: { touched?: boolean; submitted?: boolean },
+  options?: { touched?: boolean; submitted?: boolean; editing?: boolean },
 ): string | undefined {
   const digits = sanitizeIndianMobileInput(value);
-  const { touched = false, submitted = false } = options ?? {};
+  const { submitted = false, editing = false } = options ?? {};
 
   if (!digits) {
-    if (submitted) return 'Enter your 10-digit mobile number.';
-    return undefined;
+    return submitted ? EMPTY_MOBILE_MESSAGE : undefined;
   }
 
   if (digits.length < 10) {
-    if (submitted || (touched && digits.length > 0)) {
-      // Avoid the full "10-digit" error after a single keystroke unless submitted.
-      if (!submitted && digits.length < 3) return undefined;
-      return 'Enter the full 10-digit mobile number.';
+    // Incomplete while typing or after blur alone — stay quiet until Get OTP / submit.
+    if (editing || !submitted) {
+      return undefined;
     }
-    return undefined;
+    return 'Enter the full 10-digit mobile number.';
   }
 
   if (!/^[6-9]\d{9}$/.test(digits)) {

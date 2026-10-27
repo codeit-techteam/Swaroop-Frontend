@@ -60,7 +60,7 @@ export const AssignVehicleScreen = memo(function AssignVehicleScreen() {
 
   return (
     <View className="flex-1 bg-brand-background">
-      <SellerHeader title="Assign Vehicle" showBack onBack={() => router.back()} />
+      <SellerHeader title="Assign Vehicle" showBack />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 132 }}

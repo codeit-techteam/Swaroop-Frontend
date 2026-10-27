@@ -16,7 +16,7 @@ import {
 import { PrimaryButton, SecondaryButton, Typography } from '@/components/ui';
 import { PURCHASE_ORDER_COPY } from '@/constants/purchaseOrderTimeline';
 import { usePurchaseOrder } from '@/hooks/usePurchaseOrder';
-import { BackArrowIcon, BellIcon, OrdersTabIcon, PetroTradeLogo, TruckIcon } from '@/icons';
+import { BackArrowIcon, BellIcon, OrdersTabIcon, PolyStoreXLogo, TruckIcon } from '@/icons';
 import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
 
@@ -60,7 +60,7 @@ export const CustomerPurchaseOrderGeneratedScreen = memo(
             </View>
 
             <View className="flex-row items-center">
-              <PetroTradeLogo size={32} />
+              <PolyStoreXLogo size={32} />
               <Pressable
                 onPress={handleNotifications}
                 hitSlop={10}

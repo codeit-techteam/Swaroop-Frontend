@@ -53,7 +53,6 @@ export const SellerReviewScreen = () => {
         showBack
         title="Seller Onboarding"
         rightActionLabel="Save & Exit"
-        onBack={() => router.back()}
         onRightActionPress={() => router.replace(ROUTES.AUTH.ROLE_SELECTION as Href)}
       />
 

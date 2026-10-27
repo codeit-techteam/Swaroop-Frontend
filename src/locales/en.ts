@@ -1,7 +1,8 @@
 export const locales = {
   en: {
     common: {
-      appName: 'Swaroop',
+      appName: 'PolyStoreX',
+
       loading: 'Loading...',
       error: 'Something went wrong',
       retry: 'Retry',

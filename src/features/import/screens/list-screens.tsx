@@ -34,7 +34,12 @@ import {
   useDebounced,
   useImportLoader,
 } from '@/features/import/components';
-import { IMPORT_MODES, type ImportMode } from '@/features/import/config';
+import {
+  IMPORT_MARKET_EMPTY_FILTERED,
+  IMPORT_MODES,
+  importMarketEmptyCopy,
+  type ImportMode,
+} from '@/features/import/config';
 import {
   DECIMAL_PRICE,
   formatDate,
@@ -115,13 +120,28 @@ export function ImportHubScreen({ mode }: { mode: ImportMode }) {
             </Typography>
             <View className="mt-md flex-row gap-sm">
               {[
-                ['Drafts', count(['DRAFT'])],
+                [
+                  'Drafts',
+                  side?.drafts?.total ?? count(['DRAFT']),
+                  side?.drafts && side.drafts.total > 0
+                    ? side.drafts.readyToPublish > 0 && side.drafts.incomplete > 0
+                      ? `${side.drafts.readyToPublish} ready · ${side.drafts.incomplete} need details`
+                      : side.drafts.readyToPublish > 0
+                        ? `${side.drafts.readyToPublish} ready to publish`
+                        : `${side.drafts.incomplete} need details`
+                    : null,
+                ] as const,
                 [
                   'Live',
                   count(['PUBLISHED', 'MATCHING', 'OFFER_RECEIVED', 'NEGOTIATION', 'PAUSED']),
-                ],
-                ['Deals', count(['MATCHED', 'DEAL_CONFIRMED', 'PARTIALLY_FULFILLED', 'FULFILLED'])],
-              ].map(([label, value]) => (
+                  null,
+                ] as const,
+                [
+                  'Deals',
+                  count(['MATCHED', 'DEAL_CONFIRMED', 'PARTIALLY_FULFILLED', 'FULFILLED']),
+                  null,
+                ] as const,
+              ].map(([label, value, hint]) => (
                 <View key={label} className="flex-1 rounded-xl bg-brand-surface px-md py-sm">
                   <Typography variant="headingLeft" className="text-[20px]">
                     {value}
@@ -129,6 +149,15 @@ export function ImportHubScreen({ mode }: { mode: ImportMode }) {
                   <Typography variant="roleDescription" className="text-[12px] text-brand-muted">
                     {label}
                   </Typography>
+                  {hint ? (
+                    <Typography
+                      variant="roleDescription"
+                      className="mt-xs text-[10px] leading-[13px] text-amber-800"
+                      numberOfLines={2}
+                    >
+                      {hint}
+                    </Typography>
+                  ) : null}
                 </View>
               ))}
             </View>
@@ -574,16 +603,14 @@ export function ImportMarketScreen({ mode }: { mode: ImportMode }) {
       ) : !state.data?.items.length ? (
         <EmptyBlock
           title={
-            cfg.marketSide === 'BUY'
-              ? 'No open buy requests'
-              : `No open ${cfg.copy.marketPlural.toLowerCase()}`
+            activeFilters || debounced
+              ? `No matching ${cfg.copy.marketPlural.toLowerCase()}`
+              : importMarketEmptyCopy(cfg.marketSide).title
           }
           message={
             activeFilters || debounced
-              ? 'No buy or sell offers match these filters. Try widening them.'
-              : cfg.marketSide === 'BUY'
-                ? 'Open buy requests from importers will appear here when they are published.'
-                : 'Open USD/import sell offers will appear here when sellers publish them.'
+              ? IMPORT_MARKET_EMPTY_FILTERED
+              : importMarketEmptyCopy(cfg.marketSide).message
           }
         />
       ) : (
@@ -652,7 +679,7 @@ export function ImportNegotiationsScreen({ mode }: { mode: ImportMode }) {
       ) : !state.data?.items.length ? (
         <EmptyBlock
           title="No negotiations"
-          message={`Make an offer on a ${cfg.copy.market.toLowerCase()} or wait for offers on your listings.`}
+          message={`Make an offer on a ${cfg.copy.market.toLowerCase()} or wait for offers on your ${cfg.copy.ownPlural.toLowerCase()}.`}
         />
       ) : (
         <>

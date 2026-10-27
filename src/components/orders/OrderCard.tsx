@@ -150,7 +150,7 @@ export const OrderCard = memo(function OrderCard({
         <View className="mt-md flex-row items-center gap-sm rounded-lg bg-brand-success-light px-md py-sm">
           <CheckCircleIcon size={iconSizes.sm} color={brandColors.success} />
           <Typography variant="subheadingLeft" className="text-[12px] text-brand-success">
-            Payment Verified by PetroTrade
+            Payment Verified by PolyStoreX
           </Typography>
         </View>
       ) : null}

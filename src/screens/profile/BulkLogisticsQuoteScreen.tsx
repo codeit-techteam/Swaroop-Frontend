@@ -100,7 +100,7 @@ export const BulkLogisticsQuoteScreen = memo(function BulkLogisticsQuoteScreen()
       Toast.show({
         type: 'success',
         text1: 'Request submitted',
-        text2: `${result.requestNumber} sent to PetroTrade logistics team.`,
+        text2: `${result.requestNumber} sent to PolyStoreX logistics team.`,
         visibilityTime: 2500,
       });
       router.back();

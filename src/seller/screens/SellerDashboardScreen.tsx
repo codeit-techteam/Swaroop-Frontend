@@ -1,10 +1,9 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
 import { type Href, useRouter } from 'expo-router';
 
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -26,7 +25,6 @@ import {
   SellerVerificationStatusBanner,
   SettlementSummaryCard,
 } from '@/seller/components';
-import { SellerLocationSheet } from '@/seller/components/SellerLocationSheet';
 import { usePullToRefresh } from '@/seller/hooks/usePullToRefresh';
 import { useSellerDashboardSummary } from '@/seller/hooks/useSellerDashboardSummary';
 import { useSellerShipments } from '@/seller/hooks/useSellerShipments';
@@ -39,7 +37,6 @@ import { useSettlementStore } from '@/seller/modules/settlement-payout/store/set
 import { navigateSellerBottomTab } from '@/seller/navigation/useSellerBottomNavigation';
 import { getRevenueSeries, getSellerAnalytics } from '@/seller/services/analyticsService';
 import { getSellerNotificationsSnapshot } from '@/seller/services/sellerMockService';
-import { useSellerLocationStore } from '@/seller/store/sellerLocationStore';
 import { useSellerProductStore } from '@/seller/store/sellerProductStore';
 import { useSellerStore } from '@/seller/store/sellerStore';
 import type { SellerShipment } from '@/seller/types';
@@ -65,6 +62,7 @@ export const SellerDashboardScreen = memo(function SellerDashboardScreen() {
   const refreshSellerOrdersState = useSellerOrdersStore((state) => state.refreshSellerOrdersState);
   const refreshSellerOffersState = useSellerOffersStore((state) => state.refreshSellerOffersState);
   const hydrateSettlementState = useSettlementStore((state) => state.hydrateSettlementState);
+  const refreshSettlementState = useSettlementStore((state) => state.refreshSettlementState);
   const hydrateSellerOrdersState = useSellerOrdersStore((state) => state.hydrateSellerOrdersState);
   const hydrateSellerOffersState = useSellerOffersStore((state) => state.hydrateSellerOffersState);
   const { status: verificationStatus, refresh: refreshVerification } =
@@ -75,7 +73,13 @@ export const SellerDashboardScreen = memo(function SellerDashboardScreen() {
     refreshSellerOffersState();
     refreshSellerOrdersState();
     setImportRefreshKey((key) => key + 1);
-    await Promise.all([refreshDashboard(), refreshVerification(), refreshSellerAccount()]);
+    // S-07: the settlement card must refresh with the rest of the dashboard.
+    await Promise.all([
+      refreshDashboard(),
+      refreshVerification(),
+      refreshSellerAccount(),
+      refreshSettlementState(),
+    ]);
   });
   const sellerName = useSellerStore(
     (state) =>
@@ -90,15 +94,15 @@ export const SellerDashboardScreen = memo(function SellerDashboardScreen() {
 
   useEffect(() => {
     void refreshSellerAccount();
+    // Keep listing counts in sync with My listings (S-01).
+    void useSellerProductStore.getState().hydrateFromApi();
   }, [refreshSellerAccount]);
   const orderSummary = useSellerOrdersStore((state) => state.summary);
   const offerStats = useSellerOffersStore((state) => state.stats);
   const { dashboardPreviews } = useSellerShipments();
   const revenueToday = useSellerProductStore((state) => state.revenueToday);
   const revenueDelta = useSellerProductStore((state) => state.revenueDelta);
-  const publishedProductsCount = useSellerProductStore(
-    (state) => state.publishedProducts.length,
-  );
+  const publishedProductsCount = useSellerProductStore((state) => state.publishedProducts.length);
   const clearSelection = useSellerProductStore((state) => state.clearSelection);
   const settlementSummary = useSettlementStore((state) => state.summary);
   const settlements = useSettlementStore((state) => state.settlements);
@@ -142,22 +146,10 @@ export const SellerDashboardScreen = memo(function SellerDashboardScreen() {
     settlementHydrated,
   ]);
 
-  useEffect(() => {
-    void useSellerLocationStore.getState().hydrate();
-  }, []);
-
-  const locationSheetRef = useRef<BottomSheetModal>(null);
-  const currentLocation = useSellerLocationStore((s) =>
-    s.locations.find((row) => row.id === s.currentLocationId),
-  );
-  const locationsHydrated = useSellerLocationStore((s) => s.isHydrated);
+  // S-09: dashboard pin shows registered business address only — never GPS / current device location.
   const account = useSellerStore((state) => state.account);
   const businessAddressLabel = useMemo(() => formatSellerAddress(account), [account]);
-  const locationLabel = businessAddressLabel
-    ? businessAddressLabel
-    : currentLocation
-      ? `${currentLocation.city || currentLocation.name} · ${currentLocation.warehouse}`
-      : null;
+  const locationLabel = businessAddressLabel;
 
   const goToAddProduct = () => {
     clearSelection();
@@ -280,27 +272,25 @@ export const SellerDashboardScreen = memo(function SellerDashboardScreen() {
 
           <DashboardSearchButton onPress={() => router.push(ROUTES.SELLER.SEARCH as Href)} />
 
-          {locationsHydrated || businessAddressLabel ? (
-            <Pressable
-              onPress={() => locationSheetRef.current?.present()}
-              accessibilityRole="button"
-              accessibilityLabel="Business or operating location"
-              className="mt-sm flex-row items-center self-start"
-              hitSlop={6}
+          <Pressable
+            onPress={() => router.push(ROUTES.SELLER.PROFILE_ADDRESS as Href)}
+            accessibilityRole="button"
+            accessibilityLabel="Business address"
+            className="mt-sm flex-row items-center self-start"
+            hitSlop={6}
+          >
+            <LocationPinIcon color={brandColors.primary} />
+            <Typography
+              variant="caption"
+              className="ml-xs max-w-[240px] font-sans text-[12px] normal-case tracking-normal text-brand-heading"
+              numberOfLines={1}
             >
-              <LocationPinIcon color={brandColors.primary} />
-              <Typography
-                variant="caption"
-                className="ml-xs max-w-[240px] font-sans text-[12px] normal-case tracking-normal text-brand-heading"
-                numberOfLines={1}
-              >
-                {locationLabel ?? 'Set business address'}
-              </Typography>
-              <Typography variant="link" className="ml-xs font-semibold text-[12px]">
-                {locationLabel ? 'Change' : 'Add'}
-              </Typography>
-            </Pressable>
-          ) : null}
+              {locationLabel ?? 'Set business address'}
+            </Typography>
+            <Typography variant="link" className="ml-xs font-semibold text-[12px]">
+              {locationLabel ? 'Change' : 'Add'}
+            </Typography>
+          </Pressable>
 
           <SellerVerificationStatusBanner
             status={verificationStatus}
@@ -419,7 +409,6 @@ export const SellerDashboardScreen = memo(function SellerDashboardScreen() {
           onNavigate={(target) => navigateSellerBottomTab(router, target)}
         />
       </View>
-      <SellerLocationSheet ref={locationSheetRef} />
     </ScreenWrapper>
   );
 });

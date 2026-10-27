@@ -1,4 +1,5 @@
 import { apiClient } from '@/api/client';
+import { normalizeSellerOrigin } from '@/seller/constants/grade-options';
 import { ensureDevBackendSession } from '@/services/backend-session';
 import type {
   SellerProduct,
@@ -140,16 +141,9 @@ function mapProductStatus(
 }
 
 function mapTiers(tiers: BackendPriceTier[] | undefined, basePrice: number): SellerPricingTier[] {
+  // No tiers from API → empty list (sellers add explicitly). Avoid inventing "1-0 MT".
   if (!tiers?.length) {
-    return [
-      {
-        id: 'tier-1',
-        minQty: '1',
-        maxQty: '',
-        price: String(basePrice || ''),
-        discountLabel: 'Standard',
-      },
-    ];
+    return [];
   }
   return tiers.map((tier, index) => {
     const price = num(tier.price, basePrice);
@@ -157,10 +151,18 @@ function mapTiers(tiers: BackendPriceTier[] | undefined, basePrice: number): Sel
       basePrice > 0 && price < basePrice
         ? `Save ₹${Math.round(basePrice - price)}/MT`
         : str(tier.label, index === 0 ? 'Standard' : `Tier ${index + 1}`);
+    const maxN = Number(tier.maxQty);
+    const maxQty =
+      tier.maxQty == null ||
+      tier.maxQty === '' ||
+      !Number.isFinite(maxN) ||
+      maxN <= 0
+        ? ''
+        : String(maxN);
     return {
       id: str(tier.id, `tier-${index + 1}`),
-      minQty: String(num(tier.minQty, 1)),
-      maxQty: tier.maxQty == null || tier.maxQty === '' ? '' : String(num(tier.maxQty)),
+      minQty: String(Math.max(num(tier.minQty, 1), 1)),
+      maxQty,
       price: String(price),
       discountLabel: discount,
     };
@@ -185,7 +187,7 @@ function mapMobileProduct(item: BackendSellerProduct): SellerProduct {
     grade: str(item.code ?? item.grade?.code),
     category: str(item.grade?.category?.name ?? item.grade?.name, 'Grade'),
     brand: str(item.manufacturer ?? item.brand, 'PRIVATE'),
-    origin: str(item.countryOfOrigin, 'India'),
+    origin: normalizeSellerOrigin(str(item.countryOfOrigin, 'India')),
     description: str(metadata.notes ?? metadata.description),
     availableQty: String(availableQty),
     moq: String(num(offer?.moq)),

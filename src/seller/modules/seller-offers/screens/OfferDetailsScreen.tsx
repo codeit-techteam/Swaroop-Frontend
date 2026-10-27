@@ -95,7 +95,7 @@ export const OfferDetailsScreen = memo(function OfferDetailsScreen() {
   if (isResolving && !offer) {
     return (
       <ScreenWrapper padded={false} className="bg-brand-background">
-        <SellerHeader title="Offer Detail" showBack onBack={() => router.back()} />
+        <SellerHeader title="Offer Detail" showBack />
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator color={brandColors.primary} />
         </View>
@@ -106,7 +106,7 @@ export const OfferDetailsScreen = memo(function OfferDetailsScreen() {
   if (!offer) {
     return (
       <ScreenWrapper padded={false} className="bg-brand-background">
-        <SellerHeader title="Offer Detail" showBack onBack={() => router.back()} />
+        <SellerHeader title="Offer Detail" showBack />
         <View className="flex-1 items-center justify-center px-lg">
           <Typography variant="headingLeft" className="text-center text-[22px]">
             Offer not found
@@ -173,7 +173,7 @@ export const OfferDetailsScreen = memo(function OfferDetailsScreen() {
 
   return (
     <ScreenWrapper padded={false} className="bg-brand-background">
-      <SellerHeader title="Offer Detail" showBack showBell onBack={() => router.back()} />
+      <SellerHeader title="Offer Detail" showBack showBell />
 
       <ScrollView
         className="flex-1 px-lg"
@@ -301,7 +301,7 @@ export const OfferPreviewScreen = memo(function OfferPreviewScreen() {
 
   return (
     <ScreenWrapper padded={false} className="bg-brand-background">
-      <SellerHeader title="Offer Preview" showBack onBack={() => router.back()} />
+      <SellerHeader title="Offer Preview" showBack />
       <ScrollView
         className="flex-1 px-lg"
         contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}

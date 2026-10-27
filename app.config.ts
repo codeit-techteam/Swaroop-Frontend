@@ -9,12 +9,16 @@ const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID ?? '8fa5420d-cb2b-4656-bc7a-41
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: 'Swaroop',
+  name: 'PolyStoreX',
+  // The slug is the EAS project identifier (project 8fa5420d… / keystore / update
+  // channels are registered as "swaroop"). It is never shown to users; changing it
+  // breaks `eas build` and would require a new keystore. Branding lives in `name`.
   slug: 'swaroop',
   version: APP_VERSION,
   orientation: 'portrait',
   icon: './assets/images/icon.png',
-  scheme: 'swaroop',
+  scheme: 'polystorex',
+
   userInterfaceStyle: 'automatic',
   backgroundColor: '#ffffff',
   ios: {
@@ -23,9 +27,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     infoPlist: {
       UIBackgroundModes: ['remote-notification'],
       NSLocationWhenInUseUsageDescription:
-        'PetroTrade uses your location to detect the delivery pincode and save warehouse addresses.',
+        'PolyStoreX uses your location to detect the delivery pincode and save warehouse addresses.',
       NSLocationAlwaysAndWhenInUseUsageDescription:
-        'PetroTrade uses your location to detect the delivery pincode and save warehouse addresses.',
+        'PolyStoreX uses your location to detect the delivery pincode and save warehouse addresses.',
+
       NSAppTransportSecurity: {
         NSAllowsArbitraryLoads: ALLOW_CLEARTEXT,
         NSAllowsLocalNetworking: ALLOW_CLEARTEXT,
@@ -39,7 +44,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
     package: 'com.swaroop.app',
     versionCode: ANDROID_VERSION_CODE,
-    allowBackup: false,
     permissions: [
       'android.permission.INTERNET',
       'android.permission.ACCESS_NETWORK_STATE',
@@ -100,6 +104,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           buildToolsVersion: '36.0.0',
           minSdkVersion: 24,
           usesCleartextTraffic: ALLOW_CLEARTEXT,
+          // A-13: keep session data out of cloud/device backup where possible.
+          enableMinifyInReleaseBuilds: false,
         },
         ios: {
           deploymentTarget: '16.4',
@@ -117,7 +123,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'expo-location',
       {
         locationWhenInUsePermission:
-          'Allow PetroTrade to use your current location to set and save the delivery address.',
+          'Allow PolyStoreX to use your current location to set and save the delivery address.',
         isIosBackgroundLocationEnabled: false,
         isAndroidBackgroundLocationEnabled: false,
       },

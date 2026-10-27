@@ -1,9 +1,9 @@
 import type { SellerPaymentPricing } from '@/seller/types';
 
-export const PETROTRADE_CREDIT_LABEL = 'Credit — PetroTrade Managed';
+export const POLYSTOREX_CREDIT_LABEL = 'Credit — PolyStoreX Managed';
 
-export const PETROTRADE_CREDIT_NOTE =
-  'Customer credit eligibility and payment terms are determined by PetroTrade.';
+export const POLYSTOREX_CREDIT_NOTE =
+  'Customer credit eligibility and payment terms are determined by PolyStoreX.';
 
 type LegacySellerPricing = Partial<SellerPaymentPricing> & {
   advance?: string;

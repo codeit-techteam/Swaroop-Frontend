@@ -5,7 +5,6 @@ import { Modal, Pressable, RefreshControl, ScrollView, View } from 'react-native
 import { type Href, useRouter } from 'expo-router';
 
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScreenWrapper, Typography } from '@/components';
 import { ROUTES } from '@/navigation/routes';
@@ -32,13 +31,42 @@ const listingTabs: { id: SellerProductStatus; label: string }[] = [
   { id: 'inactive', label: 'Inactive' },
 ];
 
+/** Per-tab empty copy so Draft/Inactive never reuse the Published “publish” prompt (S-12). */
+const listingEmptyState: Record<
+  SellerProductStatus,
+  { title: string; description: string; ctaLabel?: string; cta: 'catalog' | 'add' | 'none' }
+> = {
+  published: {
+    title: 'No published listings',
+    description:
+      'Published grades appear in the customer marketplace. Pick a catalog grade to list stock and price.',
+    ctaLabel: 'Browse catalog',
+    cta: 'catalog',
+  },
+  draft: {
+    title: 'No draft listings',
+    description: 'Saved drafts appear here. Finish listing details and publish when you are ready.',
+    ctaLabel: 'Add listing',
+    cta: 'add',
+  },
+  inactive: {
+    title: 'No inactive listings',
+    description: 'Listings you pause appear here. Edit and republish to make them visible again.',
+    cta: 'none',
+  },
+};
+
 type WorkspaceTab = 'catalog' | 'listings';
+
+/** Approx. seller tab bar height (icons + labels + padding); FAB sits above it. */
+const SELLER_TAB_BAR_HEIGHT = 88;
+const FAB_SIZE = 56;
+const FAB_GAP = 12;
 
 const AnimatedSection = Animated.View;
 
 export const SellerProductsScreen = memo(function SellerProductsScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const products = useSellerProductStore((state) => state.products);
   const publishedProducts = useSellerProductStore((state) => state.publishedProducts);
   const draftProducts = useSellerProductStore((state) => state.draftProducts);
@@ -111,17 +139,21 @@ export const SellerProductsScreen = memo(function SellerProductsScreen() {
   return (
     <ScreenWrapper padded={false} className="bg-brand-background">
       <SellerModuleTopBar
-        title="PetroTrade"
+        title="PolyStoreX"
         showSearch={false}
         onBellPress={() => router.push(ROUTES.SELLER.NOTIFICATIONS as Href)}
       />
 
-      <View className="flex-1">
+      <View className="relative flex-1">
         <ScrollView
           className="flex-1 px-lg"
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ paddingTop: 16, paddingBottom: insets.bottom + 140 }}
+          contentContainerStyle={{
+            paddingTop: 16,
+            // Clear tab bar + FAB so the last listing / empty state stays tappable.
+            paddingBottom: SELLER_TAB_BAR_HEIGHT + FAB_SIZE + FAB_GAP + 24,
+          }}
           refreshControl={
             <RefreshControl refreshing={isRefreshing} onRefresh={() => void refresh()} />
           }
@@ -244,25 +276,15 @@ export const SellerProductsScreen = memo(function SellerProductsScreen() {
                 ) : (
                   <EmptyState
                     variant="no_products"
-                    title={
-                      listingTab === 'draft'
-                        ? 'No draft listings'
-                        : listingTab === 'inactive'
-                          ? 'No inactive listings'
-                          : 'No published listings'
-                    }
-                    description={
-                      listingTab === 'draft'
-                        ? 'Saved drafts appear here. Finish offer details and publish when you are ready.'
-                        : listingTab === 'inactive'
-                          ? 'Deactivated listings move here. Edit and republish to make them visible again.'
-                          : 'Published grades appear in the customer marketplace. Pick a catalog grade to list stock and price.'
-                    }
-                    ctaLabel={listingTab === 'published' ? 'Browse catalog' : 'Add listing'}
-                    onCtaPress={() =>
-                      listingTab === 'published'
-                        ? setWorkspace('catalog')
-                        : openAddProduct(undefined, selectedCategory?.code)
+                    title={listingEmptyState[listingTab].title}
+                    description={listingEmptyState[listingTab].description}
+                    ctaLabel={listingEmptyState[listingTab].ctaLabel}
+                    onCtaPress={
+                      listingEmptyState[listingTab].cta === 'catalog'
+                        ? () => setWorkspace('catalog')
+                        : listingEmptyState[listingTab].cta === 'add'
+                          ? () => openAddProduct(undefined, selectedCategory?.code)
+                          : undefined
                     }
                   />
                 )}
@@ -271,30 +293,41 @@ export const SellerProductsScreen = memo(function SellerProductsScreen() {
           )}
         </ScrollView>
 
-        <Pressable
-          onPress={() => openAddProduct(undefined, selectedCategory?.code)}
-          accessibilityRole="button"
-          accessibilityLabel="Add listing"
-          className="absolute right-lg h-14 w-14 items-center justify-center rounded-full bg-brand-navy"
-          style={({ pressed }) => [
-            elevation.lg,
-            {
-              // Sit above the bottom tab bar + home-indicator safe area.
-              bottom: Math.max(insets.bottom, 8) + 72,
-              opacity: pressed ? 0.92 : 1,
-              transform: [{ scale: pressed ? 0.96 : 1 }],
-            },
-          ]}
-        >
-          <Typography variant="headingLeft" className="text-[28px] leading-[28px] text-brand-white">
-            +
-          </Typography>
-        </Pressable>
-
         <SellerBottomNavigation
           active="products"
           onNavigate={(target) => navigateSellerBottomTab(router, target)}
         />
+
+        {workspace === 'listings' ? (
+          <Pressable
+            onPress={() => openAddProduct(undefined, selectedCategory?.code)}
+            accessibilityRole="button"
+            accessibilityLabel="Add listing"
+            hitSlop={8}
+            className="items-center justify-center rounded-full bg-brand-navy"
+            style={({ pressed }) => [
+              elevation.lg,
+              {
+                position: 'absolute',
+                right: 16,
+                // ScreenWrapper already applies bottom safe-area padding; clear the tab bar only.
+                bottom: SELLER_TAB_BAR_HEIGHT + FAB_GAP,
+                width: FAB_SIZE,
+                height: FAB_SIZE,
+                zIndex: 30,
+                opacity: pressed ? 0.92 : 1,
+                transform: [{ scale: pressed ? 0.96 : 1 }],
+              },
+            ]}
+          >
+            <Typography
+              variant="headingLeft"
+              className="text-[28px] leading-[28px] text-brand-white"
+            >
+              +
+            </Typography>
+          </Pressable>
+        ) : null}
       </View>
 
       <Modal transparent visible={Boolean(pendingDelete)} animationType="fade">

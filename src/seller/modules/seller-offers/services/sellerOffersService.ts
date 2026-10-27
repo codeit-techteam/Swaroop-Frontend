@@ -1,3 +1,4 @@
+import { getApiErrorMessage } from '@/utils/api-error-message';
 import type {
   BackendOffer,
   BackendOfferSummary,
@@ -9,6 +10,7 @@ import {
   cancelSellerOffer,
   createSellerOffer,
   deleteSellerOffer,
+  fetchSellerOffersSummary,
   listSellerOffers,
   pauseSellerOffer,
   updateSellerOffer,
@@ -27,7 +29,12 @@ import type {
   SellerOffersSnapshot,
 } from '@/seller/modules/seller-offers/types/offers';
 import { useSellerProductStore } from '@/seller/store/sellerProductStore';
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+import {
+  isOfferBackendId,
+  resolveOfferBackendId,
+} from '@/seller/modules/seller-offers/services/offer-id';
+
+export { isOfferBackendId, resolveOfferBackendId };
 
 const VALIDITY_HOURS: Record<OfferValidity, number> = {
   '12h': 12,
@@ -50,7 +57,7 @@ export const DEFAULT_WAREHOUSE = {
 
 const nowIso = (): string => new Date().toISOString();
 
-const isUuid = (value?: string | null): value is string => Boolean(value && UUID_RE.test(value));
+const isUuid = (value?: string | null): value is string => isOfferBackendId(value);
 
 export const computeExpiresAt = (validity: OfferValidity, from = new Date()): string => {
   const hours = VALIDITY_HOURS[validity];
@@ -175,7 +182,9 @@ export const mapBackendOfferToSellerOffer = (item: BackendOffer): SellerOffer =>
   const warehouseLocation =
     locationParts.length > 0 ? locationParts.join(', ') : DEFAULT_WAREHOUSE.location;
   const productName = item.product?.name ?? item.grade?.displayName ?? item.grade?.name ?? 'Offer';
-  const gradeLabel = item.grade?.code ?? item.grade?.name ?? '';
+  // Prefer human-readable labels over raw enum codes (B-10 / S-14).
+  const gradeLabel =
+    item.grade?.displayName ?? item.grade?.name ?? item.grade?.code ?? '';
   const remarks =
     (typeof item.metadata?.remarks === 'string' ? item.metadata.remarks : undefined) ??
     item.deliveryTerms ??
@@ -613,11 +622,14 @@ export const fetchSellerOffersSnapshot = async (
 ): Promise<SellerOffersSnapshot> => {
   const search = options?.search ?? current.search;
   try {
-    const { items } = await listSellerOffers({
-      page: 1,
-      limit: 100,
-      search: search.trim() || undefined,
-    });
+    const [{ items }, summary] = await Promise.all([
+      listSellerOffers({
+        page: 1,
+        limit: 100,
+        search: search.trim() || undefined,
+      }),
+      fetchSellerOffersSummary().catch(() => null),
+    ]);
     const offers = items.map(mapBackendOfferToSellerOffer);
     return buildSnapshot(
       offers,
@@ -626,11 +638,11 @@ export const fetchSellerOffersSnapshot = async (
       current.editingOfferId,
       current.filters,
       search,
-      null,
+      summary,
       null,
     );
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to load offers from backend.';
+    const message = getApiErrorMessage(error) || 'Failed to load offers from backend.';
     return buildSnapshot(
       [],
       current.selectedOfferId,

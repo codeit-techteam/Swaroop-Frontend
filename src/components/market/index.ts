@@ -6,5 +6,6 @@ export { EmptyState } from '@/components/market/empty-state';
 export { GradeMasterEntry } from '@/components/market/grade-master-entry';
 export { GradeCard, gradeIdentityLine, liveOfferLabel } from '@/components/market/grade-card';
 export { GradeFilterSheet, type GradeSheetFilters } from '@/components/market/grade-filter-sheet';
+export { MarketFilterSheet } from '@/components/market/market-filter-sheet';
 export { SearchSuggestions } from '@/components/market/search-suggestions';
 export { HighlightedText } from '@/components/market/highlighted-text';

@@ -16,13 +16,15 @@ import {
   Typography,
 } from '@/components';
 import { DEMO_PHONE, DEVELOPMENT_MODE } from '@/config/development';
+import { BackArrowIcon } from '@/icons';
 import { useZodForm } from '@/lib/forms';
 import { ROUTES } from '@/navigation/routes';
-import { SellerHeader, SellerPrimaryButton, SellerTextField } from '@/seller/components';
+import { SellerPrimaryButton, SellerTextField } from '@/seller/components';
 import { useSellerStore } from '@/seller/store/sellerStore';
 import { openContactSupport } from '@/services/legal-links';
 import { requestSellerOtpSend } from '@/services/seller-auth';
 import {
+  EMPTY_MOBILE_MESSAGE,
   indianMobileFieldError,
   isCompleteIndianMobile,
   sanitizeIndianMobileInput,
@@ -43,16 +45,27 @@ export const SellerLoginScreen = () => {
   const [isSending, setIsSending] = useState(false);
   const [hint, setHint] = useState<string | undefined>();
   const [submitted, setSubmitted] = useState(false);
+  const [editingMobile, setEditingMobile] = useState(false);
   const {
     control,
     handleSubmit,
     watch,
+    clearErrors,
   } = useZodForm(sellerLoginSchema, {
     defaultValues: { mobile: '' },
-    mode: 'onChange',
+    mode: 'onSubmit',
+    reValidateMode: 'onSubmit',
   });
 
   const mobileValue = watch('mobile');
+
+  const handleBack = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+    router.replace(ROUTES.AUTH.ROLE_SELECTION as Href);
+  }, [router]);
 
   const handleGetOtp = useCallback(
     async (values: SellerLoginValues) => {
@@ -82,10 +95,17 @@ export const SellerLoginScreen = () => {
 
   return (
     <ScreenWrapper scrollable className="bg-brand-background">
-      <SellerHeader showBack title="Seller Login" onBack={() => router.back()} />
-
-      <View className="py-lg">
-        <AppLogo className="self-start" />
+      <View className="flex-row items-center gap-sm py-lg">
+        <Pressable
+          onPress={handleBack}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+          className="h-10 w-10 items-center justify-center"
+        >
+          <BackArrowIcon />
+        </Pressable>
+        <AppLogo />
       </View>
 
       <AuthCard className="rounded-2xl">
@@ -109,17 +129,25 @@ export const SellerLoginScreen = () => {
               maxLength={10}
               value={value}
               onChangeText={(text) => {
-                onChange(sanitizeIndianMobileInput(text));
+                const next = sanitizeIndianMobileInput(text);
+                setEditingMobile(true);
+                onChange(next);
+                clearErrors('mobile');
                 setHint(undefined);
+                if (!next) {
+                  setSubmitted(false);
+                }
               }}
-              onBlur={onBlur}
+              onBlur={() => {
+                setEditingMobile(false);
+                onBlur();
+              }}
               error={
-                fieldState.error?.message ??
                 indianMobileFieldError(value, {
                   touched: fieldState.isTouched,
                   submitted,
-                }) ??
-                hint
+                  editing: editingMobile,
+                }) ?? (editingMobile ? undefined : hint)
               }
               leftSlot={<CountryPicker />}
               containerClassName="mt-xl"
@@ -133,9 +161,14 @@ export const SellerLoginScreen = () => {
           className="mt-xl"
           disabled={isSending}
           onPress={() => {
-            if (!mobileValue?.trim()) {
+            setEditingMobile(false);
+            // Keep pressable when empty so sellers get the same L-06 empty-field message.
+            if (!isCompleteIndianMobile(mobileValue ?? '')) {
               setSubmitted(true);
-              setHint('Enter your 10-digit mobile number.');
+              setHint(
+                indianMobileFieldError(mobileValue ?? '', { submitted: true }) ??
+                  EMPTY_MOBILE_MESSAGE,
+              );
               return;
             }
             void handleSubmit((values) => {
@@ -156,7 +189,7 @@ export const SellerLoginScreen = () => {
           className="mt-xl rounded-2xl border border-brand-border px-lg py-md"
           accessibilityRole="link"
           onPress={() => {
-            void openContactSupport();
+            void openContactSupport({ topic: 'SELL_MATERIALS' });
           }}
         >
           <Typography variant="body" className="text-center">

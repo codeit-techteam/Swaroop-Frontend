@@ -5,15 +5,15 @@ import Svg, { Path } from 'react-native-svg';
 import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
 
-type PetroTradeLogoProps = {
+type PolyStoreXLogoProps = {
   size?: number;
   color?: string;
 };
 
-export const PetroTradeLogo = memo(function PetroTradeLogo({
+export const PolyStoreXLogo = memo(function PolyStoreXLogo({
   size = iconSizes.logo,
   color = brandColors.navy,
-}: PetroTradeLogoProps) {
+}: PolyStoreXLogoProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 80 80" fill="none" accessibilityRole="image">
       {/* Outer hexagon with integrated upward arrow on top-right */}

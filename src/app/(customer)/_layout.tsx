@@ -3,6 +3,11 @@ import { Stack } from 'expo-router';
 import { CustomerRouteGuard } from '@/navigation/guards';
 import { brandColors } from '@/theme/colors';
 
+// SDK 58: tabs stay under push screens so hardware/gesture back has a destination.
+export const unstable_settings = {
+  anchor: '(tabs)',
+};
+
 export default function CustomerLayout() {
   return (
     <CustomerRouteGuard>
@@ -49,6 +54,7 @@ export default function CustomerLayout() {
         <Stack.Screen name="shipment-tracking/index" />
         <Stack.Screen name="order-detail/index" />
         <Stack.Screen name="order-confirmation/index" />
+        <Stack.Screen name="purchase-requests/create" />
         <Stack.Screen name="purchase-request-success/index" />
         <Stack.Screen name="profile/edit" />
         <Stack.Screen name="profile/company-details" />

@@ -122,11 +122,11 @@ const DEFAULT_FEATURES = [
   'IS Certified',
   'Quality Assured',
   'Consistent Batch Specs',
-  'PetroTrade Verified',
+  'PolyStoreX Verified',
 ];
 
 const DEFAULT_PRODUCT_HIGHLIGHTS = [
-  'PetroTrade Verified',
+  'PolyStoreX Verified',
   'Tax Invoice Available',
   'Fast Dispatch',
   'Credit Eligible',
@@ -288,7 +288,7 @@ const buildSpotPrice = (pricePerMt: number): SpotPriceInfo => {
     pricePerMt,
     yesterdayDelta,
     trendDirection: 'up',
-    note: 'Prices are exclusive of GST (18%). Final quote is generated after PetroTrade confirmation of your purchase request.',
+    note: 'Prices are exclusive of GST (18%). Final quote is generated after PolyStoreX confirmation of your purchase request.',
   };
 };
 
@@ -345,15 +345,15 @@ const buildPaymentOptions = (creditEligible: boolean): ProductPaymentOption[] =>
   },
   {
     id: 'credit_15',
-    title: 'PetroTrade Credit — 15 Days',
-    description: 'PetroTrade managed working capital. Seller does not extend credit.',
+    title: 'PolyStoreX Credit — 15 Days',
+    description: 'PolyStoreX managed working capital. Seller does not extend credit.',
     benefitLabel: 'Approval Required',
     eligible: creditEligible,
   },
   {
     id: 'credit_30',
-    title: 'PetroTrade Credit — 30 Days',
-    description: 'PetroTrade managed working capital. Seller does not extend credit.',
+    title: 'PolyStoreX Credit — 30 Days',
+    description: 'PolyStoreX managed working capital. Seller does not extend credit.',
     benefitLabel: 'Approval Required',
     eligible: creditEligible,
   },
@@ -423,7 +423,7 @@ export const buildProductDetails = (
   const description =
     overrides.description ??
     market.description ??
-    `${name} is offered through PetroTrade's blind marketplace with verified commercial and technical data only.`;
+    `${name} is offered through PolyStoreX's blind marketplace with verified commercial and technical data only.`;
   const applications = overrides.applications ?? market.applications ?? DEFAULT_APPLICATIONS;
   const specs = overrides.specs ?? specsFromTechnical(market.technicalSpecs) ?? DEFAULT_SPECS;
   const breadcrumbProduct = overrides.breadcrumbProduct ?? name;
@@ -486,7 +486,7 @@ export const buildProductDetails = (
     trustTitle: overrides.trustTitle ?? 'Platform Assurance',
     trustDescription:
       overrides.trustDescription ??
-      "This product is supplied through PetroTrade's Verified Supply Network. To maintain Blind Marketplace compliance, supplier identity is hidden until order processing is completed.",
+      "This product is supplied through PolyStoreX's Verified Supply Network. To maintain Blind Marketplace compliance, supplier identity is hidden until order processing is completed.",
     trustHighlight: overrides.trustHighlight ?? 'Verified Supply Network',
     trustFeatures: overrides.trustFeatures ?? DEFAULT_TRUST_FEATURES,
     quantityIncrement: overrides.quantityIncrement ?? 1,

@@ -128,7 +128,7 @@ export const CustomerSupportScreen = memo(function CustomerSupportScreen() {
 
   return (
     <ScreenWrapper padded={false} className="bg-brand-background">
-      <AppHeader variant="back" title="Help & Support" onBack={() => router.back()} />
+      <AppHeader variant="back" title="Help & Support" />
 
       <ScrollView
         className="flex-1 px-lg"
@@ -146,7 +146,7 @@ export const CustomerSupportScreen = memo(function CustomerSupportScreen() {
       >
         <Typography variant="subheading" className="mt-md text-brand-body">
           Need help with orders, payments, shipment or account? Raise a ticket and
-          our PetroTrade support team will respond.
+          our PolyStoreX support team will respond.
         </Typography>
 
         <View className="mt-lg flex-row gap-sm">
@@ -302,7 +302,7 @@ export const CustomerRaiseTicketScreen = memo(function CustomerRaiseTicketScreen
 
   return (
     <ScreenWrapper padded={false} className="bg-brand-background">
-      <AppHeader variant="back" title="Raise Ticket" onBack={() => router.back()} />
+      <AppHeader variant="back" title="Raise Ticket" />
 
       <ScrollView
         className="flex-1 px-lg"
