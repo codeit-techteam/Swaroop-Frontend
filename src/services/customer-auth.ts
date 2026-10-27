@@ -1,8 +1,13 @@
 import { isAxiosError } from 'axios';
 
 import { apiClient } from '@/api/client';
-import { DEVELOPMENT_MODE, isOfflineBackendFallbackEnabled } from '@/config/development';
+import {
+  DEMO_PASSWORD,
+  DEVELOPMENT_MODE,
+  isOfflineBackendFallbackEnabled,
+} from '@/config/development';
 import { persistTokens, unwrapAuthPayload } from '@/services/backend-session';
+import { isDevAccount, validateDevOtp } from '@/services/dev-auth';
 import { toE164IndianPhone } from '@/services/seller-auth';
 import type { ApiRequestConfig } from '@/types/api';
 
@@ -34,12 +39,9 @@ export function customerAuthErrorMessage(error: unknown, fallback: string): stri
   return fallback;
 }
 
-/**
- * Demo OTP shortcuts and password fallbacks were removed from release paths.
- * Production always requires a real provider-issued OTP from `/auth/otp/verify`.
- */
-export function isDevDemoOtp(_mobile: string, _otp: string): boolean {
-  return false;
+/** Metro-only: demo phone + DEMO_OTP (123456) for development-phase login. */
+export function isDevDemoOtp(mobile: string, otp: string): boolean {
+  return DEVELOPMENT_MODE && isDevAccount(mobile) && validateDevOtp(otp);
 }
 
 export async function sendCustomerOtp(mobile: string, purpose: CustomerOtpPurpose): Promise<void> {
@@ -52,8 +54,8 @@ export async function sendCustomerOtp(mobile: string, purpose: CustomerOtpPurpos
 
 /**
  * Verifies the OTP with the API and stores the issued access/refresh tokens.
- * No demo/password fallback — even in Metro, prefer the real OTP path so local
- * testing exercises the same contract as production.
+ * In Metro only, demo phone + 123456 falls back to the known demo password when
+ * the remote API still has fixed OTP disabled (pre-redeploy).
  */
 export async function verifyCustomerOtp(
   mobile: string,
@@ -61,16 +63,34 @@ export async function verifyCustomerOtp(
   purpose: CustomerOtpPurpose,
   roleHint: CustomerRoleHint = 'CUSTOMER',
 ): Promise<void> {
-  const response = await apiClient.post(
-    '/auth/otp/verify',
-    { phone: toE164IndianPhone(mobile), otp, purpose, roleHint },
-    PUBLIC_AUTH_REQUEST,
-  );
-  if (!persistTokens(unwrapAuthPayload(response.data))) {
-    // Metro-only offline: keep a clear error rather than inventing a session.
-    if (DEVELOPMENT_MODE && isOfflineBackendFallbackEnabled()) {
+  const phone = toE164IndianPhone(mobile);
+  try {
+    const response = await apiClient.post(
+      '/auth/otp/verify',
+      { phone, otp, purpose, roleHint },
+      PUBLIC_AUTH_REQUEST,
+    );
+    if (!persistTokens(unwrapAuthPayload(response.data))) {
+      if (DEVELOPMENT_MODE && isOfflineBackendFallbackEnabled()) {
+        throw new Error('Sign-in did not return a session. Please try again.');
+      }
       throw new Error('Sign-in did not return a session. Please try again.');
     }
-    throw new Error('Sign-in did not return a session. Please try again.');
+  } catch (error) {
+    if (!isDevDemoOtp(mobile, otp)) {
+      throw error;
+    }
+    try {
+      const response = await apiClient.post(
+        '/auth/login',
+        { phone, password: DEMO_PASSWORD },
+        PUBLIC_AUTH_REQUEST,
+      );
+      if (!persistTokens(unwrapAuthPayload(response.data))) {
+        throw new Error('Sign-in did not return a session. Please try again.');
+      }
+    } catch {
+      throw error;
+    }
   }
 }
