@@ -20,7 +20,7 @@ export const InfoGrid = memo(function InfoGrid({ items, className }: InfoGridPro
       )}
     >
       <Typography variant="roleTitle" className="mb-md text-[16px] text-brand-heading">
-        Product Information
+        Product specifications
       </Typography>
 
       <View className="flex-row flex-wrap" style={{ gap: 10 }}>

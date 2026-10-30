@@ -31,13 +31,9 @@ export const useMarketSearch = (catalog: MarketProduct[]) => {
     };
   }, []);
 
-  const selectedCategory = useMemo(
-    () =>
-      requestedCategory && catalog.some((product) => matchesCategory(product, requestedCategory))
-        ? requestedCategory
-        : null,
-    [catalog, requestedCategory],
-  );
+  // Keep the requested chip even when the live catalog has no listings in that
+  // category — catalogue search still filters Grade Master by categoryId.
+  const selectedCategory = requestedCategory;
 
   const taxonomy = useMemo(() => materialsFromCatalog(catalog), [catalog]);
 
@@ -78,7 +74,9 @@ export const useMarketSearch = (catalog: MarketProduct[]) => {
     return { filteredProducts: inCategory, expandedAcrossCategories: false };
   }, [catalog, query, rankedProducts, selectedCategory]);
 
-  const showSuggestions = isFocused && !suggestionsDismissed;
+  // Idle focus (empty query) keeps recent/popular suggestions. Typing drives the
+  // catalogue-backed results list instead of a live-listings-only overlay.
+  const showSuggestions = isFocused && !suggestionsDismissed && query.trim().length === 0;
 
   const clearBlurTimer = useCallback(() => {
     if (blurTimer.current) {

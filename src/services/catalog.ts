@@ -26,6 +26,8 @@ type BlindListing = {
   moq?: number | string | null;
   quantityAvailable?: number | string | null;
   leadTime?: string | null;
+  fulfilment?: import('@/types/fulfilment').FulfilmentInfo | null;
+  productCredit?: import('@/types/payment-eligibility').ProductCreditConfig;
   priceTiers?: {
     minQty?: number | string | null;
     maxQty?: number | string | null;
@@ -189,7 +191,8 @@ export function mapBlindProduct(product: BlindProduct): MarketProduct {
     origin: String(specs.origin ?? product.countryOfOrigin ?? ''),
     stock: num(listing?.quantityAvailable),
     moq: num(listing?.moq),
-    eta: String(listing?.leadTime ?? specs.eta ?? ''),
+    eta: String(listing?.leadTime ?? '').trim(),
+    fulfilment: listing?.fulfilment ?? null,
     category: readableCategory,
     badge: (typeof specs.badge === 'string' ? specs.badge : 'Best Value') as MarketProduct['badge'],
     image: '',
@@ -216,7 +219,9 @@ export function mapBlindProduct(product: BlindProduct): MarketProduct {
       density: product.density ?? (typeof specs.density === 'string' ? specs.density : undefined),
       form: typeof specs.form === 'string' ? specs.form : undefined,
     },
-    creditEligible: Boolean(specs.creditEligible),
+    productCredit: listing?.productCredit,
+    creditEligible:
+      listing?.productCredit?.supported ?? specs.creditEligible !== false,
     offerId: listing?.offerId,
     bulkPricing,
     documents: product.documents ?? [],

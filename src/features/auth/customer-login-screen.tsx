@@ -19,7 +19,7 @@ import {
   SecondaryButton,
   Typography,
 } from '@/components';
-import { DEVELOPMENT_MODE, DEMO_PHONE, DEMO_OTP, DEMO_USER_NAME } from '@/config/development';
+import { DEMO_PHONE, DEMO_OTP, DEMO_USER_NAME } from '@/config/development';
 import { BackArrowIcon, LockIcon } from '@/icons';
 import { useZodForm } from '@/lib/forms';
 import { parseReturnToParam } from '@/navigation/return-to';
@@ -212,7 +212,7 @@ export const CustomerLoginScreen = () => {
             }}
           />
 
-          {DEVELOPMENT_MODE ? (
+          {__DEV__ ? (
             <Typography variant="legal" className="mt-md text-center">
               Dev only: {DEMO_USER_NAME} · {DEMO_PHONE} · OTP {DEMO_OTP}
             </Typography>

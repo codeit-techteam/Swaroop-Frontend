@@ -1,13 +1,8 @@
 import { isAxiosError } from 'axios';
 
 import { apiClient } from '@/api/client';
-import {
-  DEMO_PASSWORD,
-  DEVELOPMENT_MODE,
-  isOfflineBackendFallbackEnabled,
-} from '@/config/development';
+import { DEVELOPMENT_MODE, isOfflineBackendFallbackEnabled } from '@/config/development';
 import { persistTokens, unwrapAuthPayload } from '@/services/backend-session';
-import { isDevAccount, validateDevOtp } from '@/services/dev-auth';
 import { toE164IndianPhone } from '@/services/seller-auth';
 import type { ApiRequestConfig } from '@/types/api';
 
@@ -39,11 +34,6 @@ export function customerAuthErrorMessage(error: unknown, fallback: string): stri
   return fallback;
 }
 
-/** Metro-only: demo phone + DEMO_OTP (123456) for development-phase login. */
-export function isDevDemoOtp(mobile: string, otp: string): boolean {
-  return DEVELOPMENT_MODE && isDevAccount(mobile) && validateDevOtp(otp);
-}
-
 export async function sendCustomerOtp(mobile: string, purpose: CustomerOtpPurpose): Promise<void> {
   await apiClient.post(
     '/auth/otp/send',
@@ -52,11 +42,7 @@ export async function sendCustomerOtp(mobile: string, purpose: CustomerOtpPurpos
   );
 }
 
-/**
- * Verifies the OTP with the API and stores the issued access/refresh tokens.
- * In Metro only, demo phone + 123456 falls back to the known demo password when
- * the remote API still has fixed OTP disabled (pre-redeploy).
- */
+/** Verifies the OTP with the API and stores the issued access/refresh tokens. */
 export async function verifyCustomerOtp(
   mobile: string,
   otp: string,
@@ -64,33 +50,15 @@ export async function verifyCustomerOtp(
   roleHint: CustomerRoleHint = 'CUSTOMER',
 ): Promise<void> {
   const phone = toE164IndianPhone(mobile);
-  try {
-    const response = await apiClient.post(
-      '/auth/otp/verify',
-      { phone, otp, purpose, roleHint },
-      PUBLIC_AUTH_REQUEST,
-    );
-    if (!persistTokens(unwrapAuthPayload(response.data))) {
-      if (DEVELOPMENT_MODE && isOfflineBackendFallbackEnabled()) {
-        throw new Error('Sign-in did not return a session. Please try again.');
-      }
+  const response = await apiClient.post(
+    '/auth/otp/verify',
+    { phone, otp, purpose, roleHint },
+    PUBLIC_AUTH_REQUEST,
+  );
+  if (!persistTokens(unwrapAuthPayload(response.data))) {
+    if (DEVELOPMENT_MODE && isOfflineBackendFallbackEnabled()) {
       throw new Error('Sign-in did not return a session. Please try again.');
     }
-  } catch (error) {
-    if (!isDevDemoOtp(mobile, otp)) {
-      throw error;
-    }
-    try {
-      const response = await apiClient.post(
-        '/auth/login',
-        { phone, password: DEMO_PASSWORD },
-        PUBLIC_AUTH_REQUEST,
-      );
-      if (!persistTokens(unwrapAuthPayload(response.data))) {
-        throw new Error('Sign-in did not return a session. Please try again.');
-      }
-    } catch {
-      throw error;
-    }
+    throw new Error('Sign-in did not return a session. Please try again.');
   }
 }

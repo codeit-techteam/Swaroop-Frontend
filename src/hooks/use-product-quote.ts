@@ -6,9 +6,18 @@ import {
   fetchCheckoutPaymentOptions,
   toBackendPaymentOption,
 } from '@/services/checkout';
-import type { CheckoutPaymentOption, CheckoutQuote } from '@/types/checkout-quote';
+import type { CheckoutQuote } from '@/types/checkout-quote';
 import type { PaymentMethodId } from '@/types/payment';
+import type {
+  CreditAccessView,
+  CreditLoadState,
+  ProductCreditConfig,
+} from '@/types/payment-eligibility';
+import { CREDIT_LOAD_ERROR } from '@/types/payment-eligibility';
 import type { ProductPaymentOption } from '@/types/product';
+import { mapBackendPaymentOptions } from '@/utils/map-backend-payment-options';
+
+export { mapBackendPaymentOptions };
 
 type UseProductQuoteArgs = {
   productId: string | null;
@@ -16,6 +25,7 @@ type UseProductQuoteArgs = {
   quantity: number;
   paymentId: PaymentMethodId;
   enabled: boolean;
+  amount?: number;
 };
 
 type QuotedState = {
@@ -23,42 +33,24 @@ type QuotedState = {
   value: CheckoutQuote;
 };
 
-export function mapBackendPaymentOptions(options: CheckoutPaymentOption[]): ProductPaymentOption[] {
-  return options.map((option) => {
-    const id =
-      option.paymentOption === 'ON_LOADING'
-        ? 'on_loading'
-        : option.paymentOption === 'ON_DELIVERY'
-          ? 'on_delivery'
-          : option.paymentOption === 'CREDIT_30' || option.paymentOption === 'CREDIT'
-            ? 'credit_30'
-            : option.paymentOption === 'CREDIT_15'
-              ? 'credit_15'
-              : 'advance';
-    return {
-      id,
-      title: option.title,
-      description: option.description,
-      benefitLabel: option.benefitLabel,
-      discountRate: option.discountBps ? option.discountBps / 10000 : undefined,
-      eligible: option.eligible,
-    };
-  });
-}
-
 export function useProductQuote({
   productId,
   offerId,
   quantity,
   paymentId,
   enabled,
+  amount,
 }: UseProductQuoteArgs) {
   const [quoted, setQuoted] = useState<QuotedState | null>(null);
   const [paymentOptions, setPaymentOptions] = useState<ProductPaymentOption[]>([]);
+  const [creditAccess, setCreditAccess] = useState<CreditAccessView | null>(null);
+  const [productCredit, setProductCredit] = useState<ProductCreditConfig | null>(null);
+  const [creditStatus, setCreditStatus] = useState<CreditLoadState>('idle');
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const requestSeq = useRef(0);
+  const creditSeq = useRef(0);
   const quotedRef = useRef<QuotedState | null>(null);
 
   useEffect(() => {
@@ -114,23 +106,64 @@ export function useProductQuote({
     return () => clearTimeout(handle);
   }, [refresh]);
 
-  useEffect(() => {
-    let cancelled = false;
-    void fetchCheckoutPaymentOptions()
+  const loadCredit = useCallback(() => {
+    if (!enabled) {
+      return Promise.resolve();
+    }
+    const seq = ++creditSeq.current;
+    return fetchCheckoutPaymentOptions({
+      amount: amount && amount > 0 ? amount : undefined,
+      productId: productId ?? undefined,
+      offerId: offerId ?? undefined,
+    })
       .then((result) => {
-        if (!cancelled) {
-          setPaymentOptions(mapBackendPaymentOptions(result.options));
-        }
+        if (seq !== creditSeq.current) return;
+        setPaymentOptions(mapBackendPaymentOptions(result.options));
+        setProductCredit(result.productCredit ?? null);
+        setCreditAccess(result.credit);
+        setCreditStatus('ready');
       })
       .catch(() => {
-        if (!cancelled) {
-          setPaymentOptions([]);
-        }
+        if (seq !== creditSeq.current) return;
+        setPaymentOptions([]);
+        setCreditAccess(CREDIT_LOAD_ERROR);
+        setCreditStatus('error');
       });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  }, [amount, enabled, offerId, productId]);
 
-  return { quote, paymentOptions, loading, refreshing, error, refresh };
+  useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+    const handle = setTimeout(() => {
+      void loadCredit();
+    }, 200);
+    return () => {
+      creditSeq.current += 1;
+      clearTimeout(handle);
+    };
+  }, [enabled, loadCredit]);
+
+  const resolvedCreditStatus: CreditLoadState = !enabled
+    ? 'idle'
+    : creditStatus === 'idle'
+      ? 'loading'
+      : creditStatus;
+
+  return {
+    quote,
+    paymentOptions: enabled ? paymentOptions : [],
+    creditAccess: enabled ? creditAccess : null,
+    productCredit,
+    creditStatus: resolvedCreditStatus,
+    loading,
+    refreshing,
+    error,
+    refresh,
+    refreshCredit: () => {
+      if (!enabled) return;
+      setCreditStatus('loading');
+      void loadCredit();
+    },
+  };
 }

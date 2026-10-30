@@ -111,6 +111,7 @@ export function saveCreditApplicationDraft(input: CreditDraftInput): Promise<Cre
       requestedLimit: input.requestedLimit,
       requestedTenureDays: input.requestedTenureDays,
       purpose: input.purpose?.trim() ? input.purpose.trim() : undefined,
+      metadata: input.metadata,
     }),
   );
 }

@@ -11,15 +11,18 @@ import {
   AppLogo,
   AuthCard,
   CountryPicker,
+  Divider,
   FooterLinks,
+  PrimaryButton,
   ScreenWrapper,
+  SecondaryButton,
   Typography,
 } from '@/components';
-import { DEMO_PHONE, DEVELOPMENT_MODE } from '@/config/development';
+import { DEMO_PHONE } from '@/config/development';
 import { BackArrowIcon } from '@/icons';
 import { useZodForm } from '@/lib/forms';
 import { ROUTES } from '@/navigation/routes';
-import { SellerPrimaryButton, SellerTextField } from '@/seller/components';
+import { SellerTextField } from '@/seller/components';
 import { useSellerStore } from '@/seller/store/sellerStore';
 import { openContactSupport } from '@/services/legal-links';
 import { requestSellerOtpSend } from '@/services/seller-auth';
@@ -74,7 +77,7 @@ export const SellerLoginScreen = () => {
       setIsSending(true);
       setHint(undefined);
       try {
-        const result = await requestSellerOtpSend(values.mobile);
+        const result = await requestSellerOtpSend(values.mobile, 'LOGIN');
         if (result.message) {
           setHint(result.message);
         }
@@ -84,7 +87,7 @@ export const SellerLoginScreen = () => {
 
         router.push({
           pathname: ROUTES.SELLER.OTP,
-          params: { mobile: values.mobile },
+          params: { mobile: values.mobile, source: 'login' },
         } as unknown as Href);
       } finally {
         setIsSending(false);
@@ -92,6 +95,10 @@ export const SellerLoginScreen = () => {
     },
     [router, setMobile],
   );
+
+  const handleSignUp = useCallback(() => {
+    router.push(ROUTES.SELLER.REGISTER as Href);
+  }, [router]);
 
   return (
     <ScreenWrapper scrollable className="bg-brand-background">
@@ -108,7 +115,7 @@ export const SellerLoginScreen = () => {
         <AppLogo />
       </View>
 
-      <AuthCard className="rounded-2xl">
+      <AuthCard>
         <View className="mb-lg flex-row items-center gap-xs self-start rounded-full bg-brand-badge px-md py-sm">
           <Typography variant="badge">SECURE ENTERPRISE LOGIN</Typography>
         </View>
@@ -155,11 +162,12 @@ export const SellerLoginScreen = () => {
           )}
         />
 
-        <SellerPrimaryButton
+        <PrimaryButton
           label={isSending ? 'Sending…' : 'GET OTP'}
           showArrow
           className="mt-xl"
           disabled={isSending}
+          loading={isSending}
           onPress={() => {
             setEditingMobile(false);
             // Keep pressable when empty so sellers get the same L-06 empty-field message.
@@ -177,25 +185,26 @@ export const SellerLoginScreen = () => {
           }}
         />
 
-        {DEVELOPMENT_MODE ? (
-          <View className="mt-xl rounded-2xl bg-brand-surface p-md">
+        {__DEV__ ? (
+          <View className="mt-xl rounded-md bg-brand-surface p-md">
             <Typography variant="legal" className="text-left">
               Dev only demo mobile: {DEMO_PHONE}
             </Typography>
           </View>
         ) : null}
 
-        <Pressable
-          className="mt-xl rounded-2xl border border-brand-border px-lg py-md"
-          accessibilityRole="link"
+        <Divider className="my-xl" />
+
+        <SecondaryButton label="Sign Up" onPress={handleSignUp} />
+
+        <SecondaryButton
+          label="Contact Support"
+          variant="outline"
+          className="mt-md"
           onPress={() => {
             void openContactSupport({ topic: 'SELL_MATERIALS' });
           }}
-        >
-          <Typography variant="body" className="text-center">
-            Contact Support
-          </Typography>
-        </Pressable>
+        />
       </AuthCard>
 
       <Typography variant="headingLeft" className="mt-2xl">

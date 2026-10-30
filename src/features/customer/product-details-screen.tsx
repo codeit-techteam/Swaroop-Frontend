@@ -29,6 +29,7 @@ import {
   SpotPriceCard,
   TrustCard,
 } from '@/components/product';
+import { SecondaryButton } from '@/components/ui';
 import { Typography } from '@/components/ui/typography';
 import { buildBlindProductName } from '@/constants/cart';
 import {
@@ -36,7 +37,7 @@ import {
   getTierForQuantity,
   priceForQuantity,
 } from '@/constants/productDetails';
-import { SecondaryButton } from '@/components/ui';
+import { useDeliveryLocation } from '@/hooks/use-delivery-location';
 import { useMarketplaceCatalogQuery } from '@/hooks/use-marketplace-catalog';
 import { useMarketplacePricingEstimate } from '@/hooks/use-marketplace-pricing-estimate';
 import { useNotificationBadge } from '@/hooks/use-notifications';
@@ -45,19 +46,17 @@ import { BackArrowIcon } from '@/icons';
 import { buildLoginHref } from '@/navigation/return-to';
 import { ROUTES } from '@/navigation/routes';
 import { addCustomerCartItem, mapBackendCartItems } from '@/services/cart';
-import {
-  fetchCustomerMarketplaceProduct,
-  fetchProductDocuments,
-} from '@/services/catalog';
+import { fetchCustomerMarketplaceProduct, fetchProductDocuments } from '@/services/catalog';
 import { checkoutErrorMessage, toBackendPaymentOption } from '@/services/checkout';
 import { selectIsLoggedIn, useAuthStore } from '@/store/auth-store';
 import { useCartStore } from '@/store/cart-store';
 import { brandColors } from '@/theme/colors';
 import type { MarketProduct } from '@/types/market';
 import type { PaymentMethodId } from '@/types/payment';
+import type { CreditCtaType } from '@/types/payment-eligibility';
+import { guestCreditAccess } from '@/types/payment-eligibility';
 import type { ComplianceDocument } from '@/types/product';
 import {
-  DEFAULT_ADVANCE_DISCOUNT_RATE,
   buyingSummaryFromQuote,
   estimateProductQuote,
   quoteMatchesSelection,
@@ -94,6 +93,7 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
     rfq?: string | string[];
   }>();
   const isLoggedIn = useAuthStore(selectIsLoggedIn);
+  const { selectedLocation, openAddressForm } = useDeliveryLocation();
 
   const {
     products: catalog,
@@ -136,9 +136,7 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
         if (!cancelled) {
           setDetailProduct(null);
           setDetailLoading(false);
-          setDetailError(
-            error instanceof Error ? error.message : 'Unable to load product',
-          );
+          setDetailError(error instanceof Error ? error.message : 'Unable to load product');
         }
       });
     return () => {
@@ -200,17 +198,24 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
 
   useEffect(() => {
     const dest =
-      typeof params.destination === 'string'
-        ? params.destination
-        : params.destination?.[0];
+      typeof params.destination === 'string' ? params.destination : params.destination?.[0];
     const notes = typeof params.notes === 'string' ? params.notes : params.notes?.[0];
     if (dest) setRfqDestination(dest);
     if (notes) setRfqNotes(notes);
   }, [params.destination, params.notes]);
 
+  const estimatedAmountForEligibility = useMemo(() => {
+    if (!product || !(quantityMt > 0)) return undefined;
+    const unit = product.spotPrice.pricePerMt;
+    return unit > 0 ? unit * quantityMt : undefined;
+  }, [product, quantityMt]);
+
   const {
     quote,
     paymentOptions: backendPaymentOptions,
+    creditAccess,
+    creditStatus,
+    refreshCredit,
     loading: quoteLoading,
     refreshing: quoteRefreshing,
     error: quoteError,
@@ -220,11 +225,14 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
     quantity: quantityMt,
     paymentId,
     enabled: Boolean(product) && isLoggedIn,
+    amount: estimatedAmountForEligibility,
   });
 
   const paymentOptions = useMemo(
     () =>
-      backendPaymentOptions.length > 0 ? backendPaymentOptions : (product?.paymentOptions ?? []),
+      backendPaymentOptions.length > 0
+        ? backendPaymentOptions
+        : (product?.paymentOptions ?? []).filter((option) => option.title?.trim()),
     [backendPaymentOptions, product?.paymentOptions],
   );
 
@@ -324,29 +332,56 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
     if (!product || !(displayPricePerMt > 0)) {
       return null;
     }
-    const discountRate =
-      selectedPayment?.discountRate ??
-      (paymentId === 'advance' ? DEFAULT_ADVANCE_DISCOUNT_RATE : 0);
     return estimateProductQuote({
       unitPrice: displayPricePerMt,
       quantity: quantityMt,
-      discountRate,
+      discountRate: selectedPayment?.discountRate ?? 0,
       freightPerMt: product.logistics.freightPerMt,
     });
-  }, [
-    displayPricePerMt,
-    matchingQuote,
-    paymentId,
-    product,
-    quantityMt,
-    selectedPayment?.discountRate,
-  ]);
+  }, [displayPricePerMt, matchingQuote, product, quantityMt, selectedPayment?.discountRate]);
 
   const estimatedTotal = buyingSummary?.grandTotal ?? 0;
   const confirmingPrice = Boolean(product) && !matchingQuote && !quoteError;
 
   const canPurchase = Boolean(
     product && product.stock > 0 && quantityMt >= product.moq && quantityMt <= product.stock,
+  );
+  const purchaseDisabledReason = !product
+    ? null
+    : product.stock <= 0
+      ? 'This grade is currently out of stock.'
+      : quantityMt < product.moq
+        ? `Minimum order is ${product.moq} MT.`
+        : quantityMt > product.stock
+          ? `Only ${product.stock} MT available.`
+          : null;
+
+  const handleCreditCta = useCallback(
+    (type: CreditCtaType) => {
+      if (!isLoggedIn) {
+        const returnTo = ROUTES.CUSTOMER.CREDIT_REQUEST;
+        Toast.show({
+          type: 'info',
+          text1: 'Sign in to continue',
+          text2: 'You can request business credit after signing in.',
+        });
+        router.push(buildLoginHref(returnTo));
+        return;
+      }
+      if (type === 'VIEW_APPLICATION' && creditAccess?.application?.id) {
+        router.push({
+          pathname: ROUTES.CUSTOMER.CREDIT_APPLICATION_STATUS,
+          params: { id: creditAccess.application.id },
+        } as unknown as Href);
+        return;
+      }
+      if (type === 'CONTACT_SUPPORT') {
+        router.push(ROUTES.CUSTOMER.SUPPORT as Href);
+        return;
+      }
+      router.push(ROUTES.CUSTOMER.CREDIT_REQUEST as Href);
+    },
+    [creditAccess?.application?.id, isLoggedIn, router],
   );
 
   const handleBack = useCallback(() => {
@@ -523,16 +558,7 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
       text1: 'Preparing purchase request',
       text2: 'Confirming latest pricing for your RFQ…',
     });
-  }, [
-    isLoggedIn,
-    matchingQuote,
-    product,
-    productId,
-    quantityMt,
-    rfqDestination,
-    rfqNotes,
-    router,
-  ]);
+  }, [isLoggedIn, matchingQuote, product, productId, quantityMt, rfqDestination, rfqNotes, router]);
 
   const handleOpenCart = useCallback(() => {
     router.push(ROUTES.CUSTOMER.CART as Href);
@@ -738,9 +764,10 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
             <ProductHighlights highlights={product.highlights} />
             <InfoGrid items={product.infoItems} />
             <DeliveryCard
-              origin={product.originRegion}
-              eta={product.eta}
-              logistics={product.logistics}
+              fulfilment={product.fulfilment}
+              availabilityLabel={product.availabilityLabel}
+              destinationPincode={selectedLocation.pincode}
+              onRequestPincode={() => openAddressForm()}
             />
             <ProductFeatures features={product.features} />
             <ProductApplications applications={product.applications} industry={product.industry} />
@@ -771,45 +798,16 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
               options={paymentOptions}
               selectedId={paymentId}
               onSelect={setPaymentId}
+              creditAccess={isLoggedIn ? creditAccess : guestCreditAccess(product.productCredit)}
+              creditStatus={isLoggedIn ? creditStatus : ('ready' as const)}
+              onRetryCredit={isLoggedIn ? refreshCredit : undefined}
+              onCreditCta={handleCreditCta}
             />
-            <View className="mx-lg flex-row" style={{ gap: 10 }}>
-              <View className="flex-1 rounded-lg border border-brand-border bg-brand-white px-md py-md">
-                <Typography
-                  variant="fieldLabel"
-                  className="text-[10px] tracking-[0.8px] text-brand-muted"
-                >
-                  Availability
-                </Typography>
-                <Typography
-                  variant="roleTitle"
-                  className="mt-xs text-[13px] text-brand-success"
-                  numberOfLines={1}
-                >
-                  {product.availabilityLabel}
-                </Typography>
-              </View>
-              <View className="flex-1 rounded-lg border border-brand-border bg-brand-white px-md py-md">
-                <Typography
-                  variant="fieldLabel"
-                  className="text-[10px] tracking-[0.8px] text-brand-muted"
-                >
-                  Delivery ETA
-                </Typography>
-                <Typography
-                  variant="roleTitle"
-                  className="mt-xs text-[13px] text-brand-heading"
-                  numberOfLines={1}
-                >
-                  {product.eta}
-                </Typography>
-              </View>
-            </View>
             <BuyingSummary
               summary={
                 pricingEstimate?.currency?.toUpperCase() === 'INR' && pricingEstimate.inclusiveTotal
                   ? buyingSummary
-                  : pricingEstimate?.currency &&
-                      pricingEstimate.currency.toUpperCase() !== 'INR'
+                  : pricingEstimate?.currency && pricingEstimate.currency.toUpperCase() !== 'INR'
                     ? null
                     : buyingSummary
               }
@@ -866,9 +864,20 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
               onPress={handleContinueShopping}
               accessibilityRole="button"
               accessibilityLabel="Continue shopping"
-              className="mx-lg h-11 items-center justify-center rounded-lg"
+              className="mx-lg flex-row items-center justify-center gap-sm rounded-xl border border-brand-border bg-brand-primary-tint px-lg py-md"
+              style={({ pressed }) => ({
+                opacity: pressed ? 0.88 : 1,
+                transform: [{ scale: pressed ? 0.985 : 1 }],
+                borderColor: pressed ? brandColors.primary : brandColors.border,
+              })}
             >
-              <Typography variant="link" className="text-[13px] text-brand-muted">
+              <View className="h-8 w-8 items-center justify-center rounded-full bg-brand-white">
+                <BackArrowIcon size={16} color={brandColors.primary} />
+              </View>
+              <Typography
+                variant="buttonSecondary"
+                className="text-[14px] tracking-normal text-brand-primary"
+              >
                 Continue Shopping
               </Typography>
             </Pressable>
@@ -882,7 +891,8 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
           maxMt={Math.max(product.moq, product.stock)}
           increment={product.quantityIncrement}
           estimatedTotal={estimatedTotal}
-          disabled={!canPurchase}
+          disabled={!canPurchase || addingToCart || awaitingQuote}
+          disabledReason={purchaseDisabledReason}
           refreshing={confirmingPrice}
           lockingPrice={awaitingQuote}
           adding={addingToCart}

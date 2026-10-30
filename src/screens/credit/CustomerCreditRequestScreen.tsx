@@ -19,6 +19,8 @@ import { getApiErrorMessage } from '@/api/client';
 import { useCreditDocuments } from '@/hooks/use-credit-documents';
 import { LockIcon } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
+import { fetchCustomerKyc } from '@/services/customer-kyc';
+import { toCompanyProfile } from '@/services/company-profile';
 import {
   fetchCreditEligibility,
   fetchCreditApplication,
@@ -26,6 +28,7 @@ import {
   saveCreditApplicationDraft,
   submitCreditApplication,
 } from '@/services/customer-credit';
+import { selectMobileNumber, useAuthStore } from '@/store/auth-store';
 import type { CreditApplication } from '@/types/customer-credit';
 import { isTerminalCreditStatus } from '@/types/customer-credit';
 import type { StepperStep, StepperStepStatus } from '@/types/document';
@@ -69,6 +72,14 @@ export const CustomerCreditRequestScreen = memo(function CustomerCreditRequestSc
   const [requestedLimit, setRequestedLimit] = useState('');
   const [tenureDays, setTenureDays] = useState<number>(DEFAULT_TENURE_OPTIONS[1]);
   const [purpose, setPurpose] = useState('');
+  const [monthlyVolume, setMonthlyVolume] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [gstNumber, setGstNumber] = useState('');
+  const [panNumber, setPanNumber] = useState('');
+  const [businessAddress, setBusinessAddress] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [businessEmail, setBusinessEmail] = useState('');
+  const signInPhone = useAuthStore(selectMobileNumber);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -88,11 +99,24 @@ export const CustomerCreditRequestScreen = memo(function CustomerCreditRequestSc
 
     const bootstrap = async () => {
       try {
-        const [latest, eligibility] = await Promise.all([
+        const [latest, eligibility, kyc] = await Promise.all([
           fetchLatestCreditApplication(),
           fetchCreditEligibility().catch(() => null),
+          fetchCustomerKyc().catch(() => null),
         ]);
         if (cancelled) return;
+
+        if (kyc) {
+          const profile = toCompanyProfile(kyc, signInPhone);
+          setCompanyName(profile.companyName);
+          setGstNumber(profile.gstNumber);
+          setPanNumber(profile.panNumber);
+          setBusinessAddress(
+            [profile.businessAddress, profile.state, profile.pincode].filter(Boolean).join(', '),
+          );
+          setContactPhone(profile.phone);
+          setBusinessEmail(profile.email);
+        }
 
         if (eligibility?.tenureOptions?.length) {
           setTenureOptions(eligibility.tenureOptions);
@@ -114,6 +138,10 @@ export const CustomerCreditRequestScreen = memo(function CustomerCreditRequestSc
           );
           if (latest.requestedTenureDays) setTenureDays(latest.requestedTenureDays);
           setPurpose(latest.purpose ?? '');
+          const monthly = (latest as { metadata?: { monthlyPurchaseVolume?: unknown } }).metadata
+            ?.monthlyPurchaseVolume;
+          if (typeof monthly === 'number' && monthly > 0) setMonthlyVolume(String(monthly));
+          if (typeof monthly === 'string' && monthly) setMonthlyVolume(monthly);
         }
       } catch (err) {
         if (!cancelled) setError(getApiErrorMessage(err));
@@ -126,7 +154,7 @@ export const CustomerCreditRequestScreen = memo(function CustomerCreditRequestSc
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [router, signInPhone]);
 
   const parsedLimit = useMemo(() => {
     const parsed = Number(requestedLimit.replace(/[^0-9.]/g, ''));
@@ -141,10 +169,16 @@ export const CustomerCreditRequestScreen = memo(function CustomerCreditRequestSc
     setIsSaving(true);
     setError(null);
     try {
+      const monthly = Number(monthlyVolume.replace(/[^0-9.]/g, ''));
       const saved = await saveCreditApplicationDraft({
         requestedLimit: parsedLimit,
         requestedTenureDays: tenureDays,
         purpose,
+        metadata: {
+          monthlyPurchaseVolume: Number.isFinite(monthly) && monthly > 0 ? monthly : undefined,
+          legalName: companyName || undefined,
+          gstin: gstNumber || undefined,
+        },
       });
       setApplication(saved);
       setStep('documents');
@@ -153,7 +187,7 @@ export const CustomerCreditRequestScreen = memo(function CustomerCreditRequestSc
     } finally {
       setIsSaving(false);
     }
-  }, [parsedLimit, purpose, tenureDays]);
+  }, [companyName, gstNumber, monthlyVolume, parsedLimit, purpose, tenureDays]);
 
   const handleSubmit = useCallback(async () => {
     if (!application) return;
@@ -202,7 +236,33 @@ export const CustomerCreditRequestScreen = memo(function CustomerCreditRequestSc
         {!isLoading && step === 'details' ? (
           <View className="mt-xl">
             <Typography variant="headingLeft" className="text-[18px] text-brand-primary">
-              Facility Details
+              Business information
+            </Typography>
+            <Typography variant="subheadingLeft" className="mt-xs">
+              Prefill from your verified profile. Corrections belong in company KYC settings.
+            </Typography>
+            <View className="mt-lg rounded-2xl border border-brand-border bg-brand-white p-lg">
+              {[
+                { label: 'Legal business name', value: companyName },
+                { label: 'GSTIN', value: gstNumber },
+                { label: 'PAN', value: panNumber },
+                { label: 'Registered address', value: businessAddress },
+                { label: 'Contact mobile', value: contactPhone },
+                { label: 'Business email', value: businessEmail },
+              ].map((row) => (
+                <View key={row.label} className="mb-md">
+                  <Typography variant="fieldLabel" className="text-brand-muted">
+                    {row.label}
+                  </Typography>
+                  <Typography variant="roleTitle" className="mt-xs text-[14px] text-brand-heading">
+                    {row.value?.trim() ? row.value : 'Not on file'}
+                  </Typography>
+                </View>
+              ))}
+            </View>
+
+            <Typography variant="headingLeft" className="mt-xl text-[18px] text-brand-primary">
+              Credit request details
             </Typography>
             <Typography variant="subheadingLeft" className="mt-xs">
               Tell us the limit and payment terms you need for your trading volume.
@@ -256,6 +316,23 @@ export const CustomerCreditRequestScreen = memo(function CustomerCreditRequestSc
                     </Typography>
                   </Pressable>
                 ))}
+              </View>
+
+              <Typography variant="fieldLabel" className="mb-sm mt-lg">
+                Estimated monthly purchase volume
+              </Typography>
+              <View className="min-h-[48px] flex-row items-center rounded-md border border-brand-border bg-brand-white px-md">
+                <Typography variant="roleTitle" className="mr-sm text-brand-muted">
+                  ₹
+                </Typography>
+                <TextInput
+                  value={monthlyVolume}
+                  onChangeText={(value) => setMonthlyVolume(value.replace(/[^0-9.]/g, ''))}
+                  keyboardType="numeric"
+                  placeholder="Optional"
+                  placeholderTextColor={brandColors.footer}
+                  className="flex-1 py-md font-sans text-[15px] text-brand-heading"
+                />
               </View>
 
               <Typography variant="fieldLabel" className="mb-sm mt-lg">
@@ -356,6 +433,26 @@ export const CustomerCreditRequestScreen = memo(function CustomerCreditRequestSc
                       : '—'}
                   </Typography>
                 </View>
+                {companyName ? (
+                  <View className="flex-row justify-between gap-md">
+                    <Typography variant="subheadingLeft" className="text-brand-muted">
+                      Business
+                    </Typography>
+                    <Typography variant="roleTitle" className="flex-1 text-right text-[14px]">
+                      {companyName}
+                    </Typography>
+                  </View>
+                ) : null}
+                {gstNumber ? (
+                  <View className="flex-row justify-between gap-md">
+                    <Typography variant="subheadingLeft" className="text-brand-muted">
+                      GSTIN
+                    </Typography>
+                    <Typography variant="roleTitle" className="text-[14px]">
+                      {gstNumber}
+                    </Typography>
+                  </View>
+                ) : null}
                 <View className="flex-row justify-between gap-md">
                   <Typography variant="subheadingLeft" className="text-brand-muted">
                     Documents

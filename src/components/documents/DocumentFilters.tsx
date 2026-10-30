@@ -13,6 +13,12 @@ import { brandColors } from '@/theme/colors';
 import type { DocumentStatus, DocumentTab, DocumentsFiltersState } from '@/types/documents';
 import { cn } from '@/utils/cn';
 
+const TAB_SHORT_LABELS: Record<DocumentTab, string> = {
+  purchase_orders: 'POs',
+  invoices: 'Invoices',
+  proforma: 'Proforma',
+};
+
 type DocumentFilterTabsProps = {
   selected: DocumentTab;
   onSelect: (tab: DocumentTab) => void;
@@ -23,11 +29,7 @@ export const DocumentFilterTabs = memo(function DocumentFilterTabs({
   onSelect,
 }: DocumentFilterTabsProps) {
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerClassName="gap-sm"
-    >
+    <View className="flex-row rounded-xl border border-brand-border bg-brand-white p-xs">
       {DOCUMENT_TABS.map((tab) => {
         const isSelected = tab.id === selected;
         return (
@@ -35,26 +37,28 @@ export const DocumentFilterTabs = memo(function DocumentFilterTabs({
             key={tab.id}
             onPress={() => onSelect(tab.id)}
             accessibilityRole="button"
+            accessibilityLabel={tab.title}
             accessibilityState={{ selected: isSelected }}
             className={cn(
-              'rounded-full px-md py-sm',
-              isSelected ? 'bg-brand-primary' : 'border border-brand-border bg-brand-white',
+              'min-w-0 flex-1 items-center justify-center rounded-lg px-sm py-sm',
+              isSelected ? 'bg-brand-primary' : 'bg-transparent',
             )}
             style={({ pressed }) => ({ opacity: pressed ? 0.88 : 1 })}
           >
             <Typography
-              variant="badge"
+              variant="roleTitle"
+              numberOfLines={1}
               className={cn(
-                'text-[12px] tracking-normal',
+                'text-center text-[12px]',
                 isSelected ? 'text-brand-white' : 'text-brand-body',
               )}
             >
-              {tab.title}
+              {TAB_SHORT_LABELS[tab.id]}
             </Typography>
           </Pressable>
         );
       })}
-    </ScrollView>
+    </View>
   );
 });
 
@@ -88,6 +92,37 @@ export const DocumentSearchBar = memo(function DocumentSearchBar({
   );
 });
 
+type ChipProps = {
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+};
+
+const FilterChip = memo(function FilterChip({ label, selected, onPress }: ChipProps) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      className={cn(
+        'rounded-full px-md py-sm',
+        selected ? 'bg-brand-primary-tint' : 'border border-brand-border bg-brand-white',
+      )}
+      style={({ pressed }) => ({ opacity: pressed ? 0.88 : 1 })}
+    >
+      <Typography
+        variant="badge"
+        className={cn(
+          'text-[11px] tracking-normal',
+          selected ? 'text-brand-primary' : 'text-brand-muted',
+        )}
+      >
+        {label}
+      </Typography>
+    </Pressable>
+  );
+});
+
 type DocumentFiltersRowProps = {
   filters: DocumentsFiltersState;
   warehouses: string[];
@@ -118,99 +153,47 @@ export const DocumentFiltersRow = memo(function DocumentFiltersRow({
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerClassName="gap-sm"
+        decelerationRate="fast"
+        contentContainerStyle={{ gap: 8, paddingHorizontal: 24 }}
       >
-        {DOCUMENT_STATUS_FILTERS.map((status) => {
-          const selected = filters.status === status;
-          return (
-            <Pressable
-              key={status}
-              onPress={() => onChange({ status })}
-              className={cn(
-                'rounded-full px-md py-sm',
-                selected ? 'bg-brand-primary-tint' : 'border border-brand-border bg-brand-white',
-              )}
-              style={({ pressed }) => ({ opacity: pressed ? 0.88 : 1 })}
-            >
-              <Typography
-                variant="badge"
-                className={cn(
-                  'text-[11px] tracking-normal',
-                  selected ? 'text-brand-primary' : 'text-brand-muted',
-                )}
-              >
-                {status === 'all'
-                  ? 'All Statuses'
-                  : DOCUMENT_STATUS_LABELS[status as DocumentStatus]}
-              </Typography>
-            </Pressable>
-          );
-        })}
+        {DOCUMENT_STATUS_FILTERS.map((status) => (
+          <FilterChip
+            key={status}
+            label={
+              status === 'all' ? 'All Statuses' : DOCUMENT_STATUS_LABELS[status as DocumentStatus]
+            }
+            selected={filters.status === status}
+            onPress={() => onChange({ status })}
+          />
+        ))}
         {warehouseOptions.length > 1
-          ? warehouseOptions.map((warehouse) => {
-              const selected = filters.warehouse === warehouse;
-              return (
-                <Pressable
-                  key={`wh-${warehouse}`}
-                  onPress={() => onChange({ warehouse })}
-                  className={cn(
-                    'rounded-full px-md py-sm',
-                    selected
-                      ? 'bg-brand-primary-tint'
-                      : 'border border-brand-border bg-brand-white',
-                  )}
-                >
-                  <Typography
-                    variant="badge"
-                    className={cn(
-                      'text-[11px] tracking-normal',
-                      selected ? 'text-brand-primary' : 'text-brand-muted',
-                    )}
-                  >
-                    {warehouse === 'all' ? 'All Warehouses' : warehouse}
-                  </Typography>
-                </Pressable>
-              );
-            })
+          ? warehouseOptions.map((warehouse) => (
+              <FilterChip
+                key={`wh-${warehouse}`}
+                label={warehouse === 'all' ? 'All Warehouses' : warehouse}
+                selected={filters.warehouse === warehouse}
+                onPress={() => onChange({ warehouse })}
+              />
+            ))
           : null}
         {sellerOptions.length > 1
-          ? sellerOptions.map((seller) => {
-              const selected = filters.seller === seller;
-              return (
-                <Pressable
-                  key={`sl-${seller}`}
-                  onPress={() => onChange({ seller })}
-                  className={cn(
-                    'rounded-full px-md py-sm',
-                    selected
-                      ? 'bg-brand-primary-tint'
-                      : 'border border-brand-border bg-brand-white',
-                  )}
-                >
-                  <Typography
-                    variant="badge"
-                    className={cn(
-                      'text-[11px] tracking-normal',
-                      selected ? 'text-brand-primary' : 'text-brand-muted',
-                    )}
-                  >
-                    {seller === 'all' ? 'All Supply Sources' : seller}
-                  </Typography>
-                </Pressable>
-              );
-            })
+          ? sellerOptions.map((seller) => (
+              <FilterChip
+                key={`sl-${seller}`}
+                label={seller === 'all' ? 'All Sources' : seller}
+                selected={filters.seller === seller}
+                onPress={() => onChange({ seller })}
+              />
+            ))
           : null}
-        <Pressable
+        <FilterChip
+          label={filters.sortBy === 'newest' ? 'Newest' : 'Oldest'}
+          selected={filters.sortBy !== 'newest'}
           onPress={() => onChange({ sortBy: filters.sortBy === 'newest' ? 'oldest' : 'newest' })}
-          className="rounded-full border border-brand-border bg-brand-white px-md py-sm"
-        >
-          <Typography variant="badge" className="text-[11px] tracking-normal text-brand-muted">
-            {filters.sortBy === 'newest' ? 'Newest' : 'Oldest'}
-          </Typography>
-        </Pressable>
+        />
       </ScrollView>
       {hasActive ? (
-        <Pressable onPress={onReset} className="self-end">
+        <Pressable onPress={onReset} className="self-end px-xl py-xs" hitSlop={8}>
           <Typography variant="link" className="text-[12px]">
             Reset filters
           </Typography>

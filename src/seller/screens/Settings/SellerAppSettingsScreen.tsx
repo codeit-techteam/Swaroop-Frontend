@@ -7,7 +7,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScreenWrapper, Typography } from '@/components';
 import { ROUTES } from '@/navigation/routes';
-import { openPrivacyPolicy, openTermsOfService } from '@/services/legal-links';
+import {
+  openAboutPage,
+  openPrivacyPolicy,
+  openTermsOfService,
+} from '@/services/legal-links';
 import {
   DashboardSkeleton,
   OfflineBanner,
@@ -234,7 +238,13 @@ export const SellerAppSettingsScreen = memo(function SellerAppSettingsScreen() {
             <SettingsGroup title="About">
               <SettingsInfo label="Version" value={appVersion} />
               <SettingsAction label="Licenses" onPress={() => undefined} />
-              <SettingsAction label="About PolyStoreX" onPress={() => undefined} isLast />
+              <SettingsAction
+                label="About PolyStoreX"
+                onPress={() => {
+                  void openAboutPage();
+                }}
+                isLast
+              />
             </SettingsGroup>
 
             <SettingsGroup title="Business">

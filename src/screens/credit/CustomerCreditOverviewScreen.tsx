@@ -19,9 +19,9 @@ import {
 import { formatCurrency } from '@/utils/currency';
 
 const BENEFITS = [
-  'Buy now and pay on Net-15 or Net-30 terms.',
+  'Credit 15 Days and Credit 30 Days stay visible on grades that support credit.',
+  'Request credit if you have not applied yet — approval unlocks selection at checkout.',
   'Limits are reviewed by PolyStoreX Credit Management.',
-  'Approved limits unlock credit options at checkout.',
 ];
 
 export const CustomerCreditOverviewScreen = memo(function CustomerCreditOverviewScreen() {

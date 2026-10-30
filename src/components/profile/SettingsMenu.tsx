@@ -9,6 +9,7 @@ import { ProfileSectionHeader } from '@/components/profile/ProfileSectionHeader'
 import { Typography } from '@/components/ui/typography';
 import { SETTINGS_MENU_ITEMS } from '@/constants/profile';
 import { BellIcon, ChevronRightIcon, HeadsetIcon, LogoutIcon, ShieldCheckIcon } from '@/icons';
+import { openTermsAndPrivacy } from '@/services/legal-links';
 import { showConfirmDialog } from '@/store/dialog-store';
 import { brandColors } from '@/theme/colors';
 import { cn } from '@/utils/cn';
@@ -33,15 +34,6 @@ export const SettingsMenu = memo(function SettingsMenu({
   onHelpSupport,
   className,
 }: SettingsMenuProps) {
-  const showComingSoon = useCallback((title: string) => {
-    Toast.show({
-      type: 'info',
-      text1: title,
-      text2: 'This feature is coming soon.',
-      visibilityTime: 2000,
-    });
-  }, []);
-
   const handleLogoutPress = useCallback(() => {
     showConfirmDialog({
       variant: 'danger',
@@ -70,9 +62,19 @@ export const SettingsMenu = memo(function SettingsMenu({
         return;
       }
 
-      showComingSoon(title);
+      if (id === 'terms') {
+        void openTermsAndPrivacy();
+        return;
+      }
+
+      Toast.show({
+        type: 'info',
+        text1: title,
+        text2: 'This feature is coming soon.',
+        visibilityTime: 2000,
+      });
     },
-    [handleLogoutPress, onHelpSupport, onNotifications, showComingSoon],
+    [handleLogoutPress, onHelpSupport, onNotifications],
   );
 
   return (

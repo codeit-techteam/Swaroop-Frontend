@@ -10,7 +10,7 @@ export const SellerPrimaryButton = memo(function SellerPrimaryButton(
   props: SellerPrimaryButtonProps,
 ) {
   return (
-    <PrimaryButton {...props} className={`rounded-2xl py-md ${props.className ?? ''}`.trim()} />
+    <PrimaryButton {...props} className={`rounded-md py-md ${props.className ?? ''}`.trim()} />
   );
 });
 

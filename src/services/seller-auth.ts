@@ -1,9 +1,7 @@
 import { isAxiosError } from 'axios';
 
 import { apiClient } from '@/api/client';
-import { DEMO_PASSWORD, DEVELOPMENT_MODE } from '@/config/development';
 import { STORAGE_KEYS } from '@/constants';
-import { isDevAccount, validateDevOtp } from '@/services/dev-auth';
 import { clearCachedSellerAccount } from '@/services/seller-profile';
 import { useAuthStore } from '@/store/auth-store';
 import type { ApiRequestConfig } from '@/types/api';
@@ -123,9 +121,20 @@ export function clearSellerAccess() {
   removeStorageItem(STORAGE_KEYS.REFRESH_TOKEN);
 }
 
-export async function sendSellerOtp(mobile: string): Promise<{ sent: true; demoOtp?: string }> {
+export type SellerOtpPurpose = 'LOGIN' | 'SIGNUP';
+
+export type SellerSignupProfile = {
+  fullName?: string;
+  companyName?: string;
+  gstNumber?: string;
+};
+
+export async function sendSellerOtp(
+  mobile: string,
+  purpose: SellerOtpPurpose = 'LOGIN',
+): Promise<{ sent: true; demoOtp?: string }> {
   const phone = toE164IndianPhone(mobile);
-  const response = await apiClient.post('/auth/otp/send', { phone, purpose: 'LOGIN' }, {
+  const response = await apiClient.post('/auth/otp/send', { phone, purpose }, {
     skipAuth: true,
     skipRefresh: true,
   } as ApiRequestConfig);
@@ -144,11 +153,21 @@ export async function sendSellerOtp(mobile: string): Promise<{ sent: true; demoO
 export async function verifySellerOtpSession(
   mobile: string,
   otp: string,
+  purpose: SellerOtpPurpose = 'LOGIN',
+  signup?: SellerSignupProfile,
 ): Promise<SellerAuthSession> {
   const phone = toE164IndianPhone(mobile);
   const response = await apiClient.post(
     '/auth/otp/verify',
-    { phone, otp, purpose: 'LOGIN', roleHint: 'SELLER' },
+    {
+      phone,
+      otp,
+      purpose,
+      roleHint: 'SELLER',
+      ...(signup?.fullName ? { firstName: signup.fullName.trim() } : {}),
+      ...(signup?.companyName ? { companyName: signup.companyName.trim() } : {}),
+      ...(signup?.gstNumber ? { gstin: signup.gstNumber.trim().toUpperCase() } : {}),
+    },
     { skipAuth: true, skipRefresh: true } as ApiRequestConfig,
   );
   return unwrapSession(response.data);
@@ -176,21 +195,19 @@ function sessionRequiresPasswordChange(session: SellerAuthSession): boolean {
   return Boolean(session.user?.mustChangePassword);
 }
 
-/**
- * Full seller login used by OTP screen.
- * Verifies against `/auth/otp/verify`. In Metro only, the shared demo phone +
- * DEMO_OTP falls back to password login when the API has AUTH_STRICT_OTP on
- * (fixed 123456 disabled on the remote backend).
- */
+/** Full seller login/signup used by OTP screen — verifies via `/auth/otp/verify` only. */
 export async function authenticateSellerFromOtp(
   mobile: string,
   otp: string,
+  purpose: SellerOtpPurpose = 'LOGIN',
+  signup?: SellerSignupProfile,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   if (otp.length !== 6) {
     return { ok: false, message: 'Enter the 6-digit OTP.' };
   }
 
-  const finish = (session: SellerAuthSession): { ok: true } | { ok: false; message: string } => {
+  try {
+    const session = await verifySellerOtpSession(mobile, otp, purpose, signup);
     if (sessionRequiresPasswordChange(session)) {
       return {
         ok: false,
@@ -200,18 +217,7 @@ export async function authenticateSellerFromOtp(
     }
     persistSellerAuthSession(session);
     return { ok: true };
-  };
-
-  try {
-    return finish(await verifySellerOtpSession(mobile, otp));
   } catch (error) {
-    if (DEVELOPMENT_MODE && isDevAccount(mobile) && validateDevOtp(otp)) {
-      try {
-        return finish(await loginSellerWithPassword(mobile, DEMO_PASSWORD));
-      } catch {
-        // Keep the original OTP error below.
-      }
-    }
     return {
       ok: false,
       message: sellerAuthErrorMessage(error, 'Invalid OTP. Please try again.'),
@@ -221,9 +227,10 @@ export async function authenticateSellerFromOtp(
 
 export async function requestSellerOtpSend(
   mobile: string,
+  purpose: SellerOtpPurpose = 'LOGIN',
 ): Promise<{ ok: boolean; message?: string }> {
   try {
-    await sendSellerOtp(mobile);
+    await sendSellerOtp(mobile, purpose);
     return { ok: true };
   } catch (error) {
     // An OTP issued moments ago is still valid; let the user enter it.

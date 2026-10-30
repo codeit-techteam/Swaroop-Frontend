@@ -1,6 +1,6 @@
 import { memo, useCallback, useState } from 'react';
 
-import { ActivityIndicator, Linking, Pressable, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import { useRouter } from 'expo-router';
 
@@ -11,7 +11,11 @@ import { ProfileDataState } from '@/components/profile';
 import { useCustomerKycStatus } from '@/hooks/use-customer-kyc-status';
 import { useProfile } from '@/hooks/useProfile';
 import { DownloadIcon } from '@/icons';
-import { customerKycErrorMessage, getCustomerKycDocumentUrl } from '@/services/customer-kyc';
+import {
+  customerKycErrorMessage,
+  fetchCustomerKycDocumentDownload,
+} from '@/services/customer-kyc';
+import { openSignedRemoteDocument } from '@/services/open-remote-document';
 import { useCustomerKycOverviewStore } from '@/store/customer-kyc-overview-store';
 import { brandColors } from '@/theme/colors';
 import type { TaxDocument } from '@/types/profile';
@@ -28,11 +32,25 @@ export const TaxDocumentsScreen = memo(function TaxDocumentsScreen() {
   }, [router]);
 
   const handleDownload = useCallback(async (document: TaxDocument) => {
-    if (!document.documentId) return;
+    if (!document.documentId) {
+      Toast.show({
+        type: 'error',
+        text1: `Couldn't open ${document.title}`,
+        text2: 'This document is not available yet.',
+        visibilityTime: 3000,
+      });
+      return;
+    }
     setOpeningId(document.documentId);
     try {
-      const url = await getCustomerKycDocumentUrl(document.documentId);
-      await Linking.openURL(url);
+      // Same signed download endpoint the Customer WEB APP uses for View.
+      const download = await fetchCustomerKycDocumentDownload(document.documentId);
+      await openSignedRemoteDocument({
+        url: download.url,
+        fileName: download.fileName ?? document.subtitle,
+        mimeType: download.mimeType,
+        title: document.title,
+      });
     } catch (error) {
       Toast.show({
         type: 'error',
@@ -90,7 +108,7 @@ export const TaxDocumentsScreen = memo(function TaxDocumentsScreen() {
               onPress={() => void handleDownload(document)}
               disabled={openingId !== null}
               accessibilityRole="button"
-              accessibilityLabel={`Download ${document.title}`}
+              accessibilityLabel={`View ${document.title}`}
               className="h-10 w-10 items-center justify-center rounded-lg bg-brand-primary-tint"
               style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
             >

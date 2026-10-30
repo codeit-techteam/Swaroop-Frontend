@@ -358,14 +358,36 @@ export function updateCustomerBusinessProfile(patch: {
   });
 }
 
+export type CustomerKycDocumentDownload = {
+  url: string;
+  fileName?: string | null;
+  mimeType?: string | null;
+};
+
 /** Short-lived signed URL for a stored KYC document owned by the signed-in customer. */
-export function getCustomerKycDocumentUrl(documentId: string): Promise<string> {
+export function fetchCustomerKycDocumentDownload(
+  documentId: string,
+): Promise<CustomerKycDocumentDownload> {
   return withCustomerSession(async () => {
-    const response = await apiClient.get<Envelope<{ url: string }>>(
-      `/customer/kyc/documents/${documentId}/download`,
-    );
-    return response.data.data.url;
+    const response = await apiClient.get<
+      Envelope<{ url?: string; fileName?: string | null; mimeType?: string | null }>
+    >(`/customer/kyc/documents/${documentId}/download`);
+    const data = response.data.data ?? {};
+    const url = typeof data.url === 'string' ? data.url.trim() : '';
+    if (!url) {
+      throw new Error('Document download URL was not issued.');
+    }
+    return {
+      url,
+      fileName: data.fileName ?? null,
+      mimeType: data.mimeType ?? null,
+    };
   });
+}
+
+/** @deprecated Prefer fetchCustomerKycDocumentDownload + openSignedRemoteDocument. */
+export function getCustomerKycDocumentUrl(documentId: string): Promise<string> {
+  return fetchCustomerKycDocumentDownload(documentId).then((doc) => doc.url);
 }
 
 /** PAN / GSTIN are checked server-side; provider credentials never reach the app. */

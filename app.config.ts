@@ -5,15 +5,17 @@ const APP_ENV = process.env.EXPO_PUBLIC_APP_ENV ?? 'development';
 const ALLOW_CLEARTEXT = APP_ENV === 'development';
 const APP_VERSION = process.env.EXPO_PUBLIC_APP_VERSION ?? '3.1.1';
 const ANDROID_VERSION_CODE = Number(process.env.ANDROID_VERSION_CODE ?? 3111);
-const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID ?? '8fa5420d-cb2b-4656-bc7a-411b977c9d7b';
+// PolyStoreX EAS project under polystorexs-team (swaroop.veylorn@gmail.com).
+const EAS_PROJECT_ID =
+  process.env.EAS_PROJECT_ID ?? 'ccf88988-1846-42d3-8944-a10d70252de7';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'PolyStoreX',
-  // The slug is the EAS project identifier (project 8fa5420d… / keystore / update
-  // channels are registered as "swaroop"). It is never shown to users; changing it
-  // breaks `eas build` and would require a new keystore. Branding lives in `name`.
-  slug: 'swaroop',
+  // EAS project slug for account polystorexs-team / project polystorex.
+  // Branding lives in `name`; package id stays com.swaroop.app.
+  slug: 'polystorex',
+  owner: 'polystorexs-team',
   version: APP_VERSION,
   orientation: 'portrait',
   icon: './assets/images/icon.png',
@@ -39,6 +41,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   android: {
     adaptiveIcon: {
+      // Symbol-only foreground kept inside the adaptive safe zone.
+      // Do not use the full wordmark lockup here — the system mask will crop it.
       foregroundImage: './assets/images/adaptive-icon.png',
       backgroundColor: '#ffffff',
     },
@@ -81,8 +85,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-splash-screen',
       {
+        // Full brand lockup (mark + wordmark). `contain` keeps the entire artwork visible.
         image: './assets/images/splash-icon.png',
-        imageWidth: 200,
+        imageWidth: 240,
         resizeMode: 'contain',
         backgroundColor: '#ffffff',
       },
@@ -99,9 +104,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'expo-build-properties',
       {
         android: {
-          compileSdkVersion: 36,
+          // Expo SDK 58 modules (expo-application, expo-asset, …) publish AAR
+          // metadata requiring compileSdk 37; pinning 36 fails
+          // `:expo:checkReleaseAarMetadata` on EAS. Matches SDK 58 defaults
+          // (compileSdk 37 / buildTools 37.0.0 / targetSdk 36).
+          compileSdkVersion: 37,
           targetSdkVersion: 36,
-          buildToolsVersion: '36.0.0',
+          buildToolsVersion: '37.0.0',
           minSdkVersion: 24,
           usesCleartextTraffic: ALLOW_CLEARTEXT,
           // A-13: keep session data out of cloud/device backup where possible.

@@ -14,7 +14,7 @@ import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
 import { cn } from '@/utils/cn';
 
-const logoSource = require('../../../assets/logo/polystorex-logo.png'); // project root assets
+const logoMarkSource = require('../../../assets/logo/polystorex-mark.png');
 
 
 type AppHeaderProps = {
@@ -71,12 +71,12 @@ export const AppHeader = memo(function AppHeader({
     <View className={cn('w-full px-xl', className)} style={{ paddingTop: insets.top }}>
       <View className="h-14 w-full flex-row items-center justify-center gap-sm">
         <Image
-          source={logoSource}
+          source={logoMarkSource}
           style={{
             width: iconSizes.logoSmall * 1.35,
             height: iconSizes.logoSmall * 1.35,
-            resizeMode: 'contain',
           }}
+          resizeMode="contain"
           accessibilityIgnoresInvertColors
         />
         <Typography variant="logoUpper" style={{ color: brandColors.primary }}>

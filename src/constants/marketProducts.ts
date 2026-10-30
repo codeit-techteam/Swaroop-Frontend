@@ -1,7 +1,7 @@
 import type { MarketplaceGradeCategory } from '@/types/grade-master';
 import type { MarketProduct, StockLevel } from '@/types/market';
 
-export const MARKET_SEARCH_PLACEHOLDER = 'Search GST, invoices, grades, materials, orders…';
+export const MARKET_SEARCH_PLACEHOLDER = 'Search grade, code, material or manufacturer';
 
 /**
  * Market chips: backend Grade Master categories (in admin sort order) that currently have at
@@ -15,6 +15,13 @@ export function marketCategoryChips(
   return categories
     .filter((category) => listed.has(category.id))
     .map((category) => ({ id: category.id, label: category.displayName }));
+}
+
+/** All customer-visible Grade Master categories (used while searching the catalogue). */
+export function allMarketCategoryChips(
+  categories: MarketplaceGradeCategory[],
+): { id: string; label: string }[] {
+  return categories.map((category) => ({ id: category.id, label: category.displayName }));
 }
 
 export const getMarketProductById = (

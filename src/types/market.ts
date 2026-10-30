@@ -1,3 +1,5 @@
+import type { FulfilmentInfo } from '@/types/fulfilment';
+
 export type MarketParentCategoryId = 'polymers' | 'chemicals' | 'additives' | 'base-oils';
 
 export type MarketCategory = string;
@@ -29,6 +31,7 @@ export type MarketProduct = {
   stock: number;
   moq: number;
   eta: string;
+  fulfilment?: FulfilmentInfo | null;
   category: MarketCategory;
   badge: MarketAvailabilityBadge;
   /** Blind catalog has no product photography. */
@@ -50,6 +53,7 @@ export type MarketProduct = {
   applications?: string[];
   technicalSpecs?: ProductTechnicalSpecs;
   creditEligible?: boolean;
+  productCredit?: import('@/types/payment-eligibility').ProductCreditConfig;
   offerId?: string;
   /** Seller-configured bulk pricing from the active offer listing. */
   bulkPricing?: Array<{

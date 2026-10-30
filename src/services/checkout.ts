@@ -2,7 +2,6 @@ import { isAxiosError } from 'axios';
 
 import { apiClient } from '@/api/client';
 import { ensureDevBackendSession } from '@/services/backend-session';
-import type { PaymentMethodId } from '@/types/payment';
 import type {
   CartQuoteResult,
   CheckoutAddress,
@@ -11,6 +10,9 @@ import type {
   PlacePurchaseRequestResult,
   PlatformPaymentOptionCode,
 } from '@/types/checkout-quote';
+import type { PaymentMethodId } from '@/types/payment';
+import type { CreditAccessView, ProductCreditConfig } from '@/types/payment-eligibility';
+import { GUEST_CREDIT_ACCESS } from '@/types/payment-eligibility';
 import { commerceErrorCopy, isNetworkError } from '@/utils/commerce-errors';
 
 type Envelope<T> = {
@@ -91,20 +93,35 @@ export async function fetchCheckoutAddresses(): Promise<CheckoutAddress[]> {
   return payload.data.data ?? [];
 }
 
-export async function fetchCheckoutPaymentOptions(amount?: number): Promise<{
+export async function fetchCheckoutPaymentOptions(input?: {
+  amount?: number;
+  productId?: string;
+  offerId?: string;
+}): Promise<{
   options: CheckoutPaymentOption[];
-  credit: { eligible: boolean; approvedLimit: string; availableLimit: string };
+  productCredit?: ProductCreditConfig;
+  credit: CreditAccessView;
 }> {
   await ensureDevBackendSession('customer');
+  const params: Record<string, string | number> = {};
+  if (input?.amount != null) params.amount = input.amount;
+  if (input?.productId) params.productId = input.productId;
+  if (input?.offerId) params.offerId = input.offerId;
   const payload = await apiClient.get<
     Envelope<{
       options: CheckoutPaymentOption[];
-      credit: { eligible: boolean; approvedLimit: string; availableLimit: string };
+      productCredit?: ProductCreditConfig;
+      credit: CreditAccessView;
     }>
   >('/customer/checkout/payment-options', {
-    params: amount != null ? { amount } : undefined,
+    params: Object.keys(params).length > 0 ? params : undefined,
   });
-  return payload.data.data;
+  const data = payload.data.data;
+  return {
+    options: data?.options ?? [],
+    productCredit: data?.productCredit,
+    credit: data?.credit ?? GUEST_CREDIT_ACCESS,
+  };
 }
 
 export async function createCheckoutQuote(input: {

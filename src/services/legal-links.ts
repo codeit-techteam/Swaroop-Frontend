@@ -38,6 +38,7 @@ const BROKEN_WEBSITE_HOSTS = new Set([
 const LIVE_TERMS_URL = `${LIVE_WEBSITE_ORIGIN}/terms`;
 const LIVE_PRIVACY_URL = `${LIVE_WEBSITE_ORIGIN}/privacy`;
 const LIVE_SUPPORT_URL = `${LIVE_WEBSITE_ORIGIN}/contact`;
+const LIVE_ABOUT_URL = `${LIVE_WEBSITE_ORIGIN}/about`;
 
 function isHttpUrl(value: string | null | undefined): value is string {
   if (!value) return false;
@@ -161,6 +162,18 @@ export async function openPrivacyPolicy(): Promise<void> {
     isHttpUrl(links.privacyUrl) ? links.privacyUrl : LIVE_PRIVACY_URL,
     'Privacy Policy',
   );
+}
+
+/** Profile "Terms & Privacy" — opens Terms; Privacy is linked from that page and login footers. */
+export async function openTermsAndPrivacy(): Promise<void> {
+  await openTermsOfService();
+}
+
+export async function openAboutPage(): Promise<void> {
+  const links = await fetchLegalLinks();
+  const aboutUrl =
+    isHttpUrl(links.websiteUrl) ? `${links.websiteUrl.replace(/\/+$/, '')}/about` : LIVE_ABOUT_URL;
+  await openExternal(aboutUrl, 'About PolyStoreX');
 }
 
 /** Prefer support page URL; fall back to configured mailto only. Never invent an address. */

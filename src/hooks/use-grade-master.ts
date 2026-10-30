@@ -45,7 +45,10 @@ export const useCustomerGradeFacets = (categoryId: string | null) =>
     queryFn: () => fetchCustomerGradeFacets({ categoryId }),
   });
 
-export const useCustomerGradeBrowse = (filters: GradeBrowseFilters) =>
+export const useCustomerGradeBrowse = (
+  filters: GradeBrowseFilters,
+  options?: { enabled?: boolean },
+) =>
   useInfiniteQuery({
     queryKey: gradeMasterKeys.customerGrades(filters),
     queryFn: ({ pageParam }) => fetchCustomerGradePage(filters, pageParam),
@@ -53,6 +56,7 @@ export const useCustomerGradeBrowse = (filters: GradeBrowseFilters) =>
     getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
     placeholderData: keepPreviousData,
     staleTime: LIVE_STALE_MS,
+    enabled: options?.enabled ?? true,
   });
 
 export const useCustomerGrade = (id: string | null) =>

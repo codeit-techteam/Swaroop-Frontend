@@ -20,7 +20,13 @@ import {
   persistSellerSnapshot,
   resetSellerSession,
 } from '@/seller/mock/mockSellerService';
-import type { SellerCompany, SellerDocumentId, SellerStore } from '@/seller/types';
+import { extractPanFromGstin } from '@/seller/utils/gst';
+import type {
+  SellerCompany,
+  SellerDocumentId,
+  SellerSignupDraft,
+  SellerStore,
+} from '@/seller/types';
 
 const baseSnapshot = buildDefaultSellerSnapshot();
 
@@ -66,6 +72,7 @@ let accountRequest: Promise<SellerAccountSummary | null> | null = null;
 export const useSellerStore = create<SellerStore>((set, get) => ({
   ...baseSnapshot,
   isHydrated: false,
+  signupDraft: null,
   account: null,
   accountManagers: [],
   accountStatus: 'idle',
@@ -76,6 +83,7 @@ export const useSellerStore = create<SellerStore>((set, get) => ({
     const account = snapshot.sellerLoggedIn ? readCachedSellerAccount() : null;
     set({
       ...snapshot,
+      signupDraft: null,
       account,
       accountStatus: account ? 'ready' : 'idle',
       isHydrated: true,
@@ -85,6 +93,37 @@ export const useSellerStore = create<SellerStore>((set, get) => ({
   setMobile: (mobile) => {
     set({ mobile });
     persistState(get());
+  },
+
+  applySignupDraft: (draft: SellerSignupDraft) => {
+    const gst = draft.gstNumber.trim().toUpperCase();
+    const pan = extractPanFromGstin(gst) || get().company.pan;
+    const ownerName = draft.fullName.trim();
+    set({
+      signupDraft: {
+        fullName: ownerName,
+        companyName: draft.companyName.trim(),
+        gstNumber: gst,
+        mobile: draft.mobile,
+      },
+      mobile: draft.mobile,
+      profile: {
+        ownerName,
+        companyInitials: toInitials(ownerName, get().profile.companyInitials || 'PT'),
+      },
+      company: {
+        ...get().company,
+        companyName: draft.companyName.trim(),
+        gst,
+        pan,
+        mobile: draft.mobile,
+      },
+    });
+    persistState(get());
+  },
+
+  clearSignupDraft: () => {
+    set({ signupDraft: null });
   },
 
   markOtpVerified: () => {
@@ -176,6 +215,7 @@ export const useSellerStore = create<SellerStore>((set, get) => ({
     resetSellerSession();
     set({
       ...buildDefaultSellerSnapshot(),
+      signupDraft: null,
       account: null,
       accountManagers: [],
       accountStatus: 'idle',

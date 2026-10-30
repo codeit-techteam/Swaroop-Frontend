@@ -165,19 +165,7 @@ export const SplashScreen = () => {
 
       <View className="flex-1 items-center justify-center px-xl">
         <Animated.View className="items-center" style={brandStyle}>
-          <View className="items-center justify-center">
-            <View
-              pointerEvents="none"
-              style={{
-                position: 'absolute',
-                width: 200,
-                height: 200,
-                borderRadius: 100,
-                backgroundColor: brandColors.white,
-                opacity: 0.55,
-                top: -20,
-              }}
-            />
+          <View className="items-center justify-center px-lg">
             <AppLogo variant="splash" size={iconSizes.logo} />
           </View>
 

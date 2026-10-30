@@ -12,7 +12,7 @@ import {
   ScreenWrapper,
   Typography,
 } from '@/components';
-import { DEMO_OTP, DEMO_USER_NAME, DEVELOPMENT_MODE } from '@/config/development';
+import { DEMO_OTP, DEMO_USER_NAME } from '@/config/development';
 import { ClockIcon, OtpIllustration } from '@/icons';
 import { parseReturnToParam, resolvePostAuthHref } from '@/navigation/return-to';
 import { ROUTES } from '@/navigation/routes';
@@ -24,7 +24,6 @@ import {
   verifyCustomerOtp,
   type CustomerOtpPurpose,
 } from '@/services/customer-auth';
-import { getInvalidOtpMessage, isDevAccount, validateDevOtp } from '@/services/dev-auth';
 import { refreshKycStatus } from '@/services/kyc-status-sync';
 import { resetUserScopedState } from '@/services/sign-out';
 import { useAuthStore } from '@/store/auth-store';
@@ -111,13 +110,6 @@ export const OtpVerificationScreen = () => {
       const mobileNumber = params.phone ?? '';
       const role = useAuthStore.getState().selectedRole === 'seller' ? 'seller' : 'customer';
 
-      // Local Metro only: reject wrong demo OTP early for the seeded account.
-      if (DEVELOPMENT_MODE && isDevAccount(mobileNumber) && !validateDevOtp(code)) {
-        setOtpError(getInvalidOtpMessage());
-        verifyingRef.current = false;
-        return;
-      }
-
       setIsVerifying(true);
       try {
         await verifyCustomerOtp(
@@ -176,7 +168,7 @@ export const OtpVerificationScreen = () => {
         <Typography variant="subheading" className="mt-sm px-md">
           Enter the 6-digit code sent to {phoneDisplay}
         </Typography>
-        {DEVELOPMENT_MODE ? (
+        {__DEV__ ? (
           <Typography variant="legal" className="mt-sm px-md text-center">
             Dev: {DEMO_USER_NAME} · OTP {DEMO_OTP}
           </Typography>

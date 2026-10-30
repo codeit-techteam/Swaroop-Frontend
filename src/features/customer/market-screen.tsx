@@ -1,6 +1,13 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 
-import { FlatList, Keyboard, View, type TextInputInstance } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  Keyboard,
+  View,
+  type ListRenderItem,
+  type TextInputInstance,
+} from 'react-native';
 
 import { type Href, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 
@@ -12,6 +19,7 @@ import { HeroCarousel } from '@/components/home/hero-carousel';
 import {
   CategoryFilter,
   EmptyState,
+  GradeCard,
   GradeMasterEntry,
   MarketFilterSheet,
   MarketHeader,
@@ -22,14 +30,20 @@ import {
 import { MarketListSkeleton } from '@/components/ui/skeleton';
 import { Typography } from '@/components/ui/typography';
 import { TAB_BAR_HEIGHT } from '@/constants/dashboard';
-import { marketCategoryChips } from '@/constants/marketProducts';
+import { allMarketCategoryChips, marketCategoryChips } from '@/constants/marketProducts';
+import { useDebouncedValue } from '@/hooks/use-debounce';
 import { useDeliveryLocation } from '@/hooks/use-delivery-location';
-import { useCustomerMarketplaceCategories } from '@/hooks/use-grade-master';
+import {
+  queryErrorMessage,
+  useCustomerGradeBrowse,
+  useCustomerMarketplaceCategories,
+} from '@/hooks/use-grade-master';
 import { useMarketSearch } from '@/hooks/use-market-search';
 import { useMarketplaceCatalogQuery } from '@/hooks/use-marketplace-catalog';
 import { openCustomerBanner, openCustomerBannerSecondary } from '@/lib/cms-banner';
 import { ROUTES } from '@/navigation/routes';
 import { fetchCustomerMarketplaceBanners, trackCmsBannerEvent } from '@/services/cms';
+import type { CustomerGrade, GradeBrowseFilters } from '@/types/grade-master';
 import type { HomeBanner } from '@/types/home';
 import type { MarketProduct } from '@/types/market';
 import {
@@ -39,6 +53,9 @@ import {
   countActiveMarketFilters,
   type MarketFilters,
 } from '@/utils/market-filters';
+import { buildMarketSearchRows, type MarketSearchRow } from '@/utils/market-search-rows';
+
+const SEARCH_DEBOUNCE_MS = 350;
 
 export const CustomerMarketScreen = () => {
   const router = useRouter();
@@ -75,6 +92,29 @@ export const CustomerMarketScreen = () => {
     handleSelectCategory,
     handleDismissSuggestions,
   } = useMarketSearch(marketProducts);
+
+  const trimmedQuery = query.trim();
+  const debouncedSearch = useDebouncedValue(trimmedQuery, SEARCH_DEBOUNCE_MS);
+  // Enter catalogue mode as soon as the user types; only fire the API after debounce.
+  const wantsCatalogueSearch = trimmedQuery.length > 0;
+  const isSearchPending = wantsCatalogueSearch && trimmedQuery !== debouncedSearch;
+
+  const catalogueFilters = useMemo<GradeBrowseFilters>(
+    () => ({
+      search: debouncedSearch,
+      categoryId: selectedCategory,
+    }),
+    [debouncedSearch, selectedCategory],
+  );
+  const gradesQuery = useCustomerGradeBrowse(catalogueFilters, {
+    enabled: debouncedSearch.length > 0,
+  });
+  const catalogueGrades = useMemo(
+    () => gradesQuery.data?.pages.flatMap((page) => page.items) ?? [],
+    [gradesQuery.data],
+  );
+  const catalogueTotal = gradesQuery.data?.pages[0]?.total ?? 0;
+
   const filteredProducts = useMemo(
     () => applyMarketFilters(searchedProducts, filters),
     [filters, searchedProducts],
@@ -88,8 +128,11 @@ export const CustomerMarketScreen = () => {
   );
   const { data: gradeCategories } = useCustomerMarketplaceCategories();
   const categories = useMemo(
-    () => marketCategoryChips(gradeCategories ?? [], marketProducts),
-    [gradeCategories, marketProducts],
+    () =>
+      wantsCatalogueSearch
+        ? allMarketCategoryChips(gradeCategories ?? [])
+        : marketCategoryChips(gradeCategories ?? [], marketProducts),
+    [gradeCategories, marketProducts, wantsCatalogueSearch],
   );
   const selectedCategoryLabel = useMemo(
     () => categories.find((category) => category.id === selectedCategory)?.label ?? null,
@@ -98,6 +141,14 @@ export const CustomerMarketScreen = () => {
   const totalGradeCount = useMemo(
     () => (gradeCategories ?? []).reduce((sum, category) => sum + category.gradeCount, 0),
     [gradeCategories],
+  );
+
+  const searchRows = useMemo(
+    () =>
+      debouncedSearch.length > 0
+        ? buildMarketSearchRows(catalogueGrades, marketProducts, debouncedSearch)
+        : [],
+    [catalogueGrades, debouncedSearch, marketProducts],
   );
 
   const shouldAutoFocus = useMemo(() => {
@@ -189,6 +240,17 @@ export const CustomerMarketScreen = () => {
     [router],
   );
 
+  const openGrade = useCallback(
+    (grade: CustomerGrade) => {
+      Keyboard.dismiss();
+      router.push({
+        pathname: ROUTES.CUSTOMER.GRADE_DETAILS,
+        params: { id: grade.id },
+      } as unknown as Href);
+    },
+    [router],
+  );
+
   const handleSuggestionProduct = useCallback(
     (product: MarketProduct) => {
       handleSelectProduct(product);
@@ -226,18 +288,42 @@ export const CustomerMarketScreen = () => {
     handleDismissSuggestions();
   }, [handleDismissSuggestions]);
 
-  const renderItem = useCallback(
+  const handleEndReached = useCallback(() => {
+    if (!wantsCatalogueSearch) return;
+    if (gradesQuery.hasNextPage && !gradesQuery.isFetchingNextPage) {
+      void gradesQuery.fetchNextPage();
+    }
+  }, [gradesQuery, wantsCatalogueSearch]);
+
+  const renderLiveItem = useCallback(
     ({ item, index }: { item: MarketProduct; index: number }) => (
       <ProductCard product={item} index={index} onBookNow={openProduct} />
     ),
     [openProduct],
   );
 
-  const keyExtractor = useCallback((item: MarketProduct) => item.id, []);
+  const renderSearchItem = useCallback<ListRenderItem<MarketSearchRow>>(
+    ({ item, index }) => {
+      if (item.kind === 'product') {
+        return <ProductCard product={item.product} index={index} onBookNow={openProduct} />;
+      }
+      return <GradeCard grade={item.grade} onPress={openGrade} />;
+    },
+    [openGrade, openProduct],
+  );
 
-  const trimmedQuery = query.trim();
-  const resultLabel = filteredProducts.length === 1 ? 'grade' : 'grades';
+  const liveKeyExtractor = useCallback((item: MarketProduct) => item.id, []);
+  const searchKeyExtractor = useCallback((item: MarketSearchRow) => item.key, []);
+
+  const resultCount = wantsCatalogueSearch ? catalogueTotal : filteredProducts.length;
+  const resultLabel = resultCount === 1 ? 'grade' : 'grades';
   const listBottomPadding = TAB_BAR_HEIGHT + insets.bottom + 24;
+  const showCatalogueSkeleton =
+    wantsCatalogueSearch &&
+    (isSearchPending ||
+      gradesQuery.isPending ||
+      (debouncedSearch.length === 0 && searchRows.length === 0)) &&
+    !gradesQuery.isError;
 
   if (loading) {
     return (
@@ -257,7 +343,7 @@ export const CustomerMarketScreen = () => {
     );
   }
 
-  if (error) {
+  if (error && marketProducts.length === 0 && !trimmedQuery) {
     return (
       <View className="flex-1 bg-brand-white">
         <MarketHeader
@@ -273,32 +359,6 @@ export const CustomerMarketScreen = () => {
             void refetch();
           }}
         />
-        <LocationBottomSheet
-          ref={locationSheetRef}
-          selectedId={selectedLocation.id}
-          onAddAddress={openAddressForm}
-        />
-      </View>
-    );
-  }
-
-  if (marketProducts.length === 0) {
-    return (
-      <View className="flex-1 bg-brand-white">
-        <MarketHeader
-          locationLabel={selectedLocation.label}
-          onLocationPress={handleLocationPress}
-          onCartPress={handleCartPress}
-        />
-        <EmptyState
-          title="No live listings right now"
-          description="No seller has a live offer at the moment. You can still browse every grade and check back for offers."
-          actionLabel="Refresh"
-          onActionPress={() => {
-            void refetch();
-          }}
-        />
-        <GradeMasterEntry onPress={openGradeBrowser} gradeCount={totalGradeCount} />
         <LocationBottomSheet
           ref={locationSheetRef}
           selectedId={selectedLocation.id}
@@ -360,7 +420,7 @@ export const CustomerMarketScreen = () => {
             filterLabel={activeFilterCount > 0 ? `Filters · ${activeFilterCount}` : 'Filter'}
           />
 
-          {promoBanners.length > 0 ? (
+          {!wantsCatalogueSearch && promoBanners.length > 0 ? (
             <HeroCarousel
               banners={promoBanners}
               onActionPress={handlePromoAction}
@@ -375,14 +435,18 @@ export const CustomerMarketScreen = () => {
               className="flex-1 font-sans text-[12px] normal-case tracking-normal text-brand-muted"
               numberOfLines={1}
             >
-              {trimmedQuery
-                ? `${filteredProducts.length} ${resultLabel} for “${trimmedQuery}”`
-                : selectedCategoryLabel
-                  ? `${filteredProducts.length} ${resultLabel} in ${selectedCategoryLabel}`
-                  : `${filteredProducts.length} ${resultLabel}`}
-              {activeFilterCount > 0 ? ' · filtered' : ''}
+              {showCatalogueSkeleton || isSearchPending || gradesQuery.isPlaceholderData
+                ? trimmedQuery
+                  ? 'Searching grades…'
+                  : `${filteredProducts.length} ${filteredProducts.length === 1 ? 'grade' : 'grades'}`
+                : trimmedQuery
+                  ? `${resultCount.toLocaleString('en-IN')} ${resultLabel} for “${trimmedQuery}”`
+                  : selectedCategoryLabel
+                    ? `${resultCount} ${resultLabel} in ${selectedCategoryLabel}`
+                    : `${resultCount} ${resultLabel}`}
+              {!wantsCatalogueSearch && activeFilterCount > 0 ? ' · filtered' : ''}
             </Typography>
-            {activeFilterCount > 0 ? (
+            {!wantsCatalogueSearch && activeFilterCount > 0 ? (
               <Typography
                 variant="caption"
                 className="ml-sm font-sans text-[11px] normal-case tracking-normal text-brand-primary"
@@ -392,7 +456,7 @@ export const CustomerMarketScreen = () => {
                 Clear filters
               </Typography>
             ) : null}
-            {expandedAcrossCategories ? (
+            {expandedAcrossCategories && !wantsCatalogueSearch ? (
               <Typography
                 variant="caption"
                 className="ml-sm font-sans text-[11px] normal-case tracking-normal text-brand-primary"
@@ -402,67 +466,109 @@ export const CustomerMarketScreen = () => {
             ) : null}
           </View>
 
-          <FlatList
-            data={filteredProducts}
-            keyExtractor={keyExtractor}
-            renderItem={renderItem}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="on-drag"
-            onScrollBeginDrag={handleDismissOverlay}
-            ListHeaderComponent={
-              <GradeMasterEntry
-                onPress={openGradeBrowser}
-                gradeCount={totalGradeCount}
-                query={trimmedQuery}
-              />
-            }
-            ListEmptyComponent={
-              activeFilterCount > 0 ? (
-                <EmptyState
-                  title="No live listings match your filters"
-                  description="Loosen the price, MOQ, manufacturer or origin filters to see more listings."
-                  actionLabel="Clear filters"
-                  onActionPress={handleClearFilters}
+          {showCatalogueSkeleton ? (
+            <MarketListSkeleton />
+          ) : wantsCatalogueSearch && gradesQuery.isError ? (
+            <EmptyState
+              title="Search failed"
+              description={queryErrorMessage(gradesQuery.error, 'Please try again.')}
+              actionLabel="Retry"
+              onActionPress={() => {
+                void gradesQuery.refetch();
+              }}
+            />
+          ) : wantsCatalogueSearch ? (
+            <FlatList
+              data={searchRows}
+              keyExtractor={searchKeyExtractor}
+              renderItem={renderSearchItem}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              onScrollBeginDrag={handleDismissOverlay}
+              onEndReached={handleEndReached}
+              onEndReachedThreshold={0.5}
+              ListHeaderComponent={
+                <GradeMasterEntry
+                  onPress={openGradeBrowser}
+                  gradeCount={totalGradeCount}
+                  query={trimmedQuery}
                 />
-              ) : (
+              }
+              ListFooterComponent={
+                gradesQuery.isFetchingNextPage ? (
+                  <View className="py-lg">
+                    <ActivityIndicator />
+                  </View>
+                ) : undefined
+              }
+              ListEmptyComponent={
                 <EmptyState
-                  title={
-                    trimmedQuery
-                      ? `No live listings match “${trimmedQuery}”`
-                      : selectedCategoryLabel
+                  title={`No grades found for “${trimmedQuery}”`}
+                  description="Try a grade code, material, or manufacturer."
+                  actionLabel="Clear search"
+                  onActionPress={handleClearSearch}
+                />
+              }
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{
+                paddingBottom: listBottomPadding,
+                flexGrow: 1,
+              }}
+            />
+          ) : (
+            <FlatList
+              data={filteredProducts}
+              keyExtractor={liveKeyExtractor}
+              renderItem={renderLiveItem}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              onScrollBeginDrag={handleDismissOverlay}
+              ListHeaderComponent={
+                <GradeMasterEntry
+                  onPress={openGradeBrowser}
+                  gradeCount={totalGradeCount}
+                  query={trimmedQuery}
+                />
+              }
+              ListEmptyComponent={
+                marketProducts.length === 0 ? (
+                  <EmptyState
+                    title="No live listings right now"
+                    description="No seller has a live offer at the moment. You can still search every grade above, or browse the full catalogue."
+                    actionLabel="Browse all grades"
+                    onActionPress={openGradeBrowser}
+                  />
+                ) : activeFilterCount > 0 ? (
+                  <EmptyState
+                    title="No live listings match your filters"
+                    description="Loosen the price, MOQ, manufacturer or origin filters to see more listings."
+                    actionLabel="Clear filters"
+                    onActionPress={handleClearFilters}
+                  />
+                ) : (
+                  <EmptyState
+                    title={
+                      selectedCategoryLabel
                         ? `No live listings in ${selectedCategoryLabel}`
                         : 'No materials found'
-                  }
-                  description={
-                    trimmedQuery
-                      ? 'Try a grade number or manufacturer, or search all grades above.'
-                      : selectedCategory
+                    }
+                    description={
+                      selectedCategory
                         ? 'Switch to All or pick another category to keep browsing.'
                         : 'Try a different grade, category, or search term.'
-                  }
-                  actionLabel={
-                    trimmedQuery
-                      ? 'Clear search'
-                      : selectedCategory
-                        ? 'Show all materials'
-                        : undefined
-                  }
-                  onActionPress={
-                    trimmedQuery
-                      ? handleClearSearch
-                      : selectedCategory
-                        ? handleShowAllCategories
-                        : undefined
-                  }
-                />
-              )
-            }
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{
-              paddingBottom: listBottomPadding,
-              flexGrow: 1,
-            }}
-          />
+                    }
+                    actionLabel={selectedCategory ? 'Show all materials' : undefined}
+                    onActionPress={selectedCategory ? handleShowAllCategories : undefined}
+                  />
+                )
+              }
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{
+                paddingBottom: listBottomPadding,
+                flexGrow: 1,
+              }}
+            />
+          )}
         </>
       )}
       <MarketFilterSheet

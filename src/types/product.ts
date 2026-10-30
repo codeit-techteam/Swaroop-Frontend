@@ -1,4 +1,6 @@
+import type { FulfilmentInfo } from '@/types/fulfilment';
 import type { PaymentMethodId } from '@/types/payment';
+import type { ProductCreditConfig } from '@/types/payment-eligibility';
 
 export type PriceTrendDirection = 'up' | 'down';
 
@@ -29,6 +31,7 @@ export type ProductPaymentOption = {
   id: PaymentMethodId;
   title: string;
   description: string;
+  dueLabel?: string;
   surchargeLabel?: string;
   benefitLabel?: string;
   discountRate?: number;
@@ -60,7 +63,8 @@ export type LogisticsEstimate = {
   warehouse: string;
   warehouseRegion: string;
   deliveryLocation: string;
-  estimatedDelivery: string;
+  estimatedDelivery: string | null;
+  dispatchWindow: string | null;
   transportMode: string;
   freightLabel: string;
   freightPerMt: number;
@@ -82,11 +86,15 @@ export type RelatedProductCard = {
   stockLabel: string;
 };
 
+export type TrustFeatureStatus = 'supported' | 'on_request' | 'when_provided';
+
 export type TrustFeature = {
   id: string;
   title: string;
   description: string;
   icon: 'check' | 'shield';
+  status: TrustFeatureStatus;
+  statusLabel: string;
 };
 
 export type ProductInfoItem = {
@@ -120,6 +128,7 @@ export type ProductDetails = {
   eta: string;
   warehouseRegion: string;
   originRegion: string;
+  fulfilment: FulfilmentInfo | null;
   packaging: string;
   qualityGrade: string;
   /** Blind marketplace — empty; PDP uses a grade tile instead of photography. */
@@ -148,6 +157,7 @@ export type ProductDetails = {
   documents: ComplianceDocument[];
   relatedProducts: RelatedProductCard[];
   creditEligible: boolean;
+  productCredit?: ProductCreditConfig;
   offerId?: string;
 };
 

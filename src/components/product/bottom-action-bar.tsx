@@ -22,6 +22,7 @@ type BottomActionBarProps = {
   refreshing?: boolean;
   lockingPrice?: boolean;
   adding?: boolean;
+  disabledReason?: string | null;
   onIncrement: () => void;
   onDecrement: () => void;
   onAddToCart: () => void;
@@ -39,6 +40,7 @@ export const BottomActionBar = memo(function BottomActionBar({
   refreshing = false,
   lockingPrice = false,
   adding = false,
+  disabledReason = null,
   onIncrement,
   onDecrement,
   onAddToCart,
@@ -61,7 +63,7 @@ export const BottomActionBar = memo(function BottomActionBar({
             variant="caption"
             className="font-sans text-[11px] normal-case tracking-normal text-brand-muted"
           >
-            Est. total · {quantityMt} MT
+            Estimated total · {quantityMt} MT
           </Typography>
           {refreshing ? (
             <Typography
@@ -86,6 +88,14 @@ export const BottomActionBar = memo(function BottomActionBar({
           </Typography>
         </View>
       </View>
+      {disabledReason ? (
+        <Typography
+          variant="caption"
+          className="mb-sm font-sans text-[11px] normal-case tracking-normal text-red-600"
+        >
+          {disabledReason}
+        </Typography>
+      ) : null}
       <View className="flex-row items-center" style={{ gap: 8 }}>
         <QuantitySelector
           quantityMt={quantityMt}

@@ -4,7 +4,6 @@ import type { CheckoutQuote } from '@/types/checkout-quote';
 import type { PaymentMethodId } from '@/types/payment';
 
 export const DEFAULT_FREIGHT_PER_MT = 1250;
-export const DEFAULT_ADVANCE_DISCOUNT_RATE = 0.05;
 
 export type ProductQuoteEstimate = {
   unitPrice: number;

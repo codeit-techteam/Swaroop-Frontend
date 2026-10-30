@@ -7,19 +7,24 @@ type PolyStoreXLogoProps = {
   style?: StyleProp<ImageStyle>;
   /** @deprecated Kept for call-site compatibility; logo uses brand asset colors. */
   color?: string;
+  /** `mark` = circular symbol only; `full` = mark + baked-in wordmark. */
+  variant?: 'mark' | 'full';
 };
 
-const logoSource = require('../../assets/logo/polystorex-logo.png');
+const logoFullSource = require('../../assets/logo/polystorex-logo.png');
+const logoMarkSource = require('../../assets/logo/polystorex-mark.png');
 
-/** PolyStoreX brand mark + wordmark (raster). */
+/** PolyStoreX brand raster logo. */
 export const PolyStoreXLogo = memo(function PolyStoreXLogo({
   size = 72,
   style,
+  variant = 'mark',
 }: PolyStoreXLogoProps) {
   return (
     <Image
-      source={logoSource}
-      style={[{ width: size, height: size, resizeMode: 'contain' }, style]}
+      source={variant === 'full' ? logoFullSource : logoMarkSource}
+      style={[{ width: size, height: size }, style]}
+      resizeMode="contain"
       accessibilityIgnoresInvertColors
       accessibilityLabel="PolyStoreX"
     />

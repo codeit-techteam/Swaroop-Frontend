@@ -1,4 +1,5 @@
 export { SellerLoginScreen } from '@/seller/screens/SellerLoginScreen';
+export { SellerRegisterScreen } from '@/seller/screens/SellerRegisterScreen';
 export { SellerOtpScreen } from '@/seller/screens/SellerOtpScreen';
 export { SellerCompanyScreen } from '@/seller/screens/SellerCompanyScreen';
 export { SellerVerificationScreen } from '@/seller/screens/SellerVerificationScreen';

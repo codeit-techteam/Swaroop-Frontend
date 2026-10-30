@@ -190,6 +190,8 @@ export type SellerSnapshot = {
 
 export type SellerStoreState = SellerSnapshot & {
   isHydrated: boolean;
+  /** Pending Sign Up fields until OTP completes (not persisted long-term). */
+  signupDraft: SellerSignupDraft | null;
   /** Seller identity from GET /seller/profile — same source as Seller Web. */
   account: SellerAccountSummary | null;
   accountManagers: SellerAccountManager[];
@@ -197,9 +199,19 @@ export type SellerStoreState = SellerSnapshot & {
   accountError: string | null;
 };
 
+export type SellerSignupDraft = {
+  fullName: string;
+  companyName: string;
+  gstNumber: string;
+  mobile: string;
+};
+
 export type SellerStoreActions = {
   hydrateSellerSession: () => void;
   setMobile: (mobile: string) => void;
+  /** Prefill company / profile from the Sign Up form before OTP. */
+  applySignupDraft: (draft: SellerSignupDraft) => void;
+  clearSignupDraft: () => void;
   markOtpVerified: () => void;
   /** Existing seller (profile already past draft) — open the home screen. */
   grantExistingSellerAccess: () => void;

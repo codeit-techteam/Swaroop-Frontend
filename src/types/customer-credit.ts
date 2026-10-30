@@ -205,6 +205,7 @@ export type CreditDraftInput = {
   requestedLimit: number;
   requestedTenureDays?: number;
   purpose?: string;
+  metadata?: Record<string, unknown>;
 };
 
 export type CreditDocumentPick = {

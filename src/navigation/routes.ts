@@ -73,6 +73,7 @@ export const ROUTES = {
   },
   SELLER: {
     LOGIN: '/(seller)/login',
+    REGISTER: '/(seller)/register',
     OTP: '/(seller)/otp',
     COMPANY: '/(seller)/company',
     VERIFICATION: '/(seller)/verification',
@@ -220,6 +221,7 @@ export type CustomerRoute =
 
 export type SellerRoute =
   | typeof ROUTES.SELLER.LOGIN
+  | typeof ROUTES.SELLER.REGISTER
   | typeof ROUTES.SELLER.OTP
   | typeof ROUTES.SELLER.COMPANY
   | typeof ROUTES.SELLER.VERIFICATION

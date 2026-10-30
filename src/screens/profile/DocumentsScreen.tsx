@@ -99,10 +99,10 @@ export const DocumentsScreen = memo(function DocumentsScreen() {
 
   const searchPlaceholder =
     tab === 'purchase_orders'
-      ? 'Search PO number, order, product, warehouse…'
+      ? 'Search PO, order, product…'
       : tab === 'invoices'
-        ? 'Search GST, GSTIN, invoice, order, PO, warehouse…'
-        : 'Search proforma, order, product…';
+        ? 'Search invoice, GST, order…'
+        : 'Search proforma, order…';
 
   const openDetail = useCallback(
     (kind: DocumentKind, id: string) => {
@@ -270,21 +270,16 @@ export const DocumentsScreen = memo(function DocumentsScreen() {
         <AppHeader variant="back" title="Documents" onBack={handleBack} />
       </View>
 
-      <View className="flex-1 px-xl">
-        <Typography variant="legal" className="mt-sm text-left text-brand-muted">
-          {activeTab.description}
-        </Typography>
-
-        <View className="mt-md">
+      <View className="flex-1">
+        <View className="gap-md px-xl pt-sm">
           <DocumentFilterTabs selected={tab} onSelect={setTab} />
-        </View>
-        <View className="mt-md">
           <DocumentSearchBar
             value={filters.search}
             placeholder={searchPlaceholder}
             onChangeText={(search) => setFilters({ search })}
           />
         </View>
+
         <View className="mt-md">
           <DocumentFiltersRow
             filters={filters}
@@ -295,51 +290,58 @@ export const DocumentsScreen = memo(function DocumentsScreen() {
           />
         </View>
 
-        {!isHydrated && isLoading ? (
-          <View className="mt-lg gap-md">
-            <SkeletonRow />
-            <SkeletonRow />
-            <SkeletonRow />
-          </View>
-        ) : (
-          <FlatList
-            data={listData}
-            keyExtractor={(row) => `${row.type}-${row.item.id}`}
-            renderItem={renderItem}
-            contentContainerStyle={{ paddingTop: 16, paddingBottom: 32, gap: 12, flexGrow: 1 }}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl
-                refreshing={isLoading && isHydrated}
-                onRefresh={() => void fetchFromApi()}
-              />
-            }
-            ListEmptyComponent={
-              <View className="flex-1 items-center justify-center py-2xl">
-                {isLoading ? (
-                  <LoadingSpinner color={brandColors.primary} />
-                ) : (
-                  <>
-                    <Typography variant="roleTitle" className="text-center text-brand-heading">
-                      {loadError ? 'Unable to load documents' : 'No documents match your filters'}
-                    </Typography>
-                    <Typography variant="roleDescription" className="mt-sm text-center">
-                      {loadError ??
-                        'Documents appear automatically as each order advances through the procurement lifecycle.'}
-                    </Typography>
-                  </>
-                )}
-              </View>
-            }
-            ListFooterComponent={
-              listData.length > 0 ? (
-                <Typography variant="legal" className="mt-sm text-left text-brand-muted">
-                  Showing {listData.length} of {totalCount} {activeTab.title.toLowerCase()}
-                </Typography>
-              ) : undefined
-            }
-          />
-        )}
+        <View className="mt-md flex-1 px-xl">
+          {!isHydrated && isLoading ? (
+            <View className="gap-md">
+              <SkeletonRow />
+              <SkeletonRow />
+              <SkeletonRow />
+            </View>
+          ) : (
+            <FlatList
+              data={listData}
+              keyExtractor={(row) => `${row.type}-${row.item.id}`}
+              renderItem={renderItem}
+              contentContainerStyle={{ paddingTop: 4, paddingBottom: 32, gap: 12, flexGrow: 1 }}
+              showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl
+                  refreshing={isLoading && isHydrated}
+                  onRefresh={() => void fetchFromApi()}
+                />
+              }
+              ListEmptyComponent={
+                <View className="flex-1 items-center justify-center px-md py-2xl">
+                  {isLoading ? (
+                    <LoadingSpinner color={brandColors.primary} />
+                  ) : (
+                    <>
+                      <Typography variant="roleTitle" className="text-center text-brand-heading">
+                        {loadError
+                          ? 'Unable to load documents'
+                          : 'No documents match your filters'}
+                      </Typography>
+                      <Typography
+                        variant="roleDescription"
+                        className="mt-sm max-w-[280px] text-center"
+                      >
+                        {loadError ??
+                          'Documents appear automatically as each order advances through the procurement lifecycle.'}
+                      </Typography>
+                    </>
+                  )}
+                </View>
+              }
+              ListFooterComponent={
+                listData.length > 0 ? (
+                  <Typography variant="legal" className="mt-sm text-left text-brand-muted">
+                    Showing {listData.length} of {totalCount} {activeTab.title.toLowerCase()}
+                  </Typography>
+                ) : undefined
+              }
+            />
+          )}
+        </View>
       </View>
     </ScreenWrapper>
   );

@@ -50,7 +50,7 @@ export const CreditSummaryCard = memo(function CreditSummaryCard({
 }: CreditSummaryCardProps) {
   const paymentTerms = account?.creditTermDays
     ? `Net-${account.creditTermDays} days`
-    : 'Set on approval';
+    : 'Net-15 / Net-30';
 
   return (
     <View

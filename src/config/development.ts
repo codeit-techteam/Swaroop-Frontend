@@ -39,7 +39,7 @@ export const DEV_AUTH = {
 export const DEV_RESET_VERSION = 1;
 
 export const DEV_FEATURES = {
-  /** Accept DEMO_OTP without SMS / API — Metro only. */
+  /** Soft client-side DEMO_OTP match helpers for Metro UI only — never grants a session without backend verify. */
   localOtpValidation: true,
   /** Persist login locally via AsyncStorage. */
   localStorageLogin: true,

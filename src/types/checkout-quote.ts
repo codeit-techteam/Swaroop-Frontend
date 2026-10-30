@@ -85,11 +85,14 @@ export type CheckoutAddress = {
 
 export type CheckoutPaymentOption = {
   paymentOption: PlatformPaymentOptionCode;
+  kind?: 'STANDARD' | 'CREDIT';
   title: string;
   description: string;
-  benefitLabel?: string;
+  dueLabel?: string | null;
+  benefitLabel?: string | null;
   eligible: boolean;
   discountBps: number;
+  tenureDays?: number | null;
 };
 
 export type PlacePurchaseRequestResult = {

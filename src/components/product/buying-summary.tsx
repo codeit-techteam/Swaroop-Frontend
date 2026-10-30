@@ -119,7 +119,7 @@ export const BuyingSummary = memo(function BuyingSummary({
               variant="caption"
               className="font-sans text-[13px] normal-case tracking-normal text-brand-muted"
             >
-              Price
+              Subtotal
             </Typography>
             <Typography variant="roleTitle" className="text-[13px] text-brand-heading">
               {formatInr(summary.materialSubtotal)}
@@ -131,7 +131,7 @@ export const BuyingSummary = memo(function BuyingSummary({
                 variant="caption"
                 className="font-sans text-[13px] normal-case tracking-normal text-brand-muted"
               >
-                Discount
+                Advance discount
               </Typography>
               <Typography variant="success" className="text-[13px]">
                 −{formatInr(summary.discount)}
@@ -143,7 +143,7 @@ export const BuyingSummary = memo(function BuyingSummary({
               variant="caption"
               className="font-sans text-[13px] normal-case tracking-normal text-brand-muted"
             >
-              Estimated Freight
+              Delivery charges
             </Typography>
             <Typography variant="roleTitle" className="text-[13px] text-brand-heading">
               {formatInr(summary.freight)}
@@ -162,7 +162,7 @@ export const BuyingSummary = memo(function BuyingSummary({
           </View>
           <View className="mt-xs flex-row items-center justify-between border-t border-brand-border pt-sm">
             <Typography variant="roleTitle" className="text-[14px] text-brand-heading">
-              Grand Total
+              Estimated total
             </Typography>
             <Typography variant="roleTitle" className="text-[16px] text-brand-primary">
               {formatInr(summary.grandTotal)}

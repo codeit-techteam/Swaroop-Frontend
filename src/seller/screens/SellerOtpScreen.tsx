@@ -6,20 +6,34 @@ import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { ROUTES } from '@/navigation/routes';
 import { safeGoBack } from '@/navigation/safe-back';
 
-import { AuthCard, FooterLinks, OtpInput, ScreenWrapper, Typography } from '@/components';
-import { DEMO_OTP, DEMO_USER_NAME, DEVELOPMENT_MODE } from '@/config/development';
-import { SellerHeader, SellerPrimaryButton } from '@/seller/components';
+import {
+  AuthCard,
+  FooterLinks,
+  OtpInput,
+  PrimaryButton,
+  ScreenWrapper,
+  Typography,
+} from '@/components';
+import { DEMO_OTP, DEMO_USER_NAME } from '@/config/development';
+import { SellerHeader } from '@/seller/components';
 import { SELLER_RESEND_SECONDS } from '@/seller/constants';
 import { getSellerInitialRoute } from '@/seller/navigation/getSellerInitialRoute';
 import { resolveSellerHomeAccess } from '@/seller/navigation/resolveSellerHome';
 import { useSellerStore } from '@/seller/store/sellerStore';
-import { authenticateSellerFromOtp, requestSellerOtpSend } from '@/services/seller-auth';
+import {
+  authenticateSellerFromOtp,
+  requestSellerOtpSend,
+  type SellerOtpPurpose,
+} from '@/services/seller-auth';
+import { seedSellerSignupOnboarding } from '@/services/seller-onboarding';
 
 const formatTimer = (seconds: number): string => `00:${seconds.toString().padStart(2, '0')}`;
 
 export const SellerOtpScreen = () => {
   const router = useRouter();
-  const params = useLocalSearchParams<{ mobile?: string }>();
+  const params = useLocalSearchParams<{ mobile?: string; source?: string }>();
+  const isRegister = params.source === 'register';
+  const otpPurpose: SellerOtpPurpose = isRegister ? 'SIGNUP' : 'LOGIN';
   const [otp, setOtp] = useState('');
   const [otpError, setOtpError] = useState<string | undefined>();
   const [secondsLeft, setSecondsLeft] = useState(SELLER_RESEND_SECONDS);
@@ -27,6 +41,7 @@ export const SellerOtpScreen = () => {
   const [isResending, setIsResending] = useState(false);
   const setMobile = useSellerStore((state) => state.setMobile);
   const markOtpVerified = useSellerStore((state) => state.markOtpVerified);
+  const clearSignupDraft = useSellerStore((state) => state.clearSignupDraft);
   const grantExistingSellerAccess = useSellerStore((state) => state.grantExistingSellerAccess);
 
   useEffect(() => {
@@ -46,7 +61,19 @@ export const SellerOtpScreen = () => {
     setIsVerifying(true);
     setOtpError(undefined);
     try {
-      const result = await authenticateSellerFromOtp(mobile, otp);
+      const signupDraft = useSellerStore.getState().signupDraft;
+      const result = await authenticateSellerFromOtp(
+        mobile,
+        otp,
+        otpPurpose,
+        isRegister && signupDraft
+          ? {
+              fullName: signupDraft.fullName,
+              companyName: signupDraft.companyName,
+              gstNumber: signupDraft.gstNumber,
+            }
+          : undefined,
+      );
       if (!result.ok) {
         setOtpError(result.message);
         return;
@@ -55,6 +82,15 @@ export const SellerOtpScreen = () => {
       setMobile(mobile);
       void useSellerStore.getState().refreshSellerAccount();
 
+      if (isRegister && signupDraft) {
+        await seedSellerSignupOnboarding(signupDraft).catch(() => undefined);
+        clearSignupDraft();
+        markOtpVerified();
+        router.replace(ROUTES.SELLER.COMPANY as Href);
+        return;
+      }
+
+      clearSignupDraft();
       const access = await resolveSellerHomeAccess();
       if (access === 'home') {
         grantExistingSellerAccess();
@@ -67,10 +103,13 @@ export const SellerOtpScreen = () => {
       setIsVerifying(false);
     }
   }, [
+    clearSignupDraft,
     grantExistingSellerAccess,
+    isRegister,
     isVerifying,
     markOtpVerified,
     otp,
+    otpPurpose,
     params.mobile,
     router,
     setMobile,
@@ -90,22 +129,26 @@ export const SellerOtpScreen = () => {
     const mobile = params.mobile ?? '';
     setIsResending(true);
     try {
-      await requestSellerOtpSend(mobile);
+      await requestSellerOtpSend(mobile, otpPurpose);
       setOtp('');
       setOtpError(undefined);
       setSecondsLeft(SELLER_RESEND_SECONDS);
     } finally {
       setIsResending(false);
     }
-  }, [isResending, params.mobile, secondsLeft]);
+  }, [isResending, otpPurpose, params.mobile, secondsLeft]);
+
+  const backHref = isRegister ? ROUTES.SELLER.REGISTER : ROUTES.SELLER.LOGIN;
 
   return (
     <ScreenWrapper scrollable className="bg-brand-background">
       <SellerHeader showBack title="Seller OTP Verification" />
 
-      <AuthCard className="mt-md rounded-2xl">
-        <Pressable onPress={() => safeGoBack(router, ROUTES.SELLER.LOGIN as Href)}>
-          <Typography variant="link">Back to Login</Typography>
+      <AuthCard className="mt-md">
+        <Pressable onPress={() => safeGoBack(router, backHref as Href)}>
+          <Typography variant="link">
+            {isRegister ? 'Back to Sign Up' : 'Back to Login'}
+          </Typography>
         </Pressable>
 
         <Typography variant="headingLeft" className="mt-lg">
@@ -114,7 +157,12 @@ export const SellerOtpScreen = () => {
         <Typography variant="subheadingLeft" className="mt-sm">
           Enter the 6-digit OTP sent to +91 {params.mobile ?? ''}.
         </Typography>
-        {DEVELOPMENT_MODE ? (
+        {isRegister ? (
+          <Typography variant="legal" className="mt-sm text-left">
+            After verification, complete onboarding so Admin can review your seller application.
+          </Typography>
+        ) : null}
+        {__DEV__ ? (
           <Typography variant="legal" className="mt-sm text-left">
             Dev login: {DEMO_USER_NAME} · OTP {DEMO_OTP}
           </Typography>
@@ -148,17 +196,18 @@ export const SellerOtpScreen = () => {
           </Typography>
         </Pressable>
 
-        <SellerPrimaryButton
+        <PrimaryButton
           label={isVerifying ? 'Verifying…' : 'Verify & Continue'}
           className="mt-xl"
           disabled={otp.length !== 6 || isVerifying}
+          loading={isVerifying}
           onPress={() => {
             void handleVerify();
           }}
         />
 
-        {DEVELOPMENT_MODE ? (
-          <View className="mt-lg rounded-2xl bg-brand-surface p-md">
+        {__DEV__ ? (
+          <View className="mt-lg rounded-md bg-brand-surface p-md">
             <Typography variant="legal" className="text-left">
               Demo OTP: {DEMO_OTP} (same as Seller Web)
             </Typography>

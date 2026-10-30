@@ -278,6 +278,59 @@ export function saveSellerOnboardingDraft(
   });
 }
 
+/**
+ * Seeds a draft seller onboarding row right after SIGNUP OTP so Admin KYC
+ * and the company wizard already see contact / GST details the seller entered.
+ */
+export function seedSellerSignupOnboarding(input: {
+  fullName: string;
+  companyName: string;
+  gstNumber: string;
+  mobile: string;
+}): Promise<void> {
+  const companyName = input.companyName.trim();
+  const gstin = input.gstNumber.trim().toUpperCase();
+  const phone = input.mobile.replace(/\D/g, '').slice(-10);
+  const pan =
+    gstin.length >= 12 ? gstin.slice(2, 12) : undefined;
+
+  return withSellerSession(async () => {
+    const payload = {
+      companyName,
+      phone: phone ? `+91${phone}` : undefined,
+      currentStep: 'company',
+      companyData: {
+        name: companyName,
+        legalName: companyName,
+        contactName: input.fullName.trim(),
+        phone,
+      },
+      gstData: gstin ? { gstin, ...(pan ? { pan } : {}) } : undefined,
+      panData: pan ? { pan } : undefined,
+      metadata: { source: 'SELLER_APP', signup: true },
+    };
+
+    try {
+      await apiClient.post('/seller/onboarding', payload);
+    } catch (error) {
+      if (isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403)) {
+        throw error;
+      }
+      try {
+        await apiClient.patch('/seller/onboarding', {
+          currentStep: 'company',
+          companyData: payload.companyData,
+          gstData: payload.gstData,
+          panData: payload.panData,
+          metadata: payload.metadata,
+        });
+      } catch {
+        // Non-blocking: company screen can still collect details.
+      }
+    }
+  });
+}
+
 export function submitSellerOnboarding(company: SellerCompany): Promise<SellerOnboardingStatus> {
   return withSellerSession(async () => {
     await saveSellerOnboardingDraft(company, 'review');

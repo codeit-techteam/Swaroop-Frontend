@@ -44,34 +44,45 @@ const DEFAULT_APPLICATIONS = [
 
 const DEFAULT_TRUST_FEATURES: TrustFeature[] = [
   {
-    id: 'quality',
-    title: 'Quality Verified Material',
-    description: 'Seller vetted for 99.8% fulfill rate.',
-    icon: 'check',
+    id: 'network',
+    title: 'Verified Supply Network',
+    description: 'Supplier verification follows platform onboarding checks.',
+    icon: 'shield',
+    status: 'supported',
+    statusLabel: 'Applicable where supported',
+  },
+  {
+    id: 'docs',
+    title: 'Quality Documentation',
+    description: 'COA and grade certificates are available when provided for the product.',
+    icon: 'shield',
+    status: 'when_provided',
+    statusLabel: 'Available when provided',
   },
   {
     id: 'payment',
     title: 'Secure Payment Protection',
-    description: 'Escrow-based payment settlement.',
+    description: 'Payment protection follows the configured payment and settlement process.',
     icon: 'shield',
-  },
-  {
-    id: 'network',
-    title: 'Verified Industrial Supply Network',
-    description: 'Sourced via verified procurement partners.',
-    icon: 'check',
-  },
-  {
-    id: 'docs',
-    title: 'Standard Quality Documentation',
-    description: 'COA and grade certificates available.',
-    icon: 'check',
+    status: 'supported',
+    statusLabel: 'Applicable where supported',
   },
   {
     id: 'inspection',
     title: 'Quality Inspection Available',
-    description: 'Optional third-party inspection on request.',
+    description: 'Third-party inspection can be requested where supported.',
     icon: 'shield',
+    status: 'on_request',
+    statusLabel: 'Available on request',
+  },
+  {
+    id: 'fulfilment',
+    title: 'Order and Fulfilment Support',
+    description:
+      'Purchase requests, dispatch coordination, and order tracking are handled on the platform.',
+    icon: 'shield',
+    status: 'supported',
+    statusLabel: 'Applicable where supported',
   },
 ];
 
@@ -126,11 +137,9 @@ const DEFAULT_FEATURES = [
 ];
 
 const DEFAULT_PRODUCT_HIGHLIGHTS = [
-  'PolyStoreX Verified',
+  'Blind Marketplace',
   'Tax Invoice Available',
-  'Fast Dispatch',
-  'Credit Eligible',
-  'Quality Certified',
+  'Quality Documentation',
 ];
 
 const SPEC_LABELS: Record<string, string> = {
@@ -247,10 +256,7 @@ const availabilityFromStock = (
 const getFeaturesForMaterial = (materialType: string): string[] =>
   FEATURES_BY_MATERIAL[materialType] ?? DEFAULT_FEATURES;
 
-const buildProductHighlights = (creditEligible: boolean): string[] =>
-  DEFAULT_PRODUCT_HIGHLIGHTS.map((item) =>
-    item === 'Credit Eligible' && !creditEligible ? 'Advance Preferred' : item,
-  );
+const buildProductHighlights = (_creditEligible: boolean): string[] => DEFAULT_PRODUCT_HIGHLIGHTS;
 
 /** Map backend blind documents — never invent mock TDS/MSDS. */
 const mapApiDocuments = (
@@ -267,8 +273,7 @@ const mapApiDocuments = (
     else if (t === 'ISO') type = 'iso';
     else if (t.includes('TEST')) type = 'test_certificate';
     else if (t.includes('QUALITY')) type = 'quality_report';
-    else if (t.includes('TECHNICAL') || t.includes('SPEC'))
-      type = 'technical_specification';
+    else if (t.includes('TECHNICAL') || t.includes('SPEC')) type = 'technical_specification';
     return {
       id: doc.id,
       type,
@@ -282,15 +287,12 @@ const mapApiDocuments = (
   });
 };
 
-const buildSpotPrice = (pricePerMt: number): SpotPriceInfo => {
-  const yesterdayDelta = Math.round(pricePerMt * 0.0045);
-  return {
-    pricePerMt,
-    yesterdayDelta,
-    trendDirection: 'up',
-    note: 'Prices are exclusive of GST (18%). Final quote is generated after PolyStoreX confirmation of your purchase request.',
-  };
-};
+const buildSpotPrice = (pricePerMt: number): SpotPriceInfo => ({
+  pricePerMt,
+  yesterdayDelta: 0,
+  trendDirection: 'up',
+  note: 'Unit prices come from the live offer. Checkout totals are recalculated server-side.',
+});
 
 const formatTierTotal = (price: number, mt: number, suffix = ''): string => {
   const total = Math.round(price * mt);
@@ -320,55 +322,65 @@ const buildBulkPricing = (
   });
 };
 
-const buildPaymentOptions = (creditEligible: boolean): ProductPaymentOption[] => [
-  {
-    id: 'advance' satisfies PaymentMethodId,
-    title: 'Advance',
-    description: 'Pay before dispatch for preferred pricing.',
-    benefitLabel: 'Platform Discount Eligible',
-    discountRate: 0.05,
-    eligible: true,
-  },
-  {
-    id: 'on_loading',
-    title: 'On Loading',
-    description: 'Pay after material loading confirmation.',
-    benefitLabel: 'Standard Terms',
-    eligible: true,
-  },
-  {
-    id: 'on_delivery',
-    title: 'On Delivery',
-    description: 'Pay after delivery confirmation.',
-    benefitLabel: 'Standard Terms',
-    eligible: true,
-  },
-  {
-    id: 'credit_15',
-    title: 'PolyStoreX Credit — 15 Days',
-    description: 'PolyStoreX managed working capital. Seller does not extend credit.',
-    benefitLabel: 'Approval Required',
-    eligible: creditEligible,
-  },
-  {
-    id: 'credit_30',
-    title: 'PolyStoreX Credit — 30 Days',
-    description: 'PolyStoreX managed working capital. Seller does not extend credit.',
-    benefitLabel: 'Approval Required',
-    eligible: creditEligible,
-  },
-];
+/** Guest/offline fallback — credit rows stay visible (locked) when the grade supports credit. */
+const buildPaymentOptions = (creditEligible: boolean): ProductPaymentOption[] => {
+  const standard: ProductPaymentOption[] = [
+    {
+      id: 'advance' satisfies PaymentMethodId,
+      title: 'Advance',
+      description: 'Pay against the Proforma Invoice to lock the quoted price.',
+      dueLabel: 'Due before dispatch',
+      eligible: true,
+    },
+    {
+      id: 'on_loading',
+      title: 'On Loading',
+      description: 'Pay once the material is loaded and the loading proof is shared.',
+      dueLabel: 'Due at loading confirmation',
+      eligible: true,
+    },
+    {
+      id: 'on_delivery',
+      title: 'On Delivery',
+      description: 'Pay when the material is delivered and acknowledged.',
+      dueLabel: 'Due at delivery confirmation',
+      eligible: true,
+    },
+  ];
+  if (!creditEligible) return standard;
+  return [
+    ...standard,
+    {
+      id: 'credit_15',
+      title: 'Credit 15 Days',
+      description: 'Available on this grade. Request credit to unlock Net-15 at checkout.',
+      dueLabel: 'Due 15 days after invoice',
+      benefitLabel: 'Request Credit to unlock',
+      eligible: false,
+    },
+    {
+      id: 'credit_30',
+      title: 'Credit 30 Days',
+      description: 'Available on this grade. Request credit to unlock Net-30 at checkout.',
+      dueLabel: 'Due 30 days after invoice',
+      benefitLabel: 'Request Credit to unlock',
+      eligible: false,
+    },
+  ];
+};
 
 const buildLogisticsEstimate = (input: {
   warehouseLabel: string;
   eta: string;
+  dispatchWindow?: string | null;
 }): LogisticsEstimate => ({
   warehouse: input.warehouseLabel,
   warehouseRegion: input.warehouseLabel,
-  deliveryLocation: 'Mumbai, Maharashtra',
-  estimatedDelivery: input.eta.includes('Business') ? input.eta : input.eta.replace('Days', 'Days'),
+  deliveryLocation: '',
+  estimatedDelivery: input.eta.trim() || null,
+  dispatchWindow: input.dispatchWindow?.trim() || null,
   transportMode: 'Road Freight (FTL)',
-  freightLabel: 'Freight to Mumbai',
+  freightLabel: 'Freight at quote',
   freightPerMt: 1250,
 });
 
@@ -410,9 +422,11 @@ export const buildProductDetails = (
   const trendDirection = overrides.trendDirection ?? 'up';
   const moq = overrides.moq ?? Math.max(market.moq, 1);
   const stock = overrides.stock ?? market.stock;
-  const eta = overrides.eta ?? market.eta;
-  const warehouseRegion = overrides.warehouseRegion ?? market.warehouseLabel ?? market.origin;
-  const originRegion = overrides.originRegion ?? market.origin;
+  const fulfilment = overrides.fulfilment ?? market.fulfilment ?? null;
+  const eta = overrides.eta ?? fulfilment?.deliveryEstimate?.label ?? market.eta ?? '';
+  const warehouseRegion =
+    overrides.warehouseRegion ?? fulfilment?.warehouse?.label ?? market.warehouseLabel ?? '';
+  const originRegion = overrides.originRegion ?? fulfilment?.origin ?? market.origin ?? '';
   const packaging = overrides.packaging ?? packagingFor(market);
   const qualityGrade = overrides.qualityGrade ?? market.subCategory ?? market.category;
   const grade = overrides.grade ?? market.grade;
@@ -427,9 +441,15 @@ export const buildProductDetails = (
   const applications = overrides.applications ?? market.applications ?? DEFAULT_APPLICATIONS;
   const specs = overrides.specs ?? specsFromTechnical(market.technicalSpecs) ?? DEFAULT_SPECS;
   const breadcrumbProduct = overrides.breadcrumbProduct ?? name;
-  const hsnCode = overrides.hsnCode ?? HSN_BY_MATERIAL[materialType] ?? '3902.10.00';
+  const hsnCode = overrides.hsnCode ?? fulfilment?.hsnCode ?? HSN_BY_MATERIAL[materialType] ?? '';
   const casNumber = overrides.casNumber ?? market.casNumber ?? '';
-  const creditEligible = overrides.creditEligible ?? market.creditEligible ?? false;
+  const productCredit =
+    overrides.productCredit ??
+    market.productCredit ??
+    (market.creditEligible === false
+      ? { supported: false, tenureDays: [] as number[] }
+      : { supported: true, tenureDays: [15, 30] });
+  const creditEligible = overrides.creditEligible ?? productCredit.supported;
   const availability = overrides.availability ?? availabilityFromStock(stock).level;
   const availabilityLabel = overrides.availabilityLabel ?? availabilityFromStock(stock).label;
   const categoryName = overrides.categoryName ?? breadcrumbCategoryFor(market);
@@ -459,35 +479,34 @@ export const buildProductDetails = (
     moqLabel: overrides.moqLabel ?? `${moq} MT`,
     stock,
     stockLabel,
-    eta: eta.includes('Business') ? eta : eta.replace('Days', 'Business Days'),
+    eta,
+    fulfilment,
     warehouseRegion,
     originRegion,
     packaging,
     qualityGrade,
     heroImage: '',
     infoItems: overrides.infoItems ?? [
-      { id: 'origin', label: 'Origin', value: originRegion },
-      { id: 'warehouse', label: 'Warehouse', value: warehouseRegion },
-      { id: 'stock', label: 'Stock', value: stockLabel, accent: true },
+      ...(originRegion ? [{ id: 'origin', label: 'Origin', value: originRegion }] : []),
+      ...(warehouseRegion ? [{ id: 'warehouse', label: 'Warehouse', value: warehouseRegion }] : []),
+      { id: 'stock', label: 'Available stock', value: stockLabel, accent: true },
       { id: 'moq', label: 'MOQ', value: `${moq} MT` },
       { id: 'packaging', label: 'Packaging', value: packaging },
-      { id: 'eta', label: 'Delivery Time', value: eta },
       { id: 'material', label: 'Material', value: materialType },
       { id: 'application', label: 'Application', value: application },
       ...(casNumber ? [{ id: 'cas', label: 'CAS Number', value: casNumber }] : []),
-      { id: 'hsn', label: 'HSN Code', value: hsnCode },
+      ...(hsnCode ? [{ id: 'hsn', label: 'HSN Code', value: hsnCode }] : []),
     ],
     specs,
     applications,
     applicationNote: overrides.applicationNote ?? description,
-    pricingTiers:
-      overrides.pricingTiers ?? buildBulkPricing(market.price, market.bulkPricing),
+    pricingTiers: overrides.pricingTiers ?? buildBulkPricing(market.price, market.bulkPricing),
     procurementTerms: overrides.procurementTerms ?? DEFAULT_PROCUREMENT_TERMS,
     trustTitle: overrides.trustTitle ?? 'Platform Assurance',
     trustDescription:
       overrides.trustDescription ??
-      "This product is supplied through PolyStoreX's Verified Supply Network. To maintain Blind Marketplace compliance, supplier identity is hidden until order processing is completed.",
-    trustHighlight: overrides.trustHighlight ?? 'Verified Supply Network',
+      'Built for trusted industrial procurement. Supplier identity stays hidden until order processing is completed.',
+    trustHighlight: overrides.trustHighlight ?? 'trusted industrial procurement',
     trustFeatures: overrides.trustFeatures ?? DEFAULT_TRUST_FEATURES,
     quantityIncrement: overrides.quantityIncrement ?? 1,
     availability,
@@ -500,11 +519,16 @@ export const buildProductDetails = (
     spotPrice: overrides.spotPrice ?? buildSpotPrice(market.price),
     paymentOptions: overrides.paymentOptions ?? buildPaymentOptions(creditEligible),
     logistics:
-      overrides.logistics ?? buildLogisticsEstimate({ warehouseLabel: warehouseRegion, eta }),
-    documents:
-      overrides.documents ?? mapApiDocuments(market.id, market.documents),
+      overrides.logistics ??
+      buildLogisticsEstimate({
+        warehouseLabel: warehouseRegion,
+        eta,
+        dispatchWindow: fulfilment?.dispatchWindow?.label,
+      }),
+    documents: overrides.documents ?? mapApiDocuments(market.id, market.documents),
     relatedProducts: overrides.relatedProducts ?? relatedCardsFor(market, catalog),
     creditEligible,
+    productCredit,
     offerId: overrides.offerId ?? market.offerId,
   };
 };

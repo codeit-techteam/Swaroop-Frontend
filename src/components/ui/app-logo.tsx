@@ -9,7 +9,10 @@ import { iconSizes } from '@/theme/icons';
 import { spacing } from '@/theme/spacing';
 import { cn } from '@/utils/cn';
 
-const logoSource = require('../../../assets/logo/polystorex-logo.png');
+/** Full brand lockup (circular mark + baked-in “Polystore” wordmark). */
+const logoFullSource = require('../../../assets/logo/polystorex-logo.png');
+/** Circular symbol only — safe for compact headers and icon-sized slots. */
+const logoMarkSource = require('../../../assets/logo/polystorex-mark.png');
 
 type AppLogoProps = {
   className?: string;
@@ -23,31 +26,14 @@ type AppLogoProps = {
   variant?: 'full' | 'mark' | 'splash';
 };
 
-/** Crop the circular mark from the square logo asset (mark sits in the upper half). */
 function BrandMark({ size }: { size: number }) {
-  const imageSize = size * 1.72;
   return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        overflow: 'hidden',
-        backgroundColor: brandColors.primary,
-      }}
-    >
-      <Image
-        source={logoSource}
-        style={{
-          width: imageSize,
-          height: imageSize,
-          marginLeft: (size - imageSize) / 2,
-          marginTop: size * -0.06,
-          resizeMode: 'contain',
-        }}
-        accessibilityIgnoresInvertColors
-      />
-    </View>
+    <Image
+      source={logoMarkSource}
+      style={{ width: size, height: size }}
+      resizeMode="contain"
+      accessibilityIgnoresInvertColors
+    />
   );
 }
 
@@ -99,8 +85,9 @@ export const AppLogo = memo(function AppLogo({
         accessibilityLabel={APP_NAME}
       >
         <Image
-          source={logoSource}
-          style={{ width: size * 2.8, height: size * 2.8, resizeMode: 'contain' }}
+          source={logoFullSource}
+          style={{ width: size * 2.8, height: size * 2.8 }}
+          resizeMode="contain"
           accessibilityIgnoresInvertColors
         />
       </View>

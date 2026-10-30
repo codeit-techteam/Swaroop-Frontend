@@ -69,14 +69,15 @@ export const SpotPriceCard = memo(function SpotPriceCard({
           >
             Offer currency is not INR — no silent foreign→INR conversion.
           </Typography>
-        ) : (
+        ) : spotPrice.yesterdayDelta !== 0 ? (
           <Typography
             variant="caption"
             className="mt-sm font-sans text-[12px] normal-case tracking-normal text-brand-success-light"
           >
-            ▲ +{formatInr(spotPrice.yesterdayDelta)} from yesterday
+            {spotPrice.yesterdayDelta > 0 ? '▲ +' : '▼ '}
+            {formatInr(Math.abs(spotPrice.yesterdayDelta))} from yesterday
           </Typography>
-        )}
+        ) : null}
       </View>
     </View>
   );
