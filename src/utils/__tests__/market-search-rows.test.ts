@@ -88,11 +88,33 @@ describe('buildMarketSearchRows', () => {
     });
 
     const rows = buildMarketSearchRows([catalogueOnly], [tioLive], 'tio');
-    assert.equal(rows.length, 2);
+    // F4811 does not match "tio"; only the TiO2 live listing remains after ranking.
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0]?.kind, 'product');
+    if (rows[0]?.kind === 'product') {
+      assert.equal(rows[0].product.id, 'mb-wh-50');
+    }
+  });
+
+  it('ranks TIO catalogue grades above STYROLUTION false positives for "tio"', () => {
+    const tio = grade({
+      id: 'g-tio',
+      gradeNo: 'TIO2',
+      displayName: 'TIO Grade - Titanium Dioxide',
+      manufacturer: 'PRIVATE',
+    });
+    const abs = grade({
+      id: 'g-abs',
+      gradeNo: 'M204',
+      displayName: 'ABS MOULD M204 - INEOS STYROLUTION',
+      manufacturer: 'INEOS STYROLUTION',
+    });
+
+    const rows = buildMarketSearchRows([abs, tio], [], 'tio');
+    assert.equal(rows.length, 1);
     assert.equal(rows[0]?.kind, 'grade');
-    assert.equal(rows[1]?.kind, 'product');
-    if (rows[1]?.kind === 'product') {
-      assert.equal(rows[1].product.id, 'mb-wh-50');
+    if (rows[0]?.kind === 'grade') {
+      assert.equal(rows[0].grade.id, 'g-tio');
     }
   });
 });

@@ -1,7 +1,8 @@
 import { memo } from 'react';
 
-import { Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 
+import { gradeIdentityLine, liveOfferLabel } from '@/components/market/grade-card';
 import { HighlightedText } from '@/components/market/highlighted-text';
 import { Typography } from '@/components/ui/typography';
 import { formatMarketPrice } from '@/constants/marketProducts';
@@ -9,6 +10,7 @@ import type { SellerMaterialFamily } from '@/constants/materials-taxonomy';
 import { ArrowRightIcon, ClockIcon, MarketTabIcon, SearchIcon } from '@/icons';
 import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
+import type { CustomerGrade } from '@/types/grade-master';
 import type { MarketProduct } from '@/types/market';
 import { cn } from '@/utils/cn';
 import type { GradeSearchSuggestions } from '@/utils/grade-search';
@@ -20,10 +22,13 @@ type SearchSuggestionsProps = {
   popularMaterials: SellerMaterialFamily[];
   onSelectMaterial: (material: SellerMaterialFamily) => void;
   onSelectProduct: (product: MarketProduct) => void;
+  onSelectGrade?: (grade: CustomerGrade) => void;
   onSelectRecent: (term: string) => void;
   onViewAll: () => void;
   onBrowseAll?: () => void;
   onClearRecent?: () => void;
+  /** True while the Grade Master typeahead request is in flight. */
+  isSearching?: boolean;
   className?: string;
 };
 
@@ -34,16 +39,22 @@ export const SearchSuggestions = memo(function SearchSuggestions({
   popularMaterials,
   onSelectMaterial,
   onSelectProduct,
+  onSelectGrade,
   onSelectRecent,
   onViewAll,
   onBrowseAll,
   onClearRecent,
+  isSearching = false,
   className,
 }: SearchSuggestionsProps) {
   const trimmed = query.trim();
   const showIdle = trimmed.length === 0;
-  const hasMatches = suggestions.materials.length > 0 || suggestions.products.length > 0;
+  const hasMatches =
+    suggestions.materials.length > 0 ||
+    suggestions.products.length > 0 ||
+    suggestions.grades.length > 0;
   const hasIdleContent = recentSearches.length > 0 || popularMaterials.length > 0;
+  const resultCount = Math.max(suggestions.totalProducts, suggestions.totalGrades);
 
   return (
     <View
@@ -189,6 +200,19 @@ export const SearchSuggestions = memo(function SearchSuggestions({
               </Pressable>
             ) : null}
           </View>
+        ) : !hasMatches && isSearching ? (
+          <View className="items-center px-lg py-xl">
+            <ActivityIndicator color={brandColors.primary} />
+            <Typography
+              variant="roleTitle"
+              className="mt-md text-center text-[14px] text-brand-heading"
+            >
+              Searching grades…
+            </Typography>
+            <Typography variant="subheading" className="mt-xs text-center text-[13px]">
+              Matching “{trimmed}” across the catalogue
+            </Typography>
+          </View>
         ) : !hasMatches ? (
           <View className="items-center px-lg py-xl">
             <View className="h-14 w-14 items-center justify-center rounded-full bg-brand-primary-tint">
@@ -265,7 +289,7 @@ export const SearchSuggestions = memo(function SearchSuggestions({
                   variant="fieldLabel"
                   className="mb-xs text-[10px] tracking-[0.8px] text-brand-muted"
                 >
-                  Related Grades
+                  Live listings
                 </Typography>
                 {suggestions.products.map((product) => (
                   <Pressable
@@ -314,6 +338,66 @@ export const SearchSuggestions = memo(function SearchSuggestions({
                 ))}
               </View>
             ) : null}
+
+            {suggestions.grades.length > 0 && onSelectGrade ? (
+              <View className="px-md pb-sm">
+                <Typography
+                  variant="fieldLabel"
+                  className="mb-xs text-[10px] tracking-[0.8px] text-brand-muted"
+                >
+                  Catalogue grades
+                </Typography>
+                {suggestions.grades.map((grade) => (
+                  <Pressable
+                    key={grade.id}
+                    onPress={() => onSelectGrade(grade)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Open grade ${grade.displayName}`}
+                    className="flex-row items-center py-sm"
+                  >
+                    <View className="h-9 min-w-9 items-center justify-center rounded-lg bg-brand-primary-light px-xs">
+                      <Typography variant="badge" className="text-[9px] text-brand-primary">
+                        {(grade.category?.displayName ?? grade.code).slice(0, 6)}
+                      </Typography>
+                    </View>
+                    <View className="ml-sm min-w-0 flex-1">
+                      <HighlightedText
+                        text={grade.displayName}
+                        query={trimmed}
+                        numberOfLines={1}
+                        className="font-bold font-sans text-[14px] text-brand-heading"
+                      />
+                      <HighlightedText
+                        text={gradeIdentityLine(grade)}
+                        query={trimmed}
+                        numberOfLines={1}
+                        className="mt-0.5 font-sans text-[11px] text-brand-muted"
+                      />
+                    </View>
+                    <Typography
+                      variant="caption"
+                      className="ml-sm font-sans text-[11px] normal-case tracking-normal text-brand-muted"
+                    >
+                      {grade.liveOfferCount && grade.liveOfferCount > 0
+                        ? liveOfferLabel(grade.liveOfferCount)
+                        : 'No live offers'}
+                    </Typography>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+
+            {isSearching ? (
+              <View className="flex-row items-center justify-center px-md py-sm">
+                <ActivityIndicator size="small" color={brandColors.primary} />
+                <Typography
+                  variant="caption"
+                  className="ml-sm font-sans text-[11px] normal-case tracking-normal text-brand-muted"
+                >
+                  Updating catalogue…
+                </Typography>
+              </View>
+            ) : null}
           </View>
         )}
       </ScrollView>
@@ -340,7 +424,9 @@ export const SearchSuggestions = memo(function SearchSuggestions({
               variant="caption"
               className="mr-xs font-sans text-[11px] normal-case tracking-normal text-brand-muted"
             >
-              {suggestions.totalProducts} {suggestions.totalProducts === 1 ? 'grade' : 'grades'}
+              {resultCount > 0
+                ? `${resultCount.toLocaleString('en-IN')} ${resultCount === 1 ? 'grade' : 'grades'}`
+                : 'See all'}
             </Typography>
             <ArrowRightIcon size={iconSizes.sm} color={brandColors.muted} />
           </View>

@@ -31,6 +31,7 @@ import { MarketListSkeleton } from '@/components/ui/skeleton';
 import { Typography } from '@/components/ui/typography';
 import { TAB_BAR_HEIGHT } from '@/constants/dashboard';
 import { allMarketCategoryChips, marketCategoryChips } from '@/constants/marketProducts';
+import { materialsFromCatalog } from '@/constants/materials-taxonomy';
 import { useDebouncedValue } from '@/hooks/use-debounce';
 import { useDeliveryLocation } from '@/hooks/use-delivery-location';
 import {
@@ -46,6 +47,7 @@ import { fetchCustomerMarketplaceBanners, trackCmsBannerEvent } from '@/services
 import type { CustomerGrade, GradeBrowseFilters } from '@/types/grade-master';
 import type { HomeBanner } from '@/types/home';
 import type { MarketProduct } from '@/types/market';
+import { SUGGESTION_GRADE_LIMIT, getGradeSearchSuggestions } from '@/utils/grade-search';
 import {
   EMPTY_MARKET_FILTERS,
   applyMarketFilters,
@@ -55,7 +57,7 @@ import {
 } from '@/utils/market-filters';
 import { buildMarketSearchRows, type MarketSearchRow } from '@/utils/market-search-rows';
 
-const SEARCH_DEBOUNCE_MS = 350;
+const SEARCH_DEBOUNCE_MS = 220;
 
 export const CustomerMarketScreen = () => {
   const router = useRouter();
@@ -74,7 +76,6 @@ export const CustomerMarketScreen = () => {
     selectedCategory,
     filteredProducts: searchedProducts,
     expandedAcrossCategories,
-    suggestions,
     recentSearches,
     popularMaterials,
     showSuggestions,
@@ -114,6 +115,27 @@ export const CustomerMarketScreen = () => {
     [gradesQuery.data],
   );
   const catalogueTotal = gradesQuery.data?.pages[0]?.total ?? 0;
+
+  // Amazon-style typeahead: merge live listings with debounced Grade Master hits.
+  const suggestions = useMemo(() => {
+    const taxonomy = materialsFromCatalog(marketProducts);
+    const merged = getGradeSearchSuggestions(marketProducts, taxonomy, query, {
+      grades: catalogueGrades,
+      gradeLimit: SUGGESTION_GRADE_LIMIT,
+    });
+    // Prefer server total when the debounced catalogue page has landed.
+    if (debouncedSearch.length > 0 && trimmedQuery === debouncedSearch && catalogueTotal > 0) {
+      return { ...merged, totalGrades: catalogueTotal };
+    }
+    return merged;
+  }, [
+    catalogueGrades,
+    catalogueTotal,
+    debouncedSearch,
+    marketProducts,
+    query,
+    trimmedQuery,
+  ]);
 
   const filteredProducts = useMemo(
     () => applyMarketFilters(searchedProducts, filters),
@@ -158,6 +180,20 @@ export const CustomerMarketScreen = () => {
     }
     return Array.isArray(value) && value[0] === '1';
   }, [params.focusSearch]);
+
+  // Home search taps Market with focusSearch=1. Tab screens stay mounted, so
+  // autoFocus alone is unreliable — focus the input whenever the param arrives.
+  useFocusEffect(
+    useCallback(() => {
+      if (!shouldAutoFocus) return undefined;
+      const timer = setTimeout(() => {
+        searchInputRef.current?.focus();
+        handleFocus();
+        router.setParams({ focusSearch: undefined });
+      }, 120);
+      return () => clearTimeout(timer);
+    }, [handleFocus, router, shouldAutoFocus]),
+  );
 
   const handleLocationPress = useCallback(() => {
     locationSheetRef.current?.present();
@@ -257,6 +293,14 @@ export const CustomerMarketScreen = () => {
       openProduct(product);
     },
     [handleSelectProduct, openProduct],
+  );
+
+  const handleSuggestionGrade = useCallback(
+    (grade: CustomerGrade) => {
+      handleDismissSuggestions();
+      openGrade(grade);
+    },
+    [handleDismissSuggestions, openGrade],
   );
 
   const handleSubmitSearch = useCallback(() => {
@@ -396,11 +440,16 @@ export const CustomerMarketScreen = () => {
             suggestions={suggestions}
             recentSearches={recentSearches}
             popularMaterials={popularMaterials}
+            isSearching={
+              wantsCatalogueSearch &&
+              (isSearchPending || gradesQuery.isFetching || gradesQuery.isPending)
+            }
             onSelectMaterial={(material) => {
               Keyboard.dismiss();
               handleSelectMaterial(material);
             }}
             onSelectProduct={handleSuggestionProduct}
+            onSelectGrade={handleSuggestionGrade}
             onSelectRecent={(term) => {
               Keyboard.dismiss();
               handleSelectRecent(term);

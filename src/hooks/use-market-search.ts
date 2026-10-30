@@ -74,9 +74,9 @@ export const useMarketSearch = (catalog: MarketProduct[]) => {
     return { filteredProducts: inCategory, expandedAcrossCategories: false };
   }, [catalog, query, rankedProducts, selectedCategory]);
 
-  // Idle focus (empty query) keeps recent/popular suggestions. Typing drives the
-  // catalogue-backed results list instead of a live-listings-only overlay.
-  const showSuggestions = isFocused && !suggestionsDismissed && query.trim().length === 0;
+  // Amazon-style: keep the suggestions panel open while focused — idle shows
+  // recent/popular; typing streams materials + live products + catalogue grades.
+  const showSuggestions = isFocused && !suggestionsDismissed;
 
   const clearBlurTimer = useCallback(() => {
     if (blurTimer.current) {
