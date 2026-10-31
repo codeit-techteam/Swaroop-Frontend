@@ -171,7 +171,7 @@ export const SellerDashboardScreen = memo(function SellerDashboardScreen() {
     () => [
       {
         id: 'new-orders',
-        label: 'Pending purchase requests',
+        label: 'Pending Purchase',
         value: dashboardSummary.pendingPurchaseRequests || orderSummary.pending,
       },
       {

@@ -104,7 +104,7 @@ export function toCartDelivery(location: DeliveryLocation): CartDeliveryLocation
     city: location.city,
     state: location.state,
     label: location.label,
-    etaLabel: '2–3 Business Days',
+    etaLabel: '',
   };
 }
 

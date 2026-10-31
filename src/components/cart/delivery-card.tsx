@@ -2,7 +2,6 @@ import { memo } from 'react';
 
 import { Pressable, View } from 'react-native';
 
-
 import { Typography } from '@/components/ui/typography';
 import { TruckIcon } from '@/icons';
 import { brandColors } from '@/theme/colors';
@@ -24,7 +23,6 @@ export const DeliveryCard = memo(function DeliveryCard({
 }: DeliveryCardProps) {
   return (
     <View
-
       className={cn(
         'mx-lg flex-row items-center rounded-2xl border border-brand-border bg-brand-white p-md',
         className,
@@ -37,12 +35,14 @@ export const DeliveryCard = memo(function DeliveryCard({
 
       <View className="ml-md flex-1">
         <Typography variant="roleTitle" className="text-[14px] text-brand-heading">
-          Delivery to {delivery.city}
+          {delivery.city ? `Delivery to ${delivery.city}` : 'Choose a delivery location'}
         </Typography>
         <View className="mt-xs flex-row items-center">
           <View className="mr-xs h-1.5 w-1.5 rounded-full bg-brand-success" />
           <Typography variant="roleDescription" className="text-[12px] text-brand-body">
-            Estimated Delivery: {delivery.etaLabel}
+            {delivery.etaLabel
+              ? `Estimated Delivery: ${delivery.etaLabel}`
+              : 'Delivery timeline is confirmed after your order is reviewed'}
           </Typography>
         </View>
       </View>

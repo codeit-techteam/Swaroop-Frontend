@@ -369,7 +369,7 @@ export const CustomerHomeScreen = () => {
 
           <View className="mt-xl">
             <SectionHeader title="Trending Materials" />
-            <View className="mt-md h-[168px]">
+            <View className="mt-md h-[156px]">
               {trendingProducts.length ? (
                 <FlashList
                   data={trendingProducts}

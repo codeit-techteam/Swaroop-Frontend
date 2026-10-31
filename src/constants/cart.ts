@@ -11,11 +11,12 @@ export const CART_FREIGHT_TIERS = [
   { minMt: 101, maxMt: null, amount: 32000 },
 ] as const;
 
+/** No fabricated destination or ETA: the real location comes from the customer's address. */
 export const DEFAULT_CART_DELIVERY: CartDeliveryLocation = {
-  city: 'Mumbai',
-  state: 'Maharashtra',
-  label: 'Mumbai, Maharashtra',
-  etaLabel: '2–3 Business Days',
+  city: '',
+  state: '',
+  label: '',
+  etaLabel: '',
 };
 
 export const CART_TRUST_FEATURES = [

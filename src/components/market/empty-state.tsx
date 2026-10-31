@@ -12,6 +12,8 @@ type EmptyStateProps = {
   description?: string;
   actionLabel?: string;
   onActionPress?: () => void;
+  secondaryActionLabel?: string;
+  onSecondaryActionPress?: () => void;
   className?: string;
 };
 
@@ -20,6 +22,8 @@ export const EmptyState = memo(function EmptyState({
   description = 'Try a different grade, category, or search term.',
   actionLabel,
   onActionPress,
+  secondaryActionLabel,
+  onSecondaryActionPress,
   className,
 }: EmptyStateProps) {
   return (
@@ -42,6 +46,18 @@ export const EmptyState = memo(function EmptyState({
         >
           <Typography variant="button" className="text-[13px] tracking-normal">
             {actionLabel}
+          </Typography>
+        </Pressable>
+      ) : null}
+      {secondaryActionLabel && onSecondaryActionPress ? (
+        <Pressable
+          onPress={onSecondaryActionPress}
+          accessibilityRole="button"
+          accessibilityLabel={secondaryActionLabel}
+          className="mt-md rounded-lg border border-brand-primary px-lg py-sm"
+        >
+          <Typography variant="link" className="text-[13px]">
+            {secondaryActionLabel}
           </Typography>
         </Pressable>
       ) : null}

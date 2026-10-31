@@ -102,119 +102,122 @@ export const SellerLoginScreen = () => {
 
   return (
     <ScreenWrapper scrollable className="bg-brand-background">
-      <View className="flex-row items-center gap-sm py-lg">
-        <Pressable
-          onPress={handleBack}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-          className="h-10 w-10 items-center justify-center"
-        >
-          <BackArrowIcon />
-        </Pressable>
-        <AppLogo />
-      </View>
-
-      <AuthCard>
-        <View className="mb-lg flex-row items-center gap-xs self-start rounded-full bg-brand-badge px-md py-sm">
-          <Typography variant="badge">SECURE ENTERPRISE LOGIN</Typography>
+      <View className="flex-1 justify-center py-xl">
+        <View className="mb-md flex-row items-center">
+          <Pressable
+            onPress={handleBack}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+            className="h-10 w-10 items-center justify-center"
+          >
+            <BackArrowIcon />
+          </Pressable>
         </View>
 
-        <Typography variant="headingLeft">Seller Login</Typography>
+        <AuthCard>
+          <AppLogo className="mb-xl" />
+
+          <View className="mb-lg flex-row items-center gap-xs self-start rounded-full bg-brand-badge px-md py-sm">
+            <Typography variant="badge">SECURE ENTERPRISE LOGIN</Typography>
+          </View>
+
+          <Typography variant="headingLeft">Seller Login</Typography>
+          <Typography variant="subheadingLeft" className="mt-sm">
+            Enter your registered mobile number to continue to the seller console.
+          </Typography>
+
+          <Controller
+            control={control}
+            name="mobile"
+            render={({ field: { onChange, onBlur, value }, fieldState }) => (
+              <SellerTextField
+                label="Mobile Number"
+                placeholder="98765 43210"
+                keyboardType="number-pad"
+                maxLength={10}
+                value={value}
+                onChangeText={(text) => {
+                  const next = sanitizeIndianMobileInput(text);
+                  setEditingMobile(true);
+                  onChange(next);
+                  clearErrors('mobile');
+                  setHint(undefined);
+                  if (!next) {
+                    setSubmitted(false);
+                  }
+                }}
+                onBlur={() => {
+                  setEditingMobile(false);
+                  onBlur();
+                }}
+                error={
+                  indianMobileFieldError(value, {
+                    touched: fieldState.isTouched,
+                    submitted,
+                    editing: editingMobile,
+                  }) ?? (editingMobile ? undefined : hint)
+                }
+                leftSlot={<CountryPicker />}
+                containerClassName="mt-xl"
+              />
+            )}
+          />
+
+          <PrimaryButton
+            label={isSending ? 'Sending…' : 'GET OTP'}
+            showArrow
+            className="mt-xl"
+            disabled={isSending}
+            loading={isSending}
+            onPress={() => {
+              setEditingMobile(false);
+              // Keep pressable when empty so sellers get the same L-06 empty-field message.
+              if (!isCompleteIndianMobile(mobileValue ?? '')) {
+                setSubmitted(true);
+                setHint(
+                  indianMobileFieldError(mobileValue ?? '', { submitted: true }) ??
+                    EMPTY_MOBILE_MESSAGE,
+                );
+                return;
+              }
+              void handleSubmit((values) => {
+                void handleGetOtp(values);
+              })();
+            }}
+          />
+
+          {__DEV__ ? (
+            <View className="mt-xl rounded-md bg-brand-surface p-md">
+              <Typography variant="legal" className="text-left">
+                Dev only demo mobile: {DEMO_PHONE}
+              </Typography>
+            </View>
+          ) : null}
+
+          <Divider className="my-xl" />
+
+          <SecondaryButton label="Sign Up" onPress={handleSignUp} />
+
+          <SecondaryButton
+            label="Contact Support"
+            variant="outline"
+            className="mt-md"
+            onPress={() => {
+              void openContactSupport({ topic: 'SELL_MATERIALS' });
+            }}
+          />
+        </AuthCard>
+
+        <Typography variant="headingLeft" className="mt-2xl">
+          Welcome Seller
+        </Typography>
         <Typography variant="subheadingLeft" className="mt-sm">
-          Enter your registered mobile number to continue to the seller console.
+          Access your seller dashboard, inventory, orders and enterprise operations from one place.
         </Typography>
 
-        <Controller
-          control={control}
-          name="mobile"
-          render={({ field: { onChange, onBlur, value }, fieldState }) => (
-            <SellerTextField
-              label="Mobile Number"
-              placeholder="98765 43210"
-              keyboardType="number-pad"
-              maxLength={10}
-              value={value}
-              onChangeText={(text) => {
-                const next = sanitizeIndianMobileInput(text);
-                setEditingMobile(true);
-                onChange(next);
-                clearErrors('mobile');
-                setHint(undefined);
-                if (!next) {
-                  setSubmitted(false);
-                }
-              }}
-              onBlur={() => {
-                setEditingMobile(false);
-                onBlur();
-              }}
-              error={
-                indianMobileFieldError(value, {
-                  touched: fieldState.isTouched,
-                  submitted,
-                  editing: editingMobile,
-                }) ?? (editingMobile ? undefined : hint)
-              }
-              leftSlot={<CountryPicker />}
-              containerClassName="mt-xl"
-            />
-          )}
-        />
-
-        <PrimaryButton
-          label={isSending ? 'Sending…' : 'GET OTP'}
-          showArrow
-          className="mt-xl"
-          disabled={isSending}
-          loading={isSending}
-          onPress={() => {
-            setEditingMobile(false);
-            // Keep pressable when empty so sellers get the same L-06 empty-field message.
-            if (!isCompleteIndianMobile(mobileValue ?? '')) {
-              setSubmitted(true);
-              setHint(
-                indianMobileFieldError(mobileValue ?? '', { submitted: true }) ??
-                  EMPTY_MOBILE_MESSAGE,
-              );
-              return;
-            }
-            void handleSubmit((values) => {
-              void handleGetOtp(values);
-            })();
-          }}
-        />
-
-        {__DEV__ ? (
-          <View className="mt-xl rounded-md bg-brand-surface p-md">
-            <Typography variant="legal" className="text-left">
-              Dev only demo mobile: {DEMO_PHONE}
-            </Typography>
-          </View>
-        ) : null}
-
-        <Divider className="my-xl" />
-
-        <SecondaryButton label="Sign Up" onPress={handleSignUp} />
-
-        <SecondaryButton
-          label="Contact Support"
-          variant="outline"
-          className="mt-md"
-          onPress={() => {
-            void openContactSupport({ topic: 'SELL_MATERIALS' });
-          }}
-        />
-      </AuthCard>
-
-      <Typography variant="headingLeft" className="mt-2xl">
-        Welcome Seller
-      </Typography>
-      <Typography variant="subheadingLeft" className="mt-sm">
-        Access your seller dashboard, inventory, orders and enterprise operations from one place.
-      </Typography>
-
-      <FooterLinks className="mt-2xl" />
+        <FooterLinks className="mt-2xl" />
+      </View>
     </ScreenWrapper>
   );
 };

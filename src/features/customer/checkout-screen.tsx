@@ -35,6 +35,7 @@ import {
   placePurchaseRequestFromQuote,
 } from '@/services/checkout';
 import { useCartStore } from '@/store/cart-store';
+import { useCheckoutStore } from '@/store/checkout-store';
 import { useOrderStore } from '@/store/order-store';
 import type { CartPriceChange, CheckoutAddress, CheckoutQuote } from '@/types/checkout-quote';
 import type { CheckoutProductLine, CheckoutShippingAddress } from '@/types/checkout';
@@ -193,6 +194,11 @@ export const CustomerCheckoutScreen = memo(function CustomerCheckoutScreen() {
     setSelectedAddressId(addressId);
     addressSheetRef.current?.dismiss();
   }, []);
+
+  // Keep the post-checkout screens (payment, confirmation) on the address the customer picked.
+  useEffect(() => {
+    useCheckoutStore.getState().setAddress(shippingAddress);
+  }, [shippingAddress]);
 
   const refreshPricing = useCallback(async () => {
     const source = quote;

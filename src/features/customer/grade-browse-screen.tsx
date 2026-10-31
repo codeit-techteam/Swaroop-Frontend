@@ -149,6 +149,16 @@ export const CustomerGradeBrowseScreen = memo(function CustomerGradeBrowseScreen
     }
   }, [gradesQuery]);
 
+  const openGradeRequest = useCallback(() => {
+    Keyboard.dismiss();
+    const term = search.trim();
+    router.push(
+      (term
+        ? { pathname: ROUTES.CUSTOMER.GRADE_REQUEST_NEW, params: { search: term } }
+        : ROUTES.CUSTOMER.GRADE_REQUEST_NEW) as unknown as Href,
+    );
+  }, [router, search]);
+
   const renderItem = useCallback(
     ({ item }: { item: CustomerGrade }) => <GradeCard grade={item} onPress={openGrade} />,
     [openGrade],
@@ -269,14 +279,29 @@ export const CustomerGradeBrowseScreen = memo(function CustomerGradeBrowseScreen
               <View className="py-lg">
                 <ActivityIndicator />
               </View>
+            ) : grades.length > 0 && !gradesQuery.hasNextPage ? (
+              <Pressable
+                onPress={openGradeRequest}
+                accessibilityRole="button"
+                className="mx-lg mt-lg items-center rounded-xl border border-dashed border-brand-border py-md"
+              >
+                <Typography variant="roleDescription" className="text-brand-muted">
+                  Can&apos;t find your grade?
+                </Typography>
+                <Typography variant="link" className="mt-xs">
+                  Request a new grade
+                </Typography>
+              </Pressable>
             ) : undefined
           }
           ListEmptyComponent={
             <EmptyState
               title={search ? `No grades match “${search}”` : 'No grades found'}
               description="Try a different grade number, manufacturer or category."
-              actionLabel={hasAnyFilter ? 'Clear filters' : undefined}
-              onActionPress={hasAnyFilter ? clearAll : undefined}
+              actionLabel="Request a new grade"
+              onActionPress={openGradeRequest}
+              secondaryActionLabel={hasAnyFilter ? 'Clear filters' : undefined}
+              onSecondaryActionPress={hasAnyFilter ? clearAll : undefined}
             />
           }
           showsVerticalScrollIndicator={false}

@@ -4,6 +4,11 @@ import { Modal, Pressable, TextInput, View } from 'react-native';
 
 import { PrimaryButton, SecondaryButton, Typography } from '@/components';
 import { createTierFromInput } from '@/seller/modules/seller-offers/services/sellerOffersService';
+import {
+  sanitizeDecimal,
+  validateTierInput,
+  type TierInputErrors,
+} from '@/seller/modules/seller-offers/services/tier-validation';
 import type { OfferPricingTier } from '@/seller/modules/seller-offers/types/offers';
 
 export const TierBottomSheet = memo(function TierBottomSheet({
@@ -21,6 +26,7 @@ export const TierBottomSheet = memo(function TierBottomSheet({
   const [maxQty, setMaxQty] = useState('50');
   const [discount, setDiscount] = useState('2');
   const [price, setPrice] = useState('');
+  const [errors, setErrors] = useState<TierInputErrors>({});
 
   useEffect(() => {
     if (!visible) {
@@ -31,10 +37,20 @@ export const TierBottomSheet = memo(function TierBottomSheet({
     setPrice(computed.toFixed(2));
   }, [basePrice, discount, visible]);
 
+  const closeSheet = () => {
+    setErrors({});
+    onClose();
+  };
+
   const handleSave = () => {
+    const found = validateTierInput({ minQty, maxQty, discount, price });
+    setErrors(found);
+    if (Object.keys(found).length > 0) {
+      return;
+    }
     const tier = createTierFromInput(
       basePrice,
-      Number(minQty) || 0,
+      Number(minQty),
       maxQty.trim() ? Number(maxQty) : null,
       Number(discount) || 0,
     );
@@ -42,26 +58,53 @@ export const TierBottomSheet = memo(function TierBottomSheet({
       tier.pricePerKg = Number(price);
     }
     onSave(tier);
-    onClose();
+    closeSheet();
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable className="flex-1 justify-end bg-black/40" onPress={onClose}>
-        <Pressable className="rounded-t-[28px] bg-brand-white px-lg pb-2xl pt-lg" onPress={() => undefined}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={closeSheet}>
+      <Pressable className="flex-1 justify-end bg-black/40" onPress={closeSheet}>
+        <Pressable
+          className="rounded-t-[28px] bg-brand-white px-lg pb-2xl pt-lg"
+          onPress={() => undefined}
+        >
           <View className="mb-lg h-1 w-12 self-center rounded-full bg-brand-border" />
           <Typography variant="headingLeft" className="text-[22px]">
             Add Pricing Tier
           </Typography>
 
-          <TierField label="Minimum Quantity (MT)" value={minQty} onChangeText={setMinQty} />
-          <TierField label="Maximum Quantity (MT)" value={maxQty} onChangeText={setMaxQty} />
-          <TierField label="Discount (%)" value={discount} onChangeText={setDiscount} keyboardType="decimal-pad" />
-          <TierField label="Price (₹/kg)" value={price} onChangeText={setPrice} keyboardType="decimal-pad" />
+          <TierField
+            label="Minimum Quantity (MT)"
+            value={minQty}
+            onChangeText={(v) => setMinQty(sanitizeDecimal(v, 3))}
+            keyboardType="decimal-pad"
+            error={errors.minQty}
+          />
+          <TierField
+            label="Maximum Quantity (MT)"
+            value={maxQty}
+            onChangeText={(v) => setMaxQty(sanitizeDecimal(v, 3))}
+            keyboardType="decimal-pad"
+            error={errors.maxQty}
+          />
+          <TierField
+            label="Discount (%)"
+            value={discount}
+            onChangeText={(v) => setDiscount(sanitizeDecimal(v))}
+            keyboardType="decimal-pad"
+            error={errors.discount}
+          />
+          <TierField
+            label="Price (₹/kg)"
+            value={price}
+            onChangeText={(v) => setPrice(sanitizeDecimal(v))}
+            keyboardType="decimal-pad"
+            error={errors.price}
+          />
 
           <View className="mt-xl flex-row gap-sm">
             <View className="flex-1">
-              <SecondaryButton label="Cancel" variant="outline" onPress={onClose} />
+              <SecondaryButton label="Cancel" variant="outline" onPress={closeSheet} />
             </View>
             <View className="flex-1">
               <PrimaryButton label="Add Tier" onPress={handleSave} />
@@ -78,11 +121,13 @@ const TierField = ({
   value,
   onChangeText,
   keyboardType = 'number-pad',
+  error,
 }: {
   label: string;
   value: string;
   onChangeText: (value: string) => void;
   keyboardType?: 'number-pad' | 'decimal-pad';
+  error?: string;
 }) => (
   <View className="mt-md">
     <Typography variant="fieldLabel">{label}</Typography>
@@ -92,6 +137,11 @@ const TierField = ({
       keyboardType={keyboardType}
       className="mt-sm rounded-xl border border-brand-border bg-brand-surface px-md py-md font-sans text-[15px] text-brand-heading"
     />
+    {error ? (
+      <Typography variant="error" className="mt-xs">
+        {error}
+      </Typography>
+    ) : null}
   </View>
 );
 

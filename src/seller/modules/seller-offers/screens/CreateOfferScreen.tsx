@@ -21,6 +21,7 @@ import {
   DEFAULT_WAREHOUSE,
   OFFER_VALIDITY_OPTIONS,
 } from '@/seller/modules/seller-offers/services/sellerOffersService';
+import { sanitizeDecimal } from '@/seller/modules/seller-offers/services/tier-validation';
 import { useSellerOffersStore } from '@/seller/modules/seller-offers/store/sellerOffersStore';
 import { useSellerProductStore } from '@/seller/store/sellerProductStore';
 import type { SellerProduct } from '@/seller/types';
@@ -185,15 +186,15 @@ export const CreateOfferScreen = memo(function CreateOfferScreen() {
             label="Base Price (per kg)"
             prefix="₹"
             value={editorForm.basePrice}
-            onChangeText={(value) => updateEditorField('basePrice', value)}
+            onChangeText={(value) => updateEditorField('basePrice', sanitizeDecimal(value))}
             keyboardType="decimal-pad"
           />
           <FormField
             label="Minimum Order Quantity (MOQ)"
             value={editorForm.moq}
-            onChangeText={(value) => updateEditorField('moq', value)}
+            onChangeText={(value) => updateEditorField('moq', sanitizeDecimal(value, 3))}
             suffix="MT"
-            keyboardType="number-pad"
+            keyboardType="decimal-pad"
           />
           <Typography variant="fieldLabel" className="mt-md">
             Remarks

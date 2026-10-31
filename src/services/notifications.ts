@@ -221,6 +221,21 @@ const mapBackendNotification = (row: BackendNotification): CustomerNotification 
       route: importTarget.route,
     };
   }
+  if (row.entityType === 'NEW_GRADE_REQUEST' && row.entityId) {
+    const isRead = Boolean(row.readAt) || row.status === 'READ';
+    return {
+      id: row.id,
+      category: 'marketplace',
+      title: row.title,
+      description,
+      createdAt: row.createdAt,
+      isRead,
+      priority: inferPriority(isRead, row.title),
+      reference: humanRef,
+      actionLabel: 'View request',
+      route: ROUTES.CUSTOMER.GRADE_REQUEST_DETAILS.replace('[id]', row.entityId),
+    };
+  }
   const categoryHint = resolveNotificationCategoryHint(metadata, row.title, row.entityType);
   const category =
     asCategory(metadata.category) ??

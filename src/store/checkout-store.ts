@@ -1,24 +1,18 @@
 import { create } from 'zustand';
 
-import { STORAGE_KEYS } from '@/constants';
-import {
-  CHECKOUT_GST_RATE,
-  CHECKOUT_PLATFORM_FEE,
-  DEFAULT_CHECKOUT_ADDRESS_ID,
-  getCheckoutAddressById,
-} from '@/constants/checkout';
-import type { CartItem } from '@/types/product';
+import { CHECKOUT_GST_RATE, CHECKOUT_PLATFORM_FEE } from '@/constants/checkout';
 import type { CheckoutOrderSummary, CheckoutShippingAddress } from '@/types/checkout';
-import { getStorageItem, setStorageItem } from '@/utils/storage';
+import type { CartItem } from '@/types/product';
 
 type CheckoutState = {
-  selectedAddressId: string;
+  /** The customer's real selected delivery address (from their saved address book). */
+  address: CheckoutShippingAddress | null;
   isHydrated: boolean;
 };
 
 type CheckoutActions = {
   hydrateCheckout: () => void;
-  changeAddress: (addressId: string) => void;
+  setAddress: (address: CheckoutShippingAddress | null) => void;
   getSelectedAddress: () => CheckoutShippingAddress;
   calculateFreight: (quantityMt: number) => number;
   calculateGST: (baseSubtotal: number, freight: number) => number;
@@ -28,8 +22,18 @@ type CheckoutActions = {
 
 export type CheckoutStore = CheckoutState & CheckoutActions;
 
-type PersistedCheckout = {
-  selectedAddressId: string;
+/** Neutral placeholder: never a real-looking address. Shown only when nothing is selected. */
+export const EMPTY_CHECKOUT_ADDRESS: CheckoutShippingAddress = {
+  id: '',
+  warehouseName: '',
+  line1: '',
+  line2: '',
+  state: '',
+  pincode: '',
+  zoneLabel: '',
+  cityShort: '',
+  freightAmount: 0,
+  etaLabel: '',
 };
 
 const totalQuantityMt = (items: CartItem[]): number =>
@@ -37,26 +41,6 @@ const totalQuantityMt = (items: CartItem[]): number =>
 
 const baseSubtotal = (items: CartItem[]): number =>
   items.reduce((sum, item) => sum + item.unitPricePerMt * item.quantityMt, 0);
-
-const readPersistedCheckout = (): string => {
-  const raw = getStorageItem(STORAGE_KEYS.CHECKOUT_KEY);
-  if (!raw) {
-    return DEFAULT_CHECKOUT_ADDRESS_ID;
-  }
-
-  try {
-    const parsed = JSON.parse(raw) as PersistedCheckout;
-    const address = getCheckoutAddressById(parsed.selectedAddressId);
-    return address.id;
-  } catch {
-    return DEFAULT_CHECKOUT_ADDRESS_ID;
-  }
-};
-
-const persistCheckout = (selectedAddressId: string): void => {
-  const payload: PersistedCheckout = { selectedAddressId };
-  setStorageItem(STORAGE_KEYS.CHECKOUT_KEY, JSON.stringify(payload));
-};
 
 const buildOrderSummary = (
   items: CartItem[],
@@ -69,7 +53,7 @@ const buildOrderSummary = (
   return {
     baseSubtotal: subtotal,
     freight,
-    freightLabel: `Freight (${address.cityShort})`,
+    freightLabel: address.cityShort ? `Freight (${address.cityShort})` : 'Freight',
     gst,
     platformFee: CHECKOUT_PLATFORM_FEE,
     insuranceIncluded: true,
@@ -113,23 +97,18 @@ const getStableCheckoutSummary = (
 };
 
 export const useCheckoutStore = create<CheckoutStore>((set, get) => ({
-  selectedAddressId: DEFAULT_CHECKOUT_ADDRESS_ID,
+  address: null,
   isHydrated: false,
 
   hydrateCheckout: () => {
-    set({
-      selectedAddressId: readPersistedCheckout(),
-      isHydrated: true,
-    });
+    set({ isHydrated: true });
   },
 
-  changeAddress: (addressId) => {
-    const address = getCheckoutAddressById(addressId);
-    persistCheckout(address.id);
-    set({ selectedAddressId: address.id });
+  setAddress: (address) => {
+    set({ address });
   },
 
-  getSelectedAddress: () => getCheckoutAddressById(get().selectedAddressId),
+  getSelectedAddress: () => get().address ?? EMPTY_CHECKOUT_ADDRESS,
 
   calculateFreight: (quantityMt) => {
     if (quantityMt <= 0) {
@@ -147,12 +126,12 @@ export const useCheckoutStore = create<CheckoutStore>((set, get) => ({
   getOrderSummary: (items) => getStableCheckoutSummary(items, get().getSelectedAddress()),
 }));
 
-export const selectCheckoutAddressId = (state: CheckoutStore) => state.selectedAddressId;
+export const selectCheckoutAddressId = (state: CheckoutStore) => state.address?.id ?? null;
 export const selectCheckoutHydrated = (state: CheckoutStore) => state.isHydrated;
 export const selectCheckoutAddress = (state: CheckoutStore) =>
-  getCheckoutAddressById(state.selectedAddressId);
+  state.address ?? EMPTY_CHECKOUT_ADDRESS;
 
 export const selectCheckoutOrderSummary =
   (items: CartItem[]) =>
   (state: CheckoutStore): CheckoutOrderSummary =>
-    getStableCheckoutSummary(items, getCheckoutAddressById(state.selectedAddressId));
+    getStableCheckoutSummary(items, state.address ?? EMPTY_CHECKOUT_ADDRESS);

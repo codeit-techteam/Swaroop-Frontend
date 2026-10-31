@@ -253,9 +253,9 @@ export const createEmptyEditorForm = (): OfferEditorForm => ({
   product: '',
   grade: '',
   category: '',
-  basePrice: '145',
-  moq: '25',
-  remarks: 'Prime material, immediate dispatch.',
+  basePrice: '',
+  moq: '',
+  remarks: '',
   validity: '72h',
   warehouse: DEFAULT_WAREHOUSE.name,
   warehouseLocation: DEFAULT_WAREHOUSE.location,
@@ -263,32 +263,8 @@ export const createEmptyEditorForm = (): OfferEditorForm => ({
   warehouseId: undefined,
   inventoryId: undefined,
   quantity: '500',
-  tiers: [
-    {
-      id: 'editor-tier-1',
-      minQty: 0,
-      maxQty: 10,
-      discountPercent: 2.1,
-      pricePerKg: 142,
-      label: '< 10 MT',
-    },
-    {
-      id: 'editor-tier-2',
-      minQty: 10,
-      maxQty: 50,
-      discountPercent: 2.8,
-      pricePerKg: 141,
-      label: '10 - 50 MT',
-    },
-    {
-      id: 'editor-tier-3',
-      minQty: 50,
-      maxQty: null,
-      discountPercent: 3.8,
-      pricePerKg: 139.5,
-      label: '> 50 MT',
-    },
-  ],
+  // Bulk tiers are added explicitly by the seller; never pre-filled with sample slabs.
+  tiers: [],
 });
 
 export const createEditorFormFromOffer = (offer: SellerOffer): OfferEditorForm => ({

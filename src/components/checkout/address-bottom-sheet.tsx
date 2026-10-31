@@ -10,7 +10,7 @@ import {
 } from '@gorhom/bottom-sheet';
 
 import { Typography } from '@/components/ui/typography';
-import { CHECKOUT_ADDRESSES, formatCheckoutCurrency } from '@/constants/checkout';
+import { formatCheckoutCurrency } from '@/constants/checkout';
 import { LocationPinIcon, TruckIcon } from '@/icons';
 import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
@@ -19,14 +19,14 @@ import { cn } from '@/utils/cn';
 
 type AddressBottomSheetProps = {
   selectedId: string;
-  addresses?: CheckoutShippingAddress[];
+  addresses: CheckoutShippingAddress[];
   onSelect: (addressId: string) => void;
   onAddAddress?: () => void;
 };
 
 export const AddressBottomSheet = memo(
   forwardRef<BottomSheetModal, AddressBottomSheetProps>(function AddressBottomSheet(
-    { selectedId, addresses = CHECKOUT_ADDRESSES, onSelect, onAddAddress },
+    { selectedId, addresses, onSelect, onAddAddress },
     ref,
   ) {
     const snapPoints = useMemo(() => ['58%'], []);
@@ -112,8 +112,14 @@ export const AddressBottomSheet = memo(
                       variant="roleDescription"
                       className="mt-xs text-[12px] text-brand-body"
                     >
-                      Freight: {formatCheckoutCurrency(address.freightAmount)} · ETA:{' '}
-                      {address.etaLabel}
+                      {[
+                        address.freightAmount > 0
+                          ? `Freight: ${formatCheckoutCurrency(address.freightAmount)}`
+                          : null,
+                        address.etaLabel ? `ETA: ${address.etaLabel}` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ') || address.pincode}
                     </Typography>
                   </View>
                 </View>

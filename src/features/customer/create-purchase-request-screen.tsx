@@ -23,6 +23,12 @@ import { brandColors } from '@/theme/colors';
 import { elevation } from '@/theme/shadows';
 import type { MarketProduct } from '@/types/market';
 
+const HOW_IT_WORKS_STEPS = [
+  'Choose a marketplace grade',
+  'Set quantity (respecting MOQ) and delivery address',
+  'Review pricing and tap Verify & Place Purchase Request',
+] as const;
+
 /**
  * B-02 entry for Home “Create Purchase Request”.
  * - Cart with items → continue into cart → checkout (same backend PR path as web).
@@ -172,17 +178,35 @@ export const CreatePurchaseRequestScreen = memo(function CreatePurchaseRequestSc
             </View>
           ) : (
             <View
-              className="mb-lg rounded-2xl border border-brand-primary/20 bg-brand-primary-light/40 p-md"
+              className="mb-lg rounded-2xl border border-brand-border bg-brand-white p-lg"
               style={elevation.sm}
             >
-              <Typography variant="badge" className="text-[10px] text-brand-badge-text">
+              <Typography
+                variant="badge"
+                className="text-[10px] tracking-[1px] text-brand-badge-text"
+              >
                 HOW IT WORKS
               </Typography>
-              <Typography variant="subheadingLeft" className="mt-sm text-[13px]">
-                1. Choose a marketplace grade{'\n'}
-                2. Set quantity (respecting MOQ) and delivery address{'\n'}
-                3. Review backend pricing and tap Verify & Place Purchase Request
-              </Typography>
+              <View className="mt-md gap-md">
+                {HOW_IT_WORKS_STEPS.map((step, index) => (
+                  <View key={step} className="flex-row items-start gap-md">
+                    <View className="mt-0.5 h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-primary-light">
+                      <Typography
+                        variant="badge"
+                        className="text-[11px] tracking-normal text-brand-primary"
+                      >
+                        {index + 1}
+                      </Typography>
+                    </View>
+                    <Typography
+                      variant="subheadingLeft"
+                      className="flex-1 text-[13px] leading-[20px] text-brand-body"
+                    >
+                      {step}
+                    </Typography>
+                  </View>
+                ))}
+              </View>
             </View>
           )}
 

@@ -189,14 +189,18 @@ export const SkeletonTrendingCard = memo(function SkeletonTrendingCard({
     <View
       accessible={false}
       className={cn(
-        'w-[168px] rounded-xl border border-brand-border/50 bg-brand-white p-md',
+        'h-[156px] w-[168px] rounded-xl border border-brand-border/50 bg-brand-white p-md',
         className,
       )}
     >
-      <Skeleton height={44} width={44} radius={8} />
-      <Skeleton height={14} width="85%" radius={6} className="mt-sm" />
-      <Skeleton height={12} width="55%" radius={6} className="mt-xs" />
-      <Skeleton height={14} width="45%" radius={6} className="mt-xs" />
+      <Skeleton height={40} width={40} radius={8} />
+      <View className="mt-sm flex-1 justify-between">
+        <View>
+          <Skeleton height={36} width="90%" radius={6} />
+          <Skeleton height={12} width="55%" radius={6} className="mt-xs" />
+        </View>
+        <Skeleton height={14} width="45%" radius={6} />
+      </View>
     </View>
   );
 });

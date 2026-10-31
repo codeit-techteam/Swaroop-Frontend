@@ -28,35 +28,39 @@ export const TrendingMaterialCard = memo(function TrendingMaterialCard({
       accessibilityRole="button"
       accessibilityLabel={`${product.name}, grade ${product.grade}, ${product.priceLabel}`}
       className={cn(
-        'mr-md w-[168px] rounded-xl border border-brand-border/50 bg-brand-white p-md shadow-sm',
+        'mr-md h-[156px] w-[168px] rounded-xl border border-brand-border/50 bg-brand-white p-md shadow-sm',
         className,
       )}
       style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
     >
-      <View className="h-11 w-11 items-center justify-center rounded-lg border border-brand-border bg-brand-primary-light">
+      <View className="h-10 w-10 items-center justify-center rounded-lg border border-brand-border bg-brand-primary-light">
         <Typography variant="badge" className="text-[11px] tracking-[0.4px] text-brand-primary">
           {gradeInitials(product.grade, product.name)}
         </Typography>
       </View>
 
-      <View className="mt-sm">
-        <Typography
-          variant="roleTitle"
-          className="text-[13px] text-brand-primary"
-          numberOfLines={2}
-        >
-          {product.name}
-        </Typography>
+      <View className="mt-sm flex-1 justify-between">
+        <View>
+          <Typography
+            variant="roleTitle"
+            className="h-[36px] text-[13px] leading-[18px] text-brand-primary"
+            numberOfLines={2}
+          >
+            {product.name}
+          </Typography>
+          <Typography
+            variant="caption"
+            className="mt-xs text-left font-sans text-[11px] normal-case tracking-normal text-brand-muted"
+            numberOfLines={1}
+          >
+            Grade {product.grade}
+          </Typography>
+        </View>
+
         <Typography
           variant="caption"
-          className="mt-0.5 font-sans text-[11px] normal-case tracking-normal text-brand-muted"
+          className="text-left font-semibold text-[13px] normal-case tracking-normal text-brand-primary"
           numberOfLines={1}
-        >
-          Grade {product.grade}
-        </Typography>
-        <Typography
-          variant="caption"
-          className="mt-xs font-sans text-[13px] normal-case tracking-normal text-brand-heading"
         >
           {product.priceLabel}
         </Typography>

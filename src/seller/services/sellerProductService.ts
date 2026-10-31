@@ -75,7 +75,7 @@ export const buildDefaultSellerProductSnapshot = (): SellerProductSnapshot => {
     // Empty defaults — live counts come from /seller/dashboard/summary and
     // settlement APIs. Never ship sample financials or catalogue counts.
     dashboardStats: [
-      { id: 'new-orders', label: 'Pending purchase requests', value: 0 },
+      { id: 'new-orders', label: 'Pending Purchase', value: 0 },
       { id: 'pending-accept', label: 'My Products', value: 0 },
       { id: 'active-offers', label: 'Active Offers', value: 0 },
       { id: 'dispatched', label: 'Low Stock', value: 0 },
