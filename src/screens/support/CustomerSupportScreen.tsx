@@ -1,15 +1,9 @@
 import { memo, useCallback, useMemo, useState } from 'react';
 
-import {
-  Linking,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  TextInput,
-  View,
-} from 'react-native';
+import { Linking, Pressable, RefreshControl, ScrollView, TextInput, View } from 'react-native';
 
 import { type Href, useFocusEffect, useRouter } from 'expo-router';
+
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppHeader, PrimaryButton, ScreenWrapper, Typography } from '@/components';
@@ -21,6 +15,8 @@ import {
   getCustomerSupportSnapshot,
   refreshCustomerSupportTickets,
 } from '@/services/customer-support';
+import { openContactSupport } from '@/services/legal-links';
+import { brandColors } from '@/theme/colors';
 import {
   CUSTOMER_TICKET_CATEGORY_OPTIONS,
   CUSTOMER_TICKET_PRIORITY_OPTIONS,
@@ -30,10 +26,9 @@ import {
   type CustomerTicketFilterTab,
   type CustomerTicketPriority,
 } from '@/types/customer-support';
-import { brandColors } from '@/theme/colors';
 import { cn } from '@/utils/cn';
 
-const TAB_OPTIONS: Array<{ label: string; value: CustomerTicketFilterTab }> = [
+const TAB_OPTIONS: { label: string; value: CustomerTicketFilterTab }[] = [
   { label: 'Open', value: 'open' },
   { label: 'Resolved', value: 'resolved' },
   { label: 'Closed', value: 'closed' },
@@ -118,12 +113,25 @@ export const CustomerSupportScreen = memo(function CustomerSupportScreen() {
 
   const handleCall = () => {
     const phone = snapshot.contacts.find((c) => c.type === 'phone');
-    if (phone) void Linking.openURL(`tel:${phone.value.replace(/\s/g, '')}`);
+    if (phone) {
+      void Linking.openURL(`tel:${phone.value.replace(/\s/g, '')}`);
+      return;
+    }
+    void openContactSupport();
   };
 
   const handleEmail = () => {
     const email = snapshot.contacts.find((c) => c.type === 'email');
-    if (email) void Linking.openURL(`mailto:${email.value}`);
+    if (email) {
+      void Linking.openURL(`mailto:${email.value}`);
+      return;
+    }
+    const page = snapshot.contacts.find((c) => c.type === 'link');
+    if (page) {
+      void Linking.openURL(page.value);
+      return;
+    }
+    void openContactSupport();
   };
 
   return (
@@ -145,8 +153,8 @@ export const CustomerSupportScreen = memo(function CustomerSupportScreen() {
         }
       >
         <Typography variant="subheading" className="mt-md text-brand-body">
-          Need help with orders, payments, shipment or account? Raise a ticket and
-          our PolyStoreX support team will respond.
+          Need help with orders, payments, shipment or account? Raise a ticket and our PolyStoreX
+          support team will respond.
         </Typography>
 
         <View className="mt-lg flex-row gap-sm">
@@ -163,7 +171,7 @@ export const CustomerSupportScreen = memo(function CustomerSupportScreen() {
             className="flex-1 items-center rounded-2xl border border-brand-border bg-brand-white px-md py-md"
           >
             <Typography variant="badge" className="text-brand-heading">
-              Call Support
+              {snapshot.contacts.some((c) => c.type === 'phone') ? 'Call Support' : 'Contact'}
             </Typography>
           </Pressable>
           <Pressable
@@ -197,9 +205,7 @@ export const CustomerSupportScreen = memo(function CustomerSupportScreen() {
               >
                 <Typography
                   variant="badge"
-                  className={
-                    activeTab === tab.value ? 'text-brand-white' : 'text-brand-body'
-                  }
+                  className={activeTab === tab.value ? 'text-brand-white' : 'text-brand-body'}
                 >
                   {tab.label}
                 </Typography>
@@ -216,10 +222,7 @@ export const CustomerSupportScreen = memo(function CustomerSupportScreen() {
           ) : filtered.length === 0 ? (
             <View className="items-center rounded-2xl border border-dashed border-brand-border bg-brand-white px-lg py-xl">
               <Typography variant="roleTitle">No tickets yet</Typography>
-              <Typography
-                variant="subheading"
-                className="mt-sm text-center text-brand-body"
-              >
+              <Typography variant="subheading" className="mt-sm text-center text-brand-body">
                 Raise a ticket if you need assistance from our team.
               </Typography>
             </View>
@@ -239,9 +242,7 @@ export const CustomerSupportScreen = memo(function CustomerSupportScreen() {
             {snapshot.faqs.map((faq) => (
               <Pressable
                 key={faq.id}
-                onPress={() =>
-                  setExpandedFaq(expandedFaq === faq.id ? null : faq.id)
-                }
+                onPress={() => setExpandedFaq(expandedFaq === faq.id ? null : faq.id)}
                 className="rounded-2xl border border-brand-border bg-brand-white px-lg py-md"
               >
                 <Typography variant="roleTitle">{faq.question}</Typography>
@@ -331,9 +332,7 @@ export const CustomerRaiseTicketScreen = memo(function CustomerRaiseTicketScreen
               >
                 <Typography
                   variant="badge"
-                  className={
-                    category === opt.value ? 'text-brand-white' : 'text-brand-body'
-                  }
+                  className={category === opt.value ? 'text-brand-white' : 'text-brand-body'}
                 >
                   {opt.label}
                 </Typography>
@@ -360,9 +359,7 @@ export const CustomerRaiseTicketScreen = memo(function CustomerRaiseTicketScreen
               >
                 <Typography
                   variant="badge"
-                  className={
-                    priority === opt.value ? 'text-brand-white' : 'text-brand-body'
-                  }
+                  className={priority === opt.value ? 'text-brand-white' : 'text-brand-body'}
                 >
                   {opt.label}
                 </Typography>

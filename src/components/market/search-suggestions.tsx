@@ -26,6 +26,8 @@ type SearchSuggestionsProps = {
   onSelectRecent: (term: string) => void;
   onViewAll: () => void;
   onBrowseAll?: () => void;
+  /** Opens Request a new grade with the current search prefilled (Market ↔ Browse parity). */
+  onRequestNewGrade?: () => void;
   onClearRecent?: () => void;
   /** True while the Grade Master typeahead request is in flight. */
   isSearching?: boolean;
@@ -43,6 +45,7 @@ export const SearchSuggestions = memo(function SearchSuggestions({
   onSelectRecent,
   onViewAll,
   onBrowseAll,
+  onRequestNewGrade,
   onClearRecent,
   isSearching = false,
   className,
@@ -225,16 +228,31 @@ export const SearchSuggestions = memo(function SearchSuggestions({
               No grades match “{trimmed}”
             </Typography>
             <Typography variant="subheading" className="mt-xs text-center text-[13px]">
-              Try a material like PP, HDPE, or PVC — or browse the full catalog.
+              Try a material like PP, HDPE, or PVC — or request the grade and we will source it.
             </Typography>
+            {onRequestNewGrade ? (
+              <Pressable
+                onPress={onRequestNewGrade}
+                accessibilityRole="button"
+                accessibilityLabel="Request a new grade"
+                className="mt-lg rounded-lg bg-brand-primary px-lg py-sm"
+              >
+                <Typography variant="button" className="text-[13px] tracking-normal">
+                  Request a new grade
+                </Typography>
+              </Pressable>
+            ) : null}
             {onBrowseAll ? (
               <Pressable
                 onPress={onBrowseAll}
                 accessibilityRole="button"
                 accessibilityLabel="Browse all materials"
-                className="mt-lg rounded-lg bg-brand-primary px-lg py-sm"
+                className={cn(
+                  'rounded-lg border border-brand-primary px-lg py-sm',
+                  onRequestNewGrade ? 'mt-md' : 'mt-lg',
+                )}
               >
-                <Typography variant="button" className="text-[13px] tracking-normal">
+                <Typography variant="link" className="text-[13px]">
                   Browse all materials
                 </Typography>
               </Pressable>

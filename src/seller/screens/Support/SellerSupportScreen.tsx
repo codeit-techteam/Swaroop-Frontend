@@ -3,6 +3,7 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
 import { type Href, useFocusEffect, useRouter } from 'expo-router';
+
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -18,6 +19,7 @@ import {
 } from '@/seller/components';
 import { useSellerSupport } from '@/seller/hooks/useSellerSupport';
 import type { SupportTicket, TicketFilterTab } from '@/seller/types/support';
+import { openContactSupport } from '@/services/legal-links';
 
 const TAB_OPTIONS = [
   { label: 'Open', value: 'open' },
@@ -77,12 +79,20 @@ export const SellerSupportScreen = memo(function SellerSupportScreen() {
 
   const handleCall = () => {
     const phone = snapshot.contacts.find((c) => c.type === 'phone');
-    if (phone) void Linking.openURL(`tel:${phone.value.replace(/\s/g, '')}`);
+    if (phone) {
+      void Linking.openURL(`tel:${phone.value.replace(/\s/g, '')}`);
+      return;
+    }
+    void openContactSupport();
   };
 
   const handleEmail = () => {
     const email = snapshot.contacts.find((c) => c.type === 'email');
-    if (email) void Linking.openURL(`mailto:${email.value}`);
+    if (email) {
+      void Linking.openURL(`mailto:${email.value}`);
+      return;
+    }
+    void openContactSupport();
   };
 
   const handleContactPress = (type: string, value: string) => {
@@ -103,7 +113,9 @@ export const SellerSupportScreen = memo(function SellerSupportScreen() {
         className="flex-1 px-lg"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => void pullRefresh()} />}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={() => void pullRefresh()} />
+        }
       >
         <Typography variant="subheading" className="mt-md text-brand-body">
           Get help with orders, payments, dispatch, and account issues.
@@ -158,7 +170,10 @@ export const SellerSupportScreen = memo(function SellerSupportScreen() {
         ) : null}
 
         <View className="mt-xl">
-          <Typography variant="badge" className="text-[11px] uppercase tracking-wide text-brand-body">
+          <Typography
+            variant="badge"
+            className="text-[11px] uppercase tracking-wide text-brand-body"
+          >
             Track Tickets
           </Typography>
           <View className="mt-md">
@@ -195,7 +210,10 @@ export const SellerSupportScreen = memo(function SellerSupportScreen() {
         )}
 
         <View className="mt-xl">
-          <Typography variant="badge" className="text-[11px] uppercase tracking-wide text-brand-body">
+          <Typography
+            variant="badge"
+            className="text-[11px] uppercase tracking-wide text-brand-body"
+          >
             FAQ
           </Typography>
           <View className="mt-md gap-sm">
@@ -217,7 +235,10 @@ export const SellerSupportScreen = memo(function SellerSupportScreen() {
         </View>
 
         <View className="mt-xl">
-          <Typography variant="badge" className="text-[11px] uppercase tracking-wide text-brand-body">
+          <Typography
+            variant="badge"
+            className="text-[11px] uppercase tracking-wide text-brand-body"
+          >
             Contact PolyStoreX
           </Typography>
           <View className="mt-md rounded-[22px] border border-brand-border bg-brand-white px-lg py-lg">

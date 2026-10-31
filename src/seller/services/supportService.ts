@@ -1,13 +1,10 @@
 import { apiClient } from '@/api/client';
-import {
-  MOCK_FAQS,
-  MOCK_SUPPORT_CONTACTS,
-  TICKET_CATEGORY_OPTIONS,
-} from '@/seller/mock/support';
+import { MOCK_FAQS, TICKET_CATEGORY_OPTIONS } from '@/seller/mock/support';
 import type {
   RaiseTicketInput,
   SupportApiStatus,
   SupportMessageSender,
+  SupportContact,
   SupportSnapshot,
   SupportTicket,
   SupportTicketMessage,
@@ -16,6 +13,7 @@ import type {
   TicketPriority,
   TicketStatus,
 } from '@/seller/types/support';
+import { fetchLegalLinks } from '@/services/legal-links';
 
 type Envelope<T> = {
   success: boolean;
@@ -36,13 +34,13 @@ type BackendTicket = {
   resolutionNote?: string | null;
   createdAt: string;
   updatedAt?: string;
-  messages?: Array<{
+  messages?: {
     id?: string;
     sender: string;
     senderName: string;
     body: string;
     createdAt?: string;
-  }>;
+  }[];
 };
 
 const CATEGORY_TO_API: Record<TicketCategory, string> = {
@@ -134,7 +132,7 @@ function supportReplyFields(row: BackendTicket, messages: SupportTicketMessage[]
     supportReply: lastAgent
       ? { body: lastAgent.body, senderName: lastAgent.senderName }
       : undefined,
-    resolutionNote: terminal ? row.resolutionNote ?? undefined : undefined,
+    resolutionNote: terminal ? (row.resolutionNote ?? undefined) : undefined,
   };
 }
 
@@ -173,11 +171,31 @@ function upsertTicket(ticket: SupportTicket) {
   ticketsCache = [ticket, ...ticketsCache.filter((t) => t.id !== ticket.id)];
 }
 
+async function resolveSellerSupportContacts(): Promise<SupportContact[]> {
+  try {
+    const links = await fetchLegalLinks();
+    const contacts: SupportContact[] = [];
+    if (links.supportEmail) {
+      contacts.push({
+        id: 'email',
+        label: 'Email Support',
+        value: links.supportEmail,
+        type: 'email',
+      });
+    }
+    return contacts;
+  } catch {
+    return [];
+  }
+}
+
+let contactsCache: SupportContact[] = [];
+
 export function getSupportSnapshot(): SupportSnapshot {
   return {
     tickets: ticketsCache,
     faqs: MOCK_FAQS,
-    contacts: MOCK_SUPPORT_CONTACTS,
+    contacts: contactsCache,
   };
 }
 
@@ -207,10 +225,15 @@ export function getPreferredChatTicket(
 }
 
 export async function refreshSupportTickets(): Promise<SupportSnapshot> {
-  const payload = await apiClient.get<Envelope<BackendTicket[]>>(
-    '/seller/support/tickets?limit=100',
-  );
-  ticketsCache = (payload.data.data ?? []).map(mapTicket);
+  try {
+    const payload = await apiClient.get<Envelope<BackendTicket[]>>(
+      '/seller/support/tickets?limit=100',
+    );
+    ticketsCache = (payload.data.data ?? []).map(mapTicket);
+  } catch {
+    // Keep last known tickets.
+  }
+  contactsCache = await resolveSellerSupportContacts();
   return getSupportSnapshot();
 }
 
@@ -226,20 +249,15 @@ export async function getSupportTicket(ticketId: string): Promise<SupportTicket>
   return ticket;
 }
 
-export async function createSupportTicket(
-  input: RaiseTicketInput,
-): Promise<SupportTicket> {
-  const payload = await apiClient.post<Envelope<BackendTicket>>(
-    '/seller/support/tickets',
-    {
-      category: CATEGORY_TO_API[input.category],
-      priority: PRIORITY_TO_API[input.priority],
-      subject: input.subject.trim(),
-      description: input.description.trim(),
-      attachmentName: input.attachmentName,
-      channel: 'APP',
-    },
-  );
+export async function createSupportTicket(input: RaiseTicketInput): Promise<SupportTicket> {
+  const payload = await apiClient.post<Envelope<BackendTicket>>('/seller/support/tickets', {
+    category: CATEGORY_TO_API[input.category],
+    priority: PRIORITY_TO_API[input.priority],
+    subject: input.subject.trim(),
+    description: input.description.trim(),
+    attachmentName: input.attachmentName,
+    channel: 'APP',
+  });
   if (!payload.data.data) {
     throw new Error(payload.data.message || 'Failed to create support ticket');
   }
@@ -248,10 +266,7 @@ export async function createSupportTicket(
   return ticket;
 }
 
-export async function replySupportTicket(
-  ticketId: string,
-  body: string,
-): Promise<SupportTicket> {
+export async function replySupportTicket(ticketId: string, body: string): Promise<SupportTicket> {
   const payload = await apiClient.post<Envelope<BackendTicket>>(
     `/seller/support/tickets/${ticketId}/reply`,
     { body: body.trim() },

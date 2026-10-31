@@ -56,6 +56,8 @@ export const ProfileScreen = memo(function ProfileScreen() {
           subtitle = 'Request credit & track application';
         } else if (item.subtitleKey === 'import') {
           subtitle = 'International buy requests & offers';
+        } else if (item.subtitleKey === 'gradeRequests') {
+          subtitle = 'Track new grade sourcing requests';
         } else {
           subtitle =
             profile.taxDocuments.length > 0
@@ -69,6 +71,7 @@ export const ProfileScreen = memo(function ProfileScreen() {
           'tax-documents': ROUTES.CUSTOMER.PROFILE_TAX_DOCUMENTS,
           'trading-credit': ROUTES.CUSTOMER.CREDIT_FACILITY,
           'import-trading': ROUTES.CUSTOMER.IMPORT_TRADING,
+          'grade-requests': ROUTES.CUSTOMER.GRADE_REQUESTS,
         };
 
         return {

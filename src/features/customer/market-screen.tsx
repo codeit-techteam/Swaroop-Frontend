@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
   FlatList,
   Keyboard,
+  Pressable,
   View,
   type ListRenderItem,
   type TextInputInstance,
@@ -128,14 +129,7 @@ export const CustomerMarketScreen = () => {
       return { ...merged, totalGrades: catalogueTotal };
     }
     return merged;
-  }, [
-    catalogueGrades,
-    catalogueTotal,
-    debouncedSearch,
-    marketProducts,
-    query,
-    trimmedQuery,
-  ]);
+  }, [catalogueGrades, catalogueTotal, debouncedSearch, marketProducts, query, trimmedQuery]);
 
   const filteredProducts = useMemo(
     () => applyMarketFilters(searchedProducts, filters),
@@ -202,6 +196,16 @@ export const CustomerMarketScreen = () => {
   const handleCartPress = useCallback(() => {
     router.push(ROUTES.CUSTOMER.CART as Href);
   }, [router]);
+
+  const openGradeRequest = useCallback(() => {
+    Keyboard.dismiss();
+    const term = query.trim();
+    router.push(
+      (term
+        ? { pathname: ROUTES.CUSTOMER.GRADE_REQUEST_NEW, params: { search: term } }
+        : ROUTES.CUSTOMER.GRADE_REQUEST_NEW) as unknown as Href,
+    );
+  }, [query, router]);
 
   const openGradeBrowser = useCallback(() => {
     Keyboard.dismiss();
@@ -456,6 +460,7 @@ export const CustomerMarketScreen = () => {
             }}
             onViewAll={handleViewAllResults}
             onBrowseAll={handleBrowseCatalog}
+            onRequestNewGrade={openGradeRequest}
             onClearRecent={handleClearRecent}
           />
         </View>
@@ -548,14 +553,30 @@ export const CustomerMarketScreen = () => {
                   <View className="py-lg">
                     <ActivityIndicator />
                   </View>
+                ) : searchRows.length > 0 && !gradesQuery.hasNextPage ? (
+                  <Pressable
+                    onPress={openGradeRequest}
+                    accessibilityRole="button"
+                    accessibilityLabel="Request a new grade"
+                    className="mx-lg mt-lg items-center rounded-xl border border-dashed border-brand-border py-md"
+                  >
+                    <Typography variant="roleDescription" className="text-brand-muted">
+                      Can&apos;t find your grade?
+                    </Typography>
+                    <Typography variant="link" className="mt-xs">
+                      Request a new grade
+                    </Typography>
+                  </Pressable>
                 ) : undefined
               }
               ListEmptyComponent={
                 <EmptyState
                   title={`No grades found for “${trimmedQuery}”`}
-                  description="Try a grade code, material, or manufacturer."
-                  actionLabel="Clear search"
-                  onActionPress={handleClearSearch}
+                  description="Try a grade code, material, or manufacturer — or request the grade and we will source it."
+                  actionLabel="Request a new grade"
+                  onActionPress={openGradeRequest}
+                  secondaryActionLabel="Clear search"
+                  onSecondaryActionPress={handleClearSearch}
                 />
               }
               showsVerticalScrollIndicator={false}
@@ -583,9 +604,11 @@ export const CustomerMarketScreen = () => {
                 marketProducts.length === 0 ? (
                   <EmptyState
                     title="No live listings right now"
-                    description="No seller has a live offer at the moment. You can still search every grade above, or browse the full catalogue."
+                    description="No seller has a live offer at the moment. You can still search every grade above, browse the full catalogue, or request a new grade."
                     actionLabel="Browse all grades"
                     onActionPress={openGradeBrowser}
+                    secondaryActionLabel="Request a new grade"
+                    onSecondaryActionPress={openGradeRequest}
                   />
                 ) : activeFilterCount > 0 ? (
                   <EmptyState

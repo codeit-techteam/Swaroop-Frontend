@@ -55,10 +55,15 @@ export const CUSTOMER_TICKET_PRIORITY_OPTIONS = [
   { label: 'Critical', value: 'critical' },
 ] as const;
 
-export const CUSTOMER_SUPPORT_CONTACTS = [
-  { id: 'c-1', label: 'Support Phone', value: '+91 98765 43210', type: 'phone' as const },
-  { id: 'c-2', label: 'Email Support', value: 'support@petrotrade.com', type: 'email' as const },
-];
+/** Built at runtime from GET /public/legal-links — never invent a mailbox or phone. */
+export type CustomerSupportContact = {
+  id: string;
+  label: string;
+  value: string;
+  type: 'phone' | 'email' | 'link';
+};
+
+export const CUSTOMER_SUPPORT_CONTACTS: CustomerSupportContact[] = [];
 
 export const CUSTOMER_SUPPORT_FAQS = [
   {

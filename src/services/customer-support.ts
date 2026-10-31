@@ -1,7 +1,8 @@
 import { apiClient } from '@/api/client';
+import { fetchLegalLinks } from '@/services/legal-links';
 import {
-  CUSTOMER_SUPPORT_CONTACTS,
   CUSTOMER_SUPPORT_FAQS,
+  type CustomerSupportContact,
   CUSTOMER_TICKET_CATEGORY_OPTIONS,
   type CustomerRaiseTicketInput,
   type CustomerSupportTicket,
@@ -29,7 +30,7 @@ type BackendTicket = {
   attachmentName?: string | null;
   resolutionNote?: string | null;
   createdAt: string;
-  messages?: Array<{ sender: string; senderName: string; body: string }>;
+  messages?: { sender: string; senderName: string; body: string }[];
 };
 
 const CATEGORY_TO_API: Record<CustomerTicketCategory, string> = {
@@ -113,18 +114,46 @@ function supportReplyFields(row: BackendTicket) {
   const terminal = row.status === 'RESOLVED' || row.status === 'CLOSED';
   return {
     awaitingReply: row.status === 'WAITING_CUSTOMER',
-    supportReply: lastAgent ? { body: lastAgent.body, senderName: lastAgent.senderName } : undefined,
-    resolutionNote: terminal ? row.resolutionNote ?? undefined : undefined,
+    supportReply: lastAgent
+      ? { body: lastAgent.body, senderName: lastAgent.senderName }
+      : undefined,
+    resolutionNote: terminal ? (row.resolutionNote ?? undefined) : undefined,
   };
 }
 
 let ticketsCache: CustomerSupportTicket[] = [];
 
+async function resolveSupportContacts(): Promise<CustomerSupportContact[]> {
+  try {
+    const links = await fetchLegalLinks();
+    const contacts: CustomerSupportContact[] = [];
+    if (links.supportEmail) {
+      contacts.push({
+        id: 'email',
+        label: 'Email Support',
+        value: links.supportEmail,
+        type: 'email',
+      });
+    }
+    if (links.supportUrl) {
+      contacts.push({
+        id: 'page',
+        label: 'Support page',
+        value: links.supportUrl,
+        type: 'link',
+      });
+    }
+    return contacts;
+  } catch {
+    return [];
+  }
+}
+
 export function getCustomerSupportSnapshot() {
   return {
     tickets: ticketsCache,
     faqs: CUSTOMER_SUPPORT_FAQS,
-    contacts: CUSTOMER_SUPPORT_CONTACTS,
+    contacts: [] as CustomerSupportContact[],
   };
 }
 
@@ -142,27 +171,33 @@ export function filterCustomerTicketsByTab(
 }
 
 export async function refreshCustomerSupportTickets() {
-  const payload = await apiClient.get<Envelope<BackendTicket[]>>(
-    '/customer/support/tickets?limit=100',
-  );
-  ticketsCache = (payload.data.data ?? []).map(mapTicket);
-  return getCustomerSupportSnapshot();
+  try {
+    const res = await apiClient.get<Envelope<BackendTicket[]>>(
+      '/customer/support/tickets?limit=100',
+    );
+    ticketsCache = (res.data.data ?? []).map(mapTicket);
+  } catch {
+    // Keep last known tickets on network failure.
+  }
+  const contacts = await resolveSupportContacts();
+  return {
+    tickets: ticketsCache,
+    faqs: CUSTOMER_SUPPORT_FAQS,
+    contacts,
+  };
 }
 
 export async function createCustomerSupportTicket(
   input: CustomerRaiseTicketInput,
 ): Promise<CustomerSupportTicket> {
-  const payload = await apiClient.post<Envelope<BackendTicket>>(
-    '/customer/support/tickets',
-    {
-      category: CATEGORY_TO_API[input.category],
-      priority: PRIORITY_TO_API[input.priority],
-      subject: input.subject.trim(),
-      description: input.description.trim(),
-      attachmentName: input.attachmentName,
-      channel: 'APP',
-    },
-  );
+  const payload = await apiClient.post<Envelope<BackendTicket>>('/customer/support/tickets', {
+    category: CATEGORY_TO_API[input.category],
+    priority: PRIORITY_TO_API[input.priority],
+    subject: input.subject.trim(),
+    description: input.description.trim(),
+    attachmentName: input.attachmentName,
+    channel: 'APP',
+  });
   if (!payload.data.data) {
     throw new Error(payload.data.message || 'Failed to create support ticket');
   }

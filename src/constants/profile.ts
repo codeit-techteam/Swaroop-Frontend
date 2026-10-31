@@ -43,6 +43,12 @@ export const LOGISTICS_MENU_ITEMS = [
     subtitleKey: 'import' as const,
     route: 'import-trading',
   },
+  {
+    id: 'grade-requests',
+    title: 'Grade Requests',
+    subtitleKey: 'gradeRequests' as const,
+    route: 'grade-requests',
+  },
 ] as const;
 
 export const SETTINGS_MENU_ITEMS = [

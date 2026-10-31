@@ -127,11 +127,7 @@ export const MOCK_FAQS: FaqItem[] = [
   },
 ];
 
-export const MOCK_SUPPORT_CONTACTS: SupportContact[] = [
-  { id: 'c-1', label: 'Trade Manager', value: '+91 98765 43210', type: 'phone' },
-  { id: 'c-2', label: 'Emergency Support', value: '+91 1800 123 4567', type: 'phone' },
-  { id: 'c-3', label: 'Email Support', value: 'seller-support@petrotrade.in', type: 'email' },
-];
+export const MOCK_SUPPORT_CONTACTS: SupportContact[] = [];
 
 export const TICKET_CATEGORY_OPTIONS = [
   { label: 'Order Issue', value: 'order_issue' },
