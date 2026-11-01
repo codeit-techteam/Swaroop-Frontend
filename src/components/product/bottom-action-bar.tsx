@@ -17,6 +17,8 @@ type BottomActionBarProps = {
   minMt: number;
   maxMt: number;
   increment: number;
+  /** Offer material price per MT. Same number as the marketplace card. */
+  unitPricePerMt: number;
   estimatedTotal: number;
   disabled?: boolean;
   refreshing?: boolean;
@@ -35,6 +37,7 @@ export const BottomActionBar = memo(function BottomActionBar({
   minMt,
   maxMt,
   increment,
+  unitPricePerMt,
   estimatedTotal,
   disabled = false,
   refreshing = false,
@@ -59,12 +62,23 @@ export const BottomActionBar = memo(function BottomActionBar({
     >
       <View className="mb-sm flex-row items-end justify-between">
         <View className="mr-sm min-w-0 flex-1">
-          <Typography
-            variant="caption"
-            className="font-sans text-[11px] normal-case tracking-normal text-brand-muted"
-          >
-            Estimated total · {quantityMt} MT
-          </Typography>
+          <View>
+            <Typography
+              variant="caption"
+              className="font-sans text-[11px] normal-case tracking-normal text-brand-muted"
+            >
+              Material price
+            </Typography>
+            <Typography variant="roleTitle" className="text-[16px] text-brand-heading">
+              {unitPricePerMt > 0 ? `${formatInr(unitPricePerMt)} / MT` : '—'}
+            </Typography>
+            <Typography
+              variant="caption"
+              className="mt-0.5 font-sans text-[11px] normal-case tracking-normal text-brand-muted"
+            >
+              Order total for {quantityMt} MT · includes delivery and GST
+            </Typography>
+          </View>
           {refreshing ? (
             <Typography
               variant="caption"
@@ -74,18 +88,26 @@ export const BottomActionBar = memo(function BottomActionBar({
             </Typography>
           ) : null}
         </View>
-        <View className="flex-row items-center" style={{ gap: 6 }}>
-          <View style={{ width: 16, height: 16 }} accessibilityElementsHidden={!refreshing}>
-            {refreshing ? <ActivityIndicator size="small" color={brandColors.primary} /> : null}
-          </View>
+        <View className="items-end">
           <Typography
-            variant="roleTitle"
-            className="text-[16px] text-brand-primary"
-            accessibilityLiveRegion="polite"
-            style={{ opacity: refreshing && hasTotal ? 0.85 : 1 }}
+            variant="caption"
+            className="font-sans text-[11px] normal-case tracking-normal text-brand-muted"
           >
-            {hasTotal ? formatInr(estimatedTotal) : '—'}
+            Order total
           </Typography>
+          <View className="flex-row items-center" style={{ gap: 6 }}>
+            <View style={{ width: 16, height: 16 }} accessibilityElementsHidden={!refreshing}>
+              {refreshing ? <ActivityIndicator size="small" color={brandColors.primary} /> : null}
+            </View>
+            <Typography
+              variant="roleTitle"
+              className="text-[16px] text-brand-primary"
+              accessibilityLiveRegion="polite"
+              style={{ opacity: refreshing && hasTotal ? 0.85 : 1 }}
+            >
+              {hasTotal ? formatInr(estimatedTotal) : '—'}
+            </Typography>
+          </View>
         </View>
       </View>
       {disabledReason ? (

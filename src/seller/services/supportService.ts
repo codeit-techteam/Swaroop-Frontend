@@ -1,5 +1,5 @@
 import { apiClient } from '@/api/client';
-import { MOCK_FAQS, TICKET_CATEGORY_OPTIONS } from '@/seller/mock/support';
+import { TICKET_CATEGORY_OPTIONS } from '@/seller/mock/support';
 import type {
   RaiseTicketInput,
   SupportApiStatus,
@@ -194,7 +194,7 @@ let contactsCache: SupportContact[] = [];
 export function getSupportSnapshot(): SupportSnapshot {
   return {
     tickets: ticketsCache,
-    faqs: MOCK_FAQS,
+    faqs: [],
     contacts: contactsCache,
   };
 }

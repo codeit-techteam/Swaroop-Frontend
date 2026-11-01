@@ -152,7 +152,7 @@ async function resolveSupportContacts(): Promise<CustomerSupportContact[]> {
 export function getCustomerSupportSnapshot() {
   return {
     tickets: ticketsCache,
-    faqs: CUSTOMER_SUPPORT_FAQS,
+    faqs: [] as typeof CUSTOMER_SUPPORT_FAQS,
     contacts: [] as CustomerSupportContact[],
   };
 }
@@ -182,7 +182,7 @@ export async function refreshCustomerSupportTickets() {
   const contacts = await resolveSupportContacts();
   return {
     tickets: ticketsCache,
-    faqs: CUSTOMER_SUPPORT_FAQS,
+    faqs: [] as typeof CUSTOMER_SUPPORT_FAQS,
     contacts,
   };
 }

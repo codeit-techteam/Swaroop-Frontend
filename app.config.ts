@@ -3,8 +3,9 @@ import { ExpoConfig, ConfigContext } from 'expo/config';
 const APP_ENV = process.env.EXPO_PUBLIC_APP_ENV ?? 'development';
 // Plain-HTTP (LAN backend on the dev machine) is only allowed in development builds.
 const ALLOW_CLEARTEXT = APP_ENV === 'development';
-const APP_VERSION = process.env.EXPO_PUBLIC_APP_VERSION ?? '3.1.1';
-const ANDROID_VERSION_CODE = Number(process.env.ANDROID_VERSION_CODE ?? 3111);
+const APP_VERSION = process.env.EXPO_PUBLIC_APP_VERSION ?? '3.1.2';
+// Higher than preview 3113 and production-apk 3112. Do not reuse a shipped code.
+const ANDROID_VERSION_CODE = Number(process.env.ANDROID_VERSION_CODE ?? 3114);
 // PolyStoreX EAS project under polystorexs-team (swaroop.veylorn@gmail.com).
 const EAS_PROJECT_ID =
   process.env.EAS_PROJECT_ID ?? 'ccf88988-1846-42d3-8944-a10d70252de7';
@@ -115,6 +116,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           usesCleartextTraffic: ALLOW_CLEARTEXT,
           // A-13: keep session data out of cloud/device backup where possible.
           enableMinifyInReleaseBuilds: false,
+          blockedPermissions: [
+            'android.permission.RECORD_AUDIO',
+            'android.permission.SYSTEM_ALERT_WINDOW',
+          ],
         },
         ios: {
           deploymentTarget: '16.4',
@@ -124,8 +129,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-image-picker',
       {
-        photosPermission: 'Allow Swaroop to access your photos.',
-        cameraPermission: 'Allow Swaroop to access your camera.',
+        photosPermission: 'Allow PolyStoreX to access your photos.',
+        cameraPermission: 'Allow PolyStoreX to access your camera.',
+        microphonePermission: false,
       },
     ],
     [

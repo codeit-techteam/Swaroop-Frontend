@@ -1,9 +1,5 @@
 import { STORAGE_KEYS } from '@/constants';
-import {
-  DEFAULT_SECURITY_SETTINGS,
-  MOCK_ACTIVE_SESSIONS,
-  MOCK_TRUSTED_DEVICES,
-} from '@/seller/mock/security';
+import { DEFAULT_SECURITY_SETTINGS } from '@/seller/mock/security';
 import type { SecuritySettings, SecuritySnapshot } from '@/seller/types/security';
 import { getStorageItem, setStorageItem } from '@/utils/storage';
 
@@ -34,8 +30,8 @@ let securityState = loadSecurityState();
 export function getSecuritySnapshot(): SecuritySnapshot {
   return {
     settings: { ...securityState.settings },
-    trustedDevices: MOCK_TRUSTED_DEVICES,
-    activeSessions: MOCK_ACTIVE_SESSIONS,
+    trustedDevices: [],
+    activeSessions: [],
   };
 }
 

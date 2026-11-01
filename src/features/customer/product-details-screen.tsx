@@ -890,6 +890,7 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
           minMt={product.moq}
           maxMt={Math.max(product.moq, product.stock)}
           increment={product.quantityIncrement}
+          unitPricePerMt={displayPricePerMt}
           estimatedTotal={estimatedTotal}
           disabled={!canPurchase || addingToCart || awaitingQuote}
           disabledReason={purchaseDisabledReason}

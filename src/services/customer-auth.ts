@@ -24,11 +24,16 @@ export function isOtpCooldownError(error: unknown): boolean {
 
 export function customerAuthErrorMessage(error: unknown, fallback: string): string {
   if (isAxiosError<AuthErrorBody>(error)) {
+    const status = error.response?.status;
     if (!error.response) {
       return 'Unable to reach PolyStoreX. Check your internet connection and try again.';
     }
+    // DigitalOcean rewrites an app 502 into an HTML 504 page. Never show that HTML.
+    if (status === 502 || status === 503 || status === 504) {
+      return 'OTP service is temporarily unavailable. Please try again in a moment.';
+    }
     const message = error.response.data?.message;
-    if (typeof message === 'string' && message) return message;
+    if (typeof message === 'string' && message && !message.trim().startsWith('<')) return message;
     if (Array.isArray(message) && message[0]) return message[0];
   }
   return fallback;

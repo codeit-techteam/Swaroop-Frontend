@@ -200,7 +200,10 @@ export function mapBlindProduct(product: BlindProduct): MarketProduct {
     gradeId: product.grade?.id,
     gradeNo: product.grade?.gradeNo ?? undefined,
     manufacturer:
-      product.manufacturer ?? product.brand ?? product.grade?.manufacturer ?? undefined,
+      product.grade?.manufacturer ??
+      product.manufacturer ??
+      product.brand ??
+      undefined,
     masterCategoryId: product.grade?.category?.id,
     masterCategoryName: formatCategoryDisplayName(
       product.grade?.category?.displayName,

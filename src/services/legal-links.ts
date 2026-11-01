@@ -23,16 +23,16 @@ let cached: LegalLinks | null = null;
 let inflight: Promise<LegalLinks> | null = null;
 
 /**
- * Live marketing site with production /terms, /privacy, /contact.
- * petrotrade.in is still a GoDaddy park/lander; swaroop-website.vercel.app 404s.
- * Remove remaps once custom DNS serves the site.
+ * Official PolyStoreX site. /terms, /privacy and /contact are live.
+ * Older hosts are rewritten onto this origin.
  */
-export const LIVE_WEBSITE_ORIGIN = 'https://swaroop-website-mocha.vercel.app';
+export const LIVE_WEBSITE_ORIGIN = 'https://polystorex.com';
 
 const BROKEN_WEBSITE_HOSTS = new Set([
   'petrotrade.in',
   'www.petrotrade.in',
   'swaroop-website.vercel.app',
+  'swaroop-website-mocha.vercel.app',
 ]);
 
 const LIVE_TERMS_URL = `${LIVE_WEBSITE_ORIGIN}/terms`;

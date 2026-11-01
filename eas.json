@@ -22,8 +22,8 @@
       "env": {
         "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
         "EXPO_PUBLIC_APP_ENV": "preview",
-        "EXPO_PUBLIC_APP_VERSION": "3.1.1",
-        "ANDROID_VERSION_CODE": "3113",
+        "EXPO_PUBLIC_APP_VERSION": "3.1.2",
+        "ANDROID_VERSION_CODE": "3114",
         "EXPO_PUBLIC_API_BASE_URL": "https://swaroop-backend-xzwkz.ondigitalocean.app/api/v1",
         "EXPO_PUBLIC_IMAGE_BASE_URL": "https://pub-f184fe06f7d24c68978e25682f5fd785.r2.dev"
       },
@@ -38,8 +38,8 @@
       "env": {
         "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
         "EXPO_PUBLIC_APP_ENV": "production",
-        "EXPO_PUBLIC_APP_VERSION": "3.1.1",
-        "ANDROID_VERSION_CODE": "3112",
+        "EXPO_PUBLIC_APP_VERSION": "3.1.2",
+        "ANDROID_VERSION_CODE": "3114",
         "EXPO_PUBLIC_API_BASE_URL": "https://swaroop-backend-xzwkz.ondigitalocean.app/api/v1",
         "EXPO_PUBLIC_IMAGE_BASE_URL": "https://pub-f184fe06f7d24c68978e25682f5fd785.r2.dev"
       },
@@ -53,8 +53,8 @@
       "env": {
         "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
         "EXPO_PUBLIC_APP_ENV": "production",
-        "EXPO_PUBLIC_APP_VERSION": "3.1.1",
-        "ANDROID_VERSION_CODE": "3112",
+        "EXPO_PUBLIC_APP_VERSION": "3.1.2",
+        "ANDROID_VERSION_CODE": "3114",
         "EXPO_PUBLIC_API_BASE_URL": "https://swaroop-backend-xzwkz.ondigitalocean.app/api/v1",
         "EXPO_PUBLIC_IMAGE_BASE_URL": "https://pub-f184fe06f7d24c68978e25682f5fd785.r2.dev"
       },

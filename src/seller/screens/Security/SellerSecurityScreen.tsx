@@ -108,6 +108,11 @@ export const SellerSecurityScreen = memo(function SellerSecurityScreen() {
                 Trusted Devices
               </Typography>
               <View className="gap-sm">
+                {snapshot.trustedDevices.length === 0 ? (
+                  <Typography variant="subheading" className="text-brand-body">
+                    No trusted devices yet.
+                  </Typography>
+                ) : null}
                 {snapshot.trustedDevices.map((device) => (
                   <TrustedDeviceCard key={device.id} device={device} />
                 ))}
@@ -122,6 +127,11 @@ export const SellerSecurityScreen = memo(function SellerSecurityScreen() {
                 Active Sessions
               </Typography>
               <View className="gap-sm">
+                {snapshot.activeSessions.length === 0 ? (
+                  <Typography variant="subheading" className="text-brand-body">
+                    No other active sessions.
+                  </Typography>
+                ) : null}
                 {snapshot.activeSessions.map((session) => (
                   <SessionCard key={session.id} session={session} />
                 ))}

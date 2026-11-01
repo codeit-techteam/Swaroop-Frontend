@@ -98,6 +98,13 @@ export const CreatePurchaseRequestScreen = memo(function CreatePurchaseRequestSc
     router.push(ROUTES.CUSTOMER.CART as Href);
   }, [router]);
 
+  const requestNewGrade = useCallback(() => {
+    router.push({
+      pathname: ROUTES.CUSTOMER.GRADE_REQUEST_NEW,
+      params: query.trim() ? { search: query.trim() } : {},
+    } as unknown as Href);
+  }, [query, router]);
+
   const visibleProducts = useMemo(
     () => filteredProducts.filter((product) => product.stock > 0),
     [filteredProducts],
@@ -210,9 +217,24 @@ export const CreatePurchaseRequestScreen = memo(function CreatePurchaseRequestSc
             </View>
           )}
 
-          <Typography variant="headingLeft" className="mb-sm text-[16px]">
-            {hasCartItems ? 'Add another grade' : 'Select a grade'}
-          </Typography>
+          <View className="mb-sm flex-row items-center justify-between">
+            <Typography variant="headingLeft" className="text-[16px]">
+              {hasCartItems ? 'Add another grade' : 'Select an existing grade'}
+            </Typography>
+          </View>
+          <Pressable
+            onPress={requestNewGrade}
+            accessibilityRole="button"
+            accessibilityLabel="Request a new grade"
+            className="mb-md rounded-xl border border-brand-primary bg-brand-white px-lg py-md"
+          >
+            <Typography variant="roleTitle" className="text-[14px] text-brand-primary">
+              Request a new grade
+            </Typography>
+            <Typography variant="subheadingLeft" className="mt-xs text-[12px]">
+              The grade is not in the catalogue. Send the specification for review.
+            </Typography>
+          </Pressable>
 
           <ProductPicker
             query={query}

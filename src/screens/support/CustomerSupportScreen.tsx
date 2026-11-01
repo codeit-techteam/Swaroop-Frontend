@@ -239,6 +239,11 @@ export const CustomerSupportScreen = memo(function CustomerSupportScreen() {
             FAQ
           </Typography>
           <View className="mt-md gap-sm">
+            {snapshot.faqs.length === 0 ? (
+              <Typography variant="subheading" className="text-brand-body">
+                No published FAQs yet.
+              </Typography>
+            ) : null}
             {snapshot.faqs.map((faq) => (
               <Pressable
                 key={faq.id}

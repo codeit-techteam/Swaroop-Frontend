@@ -33,6 +33,7 @@ import {
   type LocationSuggestion,
 } from '@/services/location-search';
 import { useAddressStore } from '@/store/address-store';
+import { appConfig } from '@/config/env';
 import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
 import type { AddressCaptureSource, ResolvedGeoAddress, SavedAddressKind } from '@/types/address';
@@ -415,6 +416,12 @@ export const AddressFormScreen = memo(function AddressFormScreen() {
       >
         {step === 'search' ? (
           <>
+            {!appConfig.googleMapsApiKey ? (
+              <Typography variant="subheadingLeft" className="mb-md text-[13px]">
+                The map picker is not in this build. You can search for an address, use your
+                current location, or enter the address manually.
+              </Typography>
+            ) : null}
             {autocompleteUnavailable ? (
               <Typography variant="error" className="mb-md">
                 Address search is unavailable right now. Use your current location or enter the

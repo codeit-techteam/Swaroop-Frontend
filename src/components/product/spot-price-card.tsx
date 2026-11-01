@@ -43,7 +43,7 @@ export const SpotPriceCard = memo(function SpotPriceCard({
           variant="fieldLabel"
           className="text-[10px] tracking-[1.4px] text-brand-white/70"
         >
-          Current Spot Price
+          Material price
         </Typography>
         <View className="mt-xs flex-row items-end">
           <Typography variant="headingLeft" className="text-[28px] leading-[32px] text-brand-white">
