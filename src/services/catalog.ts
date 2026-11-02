@@ -246,6 +246,12 @@ export function mapBlindProduct(product: BlindProduct): MarketProduct {
     warehouseLabel: typeof specs.warehouseLabel === 'string' ? specs.warehouseLabel : undefined,
     casNumber: typeof specs.casNumber === 'string' ? specs.casNumber : undefined,
     applications: Array.isArray(specs.applications) ? (specs.applications as string[]) : [],
+    features: Array.isArray(specs.features)
+      ? (specs.features as unknown[]).filter(
+          (item): item is string => typeof item === 'string' && item.trim().length > 0,
+        )
+      : undefined,
+    packaging: product.packaging?.trim() || undefined,
     technicalSpecs: {
       mfi: product.mfi ?? (typeof specs.mfi === 'string' ? specs.mfi : undefined),
       density: product.density ?? (typeof specs.density === 'string' ? specs.density : undefined),

@@ -231,6 +231,7 @@ const breadcrumbCategoryFor = (market: MarketProduct): string => {
 };
 
 const packagingFor = (market: MarketProduct): string => {
+  if (market.packaging?.trim()) return market.packaging.trim();
   const form = market.technicalSpecs?.form?.toLowerCase() ?? '';
   if (form.includes('liquid')) {
     return 'Drum / ISO Tank';
@@ -438,10 +439,18 @@ export const buildProductDetails = (
     overrides.description ??
     market.description ??
     `${name} is offered through PolyStoreX's blind marketplace with verified commercial and technical data only.`;
-  const applications = overrides.applications ?? market.applications ?? DEFAULT_APPLICATIONS;
+  const applications =
+    overrides.applications ??
+    (market.applications && market.applications.length > 0
+      ? market.applications
+      : DEFAULT_APPLICATIONS);
   const specs = overrides.specs ?? specsFromTechnical(market.technicalSpecs) ?? DEFAULT_SPECS;
   const breadcrumbProduct = overrides.breadcrumbProduct ?? name;
-  const hsnCode = overrides.hsnCode ?? fulfilment?.hsnCode ?? HSN_BY_MATERIAL[materialType] ?? '';
+  const hsnCode =
+    overrides.hsnCode ??
+    fulfilment?.hsnCode?.trim() ??
+    HSN_BY_MATERIAL[materialType] ??
+    '';
   const casNumber = overrides.casNumber ?? market.casNumber ?? '';
   const productCredit =
     overrides.productCredit ??
@@ -512,7 +521,11 @@ export const buildProductDetails = (
     availability,
     availabilityLabel,
     highlights: overrides.highlights ?? buildProductHighlights(creditEligible),
-    features: overrides.features ?? getFeaturesForMaterial(materialType),
+    features:
+      overrides.features ??
+      (market.features && market.features.length > 0
+        ? market.features
+        : getFeaturesForMaterial(materialType)),
     industry: overrides.industry ?? 'Petrochemicals & Packaging',
     application,
     categoryName,

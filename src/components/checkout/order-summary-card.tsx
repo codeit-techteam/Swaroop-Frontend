@@ -111,7 +111,10 @@ export const CheckoutOrderSummaryCard = memo(function CheckoutOrderSummaryCard({
 
         <View className="mb-md h-px bg-brand-border" />
 
-        <SummaryRow label="Base Amount" value={formatCheckoutCurrency(summary.baseSubtotal)} />
+        <SummaryRow
+          label="Material (price × qty)"
+          value={formatCheckoutCurrency(summary.baseSubtotal)}
+        />
         {summary.discount && summary.discount > 0 ? (
           <SummaryRow
             label="Discount"

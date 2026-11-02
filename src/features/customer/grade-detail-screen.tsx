@@ -2,7 +2,6 @@ import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
   ActivityIndicator,
-  Linking,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -38,6 +37,7 @@ import {
   type GradeTdsDocument,
   type GradeTdsResponse,
 } from '@/services/catalog';
+import { openSignedRemoteDocument } from '@/services/open-remote-document';
 import { selectIsLoggedIn, useAuthStore } from '@/store/auth-store';
 import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
@@ -313,20 +313,37 @@ export const CustomerGradeDetailScreen = memo(function CustomerGradeDetailScreen
         return;
       }
       setTdsBusyId(doc.id);
+      Toast.show({
+        type: 'info',
+        text1: mode === 'download' ? 'Preparing download…' : 'Opening TDS…',
+        text2: doc.title || 'Technical Data Sheet',
+        visibilityTime: 1600,
+      });
       try {
-        const { url } = await fetchGradeTdsDocumentUrl(gradeId, doc.id);
+        const { url, fileName, mimeType } = await fetchGradeTdsDocumentUrl(
+          gradeId,
+          doc.id,
+        );
         if (!url) throw new Error('URL unavailable');
-        await Linking.openURL(url);
+        await openSignedRemoteDocument({
+          url,
+          fileName: fileName || doc.fileName || `${doc.title || 'TDS'}.pdf`,
+          mimeType: mimeType || doc.mimeType,
+          title: doc.title || 'Technical Data Sheet',
+        });
         Toast.show({
           type: 'success',
           text1: doc.title || 'Technical Data Sheet',
-          text2: mode === 'download' ? 'TDS download started' : 'Opening verified TDS…',
+          text2:
+            mode === 'download'
+              ? 'Ready — use Share/Save if your viewer offers it'
+              : 'Opened in document viewer',
         });
       } catch {
         Toast.show({
           type: 'error',
-          text1: 'TDS unavailable',
-          text2: 'Signed download URL could not be opened.',
+          text1: 'Could not open TDS',
+          text2: 'Check your connection and try again.',
         });
       } finally {
         setTdsBusyId(null);

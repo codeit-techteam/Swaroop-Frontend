@@ -66,6 +66,9 @@ export type MarketProduct = {
   warehouseLabel?: string;
   casNumber?: string;
   applications?: string[];
+  /** Grade Master / seller feature checklist when provided by API. */
+  features?: string[];
+  packaging?: string;
   technicalSpecs?: ProductTechnicalSpecs;
   creditEligible?: boolean;
   productCredit?: import('@/types/payment-eligibility').ProductCreditConfig;

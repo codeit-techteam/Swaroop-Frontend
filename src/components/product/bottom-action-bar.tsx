@@ -80,14 +80,14 @@ export const BottomActionBar = memo(function BottomActionBar({
               className="mt-0.5 font-sans text-[11px] normal-case tracking-normal text-brand-body"
             >
               {estimatedLandedPerMt != null && estimatedLandedPerMt > 0
-                ? `Est. landed ${formatInr(estimatedLandedPerMt)} / MT`
+                ? `Est. landed ${formatInr(estimatedLandedPerMt)} / MT (material + freight + GST)`
                 : 'Final price calculated at checkout'}
             </Typography>
             <Typography
               variant="caption"
               className="mt-0.5 font-sans text-[11px] normal-case tracking-normal text-brand-muted"
             >
-              Order total for {quantityMt} MT · includes delivery and GST
+              Order total for {quantityMt} MT · material is only part of the total
             </Typography>
           </View>
           {refreshing ? (

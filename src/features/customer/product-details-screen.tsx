@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { ActivityIndicator, Linking, Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 
@@ -56,6 +56,7 @@ import {
   type ProductTdsResponse,
 } from '@/services/catalog';
 import { checkoutErrorMessage, toBackendPaymentOption } from '@/services/checkout';
+import { openSignedRemoteDocument } from '@/services/open-remote-document';
 import { selectIsLoggedIn, useAuthStore } from '@/store/auth-store';
 import { useCartStore } from '@/store/cart-store';
 import { brandColors } from '@/theme/colors';
@@ -372,20 +373,37 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
         return;
       }
       setTdsBusyId(doc.id);
+      Toast.show({
+        type: 'info',
+        text1: mode === 'download' ? 'Preparing download…' : 'Opening TDS…',
+        text2: doc.title || 'Technical Data Sheet',
+        visibilityTime: 1600,
+      });
       try {
-        const { url } = await fetchGradeTdsDocumentUrl(resolvedGradeId, doc.id);
+        const { url, fileName, mimeType } = await fetchGradeTdsDocumentUrl(
+          resolvedGradeId,
+          doc.id,
+        );
         if (!url) throw new Error('URL unavailable');
-        await Linking.openURL(url);
+        await openSignedRemoteDocument({
+          url,
+          fileName: fileName || doc.fileName || `${doc.title || 'TDS'}.pdf`,
+          mimeType: mimeType || doc.mimeType,
+          title: doc.title || 'Technical Data Sheet',
+        });
         Toast.show({
           type: 'success',
           text1: doc.title || 'Technical Data Sheet',
-          text2: mode === 'download' ? 'TDS download started' : 'Opening verified TDS…',
+          text2:
+            mode === 'download'
+              ? 'Ready — use Share/Save if your viewer offers it'
+              : 'Opened in document viewer',
         });
       } catch {
         Toast.show({
           type: 'error',
-          text1: 'TDS unavailable',
-          text2: 'Signed download URL could not be opened.',
+          text1: 'Could not open TDS',
+          text2: 'Check your connection and try again.',
         });
       } finally {
         setTdsBusyId(null);
