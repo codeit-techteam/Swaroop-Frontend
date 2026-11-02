@@ -1,6 +1,6 @@
-import { memo, useEffect } from 'react';
+import { memo, useEffect, useState } from 'react';
 
-import { ScrollView, View } from 'react-native';
+import { Alert, ScrollView, View } from 'react-native';
 
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,6 +16,11 @@ import {
 } from '@/seller/modules/seller-offers/components';
 import { useSellerOffersStore } from '@/seller/modules/seller-offers/store/sellerOffersStore';
 import { SellerHeader } from '@/seller/components';
+import {
+  fetchSellerProductGradeTds,
+  type SellerGradeTdsResponse,
+} from '@/seller/services/gradeTdsService';
+import { isBackendId } from '@/seller/utils/listing-input';
 import { brandColors } from '@/theme/colors';
 
 export const OfferReviewStatusScreen = memo(function OfferReviewStatusScreen() {
@@ -27,6 +32,8 @@ export const OfferReviewStatusScreen = memo(function OfferReviewStatusScreen() {
   const selectOffer = useSellerOffersStore((state) => state.selectOffer);
 
   const offer = offerId ? getOffer(offerId) : undefined;
+  const [gradeTds, setGradeTds] = useState<SellerGradeTdsResponse | null>(null);
+  const [gradeTdsLoading, setGradeTdsLoading] = useState(false);
 
   useEffect(() => {
     if (!offerId) {
@@ -43,6 +50,29 @@ export const OfferReviewStatusScreen = memo(function OfferReviewStatusScreen() {
     return () => clearTimeout(timer);
   }, [offerId, refreshReviewStatus, router]);
 
+  useEffect(() => {
+    const productId = offer?.productId;
+    if (!productId || !isBackendId(productId)) {
+      setGradeTds(null);
+      return;
+    }
+    let cancelled = false;
+    setGradeTdsLoading(true);
+    void (async () => {
+      try {
+        const result = await fetchSellerProductGradeTds(productId);
+        if (!cancelled) setGradeTds(result);
+      } catch {
+        if (!cancelled) setGradeTds(null);
+      } finally {
+        if (!cancelled) setGradeTdsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [offer?.productId]);
+
   if (!offer) {
     return (
       <ScreenWrapper className="bg-brand-background">
@@ -56,6 +86,44 @@ export const OfferReviewStatusScreen = memo(function OfferReviewStatusScreen() {
     if (refreshed?.status === 'active') {
       router.replace(`${ROUTES.SELLER.OFFER_APPROVED}?offerId=${offer.id}` as Href);
     }
+  };
+
+  const handleReviewTds = () => {
+    if (!offer.productId || !isBackendId(offer.productId)) {
+      Alert.alert(
+        'Platform TDS',
+        'Link this offer to a catalogue product to see verified platform TDS status.',
+      );
+      return;
+    }
+    if (gradeTdsLoading) {
+      Alert.alert('Platform TDS', 'Checking library…');
+      return;
+    }
+    if (!gradeTds) {
+      Alert.alert('Platform TDS', 'Unable to load platform TDS status right now.');
+      return;
+    }
+    if (!gradeTds.available) {
+      Alert.alert(
+        'Platform TDS',
+        gradeTds.message ??
+          'No verified platform TDS is linked yet. Customers will not see a datasheet until one is verified.',
+      );
+      return;
+    }
+    const first = gradeTds.items[0];
+    Alert.alert(
+      'Verified on platform',
+      [
+        gradeTds.product?.name ?? gradeTds.grade.name,
+        first?.title ? `Document: ${first.title}` : null,
+        first?.format ? `Format: ${String(first.format).toUpperCase()}` : null,
+        'Customers see this verified TDS on the grade page.',
+      ]
+        .filter(Boolean)
+        .join('\n'),
+    );
   };
 
   return (
@@ -130,10 +198,30 @@ export const OfferReviewStatusScreen = memo(function OfferReviewStatusScreen() {
             Product Documentation
           </Typography>
           <Typography variant="roleDescription" className="mt-sm text-brand-white/80">
-            Download technical data sheets (TDS) and safety protocols for {offer.grade}.
+            Platform TDS status for {offer.grade}. Customers see verified datasheets on the grade
+            page.
+          </Typography>
+          <Typography variant="legal" className="mt-sm text-left text-brand-white/70">
+            {gradeTdsLoading
+              ? 'Checking library…'
+              : gradeTds?.available
+                ? `Available · ${gradeTds.product?.name ?? gradeTds.grade.name}`
+                : offer.productId && isBackendId(offer.productId)
+                  ? (gradeTds?.message ?? 'Unavailable — no verified TDS linked yet.')
+                  : 'Link a catalogue product to load TDS status.'}
           </Typography>
           <View className="mt-md gap-sm">
-            <SecondaryButton label="Technical Datasheet" variant="outline" onPress={() => undefined} />
+            <SecondaryButton
+              label={
+                gradeTdsLoading
+                  ? 'Checking TDS…'
+                  : gradeTds?.available
+                    ? 'Review technical datasheet'
+                    : 'View TDS status'
+              }
+              variant="outline"
+              onPress={handleReviewTds}
+            />
             <SecondaryButton label="Safety Certificate" variant="outline" onPress={() => undefined} />
           </View>
         </View>

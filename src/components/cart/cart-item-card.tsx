@@ -100,7 +100,7 @@ export const CartItemCard = memo(function CartItemCard({
                   {formatPricePerMt(item.unitPricePerMt)}
                 </Typography>
                 <Typography variant="caption" className="mt-xs text-[10px] text-brand-muted">
-                  Current Price
+                  Material price / MT
                 </Typography>
               </View>
 

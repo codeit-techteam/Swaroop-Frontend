@@ -67,7 +67,10 @@ export const CustomerMarketScreen = () => {
   const locationSheetRef = useRef<BottomSheetModal>(null);
   const filterSheetRef = useRef<BottomSheetModal>(null);
   const { selectedLocation, openAddressForm } = useDeliveryLocation();
-  const params = useLocalSearchParams<{ focusSearch?: string | string[] }>();
+  const params = useLocalSearchParams<{
+    focusSearch?: string | string[];
+    openFilters?: string | string[];
+  }>();
   const { products: marketProducts, loading, error, refetch } = useMarketplaceCatalogQuery();
   const [promoBanners, setPromoBanners] = useState<HomeBanner[]>([]);
   // B-07: real catalogue filters (stock, credit, price, MOQ, manufacturer, origin, sort).
@@ -167,13 +170,19 @@ export const CustomerMarketScreen = () => {
     [catalogueGrades, debouncedSearch, marketProducts],
   );
 
-  const shouldAutoFocus = useMemo(() => {
-    const value = params.focusSearch;
-    if (typeof value === 'string') {
-      return value === '1';
-    }
+  const paramIsSet = useCallback((value: string | string[] | undefined) => {
+    if (typeof value === 'string') return value === '1';
     return Array.isArray(value) && value[0] === '1';
-  }, [params.focusSearch]);
+  }, []);
+
+  const shouldAutoFocus = useMemo(
+    () => paramIsSet(params.focusSearch),
+    [paramIsSet, params.focusSearch],
+  );
+  const shouldOpenFilters = useMemo(
+    () => paramIsSet(params.openFilters),
+    [paramIsSet, params.openFilters],
+  );
 
   // Home search taps Market with focusSearch=1. Tab screens stay mounted, so
   // autoFocus alone is unreliable — focus the input whenever the param arrives.
@@ -187,6 +196,19 @@ export const CustomerMarketScreen = () => {
       }, 120);
       return () => clearTimeout(timer);
     }, [handleFocus, router, shouldAutoFocus]),
+  );
+
+  // Home Filter icon opens Market with the filter sheet already presented.
+  useFocusEffect(
+    useCallback(() => {
+      if (!shouldOpenFilters) return undefined;
+      const timer = setTimeout(() => {
+        Keyboard.dismiss();
+        filterSheetRef.current?.present();
+        router.setParams({ openFilters: undefined });
+      }, 180);
+      return () => clearTimeout(timer);
+    }, [router, shouldOpenFilters]),
   );
 
   const handleLocationPress = useCallback(() => {
@@ -257,7 +279,11 @@ export const CustomerMarketScreen = () => {
 
   const handleFilterPress = useCallback(() => {
     Keyboard.dismiss();
-    filterSheetRef.current?.present();
+    // Defer present until after keyboard teardown — otherwise the sheet can
+    // fail to attach on the first tap while the search field still has focus.
+    requestAnimationFrame(() => {
+      filterSheetRef.current?.present();
+    });
   }, []);
 
   const handleApplyFilters = useCallback((next: MarketFilters) => {

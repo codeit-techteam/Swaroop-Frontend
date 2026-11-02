@@ -26,7 +26,22 @@ export type MarketProduct = {
   id: string;
   name: string;
   grade: string;
+  /** Authoritative material price ₹/MT from Offer.basePrice. */
   price: number;
+  /**
+   * Backend landed-cost preview at MOQ (ADVANCE). Never invent on the client.
+   * `finalAmountPerMT` is estimated landed — do not display as material price.
+   */
+  pricingPreview?: {
+    materialPricePerMT: string;
+    freightPerMT: string;
+    finalAmount: string;
+    finalAmountPerMT: string;
+    quantityMT: string;
+    needsPriceReview?: boolean;
+    currency?: string;
+    pricingUnit?: string;
+  } | null;
   origin: string;
   stock: number;
   moq: number;

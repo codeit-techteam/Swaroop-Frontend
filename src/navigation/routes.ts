@@ -143,6 +143,9 @@ export const ROUTES = {
     PROCUREMENT_WORKBENCH: '/(seller)/procurement-workbench',
     IMPORT_TRADING: '/(seller)/import-trading',
     SEARCH: '/(seller)/search',
+    GRADE_REQUESTS: '/(seller)/grade-requests',
+    GRADE_REQUEST_NEW: '/(seller)/grade-requests/new',
+    GRADE_REQUEST_DETAILS: '/(seller)/grade-requests/[id]',
     RAISE_TICKET: '/(seller)/raise-ticket',
   },
 

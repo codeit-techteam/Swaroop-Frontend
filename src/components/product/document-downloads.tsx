@@ -111,7 +111,7 @@ export const DocumentDownloads = memo(function DocumentDownloads({
           variant="caption"
           className="mt-sm font-sans text-[12px] normal-case tracking-normal text-brand-muted"
         >
-          {emptyMessage ?? 'TDS unavailable — no approved technical documents on file.'}
+          {emptyMessage ?? 'No additional listing documents on file.'}
         </Typography>
       </View>
     );
@@ -132,8 +132,8 @@ export const DocumentDownloads = memo(function DocumentDownloads({
         className="mt-xs font-sans text-[12px] normal-case tracking-normal text-brand-muted"
       >
         {requireAuth
-          ? 'Sign in to download verified TDS and product documents'
-          : 'Verified product documents from PolyStoreX'}
+          ? 'Sign in to download verified listing documents'
+          : 'Additional listing documents (MSDS and related)'}
       </Typography>
       <View className="mt-md" style={{ gap: 8 }}>
         {visibleDocuments.map((doc) => (

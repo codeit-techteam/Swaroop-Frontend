@@ -7,6 +7,7 @@ import { describe, it } from 'node:test';
 
 import {
   formatCategoryDisplayName,
+  formatGradeGroupLabel,
   humanizeMasterLabel,
   isInternalMasterCode,
 } from '../master-label.ts';
@@ -24,6 +25,18 @@ describe('formatCategoryDisplayName (S-14)', () => {
     assert.equal(formatCategoryDisplayName('ABS'), 'ABS');
     assert.equal(formatCategoryDisplayName('ACETONE'), 'ACETONE');
     assert.equal(formatCategoryDisplayName('BOPP'), 'BOPP');
+  });
+
+  it('humanizes TiO2 / Masterbatch grade groups without leaving underscores', () => {
+    assert.equal(formatGradeGroupLabel('TIO2_GENERAL'), 'TIO2 General');
+    assert.equal(formatGradeGroupLabel('TIO2_PLASTIC'), 'TIO2 Plastic');
+    assert.equal(
+      formatGradeGroupLabel('TIO2_PAINTS_COATINGS_INK'),
+      'TIO2 Paints Coatings Ink',
+    );
+    assert.equal(formatGradeGroupLabel('MASTERBATCH'), 'MASTERBATCH');
+    assert.equal(formatGradeGroupLabel('MASTER_BATCH'), 'Master Batch');
+    assert.ok(!formatGradeGroupLabel('TIO2_GENERAL').includes('_'));
   });
 
   it('detects internal master codes', () => {

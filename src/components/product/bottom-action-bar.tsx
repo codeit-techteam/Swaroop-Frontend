@@ -19,6 +19,8 @@ type BottomActionBarProps = {
   increment: number;
   /** Offer material price per MT. Same number as the marketplace card. */
   unitPricePerMt: number;
+  /** Backend estimated landed ₹/MT (freight + discount + GST). */
+  estimatedLandedPerMt?: number | null;
   estimatedTotal: number;
   disabled?: boolean;
   refreshing?: boolean;
@@ -38,6 +40,7 @@ export const BottomActionBar = memo(function BottomActionBar({
   maxMt,
   increment,
   unitPricePerMt,
+  estimatedLandedPerMt = null,
   estimatedTotal,
   disabled = false,
   refreshing = false,
@@ -74,6 +77,14 @@ export const BottomActionBar = memo(function BottomActionBar({
             </Typography>
             <Typography
               variant="caption"
+              className="mt-0.5 font-sans text-[11px] normal-case tracking-normal text-brand-body"
+            >
+              {estimatedLandedPerMt != null && estimatedLandedPerMt > 0
+                ? `Est. landed ${formatInr(estimatedLandedPerMt)} / MT`
+                : 'Final price calculated at checkout'}
+            </Typography>
+            <Typography
+              variant="caption"
               className="mt-0.5 font-sans text-[11px] normal-case tracking-normal text-brand-muted"
             >
               Order total for {quantityMt} MT · includes delivery and GST
@@ -93,7 +104,7 @@ export const BottomActionBar = memo(function BottomActionBar({
             variant="caption"
             className="font-sans text-[11px] normal-case tracking-normal text-brand-muted"
           >
-            Order total
+            Estimated order total
           </Typography>
           <View className="flex-row items-center" style={{ gap: 6 }}>
             <View style={{ width: 16, height: 16 }} accessibilityElementsHidden={!refreshing}>

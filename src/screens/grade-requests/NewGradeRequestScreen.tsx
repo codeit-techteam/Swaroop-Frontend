@@ -14,9 +14,9 @@ import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 
 import { useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 
 import {
-  AppHeader,
   InputField,
   PrimaryButton,
   ScreenWrapper,
@@ -24,7 +24,7 @@ import {
   Typography,
 } from '@/components';
 import { DatePickerField } from '@/components/ui/date-picker-field';
-import { gradeRequestKeys } from '@/hooks/use-grade-requests';
+import { gradeRequestApiFor, gradeRequestKeys } from '@/hooks/use-grade-requests';
 import {
   EMPTY_GRADE_REQUEST_FORM,
   decimalOnly,
@@ -34,14 +34,11 @@ import {
   type GradeRequestFormErrors,
   type GradeRequestFormValues,
 } from '@/lib/grade-request-validation';
-import { ROUTES } from '@/navigation/routes';
 import {
   GradeRequestError,
-  createGradeRequest,
-  fetchGradeRequestPrefill,
+  type GradeRequestRole,
   newIdempotencyKey,
   toGradeRequestError,
-  uploadGradeRequestDocument,
   type PickedGradeRequestFile,
 } from '@/services/grade-requests';
 import {
@@ -54,8 +51,8 @@ import {
 import { cn } from '@/utils/cn';
 import { dayjs } from '@/utils/date';
 
-const firstParam = (value?: string | string[]): string | undefined =>
-  Array.isArray(value) ? value[0] : value;
+import { GradeRequestHeader } from './GradeRequestParts';
+import { GRADE_REQUEST_ROLE_CONFIG, firstParam } from './role-config';
 
 const DEFAULT_LIMITS = {
   maxDocuments: 5,
@@ -64,8 +61,20 @@ const DEFAULT_LIMITS = {
   storageConfigured: true,
 };
 
-export const NewGradeRequestScreen = memo(function NewGradeRequestScreen() {
+/** Errors with a dedicated inline UI (conflict cards) don't need a toast as well. */
+const INLINE_ERROR_CODES = new Set(['GRADE_ALREADY_IN_CATALOGUE', 'DUPLICATE_OPEN_REQUEST']);
+
+const toastError = (title: string, error: GradeRequestError) =>
+  Toast.show({ type: 'error', text1: title, text2: error.message });
+
+type Props = { role?: GradeRequestRole };
+
+export const NewGradeRequestScreen = memo(function NewGradeRequestScreen({
+  role = 'customer',
+}: Props) {
   const router = useRouter();
+  const config = GRADE_REQUEST_ROLE_CONFIG[role];
+  const api = gradeRequestApiFor(role);
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const params = useLocalSearchParams<{ search?: string | string[] }>();
@@ -91,7 +100,8 @@ export const NewGradeRequestScreen = memo(function NewGradeRequestScreen() {
 
   useEffect(() => {
     let active = true;
-    fetchGradeRequestPrefill()
+    api
+      .fetchPrefill()
       .then((data) => {
         if (!active) return;
         setPrefill(data);
@@ -111,7 +121,7 @@ export const NewGradeRequestScreen = memo(function NewGradeRequestScreen() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [api]);
 
   const limits = prefill?.limits ?? DEFAULT_LIMITS;
 
@@ -174,17 +184,20 @@ export const NewGradeRequestScreen = memo(function NewGradeRequestScreen() {
   const setFileType = (index: number, documentType: GradeRequestDocumentType) =>
     setFiles((cur) => cur.map((f, i) => (i === index ? { ...f, documentType } : f)));
 
-  const uploadAll = async (requestId: string, pending: PickedGradeRequestFile[]) => {
-    const failed: PickedGradeRequestFile[] = [];
-    for (const file of pending) {
-      try {
-        await uploadGradeRequestDocument(requestId, file);
-      } catch {
-        failed.push(file);
+  const uploadAll = useCallback(
+    async (requestId: string, pending: PickedGradeRequestFile[]) => {
+      const failed: PickedGradeRequestFile[] = [];
+      for (const file of pending) {
+        try {
+          await api.uploadDocument(requestId, file);
+        } catch {
+          failed.push(file);
+        }
       }
-    }
-    return failed;
-  };
+      return failed;
+    },
+    [api],
+  );
 
   const handleSubmit = useCallback(async () => {
     if (submitting) return;
@@ -197,7 +210,7 @@ export const NewGradeRequestScreen = memo(function NewGradeRequestScreen() {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const created = await createGradeRequest({
+      const created = await api.create({
         gradeName: form.gradeName.trim(),
         materialCategory: form.materialCategory.trim(),
         manufacturer: form.manufacturer.trim() || undefined,
@@ -224,31 +237,72 @@ export const NewGradeRequestScreen = memo(function NewGradeRequestScreen() {
       });
       setResult(created);
       void queryClient.invalidateQueries({ queryKey: gradeRequestKeys.all });
-      if (files.length) setUploadFailures(await uploadAll(created.id, files));
+      if (files.length) {
+        const failed = await uploadAll(created.id, files);
+        setUploadFailures(failed);
+        if (failed.length) {
+          Toast.show({
+            type: 'error',
+            text1: 'Some files were not attached',
+            text2: 'Your request is saved. You can retry the upload.',
+          });
+        }
+      }
     } catch (error) {
-      setSubmitError(toGradeRequestError(error, 'Unable to submit your request.'));
+      const failure = toGradeRequestError(error, 'Unable to submit your request.');
+      setSubmitError(failure);
+      if (!INLINE_ERROR_CODES.has(failure.code ?? '')) toastError('Request not submitted', failure);
       scrollRef.current?.scrollTo({ y: 0, animated: true });
     } finally {
       setSubmitting(false);
     }
-  }, [acknowledgeExisting, files, form, prefill, queryClient, submitting]);
+  }, [acknowledgeExisting, api, files, form, prefill, queryClient, submitting, uploadAll]);
 
   const retryUploads = useCallback(async () => {
     if (!result) return;
     setRetrying(true);
-    setUploadFailures(await uploadAll(result.id, uploadFailures));
-    void queryClient.invalidateQueries({ queryKey: gradeRequestKeys.detail(result.id) });
+    const failed = await uploadAll(result.id, uploadFailures);
+    setUploadFailures(failed);
+    if (failed.length) {
+      Toast.show({
+        type: 'error',
+        text1: 'Upload failed',
+        text2: 'Check your connection and retry.',
+      });
+    } else {
+      Toast.show({ type: 'success', text1: 'Files attached' });
+    }
+    void queryClient.invalidateQueries({ queryKey: gradeRequestKeys.detail(result.id, role) });
     setRetrying(false);
-  }, [queryClient, result, uploadFailures]);
+  }, [queryClient, result, role, uploadAll, uploadFailures]);
 
   const openGradeRequest = useCallback(
     (id: string) =>
       router.replace({
-        pathname: ROUTES.CUSTOMER.GRADE_REQUEST_DETAILS,
+        pathname: config.detailsRoute,
         params: { id },
       } as unknown as Href),
-    [router],
+    [config.detailsRoute, router],
   );
+
+  /** Customer: grade detail page. Seller: Add Product with the catalogue grade preselected. */
+  const openCatalogueGrade = useCallback(
+    (id: string) =>
+      router.push({
+        pathname: config.gradeDetailsRoute ?? config.browseRoute,
+        params: config.gradeDetailsRoute ? { id } : { catalogId: id },
+      } as unknown as Href),
+    [config.browseRoute, config.gradeDetailsRoute, router],
+  );
+
+  const browseExisting = useCallback(() => {
+    if (role === 'seller') {
+      // Return to the picker we came from instead of stacking a second Add Product screen.
+      router.dismissTo(config.browseRoute as Href);
+      return;
+    }
+    router.push(config.browseRoute as Href);
+  }, [config.browseRoute, role, router]);
 
   const requiredByDate = useMemo(
     () => (form.requiredByDate ? dayjs(form.requiredByDate).toDate() : null),
@@ -258,10 +312,10 @@ export const NewGradeRequestScreen = memo(function NewGradeRequestScreen() {
   if (result) {
     return (
       <ScreenWrapper padded={false} className="bg-brand-background">
-        <AppHeader
-          variant="back"
-          title="Request submitted"
-          onBack={() => router.replace(ROUTES.CUSTOMER.GRADE_REQUESTS as Href)}
+        <GradeRequestHeader
+          role={role}
+          title={config.submittedTitle}
+          onBack={() => router.replace(config.listRoute as Href)}
         />
         <ScrollView
           className="flex-1 px-lg"
@@ -314,11 +368,7 @@ export const NewGradeRequestScreen = memo(function NewGradeRequestScreen() {
             <Typography variant="roleTitle" className="text-[14px]">
               What happens next
             </Typography>
-            {[
-              'Our team reviews the technical details.',
-              'We may ask you for more information — you will be notified.',
-              'Once the grade is identified, you can raise a purchase request.',
-            ].map((line, i) => (
+            {config.nextSteps.map((line, i) => (
               <Typography key={line} variant="roleDescription" className="mt-xs">
                 {i + 1}. {line}
               </Typography>
@@ -331,8 +381,12 @@ export const NewGradeRequestScreen = memo(function NewGradeRequestScreen() {
             className="mt-xl"
           />
           <SecondaryButton
-            label="Back to grades"
-            onPress={() => router.replace(ROUTES.CUSTOMER.GRADES as Href)}
+            label={config.doneLabel}
+            onPress={() =>
+              role === 'seller'
+                ? router.dismissTo(config.browseRoute as Href)
+                : router.replace(config.browseRoute as Href)
+            }
             className="mt-md"
           />
         </ScrollView>
@@ -342,7 +396,11 @@ export const NewGradeRequestScreen = memo(function NewGradeRequestScreen() {
 
   return (
     <ScreenWrapper padded={false} className="bg-brand-background">
-      <AppHeader variant="back" title="Request a new grade" />
+      <GradeRequestHeader
+        role={role}
+        title={config.newTitle}
+        fallbackHref={config.listRoute as Href}
+      />
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -355,25 +413,21 @@ export const NewGradeRequestScreen = memo(function NewGradeRequestScreen() {
           contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
         >
           <Typography variant="subheadingLeft" className="mt-md">
-            Can&apos;t find the grade you need? Tell us about it and our team will source or add it.
+            {config.newIntro}
           </Typography>
 
           <Pressable
-            onPress={() => router.push(ROUTES.CUSTOMER.GRADES as Href)}
+            onPress={browseExisting}
             accessibilityRole="button"
             className="mt-md rounded-lg border border-brand-border bg-brand-white px-md py-sm"
           >
-            <Typography variant="link">Search existing grades first →</Typography>
+            <Typography variant="link">{config.browseLabel}</Typography>
           </Pressable>
 
           <SubmitProblem
             error={submitError}
-            onOpenGrade={(id) =>
-              router.push({
-                pathname: ROUTES.CUSTOMER.GRADE_DETAILS,
-                params: { id },
-              } as unknown as Href)
-            }
+            role={role}
+            onOpenGrade={openCatalogueGrade}
             onOpenExisting={openGradeRequest}
             onConfirmAnyway={() => {
               setAcknowledgeExisting(true);
@@ -468,7 +522,7 @@ export const NewGradeRequestScreen = memo(function NewGradeRequestScreen() {
             </View>
             <InputField
               containerClassName="mt-md"
-              label="Delivery location *"
+              label={config.deliveryLabel}
               value={form.deliveryLocation}
               onChangeText={(v) => set('deliveryLocation', v)}
               error={errors.deliveryLocation}
@@ -476,7 +530,7 @@ export const NewGradeRequestScreen = memo(function NewGradeRequestScreen() {
               multiline
               numberOfLines={2}
               textAlignVertical="top"
-              placeholder="City, state — or a full delivery address"
+              placeholder={config.deliveryPlaceholder}
             />
             <InputField
               containerClassName="mt-md"
@@ -553,7 +607,7 @@ export const NewGradeRequestScreen = memo(function NewGradeRequestScreen() {
             />
             {prefill?.companyName ? (
               <Typography variant="roleDescription" className="mt-sm text-brand-muted">
-                Requesting on behalf of {prefill.companyName}.
+                {config.contactCaption(prefill.companyName)}
               </Typography>
             ) : null}
           </Section>
@@ -636,6 +690,7 @@ export const NewGradeRequestScreen = memo(function NewGradeRequestScreen() {
             label={acknowledgeExisting ? 'Submit anyway' : 'Submit request'}
             onPress={() => void handleSubmit()}
             loading={submitting}
+            disabled={submitting}
             className="mt-xl"
           />
         </ScrollView>
@@ -654,11 +709,13 @@ const Section = ({ title, children }: { title: string; children: React.ReactNode
 );
 
 const SubmitProblem = ({
+  role,
   error,
   onOpenGrade,
   onOpenExisting,
   onConfirmAnyway,
 }: {
+  role: GradeRequestRole;
   error: GradeRequestError | null;
   onOpenGrade: (id: string) => void;
   onOpenExisting: (id: string) => void;
@@ -673,7 +730,9 @@ const SubmitProblem = ({
           This grade may already be in the catalogue
         </Typography>
         <Typography variant="subheadingLeft" className="mt-xs">
-          Open one of these, or confirm you still want a new request.
+          {role === 'seller'
+            ? 'Open one of these to list it, or confirm you still need a new grade added.'
+            : 'Open one of these, or confirm you still want a new request.'}
         </Typography>
         {error.matches.map((m) => (
           <Pressable key={m.id} onPress={() => onOpenGrade(m.id)} className="mt-sm" hitSlop={6}>

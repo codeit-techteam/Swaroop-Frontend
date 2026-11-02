@@ -1,6 +1,7 @@
 import { apiClient } from '@/api/client';
 import { isAxiosError } from 'axios';
 import { importNotificationTarget } from '@/features/import/config';
+import { ROUTES } from '@/navigation/routes';
 import type { SellerOrder, SellerOrderPaymentMethod, SellerOrderStatus } from '@/seller/modules/seller-orders/types/sellerOrders';
 import type {
   DocumentCategory,
@@ -236,6 +237,13 @@ export async function fetchSellerNotifications(): Promise<SellerNotificationsSna
       row.entityId,
       row.metadata,
     );
+    const gradeRequestRoute =
+      row.entityType === 'NEW_GRADE_REQUEST' && row.entityId
+        ? ROUTES.SELLER.GRADE_REQUEST_DETAILS.replace('[id]', encodeURIComponent(row.entityId))
+        : null;
+    const target =
+      importTarget ??
+      (gradeRequestRoute ? { route: gradeRequestRoute, label: 'View request' } : null);
     return {
       id: row.id,
       type: row.readAt ? 'activity' : 'action',
@@ -246,15 +254,15 @@ export async function fetchSellerNotifications(): Promise<SellerNotificationsSna
       time: row.createdAt,
       isRead: Boolean(row.readAt),
       status: row.status,
-      ...(importTarget
+      ...(target
         ? {
-            route: importTarget.route,
+            route: target.route,
             actions: [
               {
                 id: `open-${row.id}`,
-                label: importTarget.label,
+                label: target.label,
                 variant: 'primary' as const,
-                route: importTarget.route,
+                route: target.route,
               },
             ],
           }

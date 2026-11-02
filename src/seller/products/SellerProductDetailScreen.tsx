@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 
 import { Alert, Pressable, ScrollView, View } from 'react-native';
 
@@ -11,11 +11,13 @@ import { ROUTES } from '@/navigation/routes';
 import { SellerCard, SellerHeader, SellerPrimaryButton } from '@/seller/components';
 import { DocumentCard } from '@/seller/components/analytics';
 import {
-  getProductDetail,
-  simulateProductDocumentDownload,
-} from '@/seller/services/productDetailService';
+  fetchSellerProductGradeTds,
+  type SellerGradeTdsResponse,
+} from '@/seller/services/gradeTdsService';
+import { getProductDetail } from '@/seller/services/productDetailService';
 import { useSellerProductStore } from '@/seller/store/sellerProductStore';
 import { formatBulkTierRangeLabel } from '@/seller/utils/bulk-tier-range';
+import { isBackendId } from '@/seller/utils/listing-input';
 import { formatSellerSellingPrice, POLYSTOREX_CREDIT_NOTE } from '@/seller/utils/pricing';
 
 const DetailRow = ({ label, value }: { label: string; value: string }) => (
@@ -42,6 +44,40 @@ export const SellerProductDetailScreen = memo(function SellerProductDetailScreen
   );
 
   const detail = useMemo(() => getProductDetail(productId ?? ''), [productId]);
+  const [gradeTds, setGradeTds] = useState<SellerGradeTdsResponse | null>(null);
+  const [gradeTdsLoading, setGradeTdsLoading] = useState(false);
+  const [gradeTdsError, setGradeTdsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const id = productId;
+    if (!id || !isBackendId(id)) {
+      setGradeTds(null);
+      setGradeTdsError(null);
+      return;
+    }
+
+    let cancelled = false;
+    setGradeTdsLoading(true);
+    setGradeTdsError(null);
+
+    void (async () => {
+      try {
+        const result = await fetchSellerProductGradeTds(id);
+        if (!cancelled) setGradeTds(result);
+      } catch {
+        if (!cancelled) {
+          setGradeTds(null);
+          setGradeTdsError('Unable to load platform TDS status.');
+        }
+      } finally {
+        if (!cancelled) setGradeTdsLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [productId]);
 
   if (!product) {
     return (
@@ -57,9 +93,49 @@ export const SellerProductDetailScreen = memo(function SellerProductDetailScreen
     );
   }
 
-  const handleDownload = async (fileName: string) => {
-    const message = await simulateProductDocumentDownload(fileName);
-    Alert.alert('Download', message);
+  const showPlatformTds = isBackendId(product.id);
+  const platformName =
+    gradeTds?.product?.name ?? gradeTds?.grade?.name ?? product.form.name;
+  const platformManufacturer =
+    gradeTds?.product?.manufacturer ??
+    gradeTds?.grade?.manufacturer ??
+    gradeTds?.items[0]?.manufacturer ??
+    product.form.brand;
+
+  const handleReviewTds = () => {
+    if (gradeTdsLoading) return;
+    if (!showPlatformTds) {
+      Alert.alert(
+        'Platform TDS',
+        'Save this product to the catalogue first to see verified platform TDS status.',
+      );
+      return;
+    }
+    if (gradeTdsError) {
+      Alert.alert('Platform TDS', gradeTdsError);
+      return;
+    }
+    if (!gradeTds?.available) {
+      Alert.alert(
+        'Platform TDS',
+        gradeTds?.message ??
+          'No verified platform TDS is linked to this product yet. Customers will not see a datasheet until one is verified.',
+      );
+      return;
+    }
+    const first = gradeTds.items[0];
+    Alert.alert(
+      'Verified on platform',
+      [
+        `${platformName}`,
+        first?.title ? `Document: ${first.title}` : null,
+        platformManufacturer ? `Manufacturer: ${platformManufacturer}` : null,
+        first?.format ? `Format: ${String(first.format).toUpperCase()}` : null,
+        'Customers see this verified TDS on the grade page. Download is managed on the platform — metadata only here.',
+      ]
+        .filter(Boolean)
+        .join('\n'),
+    );
   };
 
   return (
@@ -170,14 +246,79 @@ export const SellerProductDetailScreen = memo(function SellerProductDetailScreen
         </SellerCard>
 
         <SellerCard title="Documents" className="mt-lg">
-          {detail.documents.map((doc) => (
-            <DocumentCard
-              key={doc.id}
-              title={doc.title}
-              fileName={doc.fileName}
-              onDownload={() => void handleDownload(doc.fileName)}
-            />
-          ))}
+          {showPlatformTds ? (
+            <View className="mb-md rounded-xl border border-brand-border bg-brand-surface px-md py-md">
+              <Typography variant="roleTitle">Platform TDS (verified)</Typography>
+              <Typography variant="legal" className="mt-xs text-left text-brand-body">
+                {gradeTdsLoading
+                  ? 'Checking library…'
+                  : gradeTdsError
+                    ? gradeTdsError
+                    : gradeTds?.available
+                      ? `Available · ${platformName}${
+                          gradeTds.items[0]?.format
+                            ? ` · ${String(gradeTds.items[0].format).toUpperCase()}`
+                            : ''
+                        }`
+                      : (gradeTds?.message ?? 'Unavailable — no verified TDS linked yet.')}
+              </Typography>
+              <Typography variant="legal" className="mt-xs text-left text-brand-body">
+                Customers see this TDS on the grade page. Verified on platform — metadata only
+                (no seller download URL).
+              </Typography>
+              {gradeTds?.available
+                ? gradeTds.items.map((item) => (
+                    <View
+                      key={item.id}
+                      className="mt-sm rounded-xl border border-brand-border bg-brand-white px-md py-md"
+                    >
+                      <Typography variant="roleTitle">{item.title}</Typography>
+                      <Typography variant="legal" className="mt-0.5 text-left text-brand-body">
+                        {[
+                          item.format ? String(item.format).toUpperCase() : null,
+                          item.manufacturer ?? platformManufacturer,
+                          'Verified on platform',
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </Typography>
+                    </View>
+                  ))
+                : null}
+              <View className="mt-sm">
+                <SecondaryButton
+                  label={
+                    gradeTdsLoading
+                      ? 'Checking TDS…'
+                      : gradeTds?.available
+                        ? 'Review platform TDS'
+                        : 'View TDS status'
+                  }
+                  variant="outline"
+                  onPress={handleReviewTds}
+                />
+              </View>
+            </View>
+          ) : (
+            <>
+              <Typography variant="legal" className="mb-md text-left text-brand-body">
+                Platform TDS status appears after this product is saved to the catalogue.
+              </Typography>
+              {detail.documents.map((doc) => (
+                <DocumentCard
+                  key={doc.id}
+                  title={doc.title}
+                  fileName={doc.fileName}
+                  onDownload={() =>
+                    Alert.alert(
+                      'Documents',
+                      'Seller uploads and platform TDS are available after the product is synced.',
+                    )
+                  }
+                />
+              ))}
+            </>
+          )}
         </SellerCard>
 
         <SellerCard title="Offer Status" className="mt-lg">

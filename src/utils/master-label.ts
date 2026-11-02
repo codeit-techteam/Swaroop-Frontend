@@ -75,3 +75,8 @@ export function formatCategoryDisplayName(
   if (!raw.includes('_')) return raw;
   return humanizeMasterLabel(raw);
 }
+
+/** Customer-facing grade-group chip: TIO2_GENERAL → "TIO2 General". */
+export function formatGradeGroupLabel(value?: string | null): string {
+  return formatCategoryDisplayName(value);
+}

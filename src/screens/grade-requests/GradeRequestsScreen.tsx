@@ -6,35 +6,41 @@ import { type Href, useRouter } from 'expo-router';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppHeader, PrimaryButton, ScreenWrapper, Typography } from '@/components';
-import { EmptyState } from '@/components/market';
-import { MarketListSkeleton } from '@/components/ui/skeleton';
+import { PrimaryButton, ScreenWrapper, Typography } from '@/components';
 import { useGradeRequests } from '@/hooks/use-grade-requests';
-import { ROUTES } from '@/navigation/routes';
-import { toGradeRequestError } from '@/services/grade-requests';
-import type { GradeRequest } from '@/types/grade-request';
+import { type GradeRequestRole, toGradeRequestError } from '@/services/grade-requests';
+import { type GradeRequest, isAwaitingRequesterResponse } from '@/types/grade-request';
 import { dayjs } from '@/utils/date';
 
+import {
+  GradeRequestHeader,
+  GradeRequestListSkeleton,
+  GradeRequestStateCard,
+} from './GradeRequestParts';
 import { GradeRequestStatusPill } from './GradeRequestStatusPill';
+import { GRADE_REQUEST_ROLE_CONFIG } from './role-config';
 
-export const GradeRequestsScreen = memo(function GradeRequestsScreen() {
+type Props = { role?: GradeRequestRole };
+
+export const GradeRequestsScreen = memo(function GradeRequestsScreen({ role = 'customer' }: Props) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const query = useGradeRequests();
+  const query = useGradeRequests(role);
+  const config = GRADE_REQUEST_ROLE_CONFIG[role];
 
   const items = useMemo(() => query.data?.pages.flatMap((p) => p.items) ?? [], [query.data]);
 
   const openNew = useCallback(
-    () => router.push(ROUTES.CUSTOMER.GRADE_REQUEST_NEW as Href),
-    [router],
+    () => router.push(config.newRoute as Href),
+    [config.newRoute, router],
   );
   const openRequest = useCallback(
     (item: GradeRequest) =>
       router.push({
-        pathname: ROUTES.CUSTOMER.GRADE_REQUEST_DETAILS,
+        pathname: config.detailsRoute,
         params: { id: item.id },
       } as unknown as Href),
-    [router],
+    [config.detailsRoute, router],
   );
 
   const renderItem = useCallback(
@@ -56,9 +62,9 @@ export const GradeRequestsScreen = memo(function GradeRequestsScreen() {
           </View>
           <GradeRequestStatusPill status={item.status} label={item.statusLabel} />
         </View>
-        {item.awaitingCustomerResponse ? (
+        {isAwaitingRequesterResponse(item) ? (
           <Typography variant="error" className="mt-sm">
-            We need more information from you.
+            {config.needsResponseMessage}
           </Typography>
         ) : null}
         <Typography variant="roleDescription" className="mt-sm text-[11px] text-brand-muted">
@@ -66,18 +72,24 @@ export const GradeRequestsScreen = memo(function GradeRequestsScreen() {
         </Typography>
       </Pressable>
     ),
-    [openRequest],
+    [config.needsResponseMessage, openRequest],
   );
 
   return (
     <ScreenWrapper padded={false} className="bg-brand-background">
-      <AppHeader variant="back" title="Grade requests" />
+      <GradeRequestHeader
+        role={role}
+        title={config.listTitle}
+        fallbackHref={config.fallbackRoute as Href}
+      />
 
       {query.isPending ? (
-        <MarketListSkeleton />
+        <GradeRequestListSkeleton role={role} />
       ) : query.isError && items.length === 0 ? (
-        <EmptyState
-          title="Unable to load requests"
+        <GradeRequestStateCard
+          role={role}
+          kind="error"
+          title={config.loadErrorTitle}
           description={toGradeRequestError(query.error, 'Please try again.').message}
           actionLabel="Retry"
           onActionPress={() => void query.refetch()}
@@ -106,10 +118,12 @@ export const GradeRequestsScreen = memo(function GradeRequestsScreen() {
             ) : undefined
           }
           ListEmptyComponent={
-            <EmptyState
-              title="No grade requests yet"
-              description="If you can't find a grade in the catalogue, request it and we will source it for you."
-              actionLabel="Request a new grade"
+            <GradeRequestStateCard
+              role={role}
+              kind="empty"
+              title={config.emptyTitle}
+              description={config.emptyDescription}
+              actionLabel={config.newCtaLabel}
               onActionPress={openNew}
             />
           }
@@ -122,7 +136,7 @@ export const GradeRequestsScreen = memo(function GradeRequestsScreen() {
           className="absolute inset-x-0 bottom-0 bg-brand-background px-lg pt-sm"
           style={{ paddingBottom: insets.bottom + 12 }}
         >
-          <PrimaryButton label="Request a new grade" onPress={openNew} />
+          <PrimaryButton label={config.newCtaLabel} onPress={openNew} />
         </View>
       ) : null}
     </ScreenWrapper>

@@ -10,6 +10,27 @@ type Envelope<T> = {
   message?: string;
 };
 
+export type MarketplacePricingBreakdown = {
+  materialPricePerMT: string;
+  freightPerMT: string;
+  advanceDiscountPercent: number;
+  gstPercent: number;
+  quantityMT: string;
+  materialSubtotal: string;
+  freightTotal: string;
+  discountAmount: string;
+  taxableAmount: string;
+  gstAmount: string;
+  finalAmount: string;
+  finalAmountPerMT: string;
+  currency: string;
+  pricingUnit: string;
+  offerId: string;
+  priceVersion: string;
+  needsPriceReview?: boolean;
+  priceReviewReason?: string | null;
+};
+
 export type MarketplacePricingEstimate = {
   binding: boolean;
   currency: string;
@@ -21,6 +42,8 @@ export type MarketplacePricingEstimate = {
   amounts: null | {
     /* reserved — prefer exTax/tax/inclusiveTotal when present */
   };
+  /** Authoritative commercial breakdown from the backend pricing engine. */
+  pricing?: MarketplacePricingBreakdown | null;
   exTax?: {
     material: string;
     discount: string;

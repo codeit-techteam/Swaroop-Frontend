@@ -42,7 +42,10 @@ export type GradeRequest = {
   statusLabel: string;
   statusDescription: string;
   isOpen: boolean;
-  awaitingCustomerResponse: boolean;
+  /** Customer API key. */
+  awaitingCustomerResponse?: boolean;
+  /** Seller API key (the seller view also mirrors `awaitingCustomerResponse`). */
+  awaitingResponse?: boolean;
   gradeName: string;
   materialCategory: string;
   manufacturer: string | null;
@@ -122,3 +125,7 @@ export type GradeRequestPage = {
   totalPages: number;
   total: number;
 };
+
+/** True when the request is waiting on the requester (customer or seller) to reply. */
+export const isAwaitingRequesterResponse = (request: GradeRequest): boolean =>
+  Boolean(request.awaitingResponse ?? request.awaitingCustomerResponse);

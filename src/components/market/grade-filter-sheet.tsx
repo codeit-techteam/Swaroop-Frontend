@@ -14,6 +14,7 @@ import { PrimaryButton, SecondaryButton, Typography } from '@/components/ui';
 import { brandColors } from '@/theme/colors';
 import type { GradeFacetBucket } from '@/types/grade-master';
 import { cn } from '@/utils/cn';
+import { formatGradeGroupLabel } from '@/utils/master-label';
 
 const MANUFACTURER_LIMIT = 40;
 
@@ -145,7 +146,7 @@ export const GradeFilterSheet = memo(
               {gradeGroups.map((group) => (
                 <SheetChip
                   key={group.name}
-                  label={`${group.name} (${group.gradeCount})`}
+                  label={`${formatGradeGroupLabel(group.name)} (${group.gradeCount})`}
                   selected={draft.gradeGroup === group.name}
                   onPress={() =>
                     setDraft((prev) => ({

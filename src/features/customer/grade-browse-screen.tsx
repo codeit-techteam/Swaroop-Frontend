@@ -35,6 +35,7 @@ import {
 import { useNotificationBadge } from '@/hooks/use-notifications';
 import { ROUTES } from '@/navigation/routes';
 import type { CustomerGrade, GradeBrowseFilters } from '@/types/grade-master';
+import { formatGradeGroupLabel } from '@/utils/master-label';
 
 const SEARCH_DEBOUNCE_MS = 350;
 
@@ -96,7 +97,11 @@ export const CustomerGradeBrowseScreen = memo(function CustomerGradeBrowseScreen
 
   const gradeGroups = useMemo(() => facetsQuery.data?.gradeGroups ?? [], [facetsQuery.data]);
   const gradeGroupOptions = useMemo(
-    () => gradeGroups.map((group) => ({ id: group.name, label: group.name })),
+    () =>
+      gradeGroups.map((group) => ({
+        id: group.name,
+        label: formatGradeGroupLabel(group.name),
+      })),
     [gradeGroups],
   );
   const activeSheetCount =

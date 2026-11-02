@@ -75,6 +75,7 @@ const PROFILE_ROUTE_MAP = {
   'vehicle-slots': ROUTES.SELLER.VEHICLE_SLOTS,
   'procurement-workbench': ROUTES.SELLER.PROCUREMENT_WORKBENCH,
   'import-trading': ROUTES.SELLER.IMPORT_TRADING,
+  'grade-requests': ROUTES.SELLER.GRADE_REQUESTS,
   payments: ROUTES.SELLER.PAYMENTS,
   'bank-details': ROUTES.SELLER.PROFILE_BANK,
   'kyc-documents': ROUTES.SELLER.PROFILE_KYC,
@@ -248,6 +249,12 @@ export const SellerProfileScreen = memo(function SellerProfileScreen() {
               title="Import Trading"
               subtitle="International sell offers & buy requests"
               onPress={() => navigateProfileRoute('import-trading')}
+            />
+            <ProfileMenuItem
+              icon={<ClipboardCheckIcon size={18} color={brandColors.primaryDark} />}
+              title="Grade Requests"
+              subtitle="Request grades missing from the catalogue"
+              onPress={() => navigateProfileRoute('grade-requests')}
             />
             <ProfileMenuItem
               icon={<BankIcon size={18} color={brandColors.primaryDark} />}

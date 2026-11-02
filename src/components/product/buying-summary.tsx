@@ -65,7 +65,7 @@ export const BuyingSummary = memo(function BuyingSummary({
               variant="caption"
               className="font-sans text-[12px] normal-case tracking-normal text-brand-muted"
             >
-              Unit price / MT
+              Material price / MT
             </Typography>
             <Typography variant="roleTitle" className="text-[14px] text-brand-heading">
               {unitPrices.currency.toUpperCase() === 'INR'
@@ -78,7 +78,7 @@ export const BuyingSummary = memo(function BuyingSummary({
               variant="caption"
               className="font-sans text-[12px] normal-case tracking-normal text-brand-muted"
             >
-              Unit price / kg
+              Material price / kg
             </Typography>
             <Typography variant="roleTitle" className="text-[14px] text-brand-primary">
               {unitPrices.currency.toUpperCase() === 'INR'
@@ -119,7 +119,7 @@ export const BuyingSummary = memo(function BuyingSummary({
               variant="caption"
               className="font-sans text-[13px] normal-case tracking-normal text-brand-muted"
             >
-              Subtotal
+              Material subtotal
             </Typography>
             <Typography variant="roleTitle" className="text-[13px] text-brand-heading">
               {formatInr(summary.materialSubtotal)}

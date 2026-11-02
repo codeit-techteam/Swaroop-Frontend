@@ -1,5 +1,6 @@
 import { PRODUCT_GST_RATE } from '@/constants/productDetails';
 import { toUiPaymentOption } from '@/services/checkout';
+import type { MarketplacePricingEstimate } from '@/services/marketplace-pricing';
 import type { CheckoutQuote } from '@/types/checkout-quote';
 import type { PaymentMethodId } from '@/types/payment';
 
@@ -66,6 +67,30 @@ export function buyingSummaryFromQuote(quote: CheckoutQuote): ProductQuoteEstima
     gstRate,
     gstLabel: `Estimated GST (${quote.taxRate}%)`,
     grandTotal: Number(quote.totalAmount),
+  };
+}
+
+/** Prefer backend estimate over local freight/GST math. */
+export function buyingSummaryFromEstimate(
+  estimate: MarketplacePricingEstimate,
+): ProductQuoteEstimate | null {
+  if (!estimate.exTax || !estimate.tax || !estimate.inclusiveTotal) {
+    return null;
+  }
+  const gstRate =
+    estimate.pricing?.gstPercent ??
+    (estimate.tax.bps > 0 ? estimate.tax.bps / 100 : PRODUCT_GST_RATE * 100);
+
+  return {
+    unitPrice: Number(estimate.unitPricePerMt),
+    quantity: Number(estimate.quantity),
+    materialSubtotal: Number(estimate.exTax.material),
+    discount: Number(estimate.exTax.discount),
+    freight: Number(estimate.exTax.freight),
+    gst: Number(estimate.tax.amount),
+    gstRate,
+    gstLabel: `Estimated GST (${gstRate % 1 === 0 ? gstRate.toFixed(0) : gstRate.toFixed(2)}%)`,
+    grandTotal: Number(estimate.inclusiveTotal),
   };
 }
 

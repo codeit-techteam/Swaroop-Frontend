@@ -2,8 +2,11 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react';
 
 import { ActivityIndicator, Pressable, View } from 'react-native';
 
+import { type Href, useRouter } from 'expo-router';
+
 import { Typography } from '@/components';
 import { BackArrowIcon } from '@/icons';
+import { ROUTES } from '@/navigation/routes';
 import {
   SellerCatalogGradeRow,
   SellerCategoryTile,
@@ -17,6 +20,7 @@ import { findSellerListingForCatalog } from '@/seller/utils/catalog';
 import { brandColors } from '@/theme/colors';
 import type { GradeFacetCategory } from '@/types/grade-master';
 import type { MarketProduct } from '@/types/market';
+import { formatGradeGroupLabel } from '@/utils/master-label';
 
 const ALL_GROUPS = 'All';
 
@@ -35,6 +39,7 @@ export const SellerGradePicker = memo(function SellerGradePicker({
   initialCategory,
   onCategoryChange,
 }: SellerGradePickerProps) {
+  const router = useRouter();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<GradeFacetCategory | null>(null);
   const [gradeGroup, setGradeGroup] = useState<string | null>(null);
@@ -81,15 +86,19 @@ export const SellerGradePicker = memo(function SellerGradePicker({
 
   const trimmedQuery = query.trim();
 
+  const requestNewGrade = () =>
+    router.push({
+      pathname: ROUTES.SELLER.GRADE_REQUEST_NEW,
+      params: trimmedQuery ? { search: trimmedQuery } : {},
+    } as unknown as Href);
+
   return (
     <View>
       <SearchField
         value={query}
         onChangeText={setQuery}
         placeholder={
-          category
-            ? `Search ${category.displayName} grades`
-            : 'Search grade, code, or maker'
+          category ? `Search ${category.displayName} grades` : 'Search grade, code, or maker'
         }
       />
 
@@ -111,7 +120,7 @@ export const SellerGradePicker = memo(function SellerGradePicker({
           </Typography>
           <Typography variant="legal" className="mt-xs text-left text-brand-body">
             {category.gradeCount.toLocaleString('en-IN')} grades
-            {gradeGroup ? ` · ${gradeGroup}` : ''}
+            {gradeGroup ? ` · ${formatGradeGroupLabel(gradeGroup)}` : ''}
           </Typography>
           {browser.gradeGroups.length > 1 ? (
             <View className="mt-md">
@@ -176,17 +185,33 @@ export const SellerGradePicker = memo(function SellerGradePicker({
               onCtaPress={browser.retry}
             />
           ) : browser.grades.length === 0 ? (
-            <EmptyState
-              variant="no_search_results"
-              title="No matching grades"
-              description={
-                trimmedQuery
-                  ? 'Try another grade, grade number, or manufacturer.'
-                  : 'No seller-visible grades in this selection yet.'
-              }
-              ctaLabel={trimmedQuery ? 'Clear search' : 'All categories'}
-              onCtaPress={() => (trimmedQuery ? setQuery('') : selectCategory(null))}
-            />
+            <>
+              <EmptyState
+                variant="no_search_results"
+                title="No matching grades"
+                description={
+                  trimmedQuery
+                    ? 'Try another grade, grade number, or manufacturer.'
+                    : 'No seller-visible grades in this selection yet.'
+                }
+                ctaLabel={trimmedQuery ? 'Clear search' : 'All categories'}
+                onCtaPress={() => (trimmedQuery ? setQuery('') : selectCategory(null))}
+              />
+              <Pressable
+                onPress={requestNewGrade}
+                accessibilityRole="button"
+                accessibilityLabel="Request new grade"
+                className="items-center rounded-2xl border border-brand-navy bg-brand-white py-md"
+                style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
+              >
+                <Typography variant="roleTitle" className="text-[14px] text-brand-navy">
+                  Request new grade
+                </Typography>
+                <Typography variant="legal" className="mt-xs px-lg text-center text-brand-body">
+                  Can&apos;t find it? Ask us to add it to the Grade Master.
+                </Typography>
+              </Pressable>
+            </>
           ) : (
             <>
               <Typography variant="legal" className="text-left text-brand-body">

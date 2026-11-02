@@ -4,6 +4,7 @@ import { useAuthStore } from '@/store/auth-store';
 import type { MarketProduct } from '@/types/market';
 import {
   formatCategoryDisplayName,
+  formatGradeGroupLabel,
   isInternalMasterCode,
 } from '@/utils/master-label';
 
@@ -20,6 +21,17 @@ type Envelope<T> = {
   meta?: { total: number; totalPages?: number };
 };
 
+type BlindListingPricingPreview = {
+  materialPricePerMT?: string;
+  freightPerMT?: string;
+  finalAmount?: string;
+  finalAmountPerMT?: string;
+  quantityMT?: string;
+  needsPriceReview?: boolean;
+  currency?: string;
+  pricingUnit?: string;
+};
+
 type BlindListing = {
   offerId: string;
   price?: number | string;
@@ -33,6 +45,7 @@ type BlindListing = {
     maxQty?: number | string | null;
     price?: number | string | null;
   }[];
+  pricingPreview?: BlindListingPricingPreview | null;
 };
 
 type BlindProductDocument = {
@@ -164,7 +177,7 @@ export function mapBlindProduct(product: BlindProduct): MarketProduct {
       product.grade?.category?.displayName,
       product.grade?.category?.name,
       materialFromSpecs,
-      product.grade?.gradeGroup?.replace(/_/g, ' '),
+      formatGradeGroupLabel(product.grade?.gradeGroup),
       product.grade?.name,
       productName,
     ) || productName;
@@ -177,7 +190,7 @@ export function mapBlindProduct(product: BlindProduct): MarketProduct {
       subFromSpecs,
       product.grade?.gradeNo,
       materialLabel,
-      product.grade?.gradeGroup?.replace(/_/g, ' '),
+      formatGradeGroupLabel(product.grade?.gradeGroup),
       readableCategory,
     ) || readableCategory;
 
@@ -188,6 +201,22 @@ export function mapBlindProduct(product: BlindProduct): MarketProduct {
     name: displayName,
     grade: readableBadgeLabel,
     price: num(listing?.price),
+    pricingPreview: listing?.pricingPreview
+      ? {
+          materialPricePerMT: String(
+            listing.pricingPreview.materialPricePerMT ?? listing.price ?? '',
+          ),
+          freightPerMT: String(listing.pricingPreview.freightPerMT ?? ''),
+          finalAmount: String(listing.pricingPreview.finalAmount ?? ''),
+          finalAmountPerMT: String(listing.pricingPreview.finalAmountPerMT ?? ''),
+          quantityMT: String(
+            listing.pricingPreview.quantityMT ?? listing.moq ?? '',
+          ),
+          needsPriceReview: Boolean(listing.pricingPreview.needsPriceReview),
+          currency: listing.pricingPreview.currency,
+          pricingUnit: listing.pricingPreview.pricingUnit,
+        }
+      : null,
     origin: String(specs.origin ?? product.countryOfOrigin ?? ''),
     stock: num(listing?.quantityAvailable),
     moq: num(listing?.moq),
@@ -293,22 +322,81 @@ export async function fetchCustomerMarketplaceProduct(id: string): Promise<Marke
   return product;
 }
 
-export type GradeTdsDocument = BlindProductDocument & {
+export type GradeTdsFormat = 'pdf' | 'image' | 'other';
+
+export type GradeTdsDocument = {
+  id: string;
+  type: string;
+  title: string;
+  fileName?: string | null;
+  mimeType?: string | null;
+  fileSizeBytes?: number | string | null;
+  manufacturer?: string | null;
+  gradeCode?: string | null;
+  categoryCode?: string | null;
+  format?: GradeTdsFormat;
+  downloadRequiresAuth?: boolean;
+  revision?: number;
+  verificationStatus?: string;
+  sourceKind?: string;
+  available?: boolean;
+  uploadedAt?: string | null;
+  approvedAt?: string | null;
+  /** @deprecated Legacy product-coupled fields — grade TDS is independent of offers. */
   productId?: string;
   productCode?: string | null;
   productName?: string | null;
-  manufacturer?: string | null;
-  downloadRequiresAuth?: boolean;
+  description?: string;
+  version?: number;
+  status?: string;
 };
 
 export type GradeTdsResponse = {
-  grade: { id: string; code: string; name: string };
+  grade: {
+    id: string;
+    code: string;
+    name: string;
+    manufacturer?: string | null;
+  };
   available: boolean;
   message: string | null;
+  canRequest: boolean;
   items: GradeTdsDocument[];
 };
 
-/** TDS metadata — public for guests; customer marketplace when signed in. */
+/** Product TDS = grade-library sheet with titles synced to the product/grade name. */
+export type ProductTdsResponse = GradeTdsResponse & {
+  product?: {
+    id: string;
+    code: string;
+    name: string;
+    manufacturer?: string | null;
+  };
+};
+
+function emptyGradeTds(gradeId: string, message = 'TDS unavailable'): GradeTdsResponse {
+  return {
+    grade: { id: gradeId, code: '', name: '' },
+    available: false,
+    message,
+    canRequest: true,
+    items: [],
+  };
+}
+
+function normalizeTdsResponse<T extends GradeTdsResponse>(
+  data: T | null | undefined,
+  fallbackGradeId: string,
+): T {
+  if (!data) return emptyGradeTds(fallbackGradeId) as T;
+  return {
+    ...data,
+    canRequest: data.canRequest ?? (!data.available || (data.items?.length ?? 0) === 0),
+    items: data.items ?? [],
+  };
+}
+
+/** Grade-level TDS metadata — public for guests; independent of live offers. */
 export async function fetchGradeTdsDocuments(gradeId: string): Promise<GradeTdsResponse> {
   const base = useAuthStore.getState().accessToken
     ? '/customer/marketplace'
@@ -316,14 +404,76 @@ export async function fetchGradeTdsDocuments(gradeId: string): Promise<GradeTdsR
   const payload = await apiClient.get<Envelope<GradeTdsResponse>>(
     `${base}/grades/${gradeId}/tds`,
   );
-  return (
-    payload.data.data ?? {
-      grade: { id: gradeId, code: '', name: '' },
-      available: false,
-      message: 'TDS unavailable',
-      items: [],
+  return normalizeTdsResponse(payload.data.data, gradeId);
+}
+
+/**
+ * Verified grade-library TDS for a marketplace product (titles synced to product name).
+ * Prefers `/products/:id/tds`; falls back to grade TDS when gradeId is known.
+ */
+export async function fetchProductTdsDocuments(
+  productId: string,
+  options?: { gradeId?: string | null },
+): Promise<ProductTdsResponse> {
+  try {
+    const payload = await apiClient.get<Envelope<ProductTdsResponse>>(
+      `${productsApiBase()}/${productId}/tds`,
+    );
+    return normalizeTdsResponse(payload.data.data, options?.gradeId ?? '');
+  } catch {
+    if (options?.gradeId) {
+      return fetchGradeTdsDocuments(options.gradeId);
     }
+    return emptyGradeTds('', 'Technical Data Sheet is currently unavailable.');
+  }
+}
+
+export type GradeTdsDocumentUrl = {
+  url: string;
+  fileName?: string;
+  mimeType?: string | null;
+  expiresInSeconds?: number;
+};
+
+/** Short-lived signed URL for a verified grade-level TDS document. */
+export async function fetchGradeTdsDocumentUrl(
+  gradeId: string,
+  documentId: string,
+): Promise<GradeTdsDocumentUrl> {
+  await ensureDevBackendSession('customer');
+  const payload = await apiClient.get<Envelope<GradeTdsDocumentUrl>>(
+    `/customer/marketplace/grades/${gradeId}/tds/${documentId}/url`,
   );
+  const data = payload.data.data;
+  if (!data?.url) {
+    throw new Error('Document URL unavailable');
+  }
+  return data;
+}
+
+export type GradeTdsRequestResult = {
+  id: string;
+  referenceNumber: string;
+  status: string;
+  alreadyExists?: boolean;
+  grade?: { id: string; code: string; name: string };
+};
+
+/** Request a TDS when none is verified for the grade (auth required). */
+export async function requestGradeTds(
+  gradeId: string,
+  message?: string,
+): Promise<GradeTdsRequestResult> {
+  await ensureDevBackendSession('customer');
+  const payload = await apiClient.post<Envelope<GradeTdsRequestResult>>(
+    `/customer/marketplace/grades/${gradeId}/tds-requests`,
+    message?.trim() ? { message: message.trim() } : {},
+  );
+  const data = payload.data.data;
+  if (!data?.referenceNumber) {
+    throw new Error('TDS request failed');
+  }
+  return data;
 }
 
 /** Document metadata is guest-readable; signed download URLs still require auth. */

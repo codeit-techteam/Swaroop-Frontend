@@ -135,19 +135,34 @@ export const ProductCard = memo(function ProductCard({
             </Typography>
           </View>
 
-          <View className="items-end">
+          <View className="max-w-[52%] items-end">
+            <Typography
+              variant="caption"
+              className="font-sans text-[10px] normal-case tracking-normal text-brand-muted"
+            >
+              Material / MT
+            </Typography>
             <Typography
               variant="headingLeft"
               className="text-[20px] leading-[24px] text-brand-primary"
             >
-              {formatMarketPrice(product.price)}
+              {product.price > 0 ? formatMarketPrice(product.price) : '—'}
             </Typography>
-            <Typography
-              variant="caption"
-              className="mt-0.5 font-sans text-[11px] normal-case tracking-normal text-brand-muted"
-            >
-              per MT
-            </Typography>
+            {product.pricingPreview?.finalAmountPerMT ? (
+              <Typography
+                variant="caption"
+                className="mt-0.5 text-right font-sans text-[11px] normal-case tracking-normal text-brand-body"
+              >
+                Est. landed {formatMarketPrice(Number(product.pricingPreview.finalAmountPerMT))} / MT
+              </Typography>
+            ) : (
+              <Typography
+                variant="caption"
+                className="mt-0.5 text-right font-sans text-[10px] normal-case tracking-normal text-brand-muted"
+              >
+                Final price calculated at checkout
+              </Typography>
+            )}
           </View>
         </View>
 

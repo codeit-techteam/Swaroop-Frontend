@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, ScrollView, View } from 'react-native';
 
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 
@@ -42,25 +42,65 @@ import { useMarketplaceCatalogQuery } from '@/hooks/use-marketplace-catalog';
 import { useMarketplacePricingEstimate } from '@/hooks/use-marketplace-pricing-estimate';
 import { useNotificationBadge } from '@/hooks/use-notifications';
 import { useProductQuote } from '@/hooks/use-product-quote';
-import { BackArrowIcon } from '@/icons';
+import { BackArrowIcon, DocumentFileIcon, DownloadIcon } from '@/icons';
 import { buildLoginHref } from '@/navigation/return-to';
 import { ROUTES } from '@/navigation/routes';
 import { addCustomerCartItem, mapBackendCartItems } from '@/services/cart';
-import { fetchCustomerMarketplaceProduct, fetchProductDocuments } from '@/services/catalog';
+import {
+  fetchCustomerMarketplaceProduct,
+  fetchGradeTdsDocumentUrl,
+  fetchProductDocuments,
+  fetchProductTdsDocuments,
+  requestGradeTds,
+  type GradeTdsDocument,
+  type ProductTdsResponse,
+} from '@/services/catalog';
 import { checkoutErrorMessage, toBackendPaymentOption } from '@/services/checkout';
 import { selectIsLoggedIn, useAuthStore } from '@/store/auth-store';
 import { useCartStore } from '@/store/cart-store';
 import { brandColors } from '@/theme/colors';
+import { iconSizes } from '@/theme/icons';
 import type { MarketProduct } from '@/types/market';
 import type { PaymentMethodId } from '@/types/payment';
 import type { CreditCtaType } from '@/types/payment-eligibility';
 import { guestCreditAccess } from '@/types/payment-eligibility';
 import type { ComplianceDocument } from '@/types/product';
+import { getApiErrorMessage } from '@/utils/api-error-message';
 import {
+  buyingSummaryFromEstimate,
   buyingSummaryFromQuote,
   estimateProductQuote,
   quoteMatchesSelection,
 } from '@/utils/product-quote-estimate';
+
+const TDS_UNAVAILABLE_MESSAGE =
+  'Technical Data Sheet is currently unavailable for this grade.';
+
+function isListingSecondaryDoc(doc: ComplianceDocument): boolean {
+  const title = doc.title.trim().toUpperCase();
+  const type = String(doc.type).toLowerCase();
+  const isTds =
+    type === 'tds' ||
+    type === 'product_tds' ||
+    title.includes('TDS') ||
+    title.includes('TECHNICAL DATA');
+  return !isTds;
+}
+
+function formatTdsFileSize(bytes: number | string | null | undefined): string | null {
+  const n = typeof bytes === 'string' ? Number(bytes) : bytes;
+  if (n == null || !Number.isFinite(n) || n <= 0) return null;
+  if (n < 1024) return `${Math.round(n)} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(n < 10 * 1024 ? 1 : 0)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(n < 10 * 1024 * 1024 ? 1 : 0)} MB`;
+}
+
+function formatTdsMeta(doc: GradeTdsDocument): string {
+  const formatLabel =
+    doc.format === 'pdf' ? 'PDF' : doc.format === 'image' ? 'Image' : doc.format === 'other' ? 'File' : null;
+  const sizeLabel = formatTdsFileSize(doc.fileSizeBytes);
+  return [doc.manufacturer, formatLabel, sizeLabel].filter(Boolean).join(' · ');
+}
 
 const mapApiDoc = (doc: {
   id: string;
@@ -116,7 +156,10 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [apiDocuments, setApiDocuments] = useState<ComplianceDocument[]>([]);
-  const [docsUnavailableMessage, setDocsUnavailableMessage] = useState<string | null>(null);
+  const [tds, setTds] = useState<ProductTdsResponse | null>(null);
+  const [tdsLoading, setTdsLoading] = useState(false);
+  const [tdsBusyId, setTdsBusyId] = useState<string | null>(null);
+  const [tdsRequesting, setTdsRequesting] = useState(false);
   const [rfqNotes, setRfqNotes] = useState('');
   const [rfqDestination, setRfqDestination] = useState('');
 
@@ -150,17 +193,10 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
     void fetchProductDocuments(productId)
       .then((docs) => {
         if (cancelled) return;
-        const mapped = docs.map((doc) => mapApiDoc({ ...doc, productId }));
-        setApiDocuments(mapped);
-        setDocsUnavailableMessage(
-          mapped.length === 0 ? 'TDS unavailable — no approved technical documents on file.' : null,
-        );
+        setApiDocuments(docs.map((doc) => mapApiDoc({ ...doc, productId })));
       })
       .catch(() => {
-        if (!cancelled) {
-          setApiDocuments([]);
-          setDocsUnavailableMessage('TDS unavailable — unable to load technical documents.');
-        }
+        if (!cancelled) setApiDocuments([]);
       });
     return () => {
       cancelled = true;
@@ -174,6 +210,40 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
     }
     return getProductDetailsById(productId, catalog);
   }, [catalog, detailProduct, productId]);
+
+  const resolvedGradeId = tds?.grade?.id || detailProduct?.gradeId || null;
+
+  useEffect(() => {
+    if (!productId) return;
+    let cancelled = false;
+    setTdsLoading(true);
+    void fetchProductTdsDocuments(productId, { gradeId: detailProduct?.gradeId })
+      .then((payload) => {
+        if (!cancelled) setTds(payload);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setTds({
+            grade: { id: detailProduct?.gradeId ?? '', code: '', name: '' },
+            available: false,
+            message: TDS_UNAVAILABLE_MESSAGE,
+            canRequest: Boolean(detailProduct?.gradeId),
+            items: [],
+          });
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setTdsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [detailProduct?.gradeId, productId]);
+
+  const listingDocuments = useMemo(() => {
+    const source = apiDocuments.length > 0 ? apiDocuments : (product?.documents ?? []);
+    return source.filter(isListingSecondaryDoc);
+  }, [apiDocuments, product?.documents]);
 
   const loading = catalogLoading || detailLoading;
   const loadError = detailError ?? catalogError;
@@ -275,6 +345,87 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
     router.push(buildLoginHref(returnTo));
   }, [productId, quantityMt, rfqDestination, rfqNotes, router]);
 
+  const requireTdsAuth = useCallback(
+    (action: 'download' | 'request') => {
+      if (!productId) return;
+      Toast.show({
+        type: 'info',
+        text1: action === 'request' ? 'Sign in to request TDS' : 'Sign in to download TDS',
+        text2:
+          action === 'request'
+            ? 'TDS requests require an authenticated session.'
+            : 'Technical data sheets require an authenticated session.',
+      });
+      router.push(buildLoginHref(`/(customer)/product/${productId}`));
+    },
+    [productId, router],
+  );
+
+  const handleTdsOpen = useCallback(
+    async (doc: GradeTdsDocument, mode: 'view' | 'download') => {
+      if (!resolvedGradeId) {
+        Toast.show({ type: 'error', text1: 'TDS unavailable' });
+        return;
+      }
+      if (!isLoggedIn) {
+        requireTdsAuth('download');
+        return;
+      }
+      setTdsBusyId(doc.id);
+      try {
+        const { url } = await fetchGradeTdsDocumentUrl(resolvedGradeId, doc.id);
+        if (!url) throw new Error('URL unavailable');
+        await Linking.openURL(url);
+        Toast.show({
+          type: 'success',
+          text1: doc.title || 'Technical Data Sheet',
+          text2: mode === 'download' ? 'TDS download started' : 'Opening verified TDS…',
+        });
+      } catch {
+        Toast.show({
+          type: 'error',
+          text1: 'TDS unavailable',
+          text2: 'Signed download URL could not be opened.',
+        });
+      } finally {
+        setTdsBusyId(null);
+      }
+    },
+    [isLoggedIn, requireTdsAuth, resolvedGradeId],
+  );
+
+  const handleRequestTds = useCallback(async () => {
+    if (!resolvedGradeId) {
+      Toast.show({
+        type: 'error',
+        text1: 'Unable to request TDS',
+        text2: 'Grade information is missing for this product.',
+      });
+      return;
+    }
+    if (!isLoggedIn) {
+      requireTdsAuth('request');
+      return;
+    }
+    setTdsRequesting(true);
+    try {
+      const result = await requestGradeTds(resolvedGradeId);
+      Toast.show({
+        type: 'success',
+        text1: result.alreadyExists ? 'TDS request already open' : 'TDS request submitted',
+        text2: `Reference ${result.referenceNumber}`,
+      });
+    } catch (error) {
+      Toast.show({
+        type: 'error',
+        text1: 'Unable to request TDS',
+        text2: getApiErrorMessage(error) || 'Please try again shortly.',
+      });
+    } finally {
+      setTdsRequesting(false);
+    }
+  }, [isLoggedIn, requireTdsAuth, resolvedGradeId]);
+
   const selectedTier = useMemo(() => {
     if (!product) {
       return null;
@@ -309,11 +460,15 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
     if (matchingQuote) {
       return Number(matchingQuote.unitPrice);
     }
+    if (pricingEstimate?.unitPricePerMt) {
+      const fromEstimate = Number(pricingEstimate.unitPricePerMt);
+      if (fromEstimate > 0) return fromEstimate;
+    }
     if (!product) {
       return 0;
     }
     return priceForQuantity(product.pricingTiers, quantityMt) ?? product.spotPrice.pricePerMt;
-  }, [matchingQuote, product, quantityMt]);
+  }, [matchingQuote, pricingEstimate, product, quantityMt]);
 
   const displaySpotPrice = useMemo(() => {
     if (!product) {
@@ -329,22 +484,52 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
     if (matchingQuote) {
       return buyingSummaryFromQuote(matchingQuote);
     }
+    // Prefer backend pricing estimate — single source of truth with checkout.
+    const fromEstimate = pricingEstimate
+      ? buyingSummaryFromEstimate(pricingEstimate)
+      : null;
+    if (fromEstimate) {
+      return fromEstimate;
+    }
     if (!product || !(displayPricePerMt > 0)) {
       return null;
     }
+    // Local fallback only while estimate is loading / unavailable.
     return estimateProductQuote({
       unitPrice: displayPricePerMt,
       quantity: quantityMt,
       discountRate: selectedPayment?.discountRate ?? 0,
       freightPerMt: product.logistics.freightPerMt,
     });
-  }, [displayPricePerMt, matchingQuote, product, quantityMt, selectedPayment?.discountRate]);
+  }, [
+    displayPricePerMt,
+    matchingQuote,
+    pricingEstimate,
+    product,
+    quantityMt,
+    selectedPayment?.discountRate,
+  ]);
 
   const estimatedTotal = buyingSummary?.grandTotal ?? 0;
-  const confirmingPrice = Boolean(product) && !matchingQuote && !quoteError;
+  const estimatedLandedPerMt = useMemo(() => {
+    if (pricingEstimate?.pricing?.finalAmountPerMT) {
+      const value = Number(pricingEstimate.pricing.finalAmountPerMT);
+      return value > 0 ? value : null;
+    }
+    if (estimatedTotal > 0 && quantityMt > 0) {
+      return Math.round((estimatedTotal / quantityMt) * 100) / 100;
+    }
+    return null;
+  }, [estimatedTotal, pricingEstimate, quantityMt]);
+  const confirmingPrice =
+    Boolean(product) && !matchingQuote && (estimateLoading || (!pricingEstimate && !quoteError));
 
   const canPurchase = Boolean(
-    product && product.stock > 0 && quantityMt >= product.moq && quantityMt <= product.stock,
+    product &&
+      product.stock > 0 &&
+      quantityMt >= product.moq &&
+      quantityMt <= product.stock &&
+      displayPricePerMt > 0,
   );
   const purchaseDisabledReason = !product
     ? null
@@ -354,7 +539,11 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
         ? `Minimum order is ${product.moq} MT.`
         : quantityMt > product.stock
           ? `Only ${product.stock} MT available.`
-          : null;
+          : !(displayPricePerMt > 0)
+            ? 'This offer has no verified material price. Purchase is blocked until the price is corrected.'
+            : estimateError && !pricingEstimate && !matchingQuote
+              ? estimateError
+              : null;
 
   const handleCreditCta = useCallback(
     (type: CreditCtaType) => {
@@ -772,13 +961,165 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
             <ProductFeatures features={product.features} />
             <ProductApplications applications={product.applications} industry={product.industry} />
             <ProductSpecs product={product} />
-            <DocumentDownloads
-              documents={apiDocuments.length > 0 ? apiDocuments : product.documents}
-              productId={product.id}
-              emptyMessage={docsUnavailableMessage}
-              requireAuth={!isLoggedIn}
-              onRequireAuth={requireLoginForPurchase}
-            />
+            <View className="mx-lg rounded-xl border border-brand-border bg-brand-white p-lg shadow-sm">
+              <View className="flex-row items-center justify-between">
+                <Typography variant="roleTitle" className="text-[15px] text-brand-heading">
+                  Technical Data Sheet
+                </Typography>
+                {!tdsLoading && tds?.available && tds.items.length > 0 ? (
+                  <View
+                    className="rounded-md px-sm py-xs"
+                    style={{ backgroundColor: brandColors.successLight }}
+                  >
+                    <Typography
+                      variant="badge"
+                      className="text-[10px] tracking-[0.6px]"
+                      style={{ color: brandColors.success }}
+                    >
+                      Available
+                    </Typography>
+                  </View>
+                ) : null}
+              </View>
+
+              {tdsLoading ? (
+                <Typography variant="subheadingLeft" className="mt-sm text-[13px] text-brand-muted">
+                  Loading TDS…
+                </Typography>
+              ) : !tds?.available || tds.items.length === 0 ? (
+                <View className="mt-sm">
+                  <Typography
+                    variant="subheadingLeft"
+                    className="text-[13px] leading-[20px] text-brand-muted"
+                  >
+                    {tds?.message?.trim() || TDS_UNAVAILABLE_MESSAGE}
+                  </Typography>
+                  {(tds?.canRequest ?? Boolean(resolvedGradeId)) ? (
+                    <Pressable
+                      onPress={() => void handleRequestTds()}
+                      disabled={tdsRequesting}
+                      accessibilityRole="button"
+                      accessibilityLabel="Request TDS"
+                      className="mt-md items-center justify-center rounded-lg px-md py-md"
+                      style={{
+                        backgroundColor: brandColors.navy,
+                        opacity: tdsRequesting ? 0.7 : 1,
+                      }}
+                    >
+                      {tdsRequesting ? (
+                        <ActivityIndicator size="small" color={brandColors.white} />
+                      ) : (
+                        <Typography variant="button" className="text-[13px] text-brand-white">
+                          {isLoggedIn ? 'Request TDS' : 'Sign in to request TDS'}
+                        </Typography>
+                      )}
+                    </Pressable>
+                  ) : null}
+                </View>
+              ) : (
+                <View className="mt-md" style={{ gap: 10 }}>
+                  {tds.items.map((doc) => {
+                    const meta = formatTdsMeta(doc);
+                    const busy = tdsBusyId === doc.id;
+                    return (
+                      <View
+                        key={doc.id}
+                        className="rounded-lg border border-brand-border bg-brand-surface px-md py-md"
+                      >
+                        <View className="flex-row items-start">
+                          <View className="h-9 w-9 items-center justify-center rounded-lg bg-brand-white">
+                            <DocumentFileIcon size={iconSizes.md} color={brandColors.navy} />
+                          </View>
+                          <View className="ml-sm min-w-0 flex-1">
+                            <Typography
+                              variant="roleTitle"
+                              className="text-[13px] text-brand-heading"
+                              numberOfLines={2}
+                            >
+                              {doc.title || 'Technical Data Sheet'}
+                            </Typography>
+                            {meta ? (
+                              <Typography
+                                variant="caption"
+                                className="mt-xs font-sans text-[11px] normal-case tracking-normal text-brand-muted"
+                                numberOfLines={2}
+                              >
+                                {meta}
+                              </Typography>
+                            ) : null}
+                            {!isLoggedIn ? (
+                              <Typography
+                                variant="caption"
+                                className="mt-xs font-sans text-[11px] normal-case tracking-normal text-brand-muted"
+                              >
+                                Sign in to view or download
+                              </Typography>
+                            ) : null}
+                          </View>
+                        </View>
+                        <View className="mt-md flex-row" style={{ gap: 8 }}>
+                          <Pressable
+                            onPress={() => void handleTdsOpen(doc, 'view')}
+                            disabled={busy}
+                            accessibilityRole="button"
+                            accessibilityLabel={`View ${doc.title || 'TDS'}`}
+                            className="flex-1 items-center justify-center rounded-lg border px-md py-sm"
+                            style={{
+                              borderColor: brandColors.navy,
+                              opacity: busy ? 0.7 : 1,
+                            }}
+                          >
+                            {busy ? (
+                              <ActivityIndicator size="small" color={brandColors.navy} />
+                            ) : (
+                              <Typography
+                                variant="button"
+                                className="text-[12px]"
+                                style={{ color: brandColors.navy }}
+                              >
+                                View TDS
+                              </Typography>
+                            )}
+                          </Pressable>
+                          <Pressable
+                            onPress={() => void handleTdsOpen(doc, 'download')}
+                            disabled={busy}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Download ${doc.title || 'TDS'}`}
+                            className="flex-1 flex-row items-center justify-center rounded-lg px-md py-sm"
+                            style={{
+                              backgroundColor: brandColors.navy,
+                              opacity: busy ? 0.7 : 1,
+                              gap: 6,
+                            }}
+                          >
+                            {busy ? (
+                              <ActivityIndicator size="small" color={brandColors.white} />
+                            ) : (
+                              <>
+                                <DownloadIcon size={iconSizes.sm} color={brandColors.white} />
+                                <Typography variant="button" className="text-[12px] text-brand-white">
+                                  Download
+                                </Typography>
+                              </>
+                            )}
+                          </Pressable>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+            </View>
+            {listingDocuments.length > 0 ? (
+              <DocumentDownloads
+                documents={listingDocuments}
+                productId={product.id}
+                emptyMessage={null}
+                requireAuth={!isLoggedIn}
+                onRequireAuth={requireLoginForPurchase}
+              />
+            ) : null}
             {displaySpotPrice ? (
               <SpotPriceCard
                 spotPrice={displaySpotPrice}
@@ -891,6 +1232,7 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
           maxMt={Math.max(product.moq, product.stock)}
           increment={product.quantityIncrement}
           unitPricePerMt={displayPricePerMt}
+          estimatedLandedPerMt={estimatedLandedPerMt}
           estimatedTotal={estimatedTotal}
           disabled={!canPurchase || addingToCart || awaitingQuote}
           disabledReason={purchaseDisabledReason}

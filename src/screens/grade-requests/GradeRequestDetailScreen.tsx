@@ -6,38 +6,37 @@ import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 
 import { useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 
 import {
-  AppHeader,
   InputField,
   PrimaryButton,
   ScreenWrapper,
   SecondaryButton,
   Typography,
 } from '@/components';
-import { EmptyState } from '@/components/market';
-import { gradeRequestKeys, useGradeRequest } from '@/hooks/use-grade-requests';
-import { ROUTES } from '@/navigation/routes';
-import {
-  cancelGradeRequest,
-  fetchGradeRequestDocumentUrl,
-  respondToGradeRequest,
-  toGradeRequestError,
-} from '@/services/grade-requests';
+import { gradeRequestApiFor, gradeRequestKeys, useGradeRequest } from '@/hooks/use-grade-requests';
+import { type GradeRequestRole, toGradeRequestError } from '@/services/grade-requests';
+import { isAwaitingRequesterResponse } from '@/types/grade-request';
 import { dayjs } from '@/utils/date';
 
+import { GradeRequestHeader, GradeRequestStateCard } from './GradeRequestParts';
 import { GradeRequestStatusPill } from './GradeRequestStatusPill';
+import { GRADE_REQUEST_ROLE_CONFIG, firstParam } from './role-config';
 
-const firstParam = (value?: string | string[]): string | undefined =>
-  Array.isArray(value) ? value[0] : value;
+type Props = { role?: GradeRequestRole };
 
-export const GradeRequestDetailScreen = memo(function GradeRequestDetailScreen() {
+export const GradeRequestDetailScreen = memo(function GradeRequestDetailScreen({
+  role = 'customer',
+}: Props) {
   const router = useRouter();
+  const config = GRADE_REQUEST_ROLE_CONFIG[role];
+  const api = gradeRequestApiFor(role);
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const id = firstParam(params.id) ?? null;
-  const query = useGradeRequest(id);
+  const query = useGradeRequest(id, role);
 
   const [reply, setReply] = useState('');
   const [busy, setBusy] = useState(false);
@@ -58,7 +57,9 @@ export const GradeRequestDetailScreen = memo(function GradeRequestDetailScreen()
         setConfirmCancel(false);
         await refresh();
       } catch (error) {
-        setActionError(toGradeRequestError(error, 'Something went wrong.').message);
+        const message = toGradeRequestError(error, 'Something went wrong.').message;
+        setActionError(message);
+        Toast.show({ type: 'error', text1: 'Action failed', text2: message });
       } finally {
         setBusy(false);
       }
@@ -70,24 +71,24 @@ export const GradeRequestDetailScreen = memo(function GradeRequestDetailScreen()
     async (documentId: string) => {
       if (!id) return;
       try {
-        const url = await fetchGradeRequestDocumentUrl(id, documentId);
+        const url = await api.fetchDocumentUrl(id, documentId);
         if (url) await Linking.openURL(url);
         else setActionError('This file cannot be opened right now.');
       } catch (error) {
         setActionError(toGradeRequestError(error, 'Unable to open the file.').message);
       }
     },
-    [id],
+    [api, id],
   );
 
   const request = query.data;
 
   return (
     <ScreenWrapper padded={false} className="bg-brand-background">
-      <AppHeader
-        variant="back"
-        title={request?.referenceNumber ?? 'Grade request'}
-        fallbackHref={ROUTES.CUSTOMER.GRADE_REQUESTS as Href}
+      <GradeRequestHeader
+        role={role}
+        title={request?.referenceNumber ?? (role === 'seller' ? 'Grade Request' : 'Grade request')}
+        fallbackHref={config.listRoute as Href}
       />
 
       {query.isPending ? (
@@ -95,7 +96,9 @@ export const GradeRequestDetailScreen = memo(function GradeRequestDetailScreen()
           Loading request…
         </Typography>
       ) : query.isError || !request ? (
-        <EmptyState
+        <GradeRequestStateCard
+          role={role}
+          kind="error"
           title={
             toGradeRequestError(query.error, '').status === 404
               ? 'Request not found'
@@ -139,20 +142,37 @@ export const GradeRequestDetailScreen = memo(function GradeRequestDetailScreen()
               </Typography>
             ) : null}
             {request.resolvedGrade ? (
-              <PrimaryButton
-                label={`View grade ${request.resolvedGrade.name}`}
-                className="mt-md"
-                onPress={() =>
-                  router.push({
-                    pathname: ROUTES.CUSTOMER.GRADE_DETAILS,
-                    params: { id: request.resolvedGrade?.id },
-                  } as unknown as Href)
-                }
-              />
+              <>
+                {config.resolvedHint ? (
+                  <Typography variant="roleDescription" className="mt-md text-brand-body">
+                    {config.resolvedHint}
+                  </Typography>
+                ) : null}
+                <PrimaryButton
+                  label={config.resolvedActionLabel(request.resolvedGrade.name)}
+                  className="mt-md"
+                  onPress={() => {
+                    const grade = request.resolvedGrade;
+                    if (!grade) return;
+                    if (config.gradeDetailsRoute) {
+                      router.push({
+                        pathname: config.gradeDetailsRoute,
+                        params: { id: grade.id },
+                      } as unknown as Href);
+                    } else {
+                      // Seller: continue into Add Product with the catalogue grade preselected.
+                      router.push({
+                        pathname: config.browseRoute,
+                        params: { catalogId: grade.id },
+                      } as unknown as Href);
+                    }
+                  }}
+                />
+              </>
             ) : null}
           </View>
 
-          {request.awaitingCustomerResponse ? (
+          {isAwaitingRequesterResponse(request) ? (
             <View className="mt-lg rounded-2xl border border-brand-error bg-brand-white p-lg">
               <Typography variant="roleTitle" className="text-[14px]">
                 Your response is needed
@@ -172,7 +192,7 @@ export const GradeRequestDetailScreen = memo(function GradeRequestDetailScreen()
                 className="mt-md"
                 loading={busy}
                 disabled={reply.trim().length < 2}
-                onPress={() => void act(() => respondToGradeRequest(request.id, reply.trim()))}
+                onPress={() => void act(() => api.respond(request.id, reply.trim()))}
               />
             </View>
           ) : null}
@@ -281,7 +301,7 @@ export const GradeRequestDetailScreen = memo(function GradeRequestDetailScreen()
                     <PrimaryButton
                       label="Yes, cancel"
                       loading={busy}
-                      onPress={() => void act(() => cancelGradeRequest(request.id))}
+                      onPress={() => void act(() => api.cancel(request.id))}
                     />
                   </View>
                 </View>

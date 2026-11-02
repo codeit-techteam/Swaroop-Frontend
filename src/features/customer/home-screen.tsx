@@ -198,10 +198,17 @@ export const CustomerHomeScreen = () => {
     locationSheetRef.current?.dismiss();
   }, []);
 
-  const navigateToMarket = useCallback(() => {
+  const openMarketSearch = useCallback(() => {
     router.push({
       pathname: ROUTES.CUSTOMER.MARKET,
       params: { focusSearch: '1' },
+    } as unknown as Href);
+  }, [router]);
+
+  const openMarketFilters = useCallback(() => {
+    router.push({
+      pathname: ROUTES.CUSTOMER.MARKET,
+      params: { openFilters: '1' },
     } as unknown as Href);
   }, [router]);
 
@@ -306,7 +313,7 @@ export const CustomerHomeScreen = () => {
         >
           <View>
             <LocationSelector location={selectedLocation} onPress={openLocationSheet} />
-            <SearchBar onPress={navigateToMarket} onFilterPress={navigateToMarket} />
+            <SearchBar onPress={openMarketSearch} onFilterPress={openMarketFilters} />
           </View>
 
           <KycStatusBanner
@@ -391,7 +398,7 @@ export const CustomerHomeScreen = () => {
 
           {lowestCost ? (
             <View className="mb-lg mt-lg">
-              <LowestCostCard data={lowestCost} onPress={navigateToMarket} />
+              <LowestCostCard data={lowestCost} onPress={openMarketSearch} />
             </View>
           ) : null}
         </ScrollView>

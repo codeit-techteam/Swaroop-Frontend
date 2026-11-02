@@ -8,6 +8,7 @@ import { brandColors } from '@/theme/colors';
 import { iconSizes } from '@/theme/icons';
 import type { CustomerGrade } from '@/types/grade-master';
 import { cn } from '@/utils/cn';
+import { formatGradeGroupLabel } from '@/utils/master-label';
 
 export const gradeIdentityLine = (grade: CustomerGrade): string =>
   [grade.gradeNo, grade.manufacturer].filter(Boolean).join(' · ') || grade.code;
@@ -49,7 +50,7 @@ export const GradeCard = memo(function GradeCard({ grade, onPress, className }: 
                   variant="badge"
                   className="text-[10px] tracking-[0.6px] text-brand-body"
                 >
-                  {grade.gradeGroup}
+                  {formatGradeGroupLabel(grade.gradeGroup)}
                 </Typography>
               </View>
             ) : null}
