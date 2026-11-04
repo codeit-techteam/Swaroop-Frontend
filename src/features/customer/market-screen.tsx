@@ -390,7 +390,14 @@ export const CustomerMarketScreen = () => {
   const searchKeyExtractor = useCallback((item: MarketSearchRow) => item.key, []);
 
   const resultCount = wantsCatalogueSearch ? catalogueTotal : filteredProducts.length;
-  const resultLabel = resultCount === 1 ? 'grade' : 'grades';
+  // Catalogue search uses Grade Master totals; default Market view shows live seller offers only.
+  const resultLabel = wantsCatalogueSearch
+    ? resultCount === 1
+      ? 'Catalogue Grade'
+      : 'Catalogue Grades'
+    : resultCount === 1
+      ? 'Live Listing'
+      : 'Live Listings';
   const listBottomPadding = TAB_BAR_HEIGHT + insets.bottom + 24;
   const showCatalogueSkeleton =
     wantsCatalogueSearch &&
@@ -517,13 +524,15 @@ export const CustomerMarketScreen = () => {
             >
               {showCatalogueSkeleton || isSearchPending || gradesQuery.isPlaceholderData
                 ? trimmedQuery
-                  ? 'Searching grades…'
-                  : `${filteredProducts.length} ${filteredProducts.length === 1 ? 'grade' : 'grades'}`
+                  ? 'Searching Catalogue Grades…'
+                  : `${filteredProducts.length.toLocaleString('en-IN')} ${
+                      filteredProducts.length === 1 ? 'Live Listing' : 'Live Listings'
+                    }`
                 : trimmedQuery
                   ? `${resultCount.toLocaleString('en-IN')} ${resultLabel} for “${trimmedQuery}”`
                   : selectedCategoryLabel
-                    ? `${resultCount} ${resultLabel} in ${selectedCategoryLabel}`
-                    : `${resultCount} ${resultLabel}`}
+                    ? `${resultCount.toLocaleString('en-IN')} ${resultLabel} in ${selectedCategoryLabel}`
+                    : `${resultCount.toLocaleString('en-IN')} ${resultLabel}`}
               {!wantsCatalogueSearch && activeFilterCount > 0 ? ' · filtered' : ''}
             </Typography>
             {!wantsCatalogueSearch && activeFilterCount > 0 ? (

@@ -45,7 +45,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       // Symbol-only foreground kept inside the adaptive safe zone.
       // Do not use the full wordmark lockup here — the system mask will crop it.
       foregroundImage: './assets/images/adaptive-icon.png',
-      backgroundColor: '#ffffff',
+      backgroundColor: '#000000',
     },
     package: 'com.swaroop.app',
     versionCode: ANDROID_VERSION_CODE,
@@ -88,9 +88,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       {
         // Full brand lockup (mark + wordmark). `contain` keeps the entire artwork visible.
         image: './assets/images/splash-icon.png',
-        imageWidth: 240,
+        imageWidth: 280,
         resizeMode: 'contain',
-        backgroundColor: '#ffffff',
+        backgroundColor: '#000000',
       },
     ],
     [

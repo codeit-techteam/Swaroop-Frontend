@@ -161,4 +161,5 @@ export const buildSubmissionTimeline = (checklist?: ChecklistItem[] | null): Tim
       }))
     : DEFAULT_SUBMISSION_TIMELINE;
 
-export const SUPPORT_PHONE = '1-800-555-PETRO';
+/** Do not invent a helpline — use backend legal-links / support tickets. */
+export const SUPPORT_PHONE = '';

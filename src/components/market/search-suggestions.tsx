@@ -307,7 +307,7 @@ export const SearchSuggestions = memo(function SearchSuggestions({
                   variant="fieldLabel"
                   className="mb-xs text-[10px] tracking-[0.8px] text-brand-muted"
                 >
-                  Live listings
+                  Live Listings
                 </Typography>
                 {suggestions.products.map((product) => (
                   <Pressable
@@ -363,7 +363,7 @@ export const SearchSuggestions = memo(function SearchSuggestions({
                   variant="fieldLabel"
                   className="mb-xs text-[10px] tracking-[0.8px] text-brand-muted"
                 >
-                  Catalogue grades
+                  Catalogue Grades
                 </Typography>
                 {suggestions.grades.map((grade) => (
                   <Pressable

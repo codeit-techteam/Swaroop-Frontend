@@ -23,11 +23,11 @@ export const GradeMasterEntry = memo(function GradeMasterEntry({
   className,
 }: GradeMasterEntryProps) {
   const trimmed = query?.trim();
-  const title = trimmed ? `Browse full catalogue for “${trimmed}”` : 'Browse all grades';
+  const title = trimmed ? `Browse full catalogue for “${trimmed}”` : 'Browse all catalogue grades';
   const subtitle = trimmed
     ? 'Open the full catalogue with filters for grade group and manufacturer'
     : gradeCount && gradeCount > 0
-      ? `${gradeCount.toLocaleString('en-IN')} grades by category, grade group and manufacturer`
+      ? `${gradeCount.toLocaleString('en-IN')} Catalogue Grades`
       : 'Explore the full grade catalogue by category, grade group and manufacturer';
 
   return (

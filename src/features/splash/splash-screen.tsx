@@ -1,22 +1,19 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { Dimensions, View } from 'react-native';
+import { AccessibilityInfo, Dimensions, Image, View } from 'react-native';
 
 import { type Href, useRouter } from 'expo-router';
 
 import Animated, {
   Easing,
-  FadeInDown,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Circle, Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { LoadingSpinner, Typography } from '@/components';
-import { AppLogo } from '@/components/ui/app-logo';
 import { getLoggedInRoute } from '@/navigation/post-auth-route';
 import { ROUTES } from '@/navigation/routes';
 import { isSellerOnboardingComplete } from '@/seller/mock/mockSellerService';
@@ -29,60 +26,27 @@ import { useSellerStore } from '@/seller/store/sellerStore';
 import { refreshKycStatus } from '@/services/kyc-status-sync';
 import { useAuthStore } from '@/store/auth-store';
 import { brandColors } from '@/theme/colors';
-import { iconSizes } from '@/theme/icons';
 import { spacing } from '@/theme/spacing';
 
-const SPLASH_VISIBLE_MS = 2200;
-const FADE_IN_MS = 650;
-const SCALE_FROM = 0.92;
-const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
+const logoFullSource = require('../../../assets/logo/polystorex-logo.png');
 
-function SplashAtmosphere() {
-  return (
-    <View
-      pointerEvents="none"
-      style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }}
-    >
-      <Svg width={SCREEN_W} height={SCREEN_H}>
-        <Defs>
-          <LinearGradient id="splashBg" x1="0.5" y1="0" x2="0.5" y2="1">
-            <Stop offset="0%" stopColor={brandColors.primaryTint} />
-            <Stop offset="42%" stopColor={brandColors.white} />
-            <Stop offset="100%" stopColor="#EEF3FA" />
-          </LinearGradient>
-          <LinearGradient id="splashGlow" x1="0.5" y1="0.18" x2="0.5" y2="0.72">
-            <Stop offset="0%" stopColor={brandColors.primaryLight} stopOpacity={0.9} />
-            <Stop offset="55%" stopColor={brandColors.primaryLight} stopOpacity={0.28} />
-            <Stop offset="100%" stopColor={brandColors.white} stopOpacity={0} />
-          </LinearGradient>
-        </Defs>
-        <Rect x={0} y={0} width={SCREEN_W} height={SCREEN_H} fill="url(#splashBg)" />
-        <Rect x={0} y={0} width={SCREEN_W} height={SCREEN_H} fill="url(#splashGlow)" />
-        <Circle
-          cx={SCREEN_W * 0.88}
-          cy={SCREEN_H * 0.12}
-          r={SCREEN_W * 0.3}
-          fill={brandColors.accent}
-          opacity={0.07}
-        />
-        <Circle
-          cx={SCREEN_W * 0.06}
-          cy={SCREEN_H * 0.78}
-          r={SCREEN_W * 0.36}
-          fill={brandColors.primary}
-          opacity={0.045}
-        />
-      </Svg>
-    </View>
-  );
-}
+/** Keep splash short — navigation must not feel delayed. */
+const SPLASH_VISIBLE_MS = 2400;
+const SPLASH_REDUCED_MS = 400;
+const { width: SCREEN_W } = Dimensions.get('window');
+const LOGO_WIDTH = Math.min(SCREEN_W * 0.78, 340);
 
 export const SplashScreen = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const hasRoutedRef = useRef(false);
-  const scale = useSharedValue(SCALE_FROM);
-  const contentOpacity = useSharedValue(0);
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  const orbitOpacity = useSharedValue(0);
+  const orbitScale = useSharedValue(0.86);
+  const wordmarkOpacity = useSharedValue(0);
+  const wordmarkTranslate = useSharedValue(14);
+  const underlineProgress = useSharedValue(0);
   const footerOpacity = useSharedValue(0);
 
   const routeAfterSplash = useCallback(() => {
@@ -132,27 +96,82 @@ export const SplashScreen = () => {
   }, [router]);
 
   useEffect(() => {
-    contentOpacity.value = withTiming(1, {
-      duration: FADE_IN_MS,
+    let mounted = true;
+    void AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
+      if (mounted) setReduceMotion(enabled);
+    });
+    const sub = AccessibilityInfo.addEventListener?.('reduceMotionChanged', (enabled) => {
+      setReduceMotion(enabled);
+    });
+    return () => {
+      mounted = false;
+      // RN versions differ on subscription shape
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (sub as any)?.remove?.();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (reduceMotion) {
+      orbitOpacity.value = 1;
+      orbitScale.value = 1;
+      wordmarkOpacity.value = 1;
+      wordmarkTranslate.value = 0;
+      underlineProgress.value = 1;
+      footerOpacity.value = 1;
+      const timer = setTimeout(routeAfterSplash, SPLASH_REDUCED_MS);
+      return () => clearTimeout(timer);
+    }
+
+    // 1–2. Orbit + full lockup fade/scale in
+    orbitOpacity.value = withTiming(1, {
+      duration: 520,
       easing: Easing.out(Easing.cubic),
     });
-    scale.value = withTiming(1, {
-      duration: FADE_IN_MS,
+    orbitScale.value = withTiming(1, {
+      duration: 620,
       easing: Easing.out(Easing.cubic),
     });
+    // 3–4. Wordmark settle (artwork includes wordmark; subtle secondary motion)
+    wordmarkOpacity.value = withDelay(
+      180,
+      withTiming(1, { duration: 480, easing: Easing.out(Easing.cubic) }),
+    );
+    wordmarkTranslate.value = withDelay(
+      180,
+      withTiming(0, { duration: 480, easing: Easing.out(Easing.cubic) }),
+    );
+    // 5. Gold underline draw (scaleX on a thin gold bar under the lockup)
+    underlineProgress.value = withDelay(
+      420,
+      withTiming(1, { duration: 520, easing: Easing.out(Easing.cubic) }),
+    );
     footerOpacity.value = withDelay(
-      280,
-      withTiming(1, { duration: 450, easing: Easing.out(Easing.cubic) }),
+      500,
+      withTiming(1, { duration: 360, easing: Easing.out(Easing.cubic) }),
     );
 
     const timer = setTimeout(routeAfterSplash, SPLASH_VISIBLE_MS);
-
     return () => clearTimeout(timer);
-  }, [contentOpacity, footerOpacity, routeAfterSplash, scale]);
+  }, [
+    footerOpacity,
+    orbitOpacity,
+    orbitScale,
+    reduceMotion,
+    routeAfterSplash,
+    underlineProgress,
+    wordmarkOpacity,
+    wordmarkTranslate,
+  ]);
 
-  const brandStyle = useAnimatedStyle(() => ({
-    opacity: contentOpacity.value,
-    transform: [{ scale: scale.value }],
+  const lockupStyle = useAnimatedStyle(() => ({
+    opacity: orbitOpacity.value,
+    transform: [{ scale: orbitScale.value }, { translateY: wordmarkTranslate.value }],
+  }));
+
+  const underlineStyle = useAnimatedStyle(() => ({
+    opacity: underlineProgress.value,
+    transform: [{ scaleX: Math.max(underlineProgress.value, 0.08) }],
   }));
 
   const footerStyle = useAnimatedStyle(() => ({
@@ -160,33 +179,28 @@ export const SplashScreen = () => {
   }));
 
   return (
-    <View className="flex-1" style={{ backgroundColor: brandColors.primaryTint }}>
-      <SplashAtmosphere />
-
+    <View className="flex-1" style={{ backgroundColor: '#000000' }}>
       <View className="flex-1 items-center justify-center px-xl">
-        <Animated.View className="items-center" style={brandStyle}>
-          <View className="items-center justify-center px-lg">
-            <AppLogo variant="splash" size={iconSizes.logo} />
-          </View>
-
+        <Animated.View className="items-center" style={lockupStyle}>
+          <Image
+            source={logoFullSource}
+            style={{ width: LOGO_WIDTH, height: LOGO_WIDTH * 0.5 }}
+            resizeMode="contain"
+            accessibilityLabel="PolyStoreX"
+            accessibilityIgnoresInvertColors
+          />
           <Animated.View
-            entering={FadeInDown.delay(220).duration(480)}
-            className="items-center"
-            style={{ marginTop: spacing.xl }}
-          >
-            <View
-              style={{
-                width: 40,
-                height: 3,
+            style={[
+              underlineStyle,
+              {
+                marginTop: spacing.md,
+                height: 2,
+                width: LOGO_WIDTH * 0.72,
                 borderRadius: 2,
                 backgroundColor: brandColors.accent,
-                marginBottom: spacing.lg,
-              }}
-            />
-            <Typography variant="splashTagline" style={{ maxWidth: 280 }}>
-              Smart industrial trading & logistics
-            </Typography>
-          </Animated.View>
+              },
+            ]}
+          />
         </Animated.View>
       </View>
 
@@ -197,8 +211,11 @@ export const SplashScreen = () => {
           { paddingBottom: Math.max(insets.bottom, spacing.sm) + spacing['4xl'] },
         ]}
       >
-        <LoadingSpinner size={26} strokeWidth={2.5} color={brandColors.primary} />
-        <Typography variant="splashStatus" style={{ marginTop: spacing.md }}>
+        <LoadingSpinner size={26} strokeWidth={2.5} color={brandColors.accent} />
+        <Typography
+          variant="splashStatus"
+          style={{ marginTop: spacing.md, color: 'rgba(255,255,255,0.72)' }}
+        >
           Preparing secure session
         </Typography>
       </Animated.View>

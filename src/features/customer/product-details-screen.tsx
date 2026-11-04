@@ -686,7 +686,17 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
         quantity: quantityMt,
         paymentMethod: toBackendPaymentOption(paymentId),
       });
-      useCartStore.getState().replaceItems(mapBackendCartItems(result.cart));
+      const mapped = mapBackendCartItems(result.cart);
+      if (!mapped.length && !result.item?.id) {
+        throw new Error('Cart was not updated on the server. Please try again.');
+      }
+      useCartStore.getState().replaceItems(mapped);
+      Toast.show({
+        type: 'success',
+        text1: 'Added to cart',
+        text2: `${quantityMt} MT saved to your cart.`,
+        visibilityTime: 2000,
+      });
       return true;
     } catch (cause) {
       Toast.show({

@@ -89,8 +89,10 @@ export const CustomerCartScreen = memo(function CustomerCartScreen() {
     setSyncing(true);
     try {
       const cart = await fetchCustomerCart();
+      // Backend is source of truth — including empty carts after server-side clear.
       replaceItems(mapBackendCartItems(cart));
     } catch (cause) {
+      // Never wipe a non-empty local cart on a failed GET.
       if (useCartStore.getState().items.length === 0) {
         setShowNetworkModal(true);
       } else {

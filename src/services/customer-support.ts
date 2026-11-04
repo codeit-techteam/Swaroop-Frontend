@@ -124,17 +124,31 @@ function supportReplyFields(row: BackendTicket) {
 let ticketsCache: CustomerSupportTicket[] = [];
 
 async function resolveSupportContacts(): Promise<CustomerSupportContact[]> {
+  const { COMPANY } = await import('@/constants/company');
   try {
     const links = await fetchLegalLinks();
     const contacts: CustomerSupportContact[] = [];
-    if (links.supportEmail) {
-      contacts.push({
-        id: 'email',
-        label: 'Email Support',
-        value: links.supportEmail,
-        type: 'email',
-      });
-    }
+    const email = links.supportEmail?.trim() || COMPANY.email;
+    const phone = links.supportPhone?.trim() || COMPANY.phoneDisplay;
+    const whatsapp = links.supportWhatsapp?.trim() || COMPANY.whatsappUrl;
+    contacts.push({
+      id: 'email',
+      label: 'Email Support',
+      value: email,
+      type: 'email',
+    });
+    contacts.push({
+      id: 'phone',
+      label: 'Phone',
+      value: phone,
+      type: 'phone',
+    });
+    contacts.push({
+      id: 'whatsapp',
+      label: 'WhatsApp',
+      value: whatsapp,
+      type: 'link',
+    });
     if (links.supportUrl) {
       contacts.push({
         id: 'page',
@@ -145,7 +159,20 @@ async function resolveSupportContacts(): Promise<CustomerSupportContact[]> {
     }
     return contacts;
   } catch {
-    return [];
+    return [
+      {
+        id: 'email',
+        label: 'Email Support',
+        value: COMPANY.email,
+        type: 'email',
+      },
+      {
+        id: 'phone',
+        label: 'Phone',
+        value: COMPANY.phoneDisplay,
+        type: 'phone',
+      },
+    ];
   }
 }
 
@@ -175,13 +202,17 @@ export async function refreshCustomerSupportTickets() {
     const res = await apiClient.get<Envelope<BackendTicket[]>>(
       '/customer/support/tickets?limit=100',
     );
-    ticketsCache = (res.data.data ?? []).map(mapTicket);
+    const { JUNK_SUPPORT_TICKET_IDS } = await import('@/constants/company');
+    ticketsCache = (res.data.data ?? [])
+      .map(mapTicket)
+      .filter((ticket) => !JUNK_SUPPORT_TICKET_IDS.has(ticket.ticketId.trim().toUpperCase()));
   } catch {
     // Keep last known tickets on network failure.
   }
   const contacts = await resolveSupportContacts();
   return {
     tickets: ticketsCache,
+    // FAQ content is Admin-managed; do not invent answers when the API has none.
     faqs: [] as typeof CUSTOMER_SUPPORT_FAQS,
     contacts,
   };

@@ -91,10 +91,20 @@ export function mapBackendCartItems(cart: BackendCart | null | undefined): CartI
   return (cart?.items ?? []).map(mapBackendCartItem);
 }
 
+function unwrapEnvelopeData<T>(body: Envelope<T> | T | null | undefined): T {
+  if (body == null) {
+    throw new Error('Empty cart response');
+  }
+  if (typeof body === 'object' && 'data' in body && (body as Envelope<T>).data != null) {
+    return (body as Envelope<T>).data;
+  }
+  return body as T;
+}
+
 export async function fetchCustomerCart(): Promise<BackendCart> {
   await ensureDevBackendSession('customer');
   const payload = await apiClient.get<Envelope<BackendCart>>('/customer/cart');
-  return payload.data.data;
+  return unwrapEnvelopeData(payload.data);
 }
 
 export async function addCustomerCartItem(input: {
@@ -107,7 +117,21 @@ export async function addCustomerCartItem(input: {
     '/customer/cart/items',
     input,
   );
-  return payload.data.data;
+  const added = unwrapEnvelopeData(payload.data);
+  // Reconcile with GET so local state matches the server source of truth.
+  // Prefer GET when it confirms items; fall back to POST cart if GET is empty/fails.
+  try {
+    const cart = await fetchCustomerCart();
+    if ((cart.items?.length ?? 0) > 0) {
+      return { cart, item: added.item };
+    }
+    if ((added.cart?.items?.length ?? 0) > 0) {
+      return added;
+    }
+    return { cart, item: added.item };
+  } catch {
+    return added;
+  }
 }
 
 export async function updateCustomerCartItem(
