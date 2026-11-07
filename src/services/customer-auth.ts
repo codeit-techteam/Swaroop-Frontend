@@ -43,6 +43,8 @@ export type CustomerOtpSendResult = {
   message?: string;
   resendCooldownSeconds?: number;
   expiresInSeconds?: number;
+  smsDispatched?: boolean;
+  correlationId?: string;
 };
 
 function unwrapOtpSend(body: unknown): CustomerOtpSendResult {
@@ -52,6 +54,11 @@ function unwrapOtpSend(body: unknown): CustomerOtpSendResult {
     root.data && typeof root.data === 'object'
       ? (root.data as Record<string, unknown>)
       : root;
+  if (data.smsDispatched === false && !__DEV__) {
+    throw new Error(
+      'SMS could not be dispatched. Please try again in a moment.',
+    );
+  }
   return {
     message: typeof data.message === 'string' ? data.message : undefined,
     resendCooldownSeconds:
@@ -60,6 +67,10 @@ function unwrapOtpSend(body: unknown): CustomerOtpSendResult {
         : undefined,
     expiresInSeconds:
       typeof data.expiresInSeconds === 'number' ? data.expiresInSeconds : undefined,
+    smsDispatched:
+      typeof data.smsDispatched === 'boolean' ? data.smsDispatched : undefined,
+    correlationId:
+      typeof data.correlationId === 'string' ? data.correlationId : undefined,
   };
 }
 

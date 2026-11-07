@@ -141,12 +141,19 @@ function unwrapSellerOtpSend(body: unknown): SellerOtpSendResult {
     devOtp?: string;
     resendCooldownSeconds?: number;
     expiresInSeconds?: number;
+    smsDispatched?: boolean;
   };
   const envelope = body as Envelope<OtpSendPayload>;
   const data: OtpSendPayload =
     (envelope?.data && typeof envelope.data === 'object' ? envelope.data : null) ??
     (body && typeof body === 'object' ? (body as OtpSendPayload) : {});
   const exposed = typeof data.devOtp === 'string' ? data.devOtp : undefined;
+  if (data.smsDispatched === false && !__DEV__) {
+    throw new Error(
+      'SMS could not be dispatched. Please try again in a moment.',
+    );
+  }
+
   return {
     sent: true,
     // Only surface server-exposed dev OTP (non-production backend). Never invent 123456.
@@ -208,28 +215,6 @@ export async function verifySellerOtpSession(
   return unwrapSession(response.data);
 }
 
-export async function loginSellerWithPassword(
-  identifier: string,
-  password: string,
-): Promise<SellerAuthSession> {
-  const trimmed = identifier.trim();
-  const digits = trimmed.replace(/\D/g, '');
-  const body = trimmed.includes('@')
-    ? { email: trimmed.toLowerCase(), password }
-    : digits.length >= 10
-      ? { phone: toE164IndianPhone(trimmed), password }
-      : { identifier: trimmed, password };
-  const response = await apiClient.post('/auth/login', body, {
-    skipAuth: true,
-    skipRefresh: true,
-  } as ApiRequestConfig);
-  return unwrapSession(response.data);
-}
-
-function sessionRequiresPasswordChange(session: SellerAuthSession): boolean {
-  return Boolean(session.user?.mustChangePassword);
-}
-
 /** Full seller login/signup used by OTP screen — verifies via `/auth/otp/verify` only. */
 export async function authenticateSellerFromOtp(
   mobile: string,
@@ -242,14 +227,8 @@ export async function authenticateSellerFromOtp(
   }
 
   try {
+    // Seller apps are mobile-OTP only — ignore mustChangePassword password gates.
     const session = await verifySellerOtpSession(mobile, otp, purpose, signup);
-    if (sessionRequiresPasswordChange(session)) {
-      return {
-        ok: false,
-        message:
-          'Your temporary password must be changed first. Sign in once on Seller Web to set a new password, then return to the app.',
-      };
-    }
     persistSellerAuthSession(session);
     return { ok: true };
   } catch (error) {
@@ -277,8 +256,15 @@ export async function requestSellerOtpSend(
     };
   } catch (error) {
     // An OTP issued moments ago is still valid; let the user enter it.
-    if (isAxiosError(error) && error.response?.status === 429) {
-      return { ok: true };
+    if (
+      isAxiosError<{ code?: string }>(error) &&
+      error.response?.status === 429 &&
+      error.response.data?.code === 'AUTH_OTP_RATE_LIMITED'
+    ) {
+      return {
+        ok: true,
+        message: 'An OTP was already sent. Enter the code from your SMS.',
+      };
     }
     return {
       ok: false,

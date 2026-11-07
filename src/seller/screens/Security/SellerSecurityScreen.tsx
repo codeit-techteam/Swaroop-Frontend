@@ -48,20 +48,6 @@ export const SellerSecurityScreen = memo(function SellerSecurityScreen() {
           <>
             <View className="mt-md flex-row gap-md">
               <Pressable
-                onPress={() => undefined}
-                className="flex-1 rounded-[22px] border border-brand-border bg-brand-white p-lg"
-              >
-                <View className="h-10 w-10 items-center justify-center rounded-xl bg-brand-primary-light">
-                  <LockIcon size={20} color={brandColors.primaryDark} />
-                </View>
-                <Typography variant="roleTitle" className="mt-md">
-                  Change Password
-                </Typography>
-                <Typography variant="legal" className="mt-xs text-brand-body">
-                  Update your account password
-                </Typography>
-              </Pressable>
-              <Pressable
                 onPress={() =>
                   updateSetting({ twoFactorEnabled: !snapshot.settings.twoFactorEnabled })
                 }
@@ -74,9 +60,22 @@ export const SellerSecurityScreen = memo(function SellerSecurityScreen() {
                   Enable 2FA
                 </Typography>
                 <Typography variant="legal" className="mt-xs text-brand-body">
-                  {snapshot.settings.twoFactorEnabled ? 'Enabled' : 'Disabled'}
+                  {snapshot.settings.twoFactorEnabled
+                    ? 'Enabled — OTP required'
+                    : 'Login already uses mobile OTP'}
                 </Typography>
               </Pressable>
+              <View className="flex-1 rounded-[22px] border border-brand-border bg-brand-white p-lg">
+                <View className="h-10 w-10 items-center justify-center rounded-xl bg-brand-primary-light">
+                  <LockIcon size={20} color={brandColors.primaryDark} />
+                </View>
+                <Typography variant="roleTitle" className="mt-md">
+                  Mobile OTP login
+                </Typography>
+                <Typography variant="legal" className="mt-xs text-brand-body">
+                  Password login is disabled — sign in with your phone
+                </Typography>
+              </View>
             </View>
 
             <SettingsGroup title="Authentication">
