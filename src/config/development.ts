@@ -47,9 +47,24 @@ export const DEV_FEATURES = {
   allowOfflineBackendFallback: true,
 } as const;
 
-export const isDevAuthEnabled = (): boolean => DEVELOPMENT_MODE;
+/**
+ * Demo OTP UI (123456) is Metro-only AND must never appear when the app talks
+ * to the production MSG91 backend (AUTH_STRICT_OTP rejects fixed OTP).
+ */
+export const isProductionApiTarget = (): boolean => {
+  const base = (process.env.EXPO_PUBLIC_API_BASE_URL ?? '').toLowerCase();
+  return (
+    base.includes('ondigitalocean.app') ||
+    base.includes('polystorex.com') ||
+    process.env.EXPO_PUBLIC_APP_ENV === 'production'
+  );
+};
 
-export const isLocalOtpEnabled = (): boolean => DEVELOPMENT_MODE && DEV_FEATURES.localOtpValidation;
+export const isDevAuthEnabled = (): boolean =>
+  DEVELOPMENT_MODE && !isProductionApiTarget();
+
+export const isLocalOtpEnabled = (): boolean =>
+  isDevAuthEnabled() && DEV_FEATURES.localOtpValidation;
 
 export const isLocalStorageLoginEnabled = (): boolean =>
   DEVELOPMENT_MODE && DEV_FEATURES.localStorageLogin;

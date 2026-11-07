@@ -14,7 +14,7 @@ import {
   ScreenWrapper,
   Typography,
 } from '@/components';
-import { DEMO_OTP, DEMO_USER_NAME } from '@/config/development';
+import { DEMO_OTP, DEMO_USER_NAME, isDevAuthEnabled } from '@/config/development';
 import { SellerHeader } from '@/seller/components';
 import { SELLER_RESEND_SECONDS } from '@/seller/constants';
 import { getSellerInitialRoute } from '@/seller/navigation/getSellerInitialRoute';
@@ -187,7 +187,7 @@ export const SellerOtpScreen = () => {
             After verification, complete onboarding so Admin can review your seller application.
           </Typography>
         ) : null}
-        {__DEV__ ? (
+        {isDevAuthEnabled() ? (
           <Typography variant="legal" className="mt-sm text-left">
             Dev login: {DEMO_USER_NAME} · OTP {DEMO_OTP}
           </Typography>
@@ -228,7 +228,7 @@ export const SellerOtpScreen = () => {
           }}
         />
 
-        {__DEV__ ? (
+        {isDevAuthEnabled() ? (
           <View className="mt-lg rounded-md bg-brand-surface p-md">
             <Typography variant="legal" className="text-left">
               Demo OTP: {DEMO_OTP} (same as Seller Web)

@@ -12,7 +12,7 @@ import {
   ScreenWrapper,
   Typography,
 } from '@/components';
-import { DEMO_OTP, DEMO_USER_NAME } from '@/config/development';
+import { DEMO_OTP, DEMO_USER_NAME, isDevAuthEnabled } from '@/config/development';
 import { ClockIcon, OtpIllustration } from '@/icons';
 import { parseReturnToParam, resolvePostAuthHref } from '@/navigation/return-to';
 import { ROUTES } from '@/navigation/routes';
@@ -163,7 +163,7 @@ export const OtpVerificationScreen = () => {
         <Typography variant="subheading" className="mt-sm px-md">
           Enter the 6-digit verification code sent to {phoneDisplay}
         </Typography>
-        {__DEV__ ? (
+        {isDevAuthEnabled() ? (
           <Typography variant="legal" className="mt-sm px-md text-center">
             Dev: {DEMO_USER_NAME} · OTP {DEMO_OTP}
           </Typography>

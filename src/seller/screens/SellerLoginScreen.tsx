@@ -18,7 +18,7 @@ import {
   SecondaryButton,
   Typography,
 } from '@/components';
-import { DEMO_PHONE } from '@/config/development';
+import { DEMO_PHONE, isDevAuthEnabled } from '@/config/development';
 import { BackArrowIcon } from '@/icons';
 import { useZodForm } from '@/lib/forms';
 import { ROUTES } from '@/navigation/routes';
@@ -187,7 +187,7 @@ export const SellerLoginScreen = () => {
             }}
           />
 
-          {__DEV__ ? (
+          {isDevAuthEnabled() ? (
             <View className="mt-xl rounded-md bg-brand-surface p-md">
               <Typography variant="legal" className="text-left">
                 Dev only demo mobile: {DEMO_PHONE}
