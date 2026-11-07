@@ -37,6 +37,15 @@ export function indianMobileFieldError(
   return undefined;
 }
 
+/** Mask an Indian mobile for OTP screens: +91 ******0242 */
+export function maskIndianMobile(value?: string | null): string {
+  const digits = String(value ?? '')
+    .replace(/\D/g, '')
+    .slice(-10);
+  if (digits.length !== 10) return '+91 ******XXXX';
+  return `+91 ******${digits.slice(-4)}`;
+}
+
 export function isCompleteIndianMobile(value: string): boolean {
   return /^[6-9]\d{9}$/.test(sanitizeIndianMobileInput(value));
 }

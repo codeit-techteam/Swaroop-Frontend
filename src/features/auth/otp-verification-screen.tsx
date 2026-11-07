@@ -20,16 +20,18 @@ import { safeGoBack } from '@/navigation/safe-back';
 import {
   customerAuthErrorMessage,
   isOtpCooldownError,
-  sendCustomerOtp,
+  resendCustomerOtp,
   verifyCustomerOtp,
   type CustomerOtpPurpose,
 } from '@/services/customer-auth';
 import { refreshKycStatus } from '@/services/kyc-status-sync';
 import { resetUserScopedState } from '@/services/sign-out';
 import { useAuthStore } from '@/store/auth-store';
+import { maskIndianMobile } from '@/utils/phone-input';
 import { wp } from '@/utils/responsive';
 
-const RESEND_SECONDS = 44;
+/** Default cooldown — prefer backend `resendCooldownSeconds` when present. */
+const RESEND_SECONDS = 60;
 
 const formatTimer = (seconds: number): string => {
   const mins = Math.floor(seconds / 60)
@@ -37,13 +39,6 @@ const formatTimer = (seconds: number): string => {
     .padStart(2, '0');
   const secs = (seconds % 60).toString().padStart(2, '0');
   return `${mins}:${secs}`;
-};
-
-const formatPhone = (phone?: string): string => {
-  if (!phone || phone.length < 10) {
-    return '+91 98765 43210';
-  }
-  return `+91 ${phone.slice(0, 5)} ${phone.slice(5)}`;
 };
 
 export const OtpVerificationScreen = () => {
@@ -62,7 +57,7 @@ export const OtpVerificationScreen = () => {
   const verifyingRef = useRef(false);
   const purpose: CustomerOtpPurpose = params.source === 'register' ? 'SIGNUP' : 'LOGIN';
 
-  const phoneDisplay = useMemo(() => formatPhone(params.phone), [params.phone]);
+  const phoneDisplay = useMemo(() => maskIndianMobile(params.phone), [params.phone]);
   const isOtpComplete = otp.length === 6;
   const canResend = secondsLeft === 0;
 
@@ -87,8 +82,8 @@ export const OtpVerificationScreen = () => {
     setOtp('');
     setOtpError(undefined);
     try {
-      await sendCustomerOtp(params.phone ?? '', purpose);
-      setSecondsLeft(RESEND_SECONDS);
+      const result = await resendCustomerOtp(params.phone ?? '', purpose);
+      setSecondsLeft(result.resendCooldownSeconds ?? RESEND_SECONDS);
     } catch (error) {
       if (isOtpCooldownError(error)) {
         setSecondsLeft(RESEND_SECONDS);
@@ -166,7 +161,7 @@ export const OtpVerificationScreen = () => {
           Verify Your Number
         </Typography>
         <Typography variant="subheading" className="mt-sm px-md">
-          Enter the 6-digit code sent to {phoneDisplay}
+          Enter the 6-digit verification code sent to {phoneDisplay}
         </Typography>
         {__DEV__ ? (
           <Typography variant="legal" className="mt-sm px-md text-center">
@@ -179,7 +174,9 @@ export const OtpVerificationScreen = () => {
         <View className="mt-xl items-center gap-sm">
           <View className="flex-row items-center gap-xs">
             <ClockIcon />
-            <Typography variant="legal">Resend code in {formatTimer(secondsLeft)}</Typography>
+            <Typography variant="legal">
+              {canResend ? 'You can resend the code now' : `Resend OTP in ${formatTimer(secondsLeft)}`}
+            </Typography>
           </View>
           <Pressable
             onPress={() => {
@@ -188,6 +185,7 @@ export const OtpVerificationScreen = () => {
             disabled={!canResend}
             accessibilityRole="button"
             accessibilityState={{ disabled: !canResend }}
+            accessibilityLabel="Resend OTP"
           >
             <Typography
               variant="link"
@@ -196,12 +194,21 @@ export const OtpVerificationScreen = () => {
               Resend OTP
             </Typography>
           </Pressable>
+          <Pressable
+            onPress={handleBack}
+            accessibilityRole="button"
+            accessibilityLabel="Change Number"
+          >
+            <Typography variant="link" className="text-brand-primary">
+              Change Number
+            </Typography>
+          </Pressable>
         </View>
       </View>
 
       <View className="pb-md">
         <PrimaryButton
-          label="Verify & Continue"
+          label="Verify & Proceed"
           disabled={!isOtpComplete}
           loading={isVerifying}
           onPress={() => {
@@ -209,7 +216,7 @@ export const OtpVerificationScreen = () => {
           }}
         />
         <Typography variant="legal" className="mt-lg px-md">
-          Secure multi-factor authentication for authorized PolyStoreX personnel only.
+          Secure OTP authentication for your PolyStoreX account.
         </Typography>
       </View>
     </ScreenWrapper>

@@ -26,8 +26,15 @@ import {
   type SellerOtpPurpose,
 } from '@/services/seller-auth';
 import { seedSellerSignupOnboarding } from '@/services/seller-onboarding';
+import { maskIndianMobile } from '@/utils/phone-input';
 
-const formatTimer = (seconds: number): string => `00:${seconds.toString().padStart(2, '0')}`;
+const formatTimer = (seconds: number): string => {
+  const mins = Math.floor(seconds / 60)
+    .toString()
+    .padStart(2, '0');
+  const secs = (seconds % 60).toString().padStart(2, '0');
+  return `${mins}:${secs}`;
+};
 
 export const SellerOtpScreen = () => {
   const router = useRouter();
@@ -129,25 +136,34 @@ export const SellerOtpScreen = () => {
     const mobile = params.mobile ?? '';
     setIsResending(true);
     try {
-      await requestSellerOtpSend(mobile, otpPurpose);
+      const result = await requestSellerOtpSend(mobile, otpPurpose, { resend: true });
+      if (!result.ok) {
+        setOtpError(result.message ?? 'Unable to resend OTP. Please try again.');
+        return;
+      }
       setOtp('');
       setOtpError(undefined);
-      setSecondsLeft(SELLER_RESEND_SECONDS);
+      setSecondsLeft(result.resendCooldownSeconds ?? SELLER_RESEND_SECONDS);
     } finally {
       setIsResending(false);
     }
   }, [isResending, otpPurpose, params.mobile, secondsLeft]);
 
   const backHref = isRegister ? ROUTES.SELLER.REGISTER : ROUTES.SELLER.LOGIN;
+  const phoneDisplay = maskIndianMobile(params.mobile);
 
   return (
     <ScreenWrapper scrollable className="bg-brand-background">
       <SellerHeader showBack title="Seller OTP Verification" />
 
       <AuthCard className="mt-md">
-        <Pressable onPress={() => safeGoBack(router, backHref as Href)}>
+        <Pressable
+          onPress={() => safeGoBack(router, backHref as Href)}
+          accessibilityRole="button"
+          accessibilityLabel="Change Number"
+        >
           <Typography variant="link">
-            {isRegister ? 'Back to Sign Up' : 'Back to Login'}
+            {isRegister ? 'Back to Sign Up' : 'Change Number'}
           </Typography>
         </Pressable>
 
@@ -155,7 +171,7 @@ export const SellerOtpScreen = () => {
           Verify Mobile Number
         </Typography>
         <Typography variant="subheadingLeft" className="mt-sm">
-          Enter the 6-digit OTP sent to +91 {params.mobile ?? ''}.
+          Enter the 6-digit verification code sent to {phoneDisplay}.
         </Typography>
         {isRegister ? (
           <Typography variant="legal" className="mt-sm text-left">
@@ -197,7 +213,7 @@ export const SellerOtpScreen = () => {
         </Pressable>
 
         <PrimaryButton
-          label={isVerifying ? 'Verifying…' : 'Verify & Continue'}
+          label={isVerifying ? 'Verifying…' : 'Verify & Proceed'}
           className="mt-xl"
           disabled={otp.length !== 6 || isVerifying}
           loading={isVerifying}

@@ -39,12 +39,53 @@ export function customerAuthErrorMessage(error: unknown, fallback: string): stri
   return fallback;
 }
 
-export async function sendCustomerOtp(mobile: string, purpose: CustomerOtpPurpose): Promise<void> {
-  await apiClient.post(
+export type CustomerOtpSendResult = {
+  message?: string;
+  resendCooldownSeconds?: number;
+  expiresInSeconds?: number;
+};
+
+function unwrapOtpSend(body: unknown): CustomerOtpSendResult {
+  if (!body || typeof body !== 'object') return {};
+  const root = body as Record<string, unknown>;
+  const data =
+    root.data && typeof root.data === 'object'
+      ? (root.data as Record<string, unknown>)
+      : root;
+  return {
+    message: typeof data.message === 'string' ? data.message : undefined,
+    resendCooldownSeconds:
+      typeof data.resendCooldownSeconds === 'number'
+        ? data.resendCooldownSeconds
+        : undefined,
+    expiresInSeconds:
+      typeof data.expiresInSeconds === 'number' ? data.expiresInSeconds : undefined,
+  };
+}
+
+export async function sendCustomerOtp(
+  mobile: string,
+  purpose: CustomerOtpPurpose,
+): Promise<CustomerOtpSendResult> {
+  const response = await apiClient.post(
     '/auth/otp/send',
     { phone: toE164IndianPhone(mobile), purpose },
     PUBLIC_AUTH_REQUEST,
   );
+  return unwrapOtpSend(response.data);
+}
+
+/** Fresh OTP — invalidates the previous challenge server-side. */
+export async function resendCustomerOtp(
+  mobile: string,
+  purpose: CustomerOtpPurpose,
+): Promise<CustomerOtpSendResult> {
+  const response = await apiClient.post(
+    '/auth/otp/resend',
+    { phone: toE164IndianPhone(mobile), purpose },
+    PUBLIC_AUTH_REQUEST,
+  );
+  return unwrapOtpSend(response.data);
 }
 
 /** Verifies the OTP with the API and stores the issued access/refresh tokens. */

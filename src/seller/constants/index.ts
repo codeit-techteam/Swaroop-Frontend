@@ -10,7 +10,8 @@ export const SELLER_DEMO_OTP = '123456';
 export const SELLER_DEMO_NAME = 'Karan Veer';
 export const SELLER_DEMO_EMAIL = 'seller@test.local';
 export const SELLER_DEMO_PASSWORD = 'Test@12345';
-export const SELLER_RESEND_SECONDS = 45;
+/** Default OTP resend cooldown — prefer backend `resendCooldownSeconds` when present. */
+export const SELLER_RESEND_SECONDS = 60;
 export const SELLER_UPLOAD_DURATION_MS = 900;
 
 export const SELLER_ENTITY_TYPE_OPTIONS = [

@@ -129,25 +129,60 @@ export type SellerSignupProfile = {
   gstNumber?: string;
 };
 
+export type SellerOtpSendResult = {
+  sent: true;
+  demoOtp?: string;
+  resendCooldownSeconds?: number;
+  expiresInSeconds?: number;
+};
+
+function unwrapSellerOtpSend(body: unknown): SellerOtpSendResult {
+  type OtpSendPayload = {
+    devOtp?: string;
+    resendCooldownSeconds?: number;
+    expiresInSeconds?: number;
+  };
+  const envelope = body as Envelope<OtpSendPayload>;
+  const data: OtpSendPayload =
+    (envelope?.data && typeof envelope.data === 'object' ? envelope.data : null) ??
+    (body && typeof body === 'object' ? (body as OtpSendPayload) : {});
+  const exposed = typeof data.devOtp === 'string' ? data.devOtp : undefined;
+  return {
+    sent: true,
+    // Only surface server-exposed dev OTP (non-production backend). Never invent 123456.
+    ...(exposed ? { demoOtp: exposed } : {}),
+    ...(typeof data.resendCooldownSeconds === 'number'
+      ? { resendCooldownSeconds: data.resendCooldownSeconds }
+      : {}),
+    ...(typeof data.expiresInSeconds === 'number'
+      ? { expiresInSeconds: data.expiresInSeconds }
+      : {}),
+  };
+}
+
 export async function sendSellerOtp(
   mobile: string,
   purpose: SellerOtpPurpose = 'LOGIN',
-): Promise<{ sent: true; demoOtp?: string }> {
+): Promise<SellerOtpSendResult> {
   const phone = toE164IndianPhone(mobile);
   const response = await apiClient.post('/auth/otp/send', { phone, purpose }, {
     skipAuth: true,
     skipRefresh: true,
   } as ApiRequestConfig);
-  const data = (response.data as Envelope<{ devOtp?: string }>)?.data ?? response.data;
-  const exposed =
-    data && typeof data === 'object' && typeof (data as { devOtp?: string }).devOtp === 'string'
-      ? (data as { devOtp: string }).devOtp
-      : undefined;
-  return {
-    sent: true,
-    // Only surface server-exposed dev OTP (non-production backend). Never invent 123456.
-    ...(exposed ? { demoOtp: exposed } : {}),
-  };
+  return unwrapSellerOtpSend(response.data);
+}
+
+export async function resendSellerOtp(
+  mobile: string,
+  purpose: SellerOtpPurpose = 'LOGIN',
+): Promise<SellerOtpSendResult> {
+  const phone = toE164IndianPhone(mobile);
+  const response = await apiClient.post(
+    '/auth/otp/resend',
+    { phone, purpose },
+    { skipAuth: true, skipRefresh: true } as ApiRequestConfig,
+  );
+  return unwrapSellerOtpSend(response.data);
 }
 
 export async function verifySellerOtpSession(
@@ -228,10 +263,18 @@ export async function authenticateSellerFromOtp(
 export async function requestSellerOtpSend(
   mobile: string,
   purpose: SellerOtpPurpose = 'LOGIN',
-): Promise<{ ok: boolean; message?: string }> {
+  options?: { resend?: boolean },
+): Promise<{ ok: boolean; message?: string; resendCooldownSeconds?: number }> {
   try {
-    await sendSellerOtp(mobile, purpose);
-    return { ok: true };
+    const result = options?.resend
+      ? await resendSellerOtp(mobile, purpose)
+      : await sendSellerOtp(mobile, purpose);
+    return {
+      ok: true,
+      ...(result.resendCooldownSeconds != null
+        ? { resendCooldownSeconds: result.resendCooldownSeconds }
+        : {}),
+    };
   } catch (error) {
     // An OTP issued moments ago is still valid; let the user enter it.
     if (isAxiosError(error) && error.response?.status === 429) {
