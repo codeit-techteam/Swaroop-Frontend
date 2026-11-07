@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Pressable, View } from 'react-native';
 
@@ -46,6 +46,7 @@ export const SellerOtpScreen = () => {
   const [secondsLeft, setSecondsLeft] = useState(SELLER_RESEND_SECONDS);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
+  const verifyingRef = useRef(false);
   const setMobile = useSellerStore((state) => state.setMobile);
   const markOtpVerified = useSellerStore((state) => state.markOtpVerified);
   const clearSignupDraft = useSellerStore((state) => state.clearSignupDraft);
@@ -62,16 +63,19 @@ export const SellerOtpScreen = () => {
     return () => clearInterval(timer);
   }, [secondsLeft]);
 
-  const handleVerify = useCallback(async () => {
+  const handleVerify = useCallback(async (code?: string) => {
     const mobile = params.mobile ?? '';
-    if (otp.length !== 6 || isVerifying) return;
+    const otpCode = code ?? otp;
+    // L-10: auto-submit (6th digit) and Verify can fire together — ref closes that window.
+    if (otpCode.length !== 6 || verifyingRef.current) return;
+    verifyingRef.current = true;
     setIsVerifying(true);
     setOtpError(undefined);
     try {
       const signupDraft = useSellerStore.getState().signupDraft;
       const result = await authenticateSellerFromOtp(
         mobile,
-        otp,
+        otpCode,
         otpPurpose,
         isRegister && signupDraft
           ? {
@@ -83,6 +87,7 @@ export const SellerOtpScreen = () => {
       );
       if (!result.ok) {
         setOtpError(result.message);
+        verifyingRef.current = false;
         return;
       }
 
@@ -106,6 +111,9 @@ export const SellerOtpScreen = () => {
       }
 
       router.replace(getSellerInitialRoute(useSellerStore.getState()) as Href);
+    } catch {
+      setOtpError('Unable to verify OTP. Please try again.');
+      verifyingRef.current = false;
     } finally {
       setIsVerifying(false);
     }
@@ -113,7 +121,6 @@ export const SellerOtpScreen = () => {
     clearSignupDraft,
     grantExistingSellerAccess,
     isRegister,
-    isVerifying,
     markOtpVerified,
     otp,
     otpPurpose,
@@ -122,14 +129,16 @@ export const SellerOtpScreen = () => {
     setMobile,
   ]);
 
-  // Auto-submit when the sixth digit is entered (L-10).
-  useEffect(() => {
-    if (otp.length === 6 && !isVerifying && !otpError) {
-      void handleVerify();
-    }
-    // Only react to length completing — avoid loops on error.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional one-shot on 6 digits
-  }, [otp]);
+  const handleOtpChange = useCallback(
+    (value: string) => {
+      setOtp(value);
+      setOtpError(undefined);
+      if (value.length === 6) {
+        void handleVerify(value);
+      }
+    },
+    [handleVerify],
+  );
 
   const handleResend = useCallback(async () => {
     if (secondsLeft > 0 || isResending) return;
@@ -186,10 +195,7 @@ export const SellerOtpScreen = () => {
 
         <OtpInput
           value={otp}
-          onChange={(value) => {
-            setOtp(value);
-            setOtpError(undefined);
-          }}
+          onChange={handleOtpChange}
           error={otpError}
           className="mt-xl"
         />
