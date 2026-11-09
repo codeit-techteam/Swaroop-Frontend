@@ -15,6 +15,37 @@ function productsApiBase(): '/public/marketplace/products' | '/customer/products
     : '/public/marketplace/products';
 }
 
+/**
+ * Best Value is only for commercially eligible live offers.
+ * Invalid / review-flagged / unpriced listings must not carry the badge.
+ */
+export function resolveMarketBadge(
+  raw: unknown,
+  opts: { price: number; needsPriceReview?: boolean; stock?: number },
+): MarketProduct['badge'] {
+  if (opts.needsPriceReview || !(opts.price > 0)) {
+    return opts.stock != null && opts.stock > 0 && opts.stock < 100
+      ? 'Limited Stock'
+      : 'High Demand';
+  }
+  if (typeof raw === 'string' && raw.trim()) {
+    return raw as MarketProduct['badge'];
+  }
+  return 'Best Value';
+}
+
+/** Buyer-facing manufacturer — never expose raw supplier identities. */
+export function resolveBlindManufacturerLabel(
+  ...candidates: Array<string | null | undefined>
+): string {
+  for (const candidate of candidates) {
+    const value = candidate?.trim();
+    if (!value) continue;
+    return 'PRIVATE';
+  }
+  return 'PRIVATE';
+}
+
 type Envelope<T> = {
   success: boolean;
   data: T;
@@ -223,16 +254,20 @@ export function mapBlindProduct(product: BlindProduct): MarketProduct {
     eta: String(listing?.leadTime ?? '').trim(),
     fulfilment: listing?.fulfilment ?? null,
     category: readableCategory,
-    badge: (typeof specs.badge === 'string' ? specs.badge : 'Best Value') as MarketProduct['badge'],
+    badge: resolveMarketBadge(specs.badge, {
+      price: num(listing?.price),
+      needsPriceReview: Boolean(listing?.pricingPreview?.needsPriceReview),
+      stock: num(listing?.quantityAvailable),
+    }),
     image: '',
     gradeCode,
     gradeId: product.grade?.id,
     gradeNo: product.grade?.gradeNo ?? undefined,
-    manufacturer:
-      product.grade?.manufacturer ??
-      product.manufacturer ??
-      product.brand ??
-      undefined,
+    manufacturer: resolveBlindManufacturerLabel(
+      product.grade?.manufacturer,
+      product.manufacturer,
+      product.brand,
+    ),
     masterCategoryId: product.grade?.category?.id,
     masterCategoryName: formatCategoryDisplayName(
       product.grade?.category?.displayName,

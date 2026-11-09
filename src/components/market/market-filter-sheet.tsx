@@ -180,6 +180,10 @@ export const MarketFilterSheet = memo(
     }, [draft.manufacturers, facetQuery, facets.manufacturers]);
 
     const visibleOrigins = useMemo(() => facets.origins.slice(0, FACET_LIMIT), [facets.origins]);
+    const visibleLocations = useMemo(
+      () => (facets.locations ?? []).slice(0, FACET_LIMIT),
+      [facets.locations],
+    );
 
     const priceHint = facets.priceRange
       ? `Listings range from ${formatInr(facets.priceRange.min)} to ${formatInr(facets.priceRange.max)} per MT.`
@@ -297,7 +301,10 @@ export const MarketFilterSheet = memo(
           ) : null}
 
           {facets.origins.length > 0 ? (
-            <SheetSection title="ORIGIN">
+            <SheetSection
+              title="ORIGIN"
+              hint="Product manufacturing / supply origin — not the same as dispatch warehouse."
+            >
               <View className="flex-row flex-wrap gap-sm">
                 {visibleOrigins.map((item) => (
                   <SheetChip
@@ -308,6 +315,29 @@ export const MarketFilterSheet = memo(
                       setDraft((prev) => ({
                         ...prev,
                         origins: toggleValue(prev.origins, item.name),
+                      }))
+                    }
+                  />
+                ))}
+              </View>
+            </SheetSection>
+          ) : null}
+
+          {visibleLocations.length > 0 ? (
+            <SheetSection
+              title="DISPATCH LOCATION"
+              hint="Filter by warehouse city / dispatch hub from live listings."
+            >
+              <View className="flex-row flex-wrap gap-sm">
+                {visibleLocations.map((item) => (
+                  <SheetChip
+                    key={item.name}
+                    label={`${item.name} (${item.count})`}
+                    selected={(draft.locations ?? []).includes(item.name)}
+                    onPress={() =>
+                      setDraft((prev) => ({
+                        ...prev,
+                        locations: toggleValue(prev.locations ?? [], item.name),
                       }))
                     }
                   />

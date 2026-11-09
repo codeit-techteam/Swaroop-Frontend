@@ -36,7 +36,7 @@ export const CheckoutBottomBar = memo(function CheckoutBottomBar({
         disabled={!enabled || loading}
         accessibilityRole="button"
         accessibilityState={{ disabled: !enabled || loading }}
-        accessibilityLabel="Verify and place purchase request"
+        accessibilityLabel="Review and place purchase request"
         className={cn(
           'h-14 flex-row items-center justify-center rounded-xl',
           enabled && !loading ? 'bg-brand-heading' : 'bg-brand-disabled',
@@ -44,7 +44,7 @@ export const CheckoutBottomBar = memo(function CheckoutBottomBar({
         style={({ pressed }) => ({ opacity: enabled && !loading && pressed ? 0.85 : 1 })}
       >
         <Typography variant="button" className="mr-xs text-[15px] tracking-normal text-brand-white">
-          {loading ? 'Submitting...' : 'Verify & Place Purchase Request'}
+          {loading ? 'Submitting...' : 'Review & place request'}
         </Typography>
         <ArrowRightIcon size={iconSizes.sm} color={brandColors.white} />
       </Pressable>

@@ -31,7 +31,7 @@ import {
 import { MarketListSkeleton } from '@/components/ui/skeleton';
 import { Typography } from '@/components/ui/typography';
 import { TAB_BAR_HEIGHT } from '@/constants/dashboard';
-import { allMarketCategoryChips, marketCategoryChips } from '@/constants/marketProducts';
+import { marketCategoryChips } from '@/constants/marketProducts';
 import { materialsFromCatalog } from '@/constants/materials-taxonomy';
 import { useDebouncedValue } from '@/hooks/use-debounce';
 import { useDeliveryLocation } from '@/hooks/use-delivery-location';
@@ -104,10 +104,14 @@ export const CustomerMarketScreen = () => {
   const wantsCatalogueSearch = trimmedQuery.length > 0;
   const isSearchPending = wantsCatalogueSearch && trimmedQuery !== debouncedSearch;
 
+  // Free-text search spans the full catalogue. Category chips refine the
+  // *display* of results; applying categoryId to the grades API while the
+  // user is typing "PVC" incorrectly yields "0 grades" when a non-PVC chip
+  // was previously selected.
   const catalogueFilters = useMemo<GradeBrowseFilters>(
     () => ({
       search: debouncedSearch,
-      categoryId: selectedCategory,
+      categoryId: debouncedSearch ? undefined : selectedCategory,
     }),
     [debouncedSearch, selectedCategory],
   );
@@ -146,13 +150,35 @@ export const CustomerMarketScreen = () => {
     [searchedProducts],
   );
   const { data: gradeCategories } = useCustomerMarketplaceCategories();
-  const categories = useMemo(
+  const searchRows = useMemo(
     () =>
-      wantsCatalogueSearch
-        ? allMarketCategoryChips(gradeCategories ?? [])
-        : marketCategoryChips(gradeCategories ?? [], marketProducts),
-    [gradeCategories, marketProducts, wantsCatalogueSearch],
+      debouncedSearch.length > 0
+        ? buildMarketSearchRows(catalogueGrades, marketProducts, debouncedSearch)
+        : [],
+    [catalogueGrades, debouncedSearch, marketProducts],
   );
+  // Keep chips synchronized with search: only categories that appear in the
+  // current result set (or live catalogue). Never swap to unrelated chips
+  // (e.g. ACETONE / ALKYL / BOPP) while searching PVC.
+  const categories = useMemo(() => {
+    if (!wantsCatalogueSearch) {
+      return marketCategoryChips(gradeCategories ?? [], marketProducts);
+    }
+    const fromSearchRows = searchRows
+      .map((row) =>
+        row.kind === 'product'
+          ? row.product.masterCategoryId
+          : row.grade.category?.id,
+      )
+      .filter((id): id is string => Boolean(id));
+    const listed = new Set(fromSearchRows);
+    if (listed.size === 0) {
+      return marketCategoryChips(gradeCategories ?? [], marketProducts);
+    }
+    return (gradeCategories ?? [])
+      .filter((category) => listed.has(category.id))
+      .map((category) => ({ id: category.id, label: category.displayName }));
+  }, [gradeCategories, marketProducts, searchRows, wantsCatalogueSearch]);
   const selectedCategoryLabel = useMemo(
     () => categories.find((category) => category.id === selectedCategory)?.label ?? null,
     [categories, selectedCategory],
@@ -160,14 +186,6 @@ export const CustomerMarketScreen = () => {
   const totalGradeCount = useMemo(
     () => (gradeCategories ?? []).reduce((sum, category) => sum + category.gradeCount, 0),
     [gradeCategories],
-  );
-
-  const searchRows = useMemo(
-    () =>
-      debouncedSearch.length > 0
-        ? buildMarketSearchRows(catalogueGrades, marketProducts, debouncedSearch)
-        : [],
-    [catalogueGrades, debouncedSearch, marketProducts],
   );
 
   const paramIsSet = useCallback((value: string | string[] | undefined) => {
@@ -389,12 +407,32 @@ export const CustomerMarketScreen = () => {
   const liveKeyExtractor = useCallback((item: MarketProduct) => item.id, []);
   const searchKeyExtractor = useCallback((item: MarketSearchRow) => item.key, []);
 
-  const resultCount = wantsCatalogueSearch ? catalogueTotal : filteredProducts.length;
+  const catalogueGradeHits = useMemo(
+    () => searchRows.filter((row) => row.kind === 'grade').length,
+    [searchRows],
+  );
+  const liveSearchHits = useMemo(
+    () => searchRows.filter((row) => row.kind === 'product').length,
+    [searchRows],
+  );
+  // Prefer backend Grade Master total; fall back to loaded grade rows so we
+  // never show "0 Catalogue Grades" while matching cards are on screen.
+  const resultCount = wantsCatalogueSearch
+    ? catalogueTotal > 0
+      ? catalogueTotal
+      : catalogueGradeHits > 0
+        ? catalogueGradeHits
+        : liveSearchHits
+    : filteredProducts.length;
   // Catalogue search uses Grade Master totals; default Market view shows live seller offers only.
   const resultLabel = wantsCatalogueSearch
-    ? resultCount === 1
-      ? 'Catalogue Grade'
-      : 'Catalogue Grades'
+    ? catalogueTotal > 0 || catalogueGradeHits > 0
+      ? resultCount === 1
+        ? 'Catalogue Grade'
+        : 'Catalogue Grades'
+      : resultCount === 1
+        ? 'Live Listing'
+        : 'Live Listings'
     : resultCount === 1
       ? 'Live Listing'
       : 'Live Listings';

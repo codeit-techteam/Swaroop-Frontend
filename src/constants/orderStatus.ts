@@ -53,12 +53,13 @@ export const ORDER_LIFECYCLE_STAGE_LABELS: Record<OrderLifecycleStage, string> =
   delivery: 'Delivery',
 };
 
+/** Aligned with backend customer-orders.progress STAGE_PERCENT. */
 export const ORDER_LIFECYCLE_PROGRESS_MAP: Record<OrderLifecycleStage, number> = {
-  placed: 17,
-  procurement: 33,
-  loading: 50,
-  payment: 67,
-  dispatch: 83,
+  placed: 10,
+  procurement: 25,
+  loading: 45,
+  payment: 60,
+  dispatch: 75,
   delivery: 100,
 };
 
@@ -130,15 +131,22 @@ export const deriveOrderDisplayStatus = (order: Order): OrderDisplayStatus => {
 };
 
 export const deriveOrderProgress = (order: Order): number => {
+  // Prefer authoritative backend progress percentage when present.
+  // Do not invent client-side values like 81% for IN_TRANSIT when the API
+  // already supplied a discrete stage percentage (10/25/45/60/75/100).
+  if (
+    typeof order.progress === 'number' &&
+    Number.isFinite(order.progress) &&
+    order.progress > 0
+  ) {
+    return Math.min(100, Math.max(0, Math.round(order.progress)));
+  }
+
   const status = inferOrderStatus(order);
   const statusProgress = ORDER_STATUS_PROGRESS[status];
 
   if (order.trackingAvailable && order.dispatchProgress) {
     return Math.max(statusProgress, order.dispatchProgress);
-  }
-
-  if (order.progress > 0 && order.progress >= statusProgress) {
-    return order.progress;
   }
 
   return statusProgress;

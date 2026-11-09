@@ -8,6 +8,7 @@ import {
   buildMarketFacets,
   countActiveMarketFilters,
   normalizeMarketFilters,
+  normalizeOriginLabel,
   parseFilterNumber,
 } from '../market-filters';
 
@@ -114,6 +115,14 @@ describe('applyMarketFilters', () => {
 });
 
 describe('facets and helpers', () => {
+  it('starts with empty locations and sort-only changes do not count as filters', () => {
+    assert.deepEqual(EMPTY_MARKET_FILTERS.locations, []);
+    assert.equal(
+      countActiveMarketFilters({ ...EMPTY_MARKET_FILTERS, sort: 'moq-asc' }),
+      0,
+    );
+  });
+
   it('builds manufacturer/origin buckets and the observed price range', () => {
     const facets = buildMarketFacets(catalog);
     assert.deepEqual(facets.manufacturers, [
@@ -125,14 +134,30 @@ describe('facets and helpers', () => {
     assert.deepEqual(facets.priceRange, { min: 82000, max: 148000 });
   });
 
-  it('counts active filters for the Filter button badge', () => {
+  it('counts active filters for the Filter button badge (sort is not a filter)', () => {
     assert.equal(countActiveMarketFilters(EMPTY_MARKET_FILTERS), 0);
+    assert.equal(
+      countActiveMarketFilters({
+        ...EMPTY_MARKET_FILTERS,
+        sort: 'price-asc',
+      }),
+      0,
+    );
     assert.equal(
       countActiveMarketFilters({
         ...EMPTY_MARKET_FILTERS,
         inStockOnly: true,
         priceMax: 1,
         sort: 'price-asc',
+      }),
+      2,
+    );
+    assert.equal(
+      countActiveMarketFilters({
+        ...EMPTY_MARKET_FILTERS,
+        locations: ['Mumbai'],
+        origins: ['India'],
+        manufacturers: ['PRIVATE'],
       }),
       3,
     );
@@ -153,5 +178,11 @@ describe('facets and helpers', () => {
     });
     assert.deepEqual(normalised.manufacturers, ['PRIVATE']);
     assert.equal(normalised.maxMoq, null);
+  });
+
+  it('normalises origin aliases without merging distinct regions', () => {
+    assert.equal(normalizeOriginLabel('IN'), 'India');
+    assert.equal(normalizeOriginLabel('India'), 'India');
+    assert.equal(normalizeOriginLabel('Western India Region'), 'Western India Region');
   });
 });

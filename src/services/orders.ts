@@ -134,7 +134,8 @@ export function mapCustomerOrderToOrder(item: BackendCustomerOrder): Order {
   const paymentStatus = mapPaymentStatus(item.payment);
   const cancelled = item.presentationBucket === 'CANCELLED';
   const delivered = item.presentationBucket === 'COMPLETED';
-  const progress = num(item.progress?.percentage) || (delivered ? 100 : 20);
+  // Backend STAGE_PERCENT: PLACED=10 … DELIVERY=100. Never invent 81% client-side.
+  const progress = num(item.progress?.percentage) || (delivered ? 100 : 10);
   const shipmentKey = (item.shipment?.status ?? item.dispatch?.status ?? '').toUpperCase();
   const inTransit =
     shipmentKey.includes('TRANSIT') ||

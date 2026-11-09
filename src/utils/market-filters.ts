@@ -15,6 +15,8 @@ export type MarketFilters = {
   creditEligibleOnly: boolean;
   manufacturers: string[];
   origins: string[];
+  /** Dispatch / warehouse location labels (city or warehouse hint). */
+  locations: string[];
   /** Inclusive ₹/MT bounds; `null` = unbounded. */
   priceMin: number | null;
   priceMax: number | null;
@@ -28,6 +30,7 @@ export type MarketFacetBucket = { name: string; count: number };
 export type MarketFacets = {
   manufacturers: MarketFacetBucket[];
   origins: MarketFacetBucket[];
+  locations: MarketFacetBucket[];
   /** Observed price range across listings with a positive price. */
   priceRange: { min: number; max: number } | null;
 };
@@ -37,6 +40,7 @@ export const EMPTY_MARKET_FILTERS: MarketFilters = {
   creditEligibleOnly: false,
   manufacturers: [],
   origins: [],
+  locations: [],
   priceMin: null,
   priceMax: null,
   maxMoq: null,
@@ -66,6 +70,15 @@ export function parseFilterNumber(raw: string | number | null | undefined): numb
 }
 
 /** Normalises user input so min ≤ max and empty arrays stay empty. */
+/** Canonical origin labels — collapse ISO / country aliases without merging regions. */
+export function normalizeOriginLabel(raw: string | undefined | null): string {
+  const value = normalize(raw);
+  if (!value) return '';
+  const compact = value.toUpperCase().replace(/[^A-Z]/g, '');
+  if (compact === 'IN' || compact === 'IND' || compact === 'INDIA') return 'India';
+  return value;
+}
+
 export function normalizeMarketFilters(input: MarketFilters): MarketFilters {
   let { priceMin, priceMax } = input;
   if (isFiniteNumber(priceMin) && isFiniteNumber(priceMax) && priceMin > priceMax) {
@@ -74,27 +87,40 @@ export function normalizeMarketFilters(input: MarketFilters): MarketFilters {
   return {
     ...input,
     manufacturers: Array.from(new Set(input.manufacturers.map(normalize).filter(Boolean))),
-    origins: Array.from(new Set(input.origins.map(normalize).filter(Boolean))),
+    origins: Array.from(
+      new Set(input.origins.map(normalizeOriginLabel).filter(Boolean)),
+    ),
+    locations: Array.from(
+      new Set((input.locations ?? []).map(normalize).filter(Boolean)),
+    ),
     priceMin: isFiniteNumber(priceMin) ? priceMin : null,
     priceMax: isFiniteNumber(priceMax) ? priceMax : null,
     maxMoq: isFiniteNumber(input.maxMoq) && input.maxMoq > 0 ? input.maxMoq : null,
+    sort: input.sort ?? 'relevance',
   };
 }
 
+/**
+ * Active *filter* count for the Filters badge.
+ * Sort order is not a filter — "Price: low to high" alone → Filters 0.
+ */
 export function countActiveMarketFilters(filters: MarketFilters): number {
   let count = 0;
   if (filters.inStockOnly) count += 1;
   if (filters.creditEligibleOnly) count += 1;
   if (filters.manufacturers.length > 0) count += 1;
   if (filters.origins.length > 0) count += 1;
+  if ((filters.locations ?? []).length > 0) count += 1;
   if (filters.priceMin !== null || filters.priceMax !== null) count += 1;
   if (filters.maxMoq !== null) count += 1;
-  if (filters.sort !== 'relevance') count += 1;
   return count;
 }
 
 export const hasActiveMarketFilters = (filters: MarketFilters): boolean =>
   countActiveMarketFilters(filters) > 0;
+
+const hasSortOrFilters = (filters: MarketFilters): boolean =>
+  hasActiveMarketFilters(filters) || filters.sort !== 'relevance';
 
 function bucketise(values: (string | undefined)[]): MarketFacetBucket[] {
   const counts = new Map<string, number>();
@@ -108,11 +134,21 @@ function bucketise(values: (string | undefined)[]): MarketFacetBucket[] {
     .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 }
 
+function productLocationLabel(product: MarketProduct): string {
+  return (
+    normalize(product.fulfilment?.warehouse?.label) ||
+    normalize(product.fulfilment?.warehouse?.city) ||
+    normalize(product.warehouseLabel) ||
+    ''
+  );
+}
+
 export function buildMarketFacets(products: MarketProduct[]): MarketFacets {
   const prices = products.map((p) => p.price).filter((p) => isFiniteNumber(p) && p > 0);
   return {
     manufacturers: bucketise(products.map((p) => p.manufacturer)),
-    origins: bucketise(products.map((p) => p.origin)),
+    origins: bucketise(products.map((p) => normalizeOriginLabel(p.origin))),
+    locations: bucketise(products.map((p) => productLocationLabel(p))),
     priceRange: prices.length > 0 ? { min: Math.min(...prices), max: Math.max(...prices) } : null,
   };
 }
@@ -126,8 +162,13 @@ function matchesMarketFilters(product: MarketProduct, filters: MarketFilters): b
   ) {
     return false;
   }
-  if (filters.origins.length > 0 && !filters.origins.includes(normalize(product.origin))) {
-    return false;
+  if (filters.origins.length > 0) {
+    const origin = normalizeOriginLabel(product.origin);
+    if (!filters.origins.includes(origin)) return false;
+  }
+  if ((filters.locations ?? []).length > 0) {
+    const location = productLocationLabel(product);
+    if (!location || !filters.locations.includes(location)) return false;
   }
   if (filters.priceMin !== null || filters.priceMax !== null) {
     // Price-less (RFQ-only) rows cannot satisfy a price bound.
@@ -161,9 +202,9 @@ export function applyMarketFilters(
   rawFilters: MarketFilters,
 ): MarketProduct[] {
   const filters = normalizeMarketFilters(rawFilters);
-  if (!hasActiveMarketFilters(filters)) return products;
-  return sortProducts(
-    products.filter((product) => matchesMarketFilters(product, filters)),
-    filters.sort,
-  );
+  if (!hasSortOrFilters(filters)) return products;
+  const filtered = hasActiveMarketFilters(filters)
+    ? products.filter((product) => matchesMarketFilters(product, filters))
+    : products;
+  return sortProducts(filtered, filters.sort);
 }

@@ -90,6 +90,10 @@ const buildFormErrors = (
     }
   }
 
+  if (!form.warehouseLocation.trim()) {
+    errors.warehouseLocation = 'Select a warehouse location to continue.';
+  }
+
   // Stock is required for draft continue and publish (S-02 / S-04).
   if (!form.availableQty.trim()) {
     errors.availableQty = 'Available quantity is required.';
@@ -118,9 +122,6 @@ const buildFormErrors = (
       if (!Number.isFinite(price) || price <= 0) {
         errors.sellingPrice = 'Selling price must be greater than zero.';
       }
-    }
-    if (!form.warehouseLocation.trim()) {
-      errors.warehouseLocation = 'Warehouse location is required.';
     }
     if (catalogHasSpec(form, 'mfi') && !technicalSpecs.mfi.trim()) {
       errors.mfi = 'MFI is required.';

@@ -9,5 +9,6 @@ export { AnimatedCurrency, AnimatedFadeAmount } from '@/components/checkout/anim
 export { PriceUpdatedModal } from '@/components/checkout/price-updated-modal';
 export { QuoteExpiredModal } from '@/components/checkout/quote-expired-modal';
 export { CheckoutValidationModal } from '@/components/checkout/checkout-validation-modal';
+export { PlacePurchaseConfirmModal } from '@/components/checkout/place-purchase-confirm-modal';
 export { NetworkErrorModal } from '@/components/checkout/network-error-modal';
 export { CheckoutSkeleton } from '@/components/checkout/checkout-skeleton';

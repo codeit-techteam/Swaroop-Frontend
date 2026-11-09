@@ -12,11 +12,29 @@ export function useSellerAnalytics() {
   const [revenuePeriod, setRevenuePeriod] = useState<RevenueFilterPeriod>('7d');
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isEmpty, setIsEmpty] = useState(true);
   const [chartKey, setChartKey] = useState(0);
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 700);
-    return () => clearTimeout(timer);
+    let cancelled = false;
+    void (async () => {
+      try {
+        const next = await refreshSellerAnalytics();
+        if (!cancelled) {
+          setData(next);
+          setIsEmpty(
+            next.orders.completed === 0 &&
+              next.inventory.offersLive === 0 &&
+              next.products.active === 0,
+          );
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const revenueSeries = useMemo(
@@ -33,6 +51,11 @@ export function useSellerAnalytics() {
     setIsRefreshing(true);
     const next = await refreshSellerAnalytics();
     setData(next);
+    setIsEmpty(
+      next.orders.completed === 0 &&
+        next.inventory.offersLive === 0 &&
+        next.products.active === 0,
+    );
     setIsRefreshing(false);
   }, []);
 
@@ -43,6 +66,7 @@ export function useSellerAnalytics() {
     chartKey,
     isLoading,
     isRefreshing,
+    isEmpty,
     changeRevenuePeriod,
     refresh,
   };

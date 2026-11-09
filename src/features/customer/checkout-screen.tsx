@@ -13,6 +13,7 @@ import {
   CheckoutOrderSummaryCard,
   CheckoutSkeleton,
   CheckoutValidationModal,
+  PlacePurchaseConfirmModal,
   IndustrialBanner,
   NetworkErrorModal,
   PaymentProtocolCard,
@@ -91,6 +92,7 @@ export const CustomerCheckoutScreen = memo(function CustomerCheckoutScreen() {
   const [validationIssue, setValidationIssue] = useState<{ title: string; message: string } | null>(
     null,
   );
+  const [confirmPlaceOpen, setConfirmPlaceOpen] = useState(false);
 
   const quote = quotes[0] ?? null;
 
@@ -235,10 +237,26 @@ export const CustomerCheckoutScreen = memo(function CustomerCheckoutScreen() {
     }
   }, [handleBack, quote, router, selectedAddressId]);
 
+  const requestPlaceOrder = useCallback(() => {
+    if (quotes.length === 0 || placingRef.current) {
+      return;
+    }
+    if (!selectedAddressId) {
+      setValidationIssue({
+        title: 'Delivery address required',
+        message: 'Select or add a delivery address before placing a purchase request.',
+      });
+      addressSheetRef.current?.present();
+      return;
+    }
+    setConfirmPlaceOpen(true);
+  }, [quotes.length, selectedAddressId]);
+
   const handlePlaceOrder = useCallback(async () => {
     if (quotes.length === 0 || placingRef.current) {
       return;
     }
+    setConfirmPlaceOpen(false);
     placingRef.current = true;
     setSubmitting(true);
     try {
@@ -367,9 +385,7 @@ export const CustomerCheckoutScreen = memo(function CustomerCheckoutScreen() {
           <CheckoutBottomBar
             enabled={!submitting}
             loading={submitting}
-            onPlaceOrder={() => {
-              void handlePlaceOrder();
-            }}
+            onPlaceOrder={requestPlaceOrder}
           />
         </View>
       )}
@@ -405,6 +421,19 @@ export const CustomerCheckoutScreen = memo(function CustomerCheckoutScreen() {
         onRetry={() => {
           setShowNetworkModal(false);
           void load(uniqueQuoteIds(quoteId, extraIds));
+        }}
+      />
+      <PlacePurchaseConfirmModal
+        visible={confirmPlaceOpen}
+        totalAmount={orderSummary?.totalPayable ?? quote?.totalAmount ?? '₹0'}
+        paymentLabel={quote?.paymentLabel ?? '—'}
+        productName={quote?.product.name ?? 'Order'}
+        quantity={quote?.quantity ?? '0'}
+        unit={quote?.unit ?? 'MT'}
+        loading={submitting}
+        onCancel={() => setConfirmPlaceOpen(false)}
+        onConfirm={() => {
+          void handlePlaceOrder();
         }}
       />
       <CheckoutValidationModal

@@ -40,6 +40,7 @@ export const SellerAnalyticsScreen = memo(function SellerAnalyticsScreen() {
     chartKey,
     isLoading,
     isRefreshing,
+    isEmpty,
     changeRevenuePeriod,
     refresh,
   } = useSellerAnalytics();
@@ -261,6 +262,18 @@ export const SellerAnalyticsScreen = memo(function SellerAnalyticsScreen() {
           data={sections}
           keyExtractor={(item) => item.id}
           renderItem={renderSection}
+          ListHeaderComponent={
+            isEmpty ? (
+              <View className="mb-md rounded-2xl border border-brand-border bg-brand-white px-md py-md">
+                <Typography variant="roleTitle" className="text-brand-heading">
+                  No analytics data yet
+                </Typography>
+                <Typography variant="roleDescription" className="mt-xs text-[13px] text-brand-body">
+                  KPIs use live seller dashboard, orders, and settlement APIs — not demo figures.
+                </Typography>
+              </View>
+            ) : null
+          }
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
             paddingHorizontal: 16,

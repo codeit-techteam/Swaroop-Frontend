@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   KeyboardAvoidingView,
@@ -37,7 +37,7 @@ import {
   SELLER_PAYMENT_TERM_PRICE_FIELDS,
   SELLER_UNIT_OPTIONS,
 } from '@/seller/constants/grade-options';
-import { INVENTORY_WAREHOUSES } from '@/seller/services/inventoryService';
+import { useSellerLocationStore } from '@/seller/store/sellerLocationStore';
 import { useSellerProductStore } from '@/seller/store/sellerProductStore';
 import type { SellerPaymentPricing, SellerProductForm } from '@/seller/types';
 import { isPublishablePrice } from '@/seller/utils/numeric-input';
@@ -128,6 +128,9 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
   const isEdit = mode === 'edit' || Boolean(selectedProductId);
   const [step, setStep] = useState<ListingStep>(isEdit || catalogId ? 2 : 1);
   const [activePicker, setActivePicker] = useState<PickerKey | null>(null);
+  const locations = useSellerLocationStore((state) => state.locations);
+  const locationError = useSellerLocationStore((state) => state.error);
+  const hydrateLocations = useSellerLocationStore((state) => state.hydrate);
   const [saving, setSaving] = useState(false);
   const [resolvedGrade, setResolvedGrade] = useState<MarketProduct | null>(null);
   const appliedCatalogRef = useRef<string | null>(null);
@@ -274,23 +277,38 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
       });
   }, [applyCatalogGrade, catalogId, isEdit]);
 
+  useEffect(() => {
+    void hydrateLocations();
+  }, [hydrateLocations]);
+
+  const warehouseOptions = useMemo(
+    () =>
+      locations
+        .map((row) => row.warehouse || row.name)
+        .filter((value, index, all) => Boolean(value) && all.indexOf(value) === index),
+    [locations],
+  );
+
   const pickers: Record<
     PickerKey,
     { title: string; field: keyof SellerProductForm; items: readonly string[] }
-  > = {
-    origin: { title: 'Select origin', field: 'origin', items: SELLER_ORIGIN_OPTIONS },
-    packagingType: {
-      title: 'Select packaging',
-      field: 'packagingType',
-      items: SELLER_PACKAGING_TYPES,
-    },
-    unit: { title: 'Select unit', field: 'unit', items: SELLER_UNIT_OPTIONS },
-    warehouse: {
-      title: 'Select warehouse',
-      field: 'warehouseLocation',
-      items: INVENTORY_WAREHOUSES,
-    },
-  };
+  > = useMemo(
+    () => ({
+      origin: { title: 'Select origin', field: 'origin', items: SELLER_ORIGIN_OPTIONS },
+      packagingType: {
+        title: 'Select packaging',
+        field: 'packagingType',
+        items: SELLER_PACKAGING_TYPES,
+      },
+      unit: { title: 'Select unit', field: 'unit', items: SELLER_UNIT_OPTIONS },
+      warehouse: {
+        title: 'Select warehouse',
+        field: 'warehouseLocation',
+        items: warehouseOptions,
+      },
+    }),
+    [warehouseOptions],
+  );
 
   const screenTitle = isEdit ? 'Edit listing' : 'Add listing';
 
@@ -310,19 +328,18 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
       goToStep(1);
       return;
     }
-    if (!form.warehouseLocation.trim()) {
-      Toast.show({
-        type: 'info',
-        text1: 'Select a warehouse',
-        text2: 'Warehouse is required before continuing.',
-      });
-      return;
-    }
     if (!validateProductForm('draft')) {
+      const errs = useSellerProductStore.getState().formErrors;
+      const first =
+        errs.warehouseLocation ??
+        errs.brand ??
+        errs.availableQty ??
+        errs.moq ??
+        Object.values(errs).find(Boolean);
       Toast.show({
         type: 'info',
-        text1: 'Complete offer details',
-        text2: 'Brand, stock, and a MOQ greater than zero are required.',
+        text1: 'Complete required offer fields',
+        text2: first ?? 'Check highlighted fields, then tap Continue again.',
       });
       return;
     }
@@ -543,11 +560,26 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
                       />
                       {renderPickerField('origin', 'Origin', form.origin, formErrors.origin)}
                     </View>
-                    {renderPickerField(
-                      'warehouse',
-                      'Warehouse',
-                      form.warehouseLocation,
-                      formErrors.warehouseLocation,
+                    {warehouseOptions.length === 0 ? (
+                      <View className="rounded-2xl border border-amber-200 bg-amber-50 px-md py-md">
+                        <Typography variant="roleTitle" className="text-[14px] text-amber-900">
+                          No warehouse on your account
+                        </Typography>
+                        <Typography
+                          variant="legal"
+                          className="mt-xs text-left text-[12px] text-amber-800"
+                        >
+                          {locationError ??
+                            'Add an operating location in Profile before continuing this listing.'}
+                        </Typography>
+                      </View>
+                    ) : (
+                      renderPickerField(
+                        'warehouse',
+                        'Warehouse (required)',
+                        form.warehouseLocation,
+                        formErrors.warehouseLocation,
+                      )
                     )}
                     <View className="flex-row gap-md">
                       <SellerTextField
@@ -764,6 +796,14 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
             </Pressable>
             <SellerPrimaryButton label="Continue" className="flex-1" onPress={continueFromOffer} />
           </View>
+        ) : null}
+        {step === 2 && !form.warehouseLocation.trim() ? (
+          <Typography
+            variant="legal"
+            className="mt-sm text-center text-[12px] text-amber-700"
+          >
+            Warehouse is required on this step — select one above to continue.
+          </Typography>
         ) : null}
         {step === 3 ? (
           <View className="flex-row gap-sm">

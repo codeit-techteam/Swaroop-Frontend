@@ -47,7 +47,7 @@ import { getApiErrorMessage } from '@/utils/api-error-message';
 import { formatGradeGroupLabel } from '@/utils/master-label';
 
 const TDS_UNAVAILABLE_MESSAGE =
-  'Technical Data Sheet is currently unavailable for this grade.';
+  'Technical Data Sheet not available yet for this grade.';
 
 function formatTdsFileSize(bytes: number | string | null | undefined): string | null {
   const n = typeof bytes === 'string' ? Number(bytes) : bytes;
