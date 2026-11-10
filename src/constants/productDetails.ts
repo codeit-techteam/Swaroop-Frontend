@@ -52,14 +52,6 @@ const DEFAULT_TRUST_FEATURES: TrustFeature[] = [
     statusLabel: 'Applicable where supported',
   },
   {
-    id: 'docs',
-    title: 'Quality Documentation',
-    description: 'COA and grade certificates are available when provided for the product.',
-    icon: 'shield',
-    status: 'when_provided',
-    statusLabel: 'Available when provided',
-  },
-  {
     id: 'payment',
     title: 'Secure Payment Protection',
     description: 'Payment protection follows the configured payment and settlement process.',
@@ -139,8 +131,10 @@ const DEFAULT_FEATURES = [
 const DEFAULT_PRODUCT_HIGHLIGHTS = [
   'Blind Marketplace',
   'Tax Invoice Available',
-  'Quality Documentation',
 ];
+
+/** Include Quality Documentation highlight only when real documents exist. */
+const QUALITY_DOCUMENTATION_HIGHLIGHT = 'Quality Documentation';
 
 const SPEC_LABELS: Record<string, string> = {
   mfi: 'Melt Flow Index (MFI)',
@@ -257,7 +251,24 @@ const availabilityFromStock = (
 const getFeaturesForMaterial = (materialType: string): string[] =>
   FEATURES_BY_MATERIAL[materialType] ?? DEFAULT_FEATURES;
 
-const buildProductHighlights = (_creditEligible: boolean): string[] => DEFAULT_PRODUCT_HIGHLIGHTS;
+const buildProductHighlights = (hasQualityDocuments: boolean): string[] =>
+  hasQualityDocuments
+    ? [...DEFAULT_PRODUCT_HIGHLIGHTS, QUALITY_DOCUMENTATION_HIGHLIGHT]
+    : [...DEFAULT_PRODUCT_HIGHLIGHTS];
+
+const QUALITY_DOCUMENTATION_TRUST_FEATURE: TrustFeature = {
+  id: 'docs',
+  title: 'Quality Documentation',
+  description: 'Verified TDS/COA files are available for download for this grade.',
+  icon: 'shield',
+  status: 'supported',
+  statusLabel: 'Document on file',
+};
+
+const buildTrustFeatures = (hasQualityDocuments: boolean): TrustFeature[] =>
+  hasQualityDocuments
+    ? [...DEFAULT_TRUST_FEATURES, QUALITY_DOCUMENTATION_TRUST_FEATURE]
+    : [...DEFAULT_TRUST_FEATURES];
 
 /** Map backend blind documents — never invent mock TDS/MSDS. */
 const mapApiDocuments = (
@@ -466,6 +477,8 @@ export const buildProductDetails = (
   const stockLabel =
     overrides.stockLabel ??
     (stock >= 400 ? `${stock}+ MT Available` : `${stock.toLocaleString('en-IN')} MT Available`);
+  const documents = overrides.documents ?? mapApiDocuments(market.id, market.documents);
+  const hasQualityDocuments = documents.length > 0;
 
   return {
     id: market.id,
@@ -516,11 +529,11 @@ export const buildProductDetails = (
       overrides.trustDescription ??
       'Built for trusted industrial procurement. Supplier identity stays hidden until order processing is completed.',
     trustHighlight: overrides.trustHighlight ?? 'trusted industrial procurement',
-    trustFeatures: overrides.trustFeatures ?? DEFAULT_TRUST_FEATURES,
+    trustFeatures: overrides.trustFeatures ?? buildTrustFeatures(hasQualityDocuments),
     quantityIncrement: overrides.quantityIncrement ?? 1,
     availability,
     availabilityLabel,
-    highlights: overrides.highlights ?? buildProductHighlights(creditEligible),
+    highlights: overrides.highlights ?? buildProductHighlights(hasQualityDocuments),
     features:
       overrides.features ??
       (market.features && market.features.length > 0
@@ -538,7 +551,7 @@ export const buildProductDetails = (
         eta,
         dispatchWindow: fulfilment?.dispatchWindow?.label,
       }),
-    documents: overrides.documents ?? mapApiDocuments(market.id, market.documents),
+    documents,
     relatedProducts: overrides.relatedProducts ?? relatedCardsFor(market, catalog),
     creditEligible,
     productCredit,

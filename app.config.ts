@@ -3,9 +3,9 @@ import { ExpoConfig, ConfigContext } from 'expo/config';
 const APP_ENV = process.env.EXPO_PUBLIC_APP_ENV ?? 'development';
 // Plain-HTTP (LAN backend on the dev machine) is only allowed in development builds.
 const ALLOW_CLEARTEXT = APP_ENV === 'development';
-const APP_VERSION = process.env.EXPO_PUBLIC_APP_VERSION ?? '3.1.2';
-// Higher than preview 3113 and production-apk 3112. Do not reuse a shipped code.
-const ANDROID_VERSION_CODE = Number(process.env.ANDROID_VERSION_CODE ?? 3114);
+const APP_VERSION = process.env.EXPO_PUBLIC_APP_VERSION ?? '3.1.3';
+// Higher than previous production-apk 3114. Do not reuse a shipped code.
+const ANDROID_VERSION_CODE = Number(process.env.ANDROID_VERSION_CODE ?? 3115);
 // PolyStoreX EAS project under polystorexs-team (swaroop.veylorn@gmail.com).
 const EAS_PROJECT_ID =
   process.env.EAS_PROJECT_ID ?? 'ccf88988-1846-42d3-8944-a10d70252de7';
