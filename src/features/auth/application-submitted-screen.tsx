@@ -92,7 +92,7 @@ export const ApplicationSubmittedScreen = () => {
   return (
     <ScreenWrapper scrollable className="bg-brand-white" contentClassName="pb-xl">
       <View className="items-center pt-lg">
-        <AppLogo />
+        <AppLogo variant="full" size={84} />
       </View>
 
       <View className="mt-2xl items-center">

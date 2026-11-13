@@ -107,11 +107,8 @@ export const SellerRegisterScreen = () => {
   return (
     <ScreenWrapper scrollable className="bg-brand-white">
       <View className="items-center pt-lg">
-        <PolyStoreXLogo size={48} />
-        <Typography variant="logo" className="mt-md">
-          PolyStoreX
-        </Typography>
-        <Typography variant="subheading" className="mt-xs">
+        <PolyStoreXLogo variant="full" size={84} />
+        <Typography variant="subheading" className="mt-md">
           Create a Seller Enterprise Account
         </Typography>
       </View>

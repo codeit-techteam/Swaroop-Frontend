@@ -22,7 +22,7 @@ export const ProfileStickyHeader = memo(function ProfileStickyHeader({
       style={{ paddingTop: insets.top }}
     >
       <View className="h-14 w-full flex-row items-center">
-        <AppLogo />
+        <AppLogo variant="full" size={44} />
       </View>
     </View>
   );

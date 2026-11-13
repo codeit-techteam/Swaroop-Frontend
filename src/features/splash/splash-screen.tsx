@@ -28,7 +28,7 @@ import { useAuthStore } from '@/store/auth-store';
 import { brandColors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 
-const logoFullSource = require('../../../assets/logo/polystorex-logo.png');
+const logoFullSource = require('../../../assets/brand/polystorex-logo-transparent.png');
 
 /** Keep splash short — navigation must not feel delayed. */
 const SPLASH_VISIBLE_MS = 2400;
@@ -43,10 +43,7 @@ export const SplashScreen = () => {
   const [reduceMotion, setReduceMotion] = useState(false);
 
   const orbitOpacity = useSharedValue(0);
-  const orbitScale = useSharedValue(0.86);
-  const wordmarkOpacity = useSharedValue(0);
-  const wordmarkTranslate = useSharedValue(14);
-  const underlineProgress = useSharedValue(0);
+  const orbitScale = useSharedValue(0.94);
   const footerOpacity = useSharedValue(0);
 
   const routeAfterSplash = useCallback(() => {
@@ -115,15 +112,11 @@ export const SplashScreen = () => {
     if (reduceMotion) {
       orbitOpacity.value = 1;
       orbitScale.value = 1;
-      wordmarkOpacity.value = 1;
-      wordmarkTranslate.value = 0;
-      underlineProgress.value = 1;
       footerOpacity.value = 1;
       const timer = setTimeout(routeAfterSplash, SPLASH_REDUCED_MS);
       return () => clearTimeout(timer);
     }
 
-    // 1–2. Orbit + full lockup fade/scale in
     orbitOpacity.value = withTiming(1, {
       duration: 520,
       easing: Easing.out(Easing.cubic),
@@ -132,22 +125,8 @@ export const SplashScreen = () => {
       duration: 620,
       easing: Easing.out(Easing.cubic),
     });
-    // 3–4. Wordmark settle (artwork includes wordmark; subtle secondary motion)
-    wordmarkOpacity.value = withDelay(
-      180,
-      withTiming(1, { duration: 480, easing: Easing.out(Easing.cubic) }),
-    );
-    wordmarkTranslate.value = withDelay(
-      180,
-      withTiming(0, { duration: 480, easing: Easing.out(Easing.cubic) }),
-    );
-    // 5. Gold underline draw (scaleX on a thin gold bar under the lockup)
-    underlineProgress.value = withDelay(
-      420,
-      withTiming(1, { duration: 520, easing: Easing.out(Easing.cubic) }),
-    );
     footerOpacity.value = withDelay(
-      500,
+      280,
       withTiming(1, { duration: 360, easing: Easing.out(Easing.cubic) }),
     );
 
@@ -159,19 +138,11 @@ export const SplashScreen = () => {
     orbitScale,
     reduceMotion,
     routeAfterSplash,
-    underlineProgress,
-    wordmarkOpacity,
-    wordmarkTranslate,
   ]);
 
   const lockupStyle = useAnimatedStyle(() => ({
     opacity: orbitOpacity.value,
-    transform: [{ scale: orbitScale.value }, { translateY: wordmarkTranslate.value }],
-  }));
-
-  const underlineStyle = useAnimatedStyle(() => ({
-    opacity: underlineProgress.value,
-    transform: [{ scaleX: Math.max(underlineProgress.value, 0.08) }],
+    transform: [{ scale: orbitScale.value }],
   }));
 
   const footerStyle = useAnimatedStyle(() => ({
@@ -184,22 +155,10 @@ export const SplashScreen = () => {
         <Animated.View className="items-center" style={lockupStyle}>
           <Image
             source={logoFullSource}
-            style={{ width: LOGO_WIDTH, height: LOGO_WIDTH * 0.5 }}
+            style={{ width: LOGO_WIDTH, height: LOGO_WIDTH / (848 / 372) }}
             resizeMode="contain"
             accessibilityLabel="PolyStoreX"
             accessibilityIgnoresInvertColors
-          />
-          <Animated.View
-            style={[
-              underlineStyle,
-              {
-                marginTop: spacing.md,
-                height: 2,
-                width: LOGO_WIDTH * 0.72,
-                borderRadius: 2,
-                backgroundColor: brandColors.accent,
-              },
-            ]}
           />
         </Animated.View>
       </View>

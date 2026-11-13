@@ -34,7 +34,7 @@ export const HomeHeader = memo(function HomeHeader({
       style={{ paddingTop: insets.top }}
     >
       <View className="h-14 w-full flex-row items-center justify-between">
-        <AppLogo />
+        <AppLogo variant="full" size={44} />
 
         <View className="flex-row items-center gap-sm">
           {onCartPress ? (

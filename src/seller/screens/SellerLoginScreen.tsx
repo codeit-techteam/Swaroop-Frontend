@@ -116,7 +116,7 @@ export const SellerLoginScreen = () => {
         </View>
 
         <AuthCard>
-          <AppLogo className="mb-xl" />
+          <AppLogo variant="full" size={88} className="mb-xl" />
 
           <View className="mb-lg flex-row items-center gap-xs self-start rounded-full bg-brand-badge px-md py-sm">
             <Typography variant="badge">SECURE ENTERPRISE LOGIN</Typography>

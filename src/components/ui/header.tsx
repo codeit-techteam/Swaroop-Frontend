@@ -25,7 +25,7 @@ export const Header = memo(function Header({
       className={cn('w-full flex-row items-center justify-between', className)}
       style={{ paddingTop: spacing.screenTop, minHeight: 44 }}
     >
-      <AppLogo />
+      <AppLogo variant="full" size={48} />
       {rightSlot}
       {showSkip && !rightSlot ? (
         <Pressable

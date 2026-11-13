@@ -11,10 +11,9 @@ import { BackArrowIcon } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
 import { safeGoBack } from '@/navigation/safe-back';
 import { brandColors } from '@/theme/colors';
-import { iconSizes } from '@/theme/icons';
 import { cn } from '@/utils/cn';
 
-const logoMarkSource = require('../../../assets/logo/polystorex-mark.png');
+const logoOnLight = require('../../../assets/brand/polystorex-logo-light-bg.png');
 
 
 type AppHeaderProps = {
@@ -56,7 +55,7 @@ export const AppHeader = memo(function AppHeader({
         >
           <BackArrowIcon />
         </Pressable>
-        <Typography variant="logo" className="flex-1 pr-10 text-center">
+        <Typography variant="logo" className="flex-1 pr-10 text-center" style={{ color: brandColors.heading }}>
           {title}
         </Typography>
       </View>
@@ -69,19 +68,14 @@ export const AppHeader = memo(function AppHeader({
 
   return (
     <View className={cn('w-full px-xl', className)} style={{ paddingTop: insets.top }}>
-      <View className="h-14 w-full flex-row items-center justify-center gap-sm">
+      <View className="w-full items-center justify-center py-md">
         <Image
-          source={logoMarkSource}
-          style={{
-            width: iconSizes.logoSmall * 1.35,
-            height: iconSizes.logoSmall * 1.35,
-          }}
+          source={logoOnLight}
+          style={{ width: 220, height: 220 / (928 / 436) }}
           resizeMode="contain"
+          accessibilityLabel={APP_NAME}
           accessibilityIgnoresInvertColors
         />
-        <Typography variant="logoUpper" style={{ color: brandColors.primary }}>
-          {APP_NAME.toUpperCase()}
-        </Typography>
       </View>
     </View>
   );

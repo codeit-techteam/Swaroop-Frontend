@@ -33,7 +33,7 @@ export const SellerVerificationSubmittedScreen = () => {
   return (
     <ScreenWrapper className="bg-brand-background">
       <View className="items-center pt-lg">
-        <AppLogo />
+        <AppLogo variant="full" size={84} />
       </View>
 
       <View className="mt-xl items-center">

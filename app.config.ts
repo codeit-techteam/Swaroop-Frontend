@@ -71,7 +71,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     splash: {
       image: './assets/images/splash-icon.png',
       resizeMode: 'contain',
-      backgroundColor: '#ffffff',
+      backgroundColor: '#000000',
     },
   },
   plugins: [
@@ -88,7 +88,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       {
         // Full brand lockup (mark + wordmark). `contain` keeps the entire artwork visible.
         image: './assets/images/splash-icon.png',
-        imageWidth: 280,
+        imageWidth: 300,
         resizeMode: 'contain',
         backgroundColor: '#000000',
       },

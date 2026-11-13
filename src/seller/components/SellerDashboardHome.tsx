@@ -64,7 +64,7 @@ export const SellerHomeHeader = memo(function SellerHomeHeader({
   return (
     <View className="flex-row items-start justify-between">
       <View className="flex-1 pr-md">
-        <AppLogo />
+        <AppLogo variant="full" size={64} />
         <Typography variant="legal" className="mt-md text-left text-[12px] text-brand-body">
           {greeting}
         </Typography>
