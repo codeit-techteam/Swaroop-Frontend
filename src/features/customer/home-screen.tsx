@@ -35,6 +35,7 @@ import { ROUTES } from '@/navigation/routes';
 import { fetchCustomerMarketplaceProducts } from '@/services/catalog';
 import { fetchCustomerHomeBanners, trackCmsBannerEvent } from '@/services/cms';
 import { fetchCustomerFinanceSummary } from '@/services/orders';
+import { selectIsLoggedIn, useAuthStore } from '@/store/auth-store';
 import {
   selectActiveOrder,
   selectOrderHydrated,
@@ -80,6 +81,7 @@ export const CustomerHomeScreen = () => {
   const unreadCount = useNotificationBadge();
   const { selectedLocation, openAddressForm } = useDeliveryLocation();
   const { overview: kycOverview } = useCustomerKycStatus();
+  const isLoggedIn = useAuthStore(selectIsLoggedIn);
 
   const orders = useOrderStore(selectOrders);
   const activeOrder = useOrderStore(selectActiveOrder);
@@ -113,21 +115,26 @@ export const CustomerHomeScreen = () => {
         );
         setCatalogLoading(false);
       });
-    void fetchCustomerFinanceSummary()
-      .then((summary) => {
-        if (cancelled) return;
-        const amount = Number(summary?.outstandingAmount ?? 0);
-        setDueInvoicesLabel(
-          Number.isFinite(amount) ? `₹${Math.round(amount).toLocaleString('en-IN')}` : '₹0',
-        );
-      })
-      .catch(() => {
-        if (!cancelled) setDueInvoicesLabel('₹0');
-      });
+    // Finance summary is authenticated — skip for guests to avoid 401.
+    if (isLoggedIn) {
+      void fetchCustomerFinanceSummary()
+        .then((summary) => {
+          if (cancelled) return;
+          const amount = Number(summary?.outstandingAmount ?? 0);
+          setDueInvoicesLabel(
+            Number.isFinite(amount) ? `₹${Math.round(amount).toLocaleString('en-IN')}` : '₹0',
+          );
+        })
+        .catch(() => {
+          if (!cancelled) setDueInvoicesLabel('₹0');
+        });
+    } else {
+      setDueInvoicesLabel('₹0');
+    }
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isLoggedIn]);
 
   // Refresh CMS banners whenever Home is focused (Admin activate/upload → APP).
   useFocusEffect(

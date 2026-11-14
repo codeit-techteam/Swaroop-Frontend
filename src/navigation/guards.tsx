@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 
 import { Redirect, useGlobalSearchParams, usePathname, type Href } from 'expo-router';
 
-import { getLoggedInRoute } from '@/navigation/post-auth-route';
 import {
   buildLoginHref,
   buildReturnToFromParts,
@@ -43,6 +42,11 @@ const toCustomerReturnTo = (
   return buildReturnToFromParts(pathname, params);
 };
 
+const kycIncompleteHref = (reviewSubmitted: boolean): Href =>
+  reviewSubmitted
+    ? (ROUTES.AUTH.APPLICATION_SUBMITTED as Href)
+    : (ROUTES.AUTH.KYC_DOCUMENTS as Href);
+
 export const PrivateRouteGuard = ({ children }: AuthGuardProps): ReactNode => {
   const isLoggedIn = useAuthStore(selectIsLoggedIn);
   const kycApproved = useAuthStore(selectKycApproved);
@@ -72,7 +76,7 @@ export const PrivateRouteGuard = ({ children }: AuthGuardProps): ReactNode => {
   }
 
   if (!kycApproved) {
-    return <Redirect href={getLoggedInRoute({ kycApproved, reviewSubmitted })} />;
+    return <Redirect href={kycIncompleteHref(reviewSubmitted)} />;
   }
 
   return children;
@@ -110,8 +114,10 @@ export const CustomerRouteGuard = ({ children }: AuthGuardProps): ReactNode => {
     );
   }
 
+  // Incomplete KYC: send buyers to the KYC flow with an explicit destination —
+  // never silent-redirect transactional routes to Home/Dashboard.
   if (!kycApproved && !isGuestBrowsePath(pathname)) {
-    return <Redirect href={getLoggedInRoute({ kycApproved, reviewSubmitted })} />;
+    return <Redirect href={kycIncompleteHref(reviewSubmitted)} />;
   }
 
   return children;

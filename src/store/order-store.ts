@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 import { STORAGE_KEYS } from '@/constants';
 import { fetchCustomerOrders } from '@/services/orders';
+import { useAuthStore } from '@/store/auth-store';
 import {
   buildOrderTimeline,
   createInitialOrderFields,
@@ -232,12 +233,23 @@ export const useOrderStore = create<OrderStore>((set, get) => {
 
     hydrateOrder: () => {
       const persisted = readPersistedOrderState();
+      const isLoggedIn = useAuthStore.getState().isLoggedIn;
       set({
         currentOrder: persisted.currentOrder,
         paymentProof: persisted.paymentProof,
         orders: persisted.orders,
         isHydrated: false,
       });
+      // Guests must not call authenticated /customer/orders (avoids 401 noise).
+      if (!isLoggedIn) {
+        set({
+          currentOrder: null,
+          paymentProof: null,
+          orders: [],
+          isHydrated: true,
+        });
+        return;
+      }
       // Authoritative source: PurchaseOrder projection via /customer/orders
       void fetchCustomerOrders()
         .then((orders) => {
