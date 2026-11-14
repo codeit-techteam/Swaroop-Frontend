@@ -1,0 +1,58 @@
+{
+  "generatedAt": "2026-11-14T11:46:39.321Z",
+  "mode": "APPLY",
+  "actions": {
+    "deleteInvalidMoqTiers": [
+      {
+        "tierId": "b431c8bd-f569-4bf3-b804-df646e5e8984",
+        "offerId": "78a9a0ba-4701-4767-aa7f-f4e5943ab3ff",
+        "reference": "OFFER-2026-513092",
+        "minQty": "1.000",
+        "moq": "20.000",
+        "reason": "tier_min_below_moq"
+      },
+      {
+        "tierId": "6161e581-d70a-4dbc-b7a7-9d6593b332ab",
+        "offerId": "c997a41a-1b01-452e-8f11-d0fff09ff29c",
+        "reference": "OFFER-SKR-8FEC511C",
+        "minQty": "0.000",
+        "moq": "12.000",
+        "reason": "tier_min_below_moq"
+      },
+      {
+        "tierId": "7d8afee0-5e10-48fa-bf88-890feea72694",
+        "offerId": "1dc98c2a-900b-4bbe-a608-b0cad455f609",
+        "reference": "OFFER-SKR-BDB5BCCE",
+        "minQty": "0.000",
+        "moq": "12.000",
+        "reason": "tier_min_below_moq"
+      }
+    ],
+    "expireOffers": [
+      {
+        "offerId": "71caacef-b5cd-468c-b69c-03963943dd19",
+        "reference": "OFF-202609-234051",
+        "validUntil": "2026-10-01T11:10:41.701Z",
+        "reason": "valid_until_passed_while_active"
+      }
+    ]
+  },
+  "countryOfOriginDistribution": [
+    {
+      "value": "Western India Region",
+      "n": 100
+    },
+    {
+      "value": "Northern India Region",
+      "n": 22
+    },
+    {
+      "value": "India",
+      "n": 3
+    }
+  ],
+  "notes": [
+    "Country India/IN normalization is reported only — apply after client confirms canonical value.",
+    "Grade cleanup and SO→PSX migration are intentionally excluded."
+  ]
+}

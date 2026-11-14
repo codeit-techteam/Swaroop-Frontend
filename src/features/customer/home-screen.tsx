@@ -101,6 +101,7 @@ export const CustomerHomeScreen = () => {
 
   useEffect(() => {
     let cancelled = false;
+    // Shares in-flight + memory cache with Market tab (Phase 3 — avoid 2× fan-out).
     void fetchCustomerMarketplaceProducts()
       .then((products) => {
         if (cancelled) return;

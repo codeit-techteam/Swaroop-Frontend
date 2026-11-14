@@ -327,24 +327,46 @@ export function dedupeMarketProducts(products: MarketProduct[]): MarketProduct[]
   return unique.filter((product) => keep.has(product.id));
 }
 
-export async function fetchCustomerMarketplaceProducts(): Promise<MarketProduct[]> {
-  const base = productsApiBase();
-  if (base === '/customer/products') await ensureDevBackendSession('customer');
-  const pages: BlindProduct[] = [];
-  let page = 1;
-  let totalPages = 1;
-  do {
-    const payload = await apiClient.get<Envelope<BlindProduct[]>>(base, {
-      params: { page, limit: 100, sortBy: 'name', sortOrder: 'asc' },
-    });
-    const body = payload.data;
-    pages.push(...(body.data ?? []));
-    totalPages = body.meta?.totalPages ?? 1;
-    page += 1;
-  } while (page <= totalPages && page <= 10);
-  const products = dedupeMarketProducts(pages.map(mapBlindProduct));
-  setLiveCatalogCache(products);
-  return products;
+/** Cap page walks — was 10×100 and caused shared-IP 429 storms with Home+Market. */
+const MARKET_PAGE_LIMIT = 48;
+const MARKET_MAX_PAGES = 3;
+
+let marketplaceProductsInflight: Promise<MarketProduct[]> | null = null;
+
+export async function fetchCustomerMarketplaceProducts(
+  options: { force?: boolean } = {},
+): Promise<MarketProduct[]> {
+  if (!options.force && liveCatalogCache.length > 0) {
+    return liveCatalogCache;
+  }
+  if (marketplaceProductsInflight) return marketplaceProductsInflight;
+
+  marketplaceProductsInflight = (async () => {
+    const base = productsApiBase();
+    if (base === '/customer/products') await ensureDevBackendSession('customer');
+    const pages: BlindProduct[] = [];
+    let page = 1;
+    let totalPages = 1;
+    do {
+      const payload = await apiClient.get<Envelope<BlindProduct[]>>(base, {
+        params: { page, limit: MARKET_PAGE_LIMIT, sortBy: 'name', sortOrder: 'asc' },
+      });
+      const body = payload.data;
+      pages.push(...(body.data ?? []));
+      totalPages = Math.min(body.meta?.totalPages ?? 1, MARKET_MAX_PAGES);
+      page += 1;
+      if (page <= totalPages) {
+        await new Promise((r) => setTimeout(r, 40));
+      }
+    } while (page <= totalPages);
+    const products = dedupeMarketProducts(pages.map(mapBlindProduct));
+    setLiveCatalogCache(products);
+    return products;
+  })().finally(() => {
+    marketplaceProductsInflight = null;
+  });
+
+  return marketplaceProductsInflight;
 }
 
 export async function fetchCustomerMarketplaceProduct(id: string): Promise<MarketProduct> {

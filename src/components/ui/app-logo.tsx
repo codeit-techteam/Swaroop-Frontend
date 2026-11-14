@@ -7,13 +7,12 @@ import { cn } from '@/utils/cn';
 
 /** Official lockup with a transparent background. White type — use on black or navy. */
 const logoOnDark = require('../../../assets/brand/polystorex-logo-transparent.png');
-/** Same artwork on a black plate, so it stays readable on white screens. */
-const logoOnLight = require('../../../assets/brand/polystorex-logo-light-bg.png');
+/** Transparent dark wordmark for light / white screens — no black plate. */
+const logoOnLight = require('../../../assets/brand/polystorex-logo-on-light.png');
 /** Orbital symbol only. */
 const logoMark = require('../../../assets/brand/polystorex-symbol.png');
 
-const DARK_ASPECT = 848 / 372;
-const LIGHT_ASPECT = 928 / 436;
+const LOCKUP_ASPECT = 848 / 372;
 const MARK_ASPECT = 216 / 169;
 
 type AppLogoProps = {
@@ -23,8 +22,8 @@ type AppLogoProps = {
   color?: string;
   /**
    * `mark` = orbital symbol for compact headers.
-   * `full` = official lockup on a black plate (light screens).
-   * `splash` = official lockup for a black splash.
+   * `full` = official lockup for light screens (transparent, dark wordmark).
+   * `splash` = official lockup for a black splash (transparent, white wordmark).
    */
   variant?: 'full' | 'mark' | 'splash';
 };
@@ -36,7 +35,7 @@ export const AppLogo = memo(function AppLogo({
 }: AppLogoProps) {
   if (variant === 'splash') {
     const width = size;
-    const height = width / DARK_ASPECT;
+    const height = width / LOCKUP_ASPECT;
     return (
       <View className={cn('items-center justify-center', className)} accessibilityRole="header" accessibilityLabel={APP_NAME}>
         <Image
@@ -51,7 +50,7 @@ export const AppLogo = memo(function AppLogo({
 
   if (variant === 'full') {
     const height = size;
-    const width = height * LIGHT_ASPECT;
+    const width = height * LOCKUP_ASPECT;
     return (
       <View className={cn('items-center justify-center', className)} accessibilityRole="header" accessibilityLabel={APP_NAME}>
         <Image

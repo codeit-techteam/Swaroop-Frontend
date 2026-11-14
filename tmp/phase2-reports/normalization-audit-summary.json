@@ -1,0 +1,46 @@
+{
+  "generatedAt": "2026-11-14T11:46:38.657Z",
+  "mode": "read-only-normalization-audit",
+  "applyStatus": "BLOCKED_PENDING_CLIENT_MASTER_DATA",
+  "proposedCanonical": {
+    "countryOfOrigin": "IN (ISO) with display label India",
+    "note": "Do not rewrite without client-approved master rule"
+  },
+  "totals": {
+    "countrySupplyCombos": 5,
+    "indiaOrDomesticProductSamples": 107,
+    "nylonPaReviewRows": 4,
+    "compoundReviewRows": 92
+  },
+  "countrySupplyDistribution": [
+    {
+      "country_of_origin": "Western India Region",
+      "supply_origin": "domestic",
+      "n": 84
+    },
+    {
+      "country_of_origin": "Northern India Region",
+      "supply_origin": "domestic",
+      "n": 20
+    },
+    {
+      "country_of_origin": "Western India Region",
+      "supply_origin": "imported",
+      "n": 16
+    },
+    {
+      "country_of_origin": "India",
+      "supply_origin": "India",
+      "n": 3
+    },
+    {
+      "country_of_origin": "Northern India Region",
+      "supply_origin": "imported",
+      "n": 2
+    }
+  ],
+  "notes": [
+    "Do not infer technical equivalence (e.g. Nylon 66 Injection ≡ PA66 GF).",
+    "Compound vs Virgin needs an authoritative material-class column or client list."
+  ]
+}

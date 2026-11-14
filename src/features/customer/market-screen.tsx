@@ -27,6 +27,7 @@ import {
   ProductCard,
   SearchBar,
   SearchSuggestions,
+  StickyMarketToolbar,
 } from '@/components/market';
 import { MarketListSkeleton } from '@/components/ui/skeleton';
 import { Typography } from '@/components/ui/typography';
@@ -51,6 +52,7 @@ import type { MarketProduct } from '@/types/market';
 import { SUGGESTION_GRADE_LIMIT, getGradeSearchSuggestions } from '@/utils/grade-search';
 import {
   EMPTY_MARKET_FILTERS,
+  MARKET_SORT_OPTIONS,
   applyMarketFilters,
   buildMarketFacets,
   countActiveMarketFilters,
@@ -79,7 +81,6 @@ export const CustomerMarketScreen = () => {
     query,
     selectedCategory,
     filteredProducts: searchedProducts,
-    expandedAcrossCategories,
     recentSearches,
     popularMaterials,
     showSuggestions,
@@ -304,6 +305,14 @@ export const CustomerMarketScreen = () => {
     });
   }, []);
 
+  const handleSortPress = useCallback(() => {
+    setFilters((prev) => {
+      const idx = MARKET_SORT_OPTIONS.findIndex((opt) => opt.value === prev.sort);
+      const next = MARKET_SORT_OPTIONS[(idx + 1) % MARKET_SORT_OPTIONS.length]!;
+      return { ...prev, sort: next.value };
+    });
+  }, []);
+
   const handleApplyFilters = useCallback((next: MarketFilters) => {
     setFilters(next);
     filterSheetRef.current?.dismiss();
@@ -495,7 +504,8 @@ export const CustomerMarketScreen = () => {
         onCartPress={handleCartPress}
       />
 
-      <View className="bg-brand-white pb-sm pt-md">
+      {/* Compact search row — kept outside the list so cards enter the first viewport sooner. */}
+      <View className="border-b border-brand-border/60 bg-brand-white px-0 pb-sm pt-sm">
         <SearchBar
           ref={searchInputRef}
           value={query}
@@ -506,6 +516,15 @@ export const CustomerMarketScreen = () => {
           onClear={handleClearSearch}
           autoFocus={shouldAutoFocus}
         />
+        {!showSuggestions ? (
+          <View className="mt-sm">
+            <CategoryFilter
+              categories={categories}
+              selectedCategory={selectedCategory}
+              onSelectCategory={handleSelectCategory}
+            />
+          </View>
+        ) : null}
       </View>
 
       {showSuggestions ? (
@@ -537,30 +556,9 @@ export const CustomerMarketScreen = () => {
         </View>
       ) : (
         <>
-          <CategoryFilter
-            categories={categories}
-            selectedCategory={selectedCategory}
-            onSelectCategory={handleSelectCategory}
-            onFilterPress={handleFilterPress}
-            filterLabel={activeFilterCount > 0 ? `Filters · ${activeFilterCount}` : 'Filter'}
-          />
-
-          {!wantsCatalogueSearch && promoBanners.length > 0 ? (
-            <HeroCarousel
-              banners={promoBanners}
-              onActionPress={handlePromoAction}
-              onSecondaryPress={handlePromoSecondary}
-              onImpression={handlePromoImpression}
-            />
-          ) : null}
-
-          <View className="flex-row items-center justify-between px-lg pb-sm pt-md">
-            <Typography
-              variant="caption"
-              className="flex-1 font-sans text-[12px] normal-case tracking-normal text-brand-muted"
-              numberOfLines={1}
-            >
-              {showCatalogueSkeleton || isSearchPending || gradesQuery.isPlaceholderData
+          <StickyMarketToolbar
+            resultLabel={
+              showCatalogueSkeleton || isSearchPending || gradesQuery.isPlaceholderData
                 ? trimmedQuery
                   ? 'Searching Catalogue Grades…'
                   : `${filteredProducts.length.toLocaleString('en-IN')} ${
@@ -570,28 +568,23 @@ export const CustomerMarketScreen = () => {
                   ? `${resultCount.toLocaleString('en-IN')} ${resultLabel} for “${trimmedQuery}”`
                   : selectedCategoryLabel
                     ? `${resultCount.toLocaleString('en-IN')} ${resultLabel} in ${selectedCategoryLabel}`
-                    : `${resultCount.toLocaleString('en-IN')} ${resultLabel}`}
-              {!wantsCatalogueSearch && activeFilterCount > 0 ? ' · filtered' : ''}
-            </Typography>
-            {!wantsCatalogueSearch && activeFilterCount > 0 ? (
-              <Typography
-                variant="caption"
-                className="ml-sm font-sans text-[11px] normal-case tracking-normal text-brand-primary"
-                onPress={handleClearFilters}
-                accessibilityRole="button"
-              >
-                Clear filters
-              </Typography>
-            ) : null}
-            {expandedAcrossCategories && !wantsCatalogueSearch ? (
-              <Typography
-                variant="caption"
-                className="ml-sm font-sans text-[11px] normal-case tracking-normal text-brand-primary"
-              >
-                All materials
-              </Typography>
-            ) : null}
-          </View>
+                    : `${resultCount.toLocaleString('en-IN')} ${resultLabel}`
+            }
+            filterLabel={activeFilterCount > 0 ? `Filter · ${activeFilterCount}` : 'Filter'}
+            sortLabel={
+              filters.sort === 'price-asc'
+                ? 'Price ↑'
+                : filters.sort === 'price-desc'
+                  ? 'Price ↓'
+                  : filters.sort === 'moq-asc'
+                    ? 'MOQ'
+                    : 'Sort'
+            }
+            onFilterPress={handleFilterPress}
+            onSortPress={handleSortPress}
+            onClearFilters={handleClearFilters}
+            showClear={!wantsCatalogueSearch && activeFilterCount > 0}
+          />
 
           {showCatalogueSkeleton ? (
             <MarketListSkeleton />
@@ -631,7 +624,7 @@ export const CustomerMarketScreen = () => {
                     onPress={openGradeRequest}
                     accessibilityRole="button"
                     accessibilityLabel="Request a new grade"
-                    className="mx-lg mt-lg items-center rounded-xl border border-dashed border-brand-border py-md"
+                    className="mx-lg mt-lg min-h-[48px] items-center justify-center rounded-xl border border-dashed border-brand-border py-md"
                   >
                     <Typography variant="roleDescription" className="text-brand-muted">
                       Can&apos;t find your grade?
@@ -672,6 +665,18 @@ export const CustomerMarketScreen = () => {
                   gradeCount={totalGradeCount}
                   query={trimmedQuery}
                 />
+              }
+              ListFooterComponent={
+                promoBanners.length > 0 ? (
+                  <View className="mt-md mb-sm">
+                    <HeroCarousel
+                      banners={promoBanners}
+                      onActionPress={handlePromoAction}
+                      onSecondaryPress={handlePromoSecondary}
+                      onImpression={handlePromoImpression}
+                    />
+                  </View>
+                ) : null
               }
               ListEmptyComponent={
                 marketProducts.length === 0 ? (

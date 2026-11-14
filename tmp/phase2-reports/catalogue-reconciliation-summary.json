@@ -1,0 +1,50 @@
+{
+  "generatedAt": "2026-11-14T11:46:40.851Z",
+  "mode": "phase2-read-only-reconciliation",
+  "destructive": false,
+  "cleanupApplyStatus": "BLOCKED_PENDING_CLIENT_APPROVED_SOURCE_LIST",
+  "gradeCodeMigrationStatus": "BLOCKED_PENDING_CLIENT_FORMAT_APPROVAL",
+  "tdsBulkImportStatus": "BLOCKED_PENDING_CLIENT_PDF_PACK",
+  "freightFloorPerMt": 1250,
+  "totals": {
+    "catalogueGradesAll": 3756,
+    "uniqueGradeCodes": 3756,
+    "activeGrades": 3752,
+    "customerVisibleGrades": 3748,
+    "soPrefixedCodes": 3666,
+    "soPrefixedCustomerVisible": 3666,
+    "productsActive": 125,
+    "liveListings": 123,
+    "liveListingsPriceSane": 122,
+    "duplicateGradeCandidateGroups": 10,
+    "junkCategoryCandidates": 16,
+    "suspectedInvalidCandidates": 123,
+    "clientReportedSuspectedTarget": 444,
+    "suspectedVsClient444Delta": -321,
+    "missingManufacturers": 104,
+    "manufacturerCoveragePct": 97.23,
+    "verifiedTdsDocuments": 438,
+    "gradesWithVerifiedTds": 437,
+    "tdsCoveragePctOfCustomerVisible": 11.66,
+    "invalidMoqPriceTiers": 0,
+    "expiredOffersStillActive": 0
+  },
+  "warehouseCoverage": {
+    "liveOffersWithWarehouse": 123,
+    "liveOffersMissingWarehouse": 0,
+    "distinctWarehouses": 11
+  },
+  "approvedListCompare": {
+    "provided": false,
+    "path": null,
+    "matchedIds": 0,
+    "unmatchedListCodes": []
+  },
+  "notes": [
+    "Counts come from live DATABASE_URL queries — not hardcoded catalogue sizes.",
+    "Suspected-invalid list is heuristic; do not mass-delete without approved CSV.",
+    "Client reported ~444 junk/generic/duplicate — compare totals.suspectedInvalidCandidates.",
+    "Grade-code migration dry-run is a separate script (catalogue:grade-code-dry-run).",
+    "TDS bulk import awaits ~550 client PDFs; do not fabricate documents."
+  ]
+}

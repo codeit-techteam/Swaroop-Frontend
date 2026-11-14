@@ -1,10 +1,9 @@
 /**
  * Market tab filters (B-07).
  *
- * The Market tab loads the complete buyable catalogue (`fetchCustomerMarketplaceProducts`
- * pages through `/customer/products` until exhausted) and searches it in memory, so
- * filters are applied the same way. Facets are derived from the loaded catalogue so the
- * sheet only ever offers values that exist. Pure functions — unit-tested under Node.
+ * The Market tab loads a capped, cached buyable catalogue (`fetchCustomerMarketplaceProducts`
+ * — ≤3 pages × 48) and searches it in memory. Facets are derived from the loaded catalogue
+ * so the sheet only offers values that exist. Pure functions — unit-tested under Node.
  */
 import type { MarketProduct } from '@/types/market';
 

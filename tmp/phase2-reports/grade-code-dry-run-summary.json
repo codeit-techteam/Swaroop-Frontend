@@ -1,0 +1,228 @@
+{
+  "generatedAt": "2026-11-14T11:44:12.092Z",
+  "mode": "dry-run",
+  "productionApply": "BLOCKED_PENDING_CLIENT_APPROVAL",
+  "proposedFormat": "PSX-{FAMILY}-{GRADE_TOKEN}-{SEQ4} — deterministic; preserves UUID FKs; keeps SO- as legacyAlias",
+  "explicitlyNot": "Do not simply replace SO- with PS-",
+  "totals": {
+    "gradesScanned": 3756,
+    "soPrefixed": 3666,
+    "proposedUniqueCodes": 3756,
+    "collisionGroups": 0
+  },
+  "schemaRecommendation": {
+    "keepGradeId": true,
+    "addColumnsOrTable": [
+      "grades.legacy_code (nullable text) OR grade_code_aliases(grade_id, code, source)",
+      "backfill legacy_code = current code before rewrite",
+      "dual-read period: accept lookups by code OR legacy_code"
+    ]
+  },
+  "sample": [
+    {
+      "gradeId": "8decdb64-8840-4999-8de6-aa44c3fc580a",
+      "currentCode": "SO-ABS-1000-TAITA-FC16F3",
+      "proposedCode": "PSX-ABS_MOULD_10-1000-FC16",
+      "legacyAlias": "SO-ABS-1000-TAITA-FC16F3",
+      "sourceKey": "ABS|ABS MOULD 10-30 MFI|1000|TAITA",
+      "status": "ACTIVE",
+      "customerVisible": true,
+      "action": "DRY_RUN_ONLY"
+    },
+    {
+      "gradeId": "ebb5527b-2402-4dd4-8048-872053fbb4c9",
+      "currentCode": "SO-ABS-100322U-TORAY-039D29",
+      "proposedCode": "PSX-ABS_MOULD_10-100322U-039D",
+      "legacyAlias": "SO-ABS-100322U-TORAY-039D29",
+      "sourceKey": "ABS|ABS MOULD 10-30 MFI|100322U|TORAY",
+      "status": "ACTIVE",
+      "customerVisible": true,
+      "action": "DRY_RUN_ONLY"
+    },
+    {
+      "gradeId": "891efe88-17c0-4b83-b9c8-8f1f978f772f",
+      "currentCode": "SO-ABS-100_BLACK-STYRENIX-480165",
+      "proposedCode": "PSX-ABS_MOULD_10-100_BLACK-4801",
+      "legacyAlias": "SO-ABS-100_BLACK-STYRENIX-480165",
+      "sourceKey": "ABS|ABS MOULD 10-30 MFI|100_BLACK|STYRENIX",
+      "status": "ACTIVE",
+      "customerVisible": true,
+      "action": "DRY_RUN_ONLY"
+    },
+    {
+      "gradeId": "b80e7ad9-fa05-4429-98cb-52d559767acc",
+      "currentCode": "SO-ABS-100_SP_NATURAL-STYRENIX-397AB4",
+      "proposedCode": "PSX-ABS_MOULD_10-100_SP_NATURAL-397A",
+      "legacyAlias": "SO-ABS-100_SP_NATURAL-STYRENIX-397AB4",
+      "sourceKey": "ABS|ABS MOULD 10-30 MFI|100_SP_NATURAL|STYRENIX",
+      "status": "ACTIVE",
+      "customerVisible": true,
+      "action": "DRY_RUN_ONLY"
+    },
+    {
+      "gradeId": "55c4901a-5323-4efc-9b95-39aaca988465",
+      "currentCode": "SO-ABS-100-STYRENIX-EA6216",
+      "proposedCode": "PSX-ABS_MOULD_10-100-EA62",
+      "legacyAlias": "SO-ABS-100-STYRENIX-EA6216",
+      "sourceKey": "ABS|ABS MOULD 10-30 MFI|100|STYRENIX",
+      "status": "ACTIVE",
+      "customerVisible": true,
+      "action": "DRY_RUN_ONLY"
+    },
+    {
+      "gradeId": "723fef74-4f41-4a66-b340-3752343c5e76",
+      "currentCode": "SO-ABS-100_X01_BLACK-TORAY-B052D3",
+      "proposedCode": "PSX-ABS_MOULD_10-100_X01_BLACK-B052",
+      "legacyAlias": "SO-ABS-100_X01_BLACK-TORAY-B052D3",
+      "sourceKey": "ABS|ABS MOULD <10MFI|100-X01-BLACK|TORAY",
+      "status": "ACTIVE",
+      "customerVisible": true,
+      "action": "DRY_RUN_ONLY"
+    },
+    {
+      "gradeId": "b773f335-2d95-4a76-8b13-1d78c030e85b",
+      "currentCode": "SO-ABS-1040_NATURAL-STYRENIX-5AC4FA",
+      "proposedCode": "PSX-ABS_MOULD_10-1040_NATURAL-5AC4",
+      "legacyAlias": "SO-ABS-1040_NATURAL-STYRENIX-5AC4FA",
+      "sourceKey": "ABS|ABS MOULD 10-30 MFI|1040_NATURAL|STYRENIX",
+      "status": "ACTIVE",
+      "customerVisible": true,
+      "action": "DRY_RUN_ONLY"
+    },
+    {
+      "gradeId": "fbee3dd1-7dc1-432f-83fc-9c9d0d963743",
+      "currentCode": "SO-ABS-120_ERGO_WHITE-STYRENIX-099EE2",
+      "proposedCode": "PSX-ABS_MOULD_10-120_ERGO_WHITE-099E",
+      "legacyAlias": "SO-ABS-120_ERGO_WHITE-STYRENIX-099EE2",
+      "sourceKey": "ABS|ABS MOULD 10-30 MFI|120_ERGO_WHITE|STYRENIX",
+      "status": "ACTIVE",
+      "customerVisible": true,
+      "action": "DRY_RUN_ONLY"
+    },
+    {
+      "gradeId": "0d17f700-2921-4c90-bbcf-d644d7749b1b",
+      "currentCode": "SO-ABS-120HR-INEOS-0D1275",
+      "proposedCode": "PSX-ABS_MOULD_10-120HR-0D12",
+      "legacyAlias": "SO-ABS-120HR-INEOS-0D1275",
+      "sourceKey": "ABS|ABS MOULD 10-30 MFI|120HR|INEOS",
+      "status": "ACTIVE",
+      "customerVisible": true,
+      "action": "DRY_RUN_ONLY"
+    },
+    {
+      "gradeId": "1d038476-3e57-47f4-b64c-c85ed314c2fb",
+      "currentCode": "SO-ABS-120_HR_UVS_BLACK-STYRENIX-A71E23",
+      "proposedCode": "PSX-ABS_MOULD_10-120_HR_UVS_BLACK-A71E",
+      "legacyAlias": "SO-ABS-120_HR_UVS_BLACK-STYRENIX-A71E23",
+      "sourceKey": "ABS|ABS MOULD 10-30 MFI|120_HR_UVS_BLACK|STYRENIX",
+      "status": "ACTIVE",
+      "customerVisible": true,
+      "action": "DRY_RUN_ONLY"
+    },
+    {
+      "gradeId": "6e5d32b4-8c24-40ab-bdf3-757dbb468415",
+      "currentCode": "SO-ABS-120_IFB_WHITE-STYRENIX-3EB1BB",
+      "proposedCode": "PSX-ABS_MOULD_10-120_IFB_WHITE-3EB1",
+      "legacyAlias": "SO-ABS-120_IFB_WHITE-STYRENIX-3EB1BB",
+      "sourceKey": "ABS|ABS MOULD 10-30 MFI|120_IFB_WHITE|STYRENIX",
+      "status": "ACTIVE",
+      "customerVisible": true,
+      "action": "DRY_RUN_ONLY"
+    },
+    {
+      "gradeId": "b74ab362-4414-474a-acb9-3d793817ba6e",
+      "currentCode": "SO-ABS-120-STYRENIX-FF6F81",
+      "proposedCode": "PSX-ABS_MOULD_10-120-FF6F",
+      "legacyAlias": "SO-ABS-120-STYRENIX-FF6F81",
+      "sourceKey": "ABS|ABS MOULD 10-30 MFI|120|STYRENIX",
+      "status": "ACTIVE",
+      "customerVisible": true,
+      "action": "DRY_RUN_ONLY"
+    },
+    {
+      "gradeId": "f2658b39-f001-48d7-a395-446bc2672200",
+      "currentCode": "SO-ABS-140-STYRENIX-C3A270",
+      "proposedCode": "PSX-ABS_MOULD_10-140-C3A2",
+      "legacyAlias": "SO-ABS-140-STYRENIX-C3A270",
+      "sourceKey": "ABS|ABS MOULD 10-30 MFI|140|STYRENIX",
+      "status": "ACTIVE",
+      "customerVisible": true,
+      "action": "DRY_RUN_ONLY"
+    },
+    {
+      "gradeId": "19afca27-38e6-407c-958c-5d90e1a20e72",
+      "currentCode": "SO-ABS-150_NATURAL-STYRENIX-7FDA6D",
+      "proposedCode": "PSX-ABS_MOULD_10-150_NATURAL-7FDA",
+      "legacyAlias": "SO-ABS-150_NATURAL-STYRENIX-7FDA6D",
+      "sourceKey": "ABS|ABS MOULD 10-30 MFI|150_NATURAL|STYRENIX",
+      "status": "ACTIVE",
+      "customerVisible": true,
+      "action": "DRY_RUN_ONLY"
+    },
+    {
+      "gradeId": "e53a636c-0460-4390-b409-c76b32048244",
+      "currentCode": "SO-ABS-150-STYRENIX-DE6B05",
+      "proposedCode": "PSX-ABS_MOULD_10-150-DE6B",
+      "legacyAlias": "SO-ABS-150-STYRENIX-DE6B05",
+      "sourceKey": "ABS|ABS MOULD 10-30 MFI|150|STYRENIX",
+      "status": "ACTIVE",
+      "customerVisible": true,
+      "action": "DRY_RUN_ONLY"
+    },
+    {
+      "gradeId": "b1164e57-a63a-4b2d-b7cc-2cec75df8f42",
+      "currentCode": "SO-ABS-200EP-INEOS-0DDAAA",
+      "proposedCode": "PSX-ABS_MOULD_10-200EP-0DDA",
+      "legacyAlias": "SO-ABS-200EP-INEOS-0DDAAA",
+      "sourceKey": "ABS|ABS MOULD 10-30 MFI|200EP|INEOS",
+      "status": "ACTIVE",
+      "customerVisible": true,
+      "action": "DRY_RUN_ONLY"
+    },
+    {
+      "gradeId": "ede92d59-6f09-46cf-bc15-3a047b095377",
+      "currentCode": "SO-ABS-200_EP_NATURAL-STYRENIX-8CAD23",
+      "proposedCode": "PSX-ABS_MOULD_10-200_EP_NATURAL-8CAD",
+      "legacyAlias": "SO-ABS-200_EP_NATURAL-STYRENIX-8CAD23",
+      "sourceKey": "ABS|ABS MOULD 10-30 MFI|200_EP_NATURAL|STYRENIX",
+      "status": "ACTIVE",
+      "customerVisible": true,
+      "action": "DRY_RUN_ONLY"
+    },
+    {
+      "gradeId": "a7b4c0bd-6107-4037-a67e-3d3d83355bae",
+      "currentCode": "SO-ABS-3000D-TAITA-DD7728",
+      "proposedCode": "PSX-ABS_EXTRUSIO-3000D-DD77",
+      "legacyAlias": "SO-ABS-3000D-TAITA-DD7728",
+      "sourceKey": "ABS|ABS EXTRUSION|3000D|TAITA",
+      "status": "ACTIVE",
+      "customerVisible": true,
+      "action": "DRY_RUN_ONLY"
+    },
+    {
+      "gradeId": "d37e3b8c-20da-498e-b0c7-4b9489b5425d",
+      "currentCode": "SO-ABS-300_B_BLACK-STYRENIX-354105",
+      "proposedCode": "PSX-ABS_MOULD_30-300_B_BLACK-3541",
+      "legacyAlias": "SO-ABS-300_B_BLACK-STYRENIX-354105",
+      "sourceKey": "ABS|ABS MOULD >30 MFI|300_B_BLACK|STYRENIX",
+      "status": "ACTIVE",
+      "customerVisible": true,
+      "action": "DRY_RUN_ONLY"
+    },
+    {
+      "gradeId": "5e3fb5dd-84a4-4f81-9365-1ee7c61646f1",
+      "currentCode": "SO-ABS-300_IFBWHITE-INEOS-5C4C66",
+      "proposedCode": "PSX-ABS_MOULD_30-300_IFBWHITE-5C4C",
+      "legacyAlias": "SO-ABS-300_IFBWHITE-INEOS-5C4C66",
+      "sourceKey": "ABS|ABS MOULD >30 MFI|300-IFBWHITE|INEOS",
+      "status": "ACTIVE",
+      "customerVisible": true,
+      "action": "DRY_RUN_ONLY"
+    }
+  ],
+  "notes": [
+    "No database writes were performed.",
+    "Client must approve format before any production migration.",
+    "Collision groups must be resolved (extend SEQ) before apply."
+  ]
+}

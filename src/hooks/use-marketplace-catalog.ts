@@ -10,16 +10,21 @@ type CatalogState = {
   refetch: () => Promise<void>;
 };
 
+/**
+ * Shared marketplace catalogue hook.
+ * Multiple screens (Market, Home via service cache, PR create, PDP) coalesce
+ * through `fetchCustomerMarketplaceProducts` in-flight + memory cache.
+ */
 export const useMarketplaceCatalogQuery = (): CatalogState => {
   const [products, setProducts] = useState<MarketProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const refetch = useCallback(async () => {
+  const load = useCallback(async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      const next = await fetchCustomerMarketplaceProducts();
+      const next = await fetchCustomerMarketplaceProducts({ force });
       setProducts(next);
     } catch (cause) {
       setProducts([]);
@@ -29,9 +34,13 @@ export const useMarketplaceCatalogQuery = (): CatalogState => {
     }
   }, []);
 
+  const refetch = useCallback(async () => {
+    await load(true);
+  }, [load]);
+
   useEffect(() => {
-    void refetch();
-  }, [refetch]);
+    void load(false);
+  }, [load]);
 
   return { products, loading, error, refetch };
 };

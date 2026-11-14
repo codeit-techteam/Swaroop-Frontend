@@ -139,76 +139,92 @@ Mapping sheet; DNS; infra for Redis (optional).
 
 ---
 
-## Phase 4 — Mobile UX, APK release, SEO/a11y (P2 + #23)
+## Phase 4 — SEO, domains, blog/chips, APK prep (P3 + #23)
 
-**Goal:** Ship Android 3.1.3 and close UX/SEO/a11y gaps.
+**Goal:** Close SEO/domain/release-prep gaps; prepare APK 3.1.3 without claiming an artifact until EAS succeeds.
+
+### Status (14 Nov 2026) — see `POLYSTOREX_PHASE4_COMPLETION.md`
+
+| Workstream | Status |
+|------------|--------|
+| SEO (#20) Website | **DONE / LIVE** |
+| SEO (#20) Customer canonical + grade sitemap + robots Host | **CODE DONE** — Vercel redeploy + `NEXT_PUBLIC_APP_URL` pending |
+| Blog empty / materials chips (#22) | **CODE DONE** — chips linked; empty blog hidden/noIndex; Sanity posts still **BLOCKED** |
+| Domains (#11) web apps | **LIVE** (customer/seller/admin/www) |
+| Domains (#11) `api.polystorex.com` | **BLOCKED** (NXDOMAIN) — keep DO API |
+| Backend CORS defaults for `*.polystorex.com` | **CODE DONE** — Backend redeploy pending |
+| APK (#23) config audit | **DONE** — 3.1.3 / 3115 / `com.swaroop.app` |
+| APK (#23) EAS build | **BLOCKED** — Entity Not Authorized (`polystorexs-team` / `polystorex`) |
+| Release QA | Checklist recorded; full E2E after redeploys + APK |
 
 ### Entry criteria
 - Phase 1–3 API behaviour acceptable on devices  
-- EAS access to `polystorexs-team`  
+- EAS access to `polystorexs-team` (**not met** — APK stopped)
 
-### Workstream A — Mobile marketplace (#17)
-1. Compact search/categories.  
-2. Sticky Sort \| Filter.  
-3. First-viewport product visibility.
+### Workstream A — Mobile marketplace (#17) *(done in Phase 3)*
+Sticky Sort\|Filter + first-viewport cards shipped in Phase 3 (LOCAL ONLY until APK).
 
 ### Workstream B — APK (#23)
-1. Confirm `com.swaroop.app` retained.  
-2. `eas build --platform android --profile production-apk`.  
-3. Device QA matrix; publish artifact link.  
+1. Confirm `com.swaroop.app` retained — **YES**.  
+2. `eas build --platform android --profile production-apk` — **STOPPED** (access).  
+3. Device QA matrix — pending artifact.  
 4. Do **not** create new application id.
 
-### Workstream C — Logo (#18)
-1. Surface-by-surface variant audit.  
-2. Optional transparent asset from brand.
+### Workstream C — Logo (#18) *(done in Phase 3)*
+On-light logo wired; optional transparent brand asset still client-optional.
 
-### Workstream D — SEO (#20) + a11y (#21) + blog/chips (#22)
-1. Customer sitemap policy for grades.  
-2. axe CI on critical routes; contrast pass.  
-3. Sanity blog content; materials page chips clickable.
+### Workstream D — SEO (#20) + blog/chips (#22)
+1. Customer sitemap includes live-offer grade URLs — **CODE DONE**.  
+2. Blog nav/preview/sitemap gated without posts — **DONE**.  
+3. Materials + homepage polymer chips → marketplace filters — **DONE**.  
+4. axe CI residual remains Phase 3 open item.
 
 ### Workstream E — Grade codes (#6) — **planning only**
-1. Collect client target format.  
-2. Write migration design (dual-read).  
-3. **No production migration in Phase 4** without signed approval.
+No production migration in Phase 4.
 
-### Exit criteria
-- Installable APK 3.1.3 (3115) verified  
-- Mobile first-viewport acceptance  
-- SEO/a11y/blog acceptance checklist signed  
+### Exit criteria (partial)
+- [x] SEO/domain/blog/chip code complete with evidence report  
+- [ ] Customer + Backend + Website redeployed  
+- [ ] Installable APK 3.1.3 (3115) verified  
+- [ ] Full release QA signed  
 
 ### Dependencies
-EAS org; Sanity; brand assets; SEO indexing policy.
+EAS org invite; DNS for API; Vercel env `NEXT_PUBLIC_APP_URL`; Sanity posts (optional).
 
 ---
 
-## Phase 5 — Hardening, migration execution, release engineering
+## Phase 5 — Final production verification & handover
 
-**Goal:** Execute approved migrations; observability; regression suite; production readiness sign-off.
+**Goal:** Independent release QA; distinguish LOCAL ONLY vs DEPLOYED; client handover; production-ready gate.
 
-### Entry criteria
-- Written approvals for: grade-code migration (#6), any catalogue deletes, domain cutover complete  
+### Status (14 Nov 2026) — see `POLYSTOREX_FINAL_CLIENT_HANDOVER.md`
+
+| Gate | Result |
+|------|--------|
+| Six-repo + API consistency | **PASS** |
+| Guest marketplace + privacy + test SKU exclusion | **PASS** (live) |
+| Security unauth probes | **PASS** |
+| Buyer authenticated E2E | **NOT EXECUTED** (no authorized account) |
+| Production DB SQL | **BLOCKED** (engineer env → localhost only) |
+| APK 3.1.3 / 3115 | **BLOCKED** (EAS unauthorized; no artifact) |
+| Full production-ready sign-off | **NO** |
+
+### Entry criteria (original migration work)
+- Written approvals for: grade-code migration (#6), any catalogue deletes, domain cutover complete — **still open**
 
 ### Workstream A — Grade code migration (#6)
-1. Dual-write/dual-read window.  
-2. Backfill with uniqueness checks.  
-3. Customer-visible sanitize updated.  
-4. Rollback plan tested on staging.
+Still **BLOCKED** on client format approval — not executed in Phase 5.
 
 ### Workstream B — Observability & QA
-1. Health payload includes build SHA.  
-2. Synthetic checks: marketplace, OTP, KYC gate, checkout.  
-3. Expand Vitest + add Customer WebApp smoke tests.  
-4. Catalogue dry-run reports in CI (read-only).
+Independent live probes + Customer unit tests (15/15) completed. Authenticated synthetic checkout **not** run.
 
-### Workstream C — Release engineering
-1. Document deploy owners for DO/Vercel/EAS.  
-2. Forbidden-claims grep in CI.  
-3. APK + web release checklist template.
+### Workstream C — Release engineering / handover
+`POLYSTOREX_FINAL_CLIENT_HANDOVER.md` delivered with blockers and deploy matrix.
 
 ### Exit criteria
-- All 23 issues either DONE or explicitly accepted residual risk  
-- Production sign-off document with evidence links  
+- [x] Handover report with evidence  
+- [ ] All 23 issues DONE or accepted residual risk  
+- [ ] Production-ready sign-off — **rejected** until release-critical blockers clear  
 
 ---
 

@@ -2,6 +2,11 @@
 
 **Audit date:** 14 November 2026  
 **Phase 1 code update:** 14 November 2026 — see `POLYSTOREX_PHASE1_COMPLETION.md`  
+**Phase 2 code update:** 14 November 2026 — see `POLYSTOREX_PHASE2_COMPLETION.md`  
+**Phase 3 code update:** 14 November 2026 — see `POLYSTOREX_PHASE3_COMPLETION.md`  
+**Phase 4 code update:** 14 November 2026 — see `POLYSTOREX_PHASE4_COMPLETION.md`  
+**Phase 5 independent verification:** 14 November 2026 — see `POLYSTOREX_FINAL_CLIENT_HANDOVER.md`  
+**Platform production-ready:** **NO** (APK blocked; buyer E2E not executed; Phase 2–4 largely LOCAL ONLY; prod DB SQL blocked — localhost env only)  
 **Rule:** Every status has evidence. No DONE from prior assistant summaries alone.  
 **Deploy rule:** Do not mark DEPLOYED without independent verification.
 
@@ -16,13 +21,13 @@ Deploy tags: `DEPLOYED` | `LOCAL ONLY` | `N/A`
 |-------|--------|
 | **Client expectation** | Remove test SKUs from marketplace, search, recommendations, cart surfaces |
 | **Before status (Phase 0)** | **NOT DONE** |
-| **Current implementation** | API exclusion filter + soft-deactivate script. Live API still returns E2E until Backend redeploy and/or DB apply. |
-| **Status** | **PARTIALLY DONE** (`LOCAL ONLY`) |
-| **Evidence** | `excluded-test-products.ts` + wired into `buyableMarketplaceProductWhere` / `activeMarketplaceOfferWhere`. Specs pass. Live probe 14 Nov still: E2E Bulk Pricing Test ACTIVE. Prod `DATABASE_URL` unavailable (localhost only). |
-| **Required changes** | Prod DB `--apply` + Backend redeploy; re-probe search → 0 |
+| **Current implementation** | API exclusion **DEPLOYED** (`361af18`) + DB soft-deactivate **applied** 14 Nov ~11:30Z UTC. |
+| **Status** | **DONE** (**DEPLOYED**) |
+| **Evidence** | Soft-deleted products `97625de6-…` / `6facf910-…`; paused offers `OFFER-2026-381852` / `OFFER-2026-513092`. Live search E2E + HD Blow Test → 0; `meta.total` 122. Grade “HD Blow” left intact. |
+| **Required changes** | Rotate exposed DB password; optional remove temporary Trusted Source IP later |
 | **Repository** | Swaroop-Backend |
-| **Dependencies** | Production `DATABASE_URL` + backup |
-| **Test cases** | Unit: excluded ids; Live: search both names → 0 after deploy |
+| **Dependencies** | None for Issue #1 |
+| **Test cases** | Live search 0; DB soft-deleted (done) |
 
 ---
 
@@ -80,12 +85,12 @@ Deploy tags: `DEPLOYED` | `LOCAL ONLY` | `N/A`
 |-------|--------|
 | **Client expectation** | Sensible manufacturer display; hide junk/generic grades; ~3748 catalogue awareness |
 | **Before status (Phase 0)** | **PARTIALLY DONE** — privacy DEPLOYED; junk open |
-| **Current implementation** | Phase 1 hardened secondary leaks (cart/PR/TDS customer payloads → PRIVATE). Junk hygiene still Phase 2. |
-| **Status** | **PARTIALLY DONE** — privacy strengthened (`LOCAL ONLY` for new sanitize paths); junk **NOT DONE** |
-| **Evidence** | `cart.service.ts` sanitize; `toCustomerFacingPr` sanitize; `grade-tds.service.ts` customer audience blinds manufacturer |
-| **Required changes** | Backend redeploy; client junk list for Phase 2 |
+| **Current implementation** | Privacy on customer payloads. Phase 2 dry-run reconciliation: **3748** customer-visible grades; heuristic junk **16** / suspected-invalid **123** (client target **444** unmatched — no approved list). Cleanup apply **BLOCKED**. |
+| **Status** | **PARTIALLY DONE** — privacy **DEPLOYED**; junk cleanup **BLOCKED** on client list |
+| **Evidence** | `catalogue:phase2-report` summary 14 Nov; `tmp/phase2-reconciliation/`; privacy sanitize paths from Phase 1 |
+| **Required changes** | Client approved hide/mapping CSV → pause/hide (preserve FKs); redeploy any new code |
 | **Repository** | Backend |
-| **Dependencies** | Junk CSV (Phase 2) |
+| **Dependencies** | Junk CSV / revised catalogue |
 | **Test cases** | Customer TDS/cart/PR never show real maker; Admin still sees real data |
 
 ---
@@ -95,13 +100,13 @@ Deploy tags: `DEPLOYED` | `LOCAL ONLY` | `N/A`
 | Field | Detail |
 |-------|--------|
 | **Client expectation** | New PolyStoreX code standard (format TBD by client) |
-| **Current implementation** | `gradeCodeOf` builds `SO-{category}-{gradeNo}-{manufacturer}-{hash}`; live SO- search total **3666** |
-| **Status** | **BLOCKED** |
-| **Evidence** | `source-one-csv.ts` `gradeCodeOf`; live `SO-ABS-3000D-PRIVATE-DD7728`; `sanitizeBlindCode` replaces maker token with PRIVATE |
-| **Required changes** | Client approves target format + uniqueness rules → migration plan → dual-read period |
+| **Current implementation** | Live **3666** SO- codes. Dry-run proposes `PSX-{FAMILY}-{GRADE_TOKEN}-{SEQ4}` — **3756** unique, **0** collisions; SO- retained as `legacyAlias`. **Not** a simple SO→PS replace. Production apply **BLOCKED**. |
+| **Status** | **BLOCKED** (dry-run **DONE**) |
+| **Evidence** | `catalogue:grade-code-dry-run` → `tmp/phase2-grade-code-migration/summary.json`; `phase2-integrity.spec.ts` format contract |
+| **Required changes** | Client approves format → dual-read schema (`legacy_code` / aliases) → migrate without rewriting UUIDs |
 | **Repository** | Backend (generation + migration) |
 | **Dependencies** | Client code-standard approval — **do not migrate first** |
-| **Test cases** | Generator unit tests for new scheme; uniqueness; buyer-facing sanitize |
+| **Test cases** | Generator uniqueness; buyer-facing sanitize; FK preservation |
 
 ---
 
@@ -110,13 +115,13 @@ Deploy tags: `DEPLOYED` | `LOCAL ONLY` | `N/A`
 | Field | Detail |
 |-------|--------|
 | **Client expectation** | Real TDS PDFs; do not invent docs; Quality Documentation only when files exist |
-| **Current implementation** | Backend serves verified TDS only; web/mobile gate highlights on real docs; library largely empty pending client PDFs |
-| **Status** | **PARTIALLY DONE** (gating) / content **BLOCKED** on client |
-| **Evidence** | `grade-tds.service.ts` `VERIFIED`; `lib/cx-feed.ts` strips quality highlight without docs; `grade-tds-section.tsx`; Expo bump commit notes TDS gate; no fabricated PDFs found in prod path |
-| **Required changes** | Ingest ~550 client PDFs via Admin/import; map to grades; keep gate |
+| **Current implementation** | Gating strengthened (highlights + Trust Badges + no fabricated `buildProductDocuments`). Prod: **438** verified TDS / **437** grades (**11.66%** of customer-visible). Bulk import prep documented; ~550 client PDFs **not** loaded. |
+| **Status** | **PARTIALLY DONE** (gating) / bulk content **BLOCKED** on client |
+| **Evidence** | `docs/phase2-tds-bulk-import.md`; recon `verifiedTdsDocuments=438`; Customer TrustBadges `hasQualityDocs`; `phase2-integrity` TDS gate test |
+| **Required changes** | Client PDF pack + mapping → `import:tds` dry-run then apply; keep VERIFIED gate |
 | **Repository** | Backend TDS + Admin upload + Customer/Mobile UI |
 | **Dependencies** | Client PDF pack + mapping list |
-| **Test cases** | Grade without TDS: unavailable + no false “enabled” trust tick; with verified file: download works |
+| **Test cases** | Grade without TDS: unavailable + no false trust tick; with verified file: download works |
 
 ---
 
@@ -156,13 +161,13 @@ Deploy tags: `DEPLOYED` | `LOCAL ONLY` | `N/A`
 | Field | Detail |
 |-------|--------|
 | **Client expectation** | Marketplace/grade pages load acceptably; no spurious 429 |
-| **Current implementation** | In-memory rate limit raised (marketplace GET 600/min in config); Customer catalog may still paginate up to 10×100; heavy Prisma includes; no Redis/shared cache |
-| **Status** | **PARTIALLY DONE** |
-| **Evidence** | `rate-limit.guard.ts`; `configuration.ts` `THROTTLE_MARKETPLACE_LIMIT`; `services/catalog.ts` multi-page fetch; `marketplace.service.ts` includes; indexes in `schema.prisma` |
-| **Required changes** | Server-side filter/pagination; reduce client fan-out; shared rate-limit store; query profiling; CDN/cache for public catalogue |
+| **Current implementation** | Phase 3: catalogue fan-out capped (≤3×48 pages, sequential); in-flight + store dedupe; **no 429 auto-retry**; `Retry-After` header; guest home/categories **30s TTL cache** (bumped on offer lifecycle); offer marketplace index applied. Live baseline 14 Nov: products20 **0.61s**, products100 **0.43s**, home **0.46s**, burst50 **0×429**. Auth/OTP bucket still `min(default,60)`. |
+| **Status** | **PARTIALLY DONE** — code **DONE** (`LOCAL ONLY` pending Backend + Customer redeploy) |
+| **Evidence** | `POLYSTOREX_PHASE3_COMPLETION.md` timings; `services/catalog.ts` MAX_PAGES=3; `apiClient.ts` 429 guard; `marketplace-cache.ts`; `phase3-catalog-loading.test.ts` |
+| **Required changes** | Redeploy Backend + Customer; optional Redis if multi-instance |
 | **Repository** | Backend + Customer-WEBAPP (+ mobile) |
-| **Dependencies** | DO redeploy for limit changes; optional Redis |
-| **Test cases** | Load marketplace logged-out < target SLA; burst GETs under limit; no retry storms |
+| **Dependencies** | DO / Vercel redeploy |
+| **Test cases** | Cold marketplace ≤6 catalogue GETs; burst GETs under limit; no 429 retry storms |
 
 ---
 
@@ -172,13 +177,13 @@ Deploy tags: `DEPLOYED` | `LOCAL ONLY` | `N/A`
 |-------|--------|
 | **Client expectation** | Stable production URLs; audit hardcoded interim hosts |
 | **Before status (Phase 0)** | **PARTIALLY DONE** |
-| **Current implementation** | Phase 1 documented interim DO defaults; Customer `adminApiUrl` default is admin Vercel host (not localhost). No unconfigured custom-domain switch. |
-| **Status** | **PARTIALLY DONE** |
-| **Evidence** | `Swaroop-Customer-WEBAPP/lib/env.ts`; live DO health still OK |
-| **Required changes** | DNS cutover when client ready |
+| **Current implementation** | **LIVE:** `www` / `customer` / `seller` / `admin`.polystorex.com (HTTPS 200). **API custom domain NOT ready** (`api.polystorex.com` NXDOMAIN). Keep DO API. Backend CORS defaults include custom web hosts (redeploy). Docs: `docs/PRODUCTION_DOMAINS.md`. |
+| **Status** | **PARTIALLY DONE** — web domains LIVE; API cutover **BLOCKED** |
+| **Evidence** | curl 200 on four web hosts; dig empty for api; DO health 200 |
+| **Required changes** | DO custom domain for API + TLS; then env flip; Customer `NEXT_PUBLIC_APP_URL` |
 | **Repository** | All six |
-| **Dependencies** | DNS + hosting access |
-| **Test cases** | Smoke each hostname + TLS + CORS |
+| **Dependencies** | DNS for API; Vercel/DO env |
+| **Test cases** | Smoke each hostname + TLS + CORS + OTP |
 
 ---
 
@@ -203,13 +208,13 @@ Deploy tags: `DEPLOYED` | `LOCAL ONLY` | `N/A`
 | Field | Detail |
 |-------|--------|
 | **Client expectation** | Consistent regions/hubs; correct polymer linkages; MOQ vs tiers; material class |
-| **Current implementation** | Seed/catalog inconsistencies remain (region strings, Nylon→PA66_GF master, demo 0–11 MT tier). Prod DB not fully queryable locally |
-| **Status** | **NOT DONE** |
-| **Evidence** | `catalog-products.json` region mix; Nylon product → `PA66_GF30_FR_BK`; `demo-bootstrap.service.ts` `{minQty:0,maxQty:11}`; `commerce-pricing.ts` MOQ checks; live region values need authenticated/admin audit |
-| **Required changes** | Master-data correction scripts with client-approved mappings; validate tier ≥ MOQ |
+| **Current implementation** | MOQ tier validation enforced in code; prod remediated **3** invalid tiers → **0**; **1** expired ACTIVE offer → `EXPIRED`. Normalization audit: India/IN samples **107**, Nylon/PA review **4**, Compound review **92** — apply **BLOCKED** (no inferred equivalence). Demo bootstrap tiers start at MOQ 12. |
+| **Status** | **PARTIALLY DONE** — integrity **DONE**; master-data normalize **BLOCKED** |
+| **Evidence** | `assertPriceTiersRespectMoq`; `catalogue:integrity-remediate` apply 14 Nov; `catalogue:normalize-audit`; `phase2-integrity.spec.ts` |
+| **Required changes** | Client master rules for country / Nylon-PA66 / Compound-Virgin; then controlled rewrite |
 | **Repository** | Backend seeds + Admin data tools |
-| **Dependencies** | Prod DB access; client mapping sheet |
-| **Test cases** | Fixture assertions for Nylon linkage; offer activation rejects tier below MOQ |
+| **Dependencies** | Client mapping sheet |
+| **Test cases** | Offer activation rejects tier below MOQ; landed math; no auto Nylon≡PA66 |
 
 ---
 
@@ -218,10 +223,10 @@ Deploy tags: `DEPLOYED` | `LOCAL ONLY` | `N/A`
 | Field | Detail |
 |-------|--------|
 | **Client expectation** | Useful Brand/Warehouse/Credit/category filters including PP/Nylon |
-| **Current implementation** | Brand collapses to PRIVATE (by design). Warehouse often “All Regions”. Credit product model 15/30 days. Chips derived from live listings |
-| **Status** | **PARTIALLY DONE** |
-| **Evidence** | `catalog-mapper.ts` `resolveBlindManufacturer` / `warehousesFromProducts`; `payment-eligibility.ts` tenure `[15,30]`; mobile `marketCategoryChips()` |
-| **Required changes** | Client policy: hide Brand when blind, or show polymer family instead; enrich warehouse facets; align credit filter with offers |
+| **Current implementation** | Brand filter shows blind-policy copy + disabled when only PRIVATE. `warehousesFromProducts` prefers real hub labels (11 distinct live warehouses). PP/Nylon chip codes normalized in `material-taxonomy`. Credit toggle still “15 / 30 Day Platform Credit”. |
+| **Status** | **PARTIALLY DONE** (`LOCAL ONLY` until Customer redeploy) |
+| **Evidence** | `brand-filter.tsx`; `warehousesFromProducts`; `materialsFromCatalog` PP/NYLON; recon `distinctWarehouses=11` |
+| **Required changes** | Redeploy Customer WebApp; optional credit facet driven purely from offer payment methods |
 | **Repository** | Customer-WEBAPP, SWAROOP, Backend aggregations |
 | **Dependencies** | Blind-marketplace product policy |
 | **Test cases** | Filter facets match offer attributes; PP/Nylon appear when catalogue has them |
@@ -233,12 +238,12 @@ Deploy tags: `DEPLOYED` | `LOCAL ONLY` | `N/A`
 | Field | Detail |
 |-------|--------|
 | **Client expectation** | Honest expiry / countdown |
-| **Current implementation** | Mapper no longer fabricates `validUntil`; UI uses “Open availability” when null |
-| **Status** | **NEEDS VERIFICATION** |
-| **Evidence** | `catalog-mapper.ts` L568–570 comment+logic; `offer-countdown.tsx` / banners. Live marketplace SSR HTML did not contain “Ends in 365” (CSR — incomplete proof). Fix commit `10a5075` on Customer `main` |
-| **Required changes** | Confirm on deployed production after hard refresh; ensure API `validUntil` populated when truly limited |
+| **Current implementation** | Mapper never fabricates expiry; null → not limited-time. Marketplace query excludes `validUntil < now`. Prod expired ACTIVE offer remediations: **0** remaining. Frontend test asserts no fake 365-day expiry. |
+| **Status** | **PARTIALLY DONE** — code **DONE**; Customer redeploy **LOCAL ONLY** pending |
+| **Evidence** | `catalog-mapper.ts` expiresAt null path; `marketplace.service.ts` validUntil filter; integrity remediate expire; `phase2-integrity.test.ts` |
+| **Required changes** | Redeploy Customer WebApp; spot-check Today’s Offers UI |
 | **Repository** | Customer-WEBAPP |
-| **Dependencies** | Vercel deploy confirmation |
+| **Dependencies** | Vercel deploy |
 | **Test cases** | Offer with null expiry → Open availability; with date → accurate countdown; never +365 fabricate |
 
 ---
@@ -263,13 +268,13 @@ Deploy tags: `DEPLOYED` | `LOCAL ONLY` | `N/A`
 | Field | Detail |
 |-------|--------|
 | **Client expectation** | Products in first viewport; compact search/categories; sticky Sort\|Filter |
-| **Current implementation** | Header → search → categories → optional hero → list; no sticky filter bar |
-| **Status** | **NOT DONE** |
-| **Evidence** | `SWAROOP/src/features/customer/market-screen.tsx`; `MarketFilterSheet`; no `stickyHeaderIndices` |
-| **Required changes** | Compact header; sticky Sort\|Filter; defer/remove hero above fold |
+| **Current implementation** | Compact search + category chips; fixed `StickyMarketToolbar` (Sort\|Filter); promo/hero moved to **list footer**; touch targets ≥40×44; safe-area padding kept. |
+| **Status** | **PARTIALLY DONE** (`LOCAL ONLY` — needs APK rebuild) |
+| **Evidence** | `sticky-market-toolbar.tsx`; `market-screen.tsx` layout; `category-filter.tsx` min touch sizes |
+| **Required changes** | Device QA on small Android widths after APK (#23) |
 | **Repository** | SWAROOP |
-| **Dependencies** | APK rebuild (#23) for device delivery |
-| **Test cases** | First viewport shows ≥1 product card on common phones; sticky bar remains while scrolling |
+| **Dependencies** | APK rebuild (#23) |
+| **Test cases** | First viewport shows ≥1 product card; toolbar remains while scrolling |
 
 ---
 
@@ -278,13 +283,13 @@ Deploy tags: `DEPLOYED` | `LOCAL ONLY` | `N/A`
 | Field | Detail |
 |-------|--------|
 | **Client expectation** | Correct logo on light/dark surfaces; transparent asset if needed |
-| **Current implementation** | Dual assets (`logoOnLight` black plate / transparent on dark) documented and wired |
-| **Status** | **PARTIALLY DONE** |
-| **Evidence** | Customer `components/auth/logo.tsx`; Expo `src/components/ui/app-logo.tsx`; Website `components/brand/logo.tsx`; adaptive icon bg `#000000` in `app.config.ts` |
-| **Required changes** | Audit every surface for wrong variant; optional client-supplied fully transparent wordmark |
+| **Current implementation** | Prepared `polystorex-logo-on-light.png` (transparent, dark wordmark from supplied artwork). Light surfaces across Customer/Website/Admin/Seller/Expo use on-light; dark surfaces keep transparent white wordmark. Black-plate `logo-light-bg` removed from white chrome. |
+| **Status** | **PARTIALLY DONE** (`LOCAL ONLY` until redeploys) |
+| **Evidence** | Asset in `*/public/brand/polystorex-logo-on-light.png` + `SWAROOP/assets/brand/`; logo components updated; corners alpha=0 verified |
+| **Required changes** | Redeploy all frontends; visual QA light/dark |
 | **Repository** | All frontends |
-| **Dependencies** | Optional new asset from brand |
-| **Test cases** | Visual checklist light/dark web + mobile splash/header |
+| **Dependencies** | Deploy access |
+| **Test cases** | White header/login: no black plate; dark splash: white wordmark readable |
 
 ---
 
@@ -308,13 +313,13 @@ Deploy tags: `DEPLOYED` | `LOCAL ONLY` | `N/A`
 | Field | Detail |
 |-------|--------|
 | **Client expectation** | Correct www canonicals; robots; grade pages in sitemap where appropriate |
-| **Current implementation** | Website SEO uses www host; Customer sitemap is shallow (login/register/marketplace/grades **index** only — no per-grade URLs) |
-| **Status** | **PARTIALLY DONE** |
-| **Evidence** | `Swaroop-Website/app/robots.ts`, `app/sitemap.ts`, `lib/seo.ts`; Customer `app/sitemap.ts` / `lib/seo.ts` `PRODUCTION_APP_URL` Vercel fallback |
-| **Required changes** | Decide indexability of customer grade URLs; generate sitemap entries; set `NEXT_PUBLIC_APP_URL` to canonical customer domain |
+| **Current implementation** | Website robots/sitemap/OG **LIVE** on www. Customer code: canonical `customer.polystorex.com`, hostname-only Host, sitemap includes **live-offer grade detail URLs**, private routes disallowed. Redeploy required for live Host/sitemap. |
+| **Status** | **PARTIALLY DONE** — Website **DEPLOYED**; Customer SEO **LOCAL ONLY** until Vercel redeploy |
+| **Evidence** | Live www robots/sitemap; `phase4-seo.test.ts`; `app/sitemap.ts` fetches `hasOffers=true` grades |
+| **Required changes** | Redeploy Customer; set `NEXT_PUBLIC_APP_URL=https://customer.polystorex.com` |
 | **Repository** | Website + Customer-WEBAPP |
-| **Dependencies** | Domain/DNS; SEO indexing policy |
-| **Test cases** | robots → sitemap; sample grade URL present if policy allows; canonical host consistent |
+| **Dependencies** | Vercel redeploy |
+| **Test cases** | robots Host = customer.polystorex.com; sitemap has `/marketplace/grades/{uuid}` |
 
 ---
 
@@ -323,12 +328,12 @@ Deploy tags: `DEPLOYED` | `LOCAL ONLY` | `N/A`
 | Field | Detail |
 |-------|--------|
 | **Client expectation** | WCAG AA: contrast, labelled controls |
-| **Current implementation** | Spot `aria-label` fixes; docs admit 165+ items not done; no jest-axe suite |
+| **Current implementation** | Phase 3: global `:focus-visible` ring; marketplace sort labelled + contrast; logo alt text; mobile toolbar semantics / touch targets. Full axe 165+ checklist **not** certified. |
 | **Status** | **PARTIALLY DONE** |
-| **Evidence** | `docs/ACCESSIBILITY.md`; cart/sidebar labels; build fix `c517f9a` |
-| **Required changes** | Automated axe CI on key routes; systematic contrast pass |
+| **Evidence** | `styles/globals.css`; `sort-dropdown.tsx`; `docs/ACCESSIBILITY.md` Phase 3 section; Website `LogoMark` alt |
+| **Required changes** | Production axe scan (guest + auth); automated CI optional |
 | **Repository** | Customer-WEBAPP (primary), Website, Seller, Admin |
-| **Dependencies** | Design token decisions for contrast |
+| **Dependencies** | Post-deploy QA |
 | **Test cases** | axe critical=0 on login/marketplace/cart; form inputs have names |
 
 ---
@@ -338,13 +343,13 @@ Deploy tags: `DEPLOYED` | `LOCAL ONLY` | `N/A`
 | Field | Detail |
 |-------|--------|
 | **Client expectation** | Blog content; clickable polymer chips → marketplace |
-| **Current implementation** | Homepage ecosystem chips link to customer marketplace with category/search. `/materials` tags are plain `<li>`. Blog empty without Sanity config |
-| **Status** | **PARTIALLY DONE** |
-| **Evidence** | `materials-ecosystem.tsx` links; `app/materials/page.tsx` non-links; `isSanityConfigured()` / `BlogEmptyState`; commit `9280a6e` |
-| **Required changes** | Wire materials chips; configure Sanity + publish posts |
+| **Current implementation** | Homepage ecosystem chips linked. `/materials` polymer families (PP/PVC/HDPE/Nylon/…) now link to marketplace filters. Blog nav/preview hidden without Sanity; `/blogs` noIndex when unconfigured; sitemap omits `/blogs` without posts. |
+| **Status** | **PARTIALLY DONE** — chips/empty-blog UX **DONE** (`LOCAL ONLY` until Website redeploy); content still **BLOCKED** on Sanity posts |
+| **Evidence** | `app/materials/page.tsx` anchors; `blogs/page.tsx` noIndex; `sitemap.ts` conditional `/blogs` |
+| **Required changes** | Redeploy Website; publish Sanity posts when ready |
 | **Repository** | Swaroop-Website |
-| **Dependencies** | Sanity project credentials (secure); content authors |
-| **Test cases** | Each chip navigates with expected query; blog lists ≥1 published post when CMS ready |
+| **Dependencies** | Sanity credentials + authors |
+| **Test cases** | PP/Nylon chip → marketplace search; empty blog not in nav/sitemap |
 
 ---
 
@@ -353,10 +358,10 @@ Deploy tags: `DEPLOYED` | `LOCAL ONLY` | `N/A`
 | Field | Detail |
 |-------|--------|
 | **Client expectation** | Ship APK with latest mobile+backend sync (newer than reported 3.1.2 / 4 Nov) |
-| **Current implementation** | Config **3.1.3 / 3115**, package `com.swaroop.app`, prod API in `eas.json`. **No APK built**. Newest local artifact **3.1.1/3113**. EAS unauthorized for `polystorexs-team` |
+| **Current implementation** | Release config ready: **3.1.3 / 3115**, `com.swaroop.app` unchanged, `production-apk` → DO API. **No APK artifact.** EAS CLI as `sumit.codeit1` → **Entity Not Authorized** for App `ccf88988-…` / org `polystorexs-team`. Release step **stopped**. |
 | **Status** | **BLOCKED** |
-| **Evidence** | `app.config.ts` L6–11, L50–51; `eas.json`; `docs/release-report-v3.1.3-3115.md`; filesystem APK search; live API PRIVATE grades shows some Nov 10+ backend behaviour deployed, but **Backend commit SHA for Nov 14 not proven** |
-| **Required changes** | Authorized `eas login` → `eas build --profile production-apk`; device QA; do **not** change application id without approval |
+| **Evidence** | `eas project:info` error 14 Nov; `POLYSTOREX_PHASE4_COMPLETION.md` §4; `app.config.ts` / `eas.json` |
+| **Required changes** | Invite builder to `polystorexs-team`/`polystorex` → `eas build --profile production-apk`; device QA; **do not** change application id |
 | **Repository** | SWAROOP (+ Backend already live for API) |
 | **Dependencies** | Expo org access; optional Maps key in EAS secrets |
 | **Test cases** | Install APK; version 3.1.3 (3115); hits DO API; smoke marketplace/KYC/checkout |
@@ -369,20 +374,65 @@ Deploy tags: `DEPLOYED` | `LOCAL ONLY` | `N/A`
 |------|-----|
 | Marketing claims removal on live sites | **DEPLOYED** |
 | Blind grade/product `PRIVATE` on live API | **DEPLOYED** (behaviour) |
-| Test product DB soft-deactivate | **NOT applied** (no prod DATABASE_URL) |
-| Phase 1 API test-product exclusion filter | **LOCAL ONLY** (needs Backend redeploy) |
-| Phase 1 KYC enforce default true + cart guard | **LOCAL ONLY** |
-| Phase 1 cart/PR/TDS privacy + PetroTrade→PolyStoreX copy | **LOCAL ONLY** |
-| Phase 1 Customer WebApp dedupe/KYC UI/commerce copy | **LOCAL ONLY** |
+| Test product DB soft-deactivate | **DONE** (applied 14 Nov 2026 ~11:30Z UTC) |
+| Phase 1 API test-product exclusion filter | **DEPLOYED** (`361af18` — live search 0) |
+| Phase 1 KYC enforce default true + cart guard | **DEPLOYED** (`361af18`; confirm env not `false`) |
+| Phase 1 cart/PR/TDS privacy + PetroTrade→PolyStoreX copy | **DEPLOYED** (`361af18`) |
+| Phase 1 Customer WebApp dedupe/KYC UI/commerce copy | **DEPLOYED** (`bedd18c` Vercel Production success) |
 | Phase 1 Expo guest finance/orders + KYC redirect | **LOCAL ONLY** (needs APK) |
 | Mobile 3.1.3 | **LOCAL ONLY** config — **no artifact** |
+| Phase 2 reconciliation scripts + MOQ/expiry DB remediation | **DONE** (scripts local; DB apply 14 Nov) |
+| Phase 2 Customer TDS/MOQ/filter UI hardening | **LOCAL ONLY** (needs Vercel redeploy) |
+| Phase 2 grade cleanup / SO→PSX migrate / TDS bulk | **BLOCKED** (client) |
+| Phase 3 catalogue fan-out / cache / logo / mobile UX | **LOCAL ONLY** (see `POLYSTOREX_PHASE3_COMPLETION.md`) |
+| Phase 3 offer marketplace index on prod DB | **DONE** (applied 14 Nov) |
 
 ---
 
 ## Phase 1 stop criteria
 
-Phase 1 **code + unit tests** are complete. Phase 2 must wait until:
+Phase 1 **code + unit tests** are complete (see `POLYSTOREX_PHASE1_COMPLETION.md`). Live health + marketplace verified 14 Nov.
 
-1. Production DB soft-deactivate **or** Backend redeploy of exclusion filter is verified live (search E2E / HD Blow Test → 0), **or** residual risk accepted in writing  
-2. Customer WebApp + Backend redeploys documented with revision ids  
-3. See `POLYSTOREX_PHASE1_COMPLETION.md` for full evidence |
+## Phase 2 stop criteria
+
+Phase 2 **tooling + integrity fixes + tests** complete. Client-dependent items remain **BLOCKED**:
+
+1. Approved junk/revised catalogue list (cannot close exact **444**)  
+2. Grade-code format approval before production migration  
+3. ~550 TDS PDF pack + mapping  
+4. Nylon/PA66 and Compound/Virgin master rules  
+
+See `POLYSTOREX_PHASE2_COMPLETION.md`.
+
+## Phase 3 stop criteria
+
+Phase 3 **code + measured baselines + tests** complete:
+
+1. 429 root-cause fan-out fixed without disabling global rate limits  
+2. Marketplace timings recorded; guest cache + index shipped  
+3. Mobile sticky Sort\|Filter + first-viewport cards  
+4. Transparent on-light logo wired  
+5. A11y focus/labels/contrast improvements (full axe still open post-deploy)  
+
+Redeploy Backend + frontends to move Phase 3 from **LOCAL ONLY** → **DEPLOYED**.
+
+## Phase 4 stop criteria
+
+Phase 4 **code + domain audit + APK prep** complete (see `POLYSTOREX_PHASE4_COMPLETION.md`):
+
+1. Website SEO LIVE (robots/sitemap/OG HTTPS www)  
+2. Customer SEO code: canonical `customer.polystorex.com`, grade sitemap, private Disallow — **LOCAL ONLY** until Vercel redeploy (`NEXT_PUBLIC_APP_URL`)  
+3. Materials/homepage polymer chips → marketplace filters; empty blog hidden/noIndex  
+4. Web domains LIVE; `api.polystorex.com` **BLOCKED** (DNS) — keep DO API  
+5. APK config 3.1.3 / 3115 / `com.swaroop.app` audited; EAS build **BLOCKED** (Entity Not Authorized) — **no APK claimed**  
+6. `phase4-seo.test.ts` pass (15 suite tests total including prior phases)
+
+### Deploy / release board (Phase 4)
+
+| Track | Status |
+|-------|--------|
+| Phase 4 Customer SEO + grade sitemap | **LOCAL ONLY** (live sitemap still interim Vercel URLs, no grade paths) |
+| Phase 4 Website blog/chips | **LOCAL ONLY** until Website redeploy (homepage chips already linked in prior deploy) |
+| Phase 4 Backend CORS `*.polystorex.com` | **LOCAL ONLY** until DO redeploy |
+| APK 3.1.3 (3115) | **BLOCKED** — EAS access |
+| API custom domain | **BLOCKED** — DNS |

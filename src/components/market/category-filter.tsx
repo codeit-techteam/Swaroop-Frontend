@@ -27,7 +27,7 @@ const CategoryChip = memo(function CategoryChip({ label, selected, onPress }: Ca
       accessibilityState={{ selected }}
       accessibilityLabel={`Filter ${label}`}
       className={cn(
-        'mr-sm rounded-lg border px-md py-sm',
+        'mr-sm min-h-[40px] justify-center rounded-lg border px-md py-sm',
         selected ? 'border-brand-border bg-brand-overlay' : 'border-brand-border bg-brand-white',
       )}
       style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
@@ -83,7 +83,8 @@ export const CategoryFilter = memo(function CategoryFilter({
               onPress={onFilterPress}
               accessibilityRole="button"
               accessibilityLabel={filterLabel}
-              className="mr-sm flex-row items-center gap-xs rounded-lg bg-brand-primary px-md py-sm"
+              hitSlop={6}
+              className="mr-sm min-h-[40px] min-w-[44px] flex-row items-center gap-xs rounded-lg bg-brand-primary px-md py-sm"
               style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
             >
               <FilterIcon size={iconSizes.sm} color={brandColors.white} />

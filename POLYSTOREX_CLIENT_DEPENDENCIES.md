@@ -10,10 +10,10 @@
 
 | # | Item | Needed for | Format / notes |
 |---|------|------------|----------------|
-| 1 | **Junk / invalid grade hide list** | Issue #5 | Approved CSV/XLSX of grade codes or Source.One rows to hide (preferred) or delete. Must explicitly approve destructive deletes. |
-| 2 | **Target grade-code standard** | Issue #6 | Written format (prefix, segments, uniqueness, examples). **No migration until approved.** |
-| 3 | **TDS / COA PDF pack (~550)** | Issue #7 | PDFs + mapping to grade code / Source.One id. Do not invent documents. |
-| 4 | **Master-data correction sheet** | Issue #13 | Region/hub taxonomy; Nylon 66 ↔ correct PA66 grade; Compound vs Virgin rules; MOQ vs tier rules. |
+| 1 | **Junk / invalid grade hide list** | Issue #5 / Phase 2 | Approved CSV/XLSX of grade codes or Source.One rows to hide (preferred) or delete. Heuristic audit found **123** candidates vs client-reported **444** — need exact list. Must explicitly approve destructive deletes. |
+| 2 | **Target grade-code standard** | Issue #6 / Phase 2 | Review proposed `PSX-{FAMILY}-{GRADE_TOKEN}-{SEQ4}` (dry-run ready) **or** supply alternate. **No migration until approved.** Do not approve simple SO→PS. |
+| 3 | **TDS / COA PDF pack (~550)** | Issue #7 / Phase 2 | PDFs + mapping to grade code / Source.One id. Import pipeline prepared; do not invent documents. Live verified TDS today: **438**. |
+| 4 | **Master-data correction sheet** | Issue #13 / Phase 2 | Region/hub taxonomy; Nylon 66 ↔ PA66 (no inferred equivalence); Compound vs Virgin; confirm India→`IN` canonical. MOQ tier integrity already remediated in prod. |
 | 5 | **Duplicate-listing UX decision** | Issue #2 | One marketplace card per `gradeId` vs one card per seller offer. |
 | 6 | **KYC trading policy** | Issue #4 | Exact definition of “complete KYC” for Buy Now / cart / checkout; whether `KYC_ENFORCE_FOR_TRADING` may be enabled in production. |
 | 7 | **Price visibility policy confirmation** | Issue #19 | Confirm current implemented policy (listing prices public; checkout/credit/docs require sign-in) **or** provide alternate written policy. |
@@ -56,17 +56,26 @@ Interim production hosts in use today:
 | Admin | `swaroop-admin-pi.vercel.app` |
 | Website | `www.polystorex.com` / `swaroop-website.vercel.app` |
 
-### Client/DNS checklist (when cutover approved)
+### Domain status (14 Nov 2026)
 
-- [ ] Confirm target hostnames (e.g. `api.polystorex.com`, `app.polystorex.com`, admin hostname).  
-- [ ] Create DNS records (CNAME/A) per Vercel / DigitalOcean docs.  
-- [ ] Attach TLS certificates.  
-- [ ] Update frontend env base URLs.  
-- [ ] Update Backend `CORS_ORIGINS` / platform host flags.  
-- [ ] Smoke OTP, marketplace, admin login on new hosts.  
-- [ ] Keep interim hosts until smoke passes; then deprecate.
+| Host | Status |
+|------|--------|
+| `www.polystorex.com` / `polystorex.com` | **LIVE** |
+| `customer.polystorex.com` | **LIVE** (set `NEXT_PUBLIC_APP_URL` + redeploy Customer for SEO Host) |
+| `seller.polystorex.com` | **LIVE** |
+| `admin.polystorex.com` | **LIVE** |
+| `api.polystorex.com` | **NOT configured** — keep DigitalOcean API until DNS+TLS+health verified |
 
-Website repo contains additional DNS notes under content/DNS checklist files — follow those for Vercel project names.
+See `docs/PRODUCTION_DOMAINS.md`.
+
+### Client/DNS checklist (remaining)
+
+- [x] Confirm web app hostnames (customer/seller/admin).  
+- [ ] Add `api.polystorex.com` to DigitalOcean App Platform + TLS.  
+- [ ] After API health 200: update CORS + frontend/Expo API base URLs (keep DO fallback).  
+- [ ] Set Customer Vercel `NEXT_PUBLIC_APP_URL=https://customer.polystorex.com` and redeploy.  
+- [ ] Smoke OTP, marketplace, admin login on custom hosts.  
+- [ ] Invite Expo builder to org **`polystorexs-team`** project **`polystorex`** (APK currently **Entity Not Authorized**).
 
 ---
 
@@ -88,10 +97,12 @@ Website repo contains additional DNS notes under content/DNS checklist files —
 ## 5. What engineering already has (no client action)
 
 - Live API read access for public marketplace/health probes  
-- Soft-deactivate **scripts and runbook** (not yet applied)  
-- Customer WebApp / Backend code fixes on git `main` awaiting deploy proof  
-- Expo config bumped to **3.1.3 / 3115** with package `com.swaroop.app`  
+- Soft-deactivate **scripts and runbook** (applied Phase 1 where approved)  
+- Customer WebApp / Backend / Website Phase 2–4 code awaiting redeploy proof  
+- Expo config bumped to **3.1.3 / 3115** with package `com.swaroop.app` (APK build **BLOCKED** on EAS invite)  
 - Blind marketplace `PRIVATE` manufacturer behaviour already live  
+- Custom web domains LIVE; production domain runbook in `docs/PRODUCTION_DOMAINS.md`  
+- Customer SEO helpers + grade sitemap generator ready (set `NEXT_PUBLIC_APP_URL` on redeploy)  
 
 ---
 
