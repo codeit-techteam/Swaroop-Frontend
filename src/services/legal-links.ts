@@ -105,9 +105,9 @@ export async function fetchLegalLinks(): Promise<LegalLinks> {
         privacyUrl: resolvePublicWebsiteUrl(data.privacyUrl) ?? LIVE_PRIVACY_URL,
         supportUrl: resolvePublicWebsiteUrl(data.supportUrl) ?? LIVE_SUPPORT_URL,
         supportEmail: data.supportEmail?.trim() || 'it@polystorex.com',
-        supportPhone: data.supportPhone?.trim() || '+91 99626 20101',
+        supportPhone: data.supportPhone?.trim() || '+91 82484 00787',
         supportWhatsapp:
-          data.supportWhatsapp?.trim() || 'https://wa.me/919962620101',
+          data.supportWhatsapp?.trim() || 'https://wa.me/918248400787',
         missing: Array.isArray(data.missing) ? data.missing : [],
       };
       return cached;
@@ -122,8 +122,8 @@ export async function fetchLegalLinks(): Promise<LegalLinks> {
         privacyUrl: LIVE_PRIVACY_URL,
         supportUrl: LIVE_SUPPORT_URL,
         supportEmail: 'it@polystorex.com',
-        supportPhone: '+91 99626 20101',
-        supportWhatsapp: 'https://wa.me/919962620101',
+        supportPhone: '+91 82484 00787',
+        supportWhatsapp: 'https://wa.me/918248400787',
         missing: [],
       };
     } finally {
