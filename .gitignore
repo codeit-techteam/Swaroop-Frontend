@@ -59,3 +59,5 @@ coverage/
 
 # Local release artifacts (never commit APKs)
 artifacts/
+
+.secrets/
