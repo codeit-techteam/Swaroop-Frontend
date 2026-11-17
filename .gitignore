@@ -7,7 +7,7 @@ dist/
 web-build/
 expo-env.d.ts
 
-# Native
+# Native signing material
 *.orig.*
 *.jks
 *.p8
@@ -21,26 +21,38 @@ expo-env.d.ts
 # Metro
 .metro-health-check*
 
-# Environment
+# Local secrets — commit .env.example only
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+*.env
+.envrc
+.secrets/
 
-# Firebase Admin credentials. google-services.json is the Android client config
-# and stays in the app project. Never commit a service-account private key.
+# Firebase client configs stay on the machine and in EAS file secrets.
+# Never commit a service-account private key.
+google-services.json
+GoogleService-Info.plist
 *service-account*.json
 *serviceAccount*.json
 *firebase-adminsdk*.json
 firebase-service-account.json
+credentials.json
+*-credentials.json
+
+# Local audit exports
+PolyStoreX_TDS_Audit_Report*.xlsx
 
 # Debug
 npm-debug.*
 yarn-debug.*
 yarn-error.*
+*.log
 
 # macOS
 .DS_Store
 *.pem
+Thumbs.db
 
 # TypeScript
 *.tsbuildinfo
@@ -48,16 +60,13 @@ yarn-error.*
 # Testing
 coverage/
 
-# IDE
+# IDE / agent
 .idea/
 .vscode/
+.cursor/
 *.swp
 *.swo
 
-# EAS
-.easignore
-
-# Local release artifacts (never commit APKs)
+# Local release artifacts
 artifacts/
-
-.secrets/
+tmp/

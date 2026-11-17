@@ -51,9 +51,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       backgroundColor: '#000000',
     },
     package: 'com.polystorex.app',
-    // Android client for Firebase project polystorex-7b42a.
-    // The file must be the com.polystorex.app Android app in that project.
-    googleServicesFile: './google-services.json',
+    // Local file is gitignored. EAS file env GOOGLE_SERVICES_JSON supplies the path
+    // on cloud builds. The Android app must be com.polystorex.app.
+    googleServicesFile: process.env.GOOGLE_SERVICES_JSON ?? './google-services.json',
     versionCode: ANDROID_VERSION_CODE,
     permissions: [
       'android.permission.INTERNET',

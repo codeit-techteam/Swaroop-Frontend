@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "297636086464",
+    "project_number": "YOUR_FIREBASE_PROJECT_NUMBER",
     "project_id": "polystorex-7b42a",
     "storage_bucket": "polystorex-7b42a.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:297636086464:android:861791346600f1b87fa325",
+        "mobilesdk_app_id": "YOUR_FIREBASE_ANDROID_APP_ID",
         "android_client_info": {
           "package_name": "com.polystorex.app"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyDmFW6WTox1HlZ1smgy1QSFTiaKFBH2R3c"
+          "current_key": "YOUR_FIREBASE_ANDROID_API_KEY"
         }
       ],
       "services": {
