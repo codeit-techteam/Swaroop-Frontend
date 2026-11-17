@@ -17,6 +17,7 @@ import { ClockIcon, OtpIllustration } from '@/icons';
 import { parseReturnToParam, resolvePostAuthHref } from '@/navigation/return-to';
 import { ROUTES } from '@/navigation/routes';
 import { safeGoBack } from '@/navigation/safe-back';
+import { consumePendingPushRoute, peekPendingPushRoute } from '@/services/pending-push-route';
 import {
   customerAuthErrorMessage,
   isOtpCooldownError,
@@ -130,7 +131,12 @@ export const OtpVerificationScreen = () => {
       verifyingRef.current = false;
 
       const { kycApproved, reviewSubmitted } = useAuthStore.getState();
-      router.replace(resolvePostAuthHref({ returnTo, kycApproved, reviewSubmitted }));
+      const pending = peekPendingPushRoute();
+      const pendingForCustomer =
+        pending && pending.startsWith('/(customer)/') ? pending : null;
+      const next = returnTo ?? pendingForCustomer ?? undefined;
+      if (kycApproved && next) consumePendingPushRoute('customer');
+      router.replace(resolvePostAuthHref({ returnTo: next, kycApproved, reviewSubmitted }));
     },
     [completeLogin, params.phone, purpose, returnTo, router],
   );

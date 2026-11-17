@@ -6,7 +6,9 @@ import Constants from 'expo-constants';
 import { z } from 'zod';
 
 const envSchema = z.object({
-  EXPO_PUBLIC_APP_ENV: z.enum(['development', 'staging', 'production']).default('development'),
+  EXPO_PUBLIC_APP_ENV: z
+    .enum(['development', 'preview', 'staging', 'production'])
+    .default('development'),
   EXPO_PUBLIC_APP_VERSION: z.string().default('1.0.0'),
   EXPO_PUBLIC_API_BASE_URL: z.string().url(),
   EXPO_PUBLIC_IMAGE_BASE_URL: z.string().url(),

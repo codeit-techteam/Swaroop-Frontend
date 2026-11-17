@@ -26,6 +26,7 @@ import {
   type SellerOtpPurpose,
 } from '@/services/seller-auth';
 import { seedSellerSignupOnboarding } from '@/services/seller-onboarding';
+import { consumePendingPushRoute } from '@/services/pending-push-route';
 import { maskIndianMobile } from '@/utils/phone-input';
 
 const formatTimer = (seconds: number): string => {
@@ -110,7 +111,8 @@ export const SellerOtpScreen = () => {
         markOtpVerified();
       }
 
-      router.replace(getSellerInitialRoute(useSellerStore.getState()) as Href);
+      const pending = access === 'home' ? consumePendingPushRoute('seller') : null;
+      router.replace((pending ?? getSellerInitialRoute(useSellerStore.getState())) as Href);
     } catch {
       setOtpError('Unable to verify OTP. Please try again.');
       verifyingRef.current = false;

@@ -245,6 +245,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   },
 
   logout: async () => {
+    const { unregisterCurrentPushToken } = await import('@/services/push-token-api');
+    await unregisterCurrentPushToken();
     logoutSession();
     useKycStore.getState().resetKyc();
     set({

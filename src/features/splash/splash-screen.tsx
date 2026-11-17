@@ -23,6 +23,7 @@ import {
   resolveSellerHomeAccess,
 } from '@/seller/navigation/resolveSellerHome';
 import { useSellerStore } from '@/seller/store/sellerStore';
+import { consumePendingPushRoute, peekPendingPushRoute } from '@/services/pending-push-route';
 import { refreshKycStatus } from '@/services/kyc-status-sync';
 import { useAuthStore } from '@/store/auth-store';
 import { brandColors } from '@/theme/colors';
@@ -74,12 +75,25 @@ export const SplashScreen = () => {
             useSellerStore.getState().grantExistingSellerAccess();
           }
         }
-        router.replace(getSellerInitialRoute(useSellerStore.getState()));
+        const ready = isSellerOnboardingComplete(useSellerStore.getState());
+        const pending = ready ? consumePendingPushRoute('seller') : null;
+        router.replace((pending ?? getSellerInitialRoute(useSellerStore.getState())) as Href);
         return;
       }
 
       if (isLoggedIn) {
-        router.replace(getLoggedInRoute({ kycApproved, reviewSubmitted }));
+        const pending = kycApproved ? consumePendingPushRoute('customer') : null;
+        router.replace((pending ?? getLoggedInRoute({ kycApproved, reviewSubmitted })) as Href);
+        return;
+      }
+
+      const pending = peekPendingPushRoute();
+      if (pending?.startsWith('/(seller)/')) {
+        router.replace(ROUTES.SELLER.LOGIN as Href);
+        return;
+      }
+      if (pending?.startsWith('/(customer)/')) {
+        router.replace(ROUTES.AUTH.CUSTOMER_LOGIN as Href);
         return;
       }
 

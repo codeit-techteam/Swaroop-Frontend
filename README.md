@@ -20,10 +20,10 @@ Expo React Native app for PolyStoreX buyers (and embedded seller module under `s
 
 ## Current app version
 
-- `versionName`: **3.1.2**
-- `versionCode`: **3114**
-- Android package / iOS bundle: **`com.swaroop.app`** (do not change to `com.polystorex.app` until client confirms Play Console impact)
-- EAS project: `polystorex` under `polystorexs-team`
+- `versionName`: **3.1.3**
+- `versionCode`: **3116**
+- Android package / iOS bundle: **`com.polystorex.app`** (changed from `com.swaroop.app` on 17 Nov 2026; installs as a separate app, not an update of the old package)
+- EAS project: `polystorex`, target owner `polystorex-team`. See `docs/POLYSTOREX_IDENTITY_MIGRATION_2026-11-17.md` for the open project-access blocker.
 
 ## Branding assets
 
@@ -55,7 +55,7 @@ npm run build:android:production-apk   # only after release gate
 ## Known issues / blockers (4 Nov 2026)
 
 - Production backend URL + `AUTH_STRICT_OTP` / MSG91 production env: **Client Action Required**
-- Package ID change to `com.polystorex.app`: **Client approval + Play Console check**
+- Package ID change to `com.polystorex.app`: **applied in config 17 Nov 2026; no build yet**
 - Google Maps billing / device verification: **Client Action Required**
 - ABS EXTRUSION 3000D ₹10/MT test offer: **commercial confirmation before price change**
 - Catalogue merges / HSN fill: **dry-run only until backup + approval** (`Swaroop-Backend/scripts/dry-run-catalogue-cleanup.mjs`)

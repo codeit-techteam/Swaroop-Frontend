@@ -32,6 +32,7 @@ import { useSellerProductStore } from '@/seller/store/sellerProductStore';
 import { useSellerStore } from '@/seller/store/sellerStore';
 import { applyDevResetIfNeeded, applySellerIdentityMigration } from '@/services/dev-reset';
 import { configureNotifications } from '@/services/notification-service';
+import { startPushNavigation, startPushRegistration } from '@/services/push-registration';
 import { useAddressStore } from '@/store/address-store';
 import { useAuthStore } from '@/store/auth-store';
 import { useCartStore } from '@/store/cart-store';
@@ -54,6 +55,31 @@ const NotificationConfigurator = (): null => {
   useEffect(() => {
     configureNotifications();
   }, []);
+
+  return null;
+};
+
+const PushRegistration = (): null => {
+  const hydrated = useAuthStore((state) => state.isHydrated);
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
+  const selectedRole = useAuthStore((state) => state.selectedRole);
+  const sellerLoggedIn = useSellerStore((state) => state.sellerLoggedIn);
+  const audience = selectedRole === 'seller' ? 'seller' : 'customer';
+  const sessionActive =
+    hydrated &&
+    Boolean(accessToken) &&
+    (audience === 'seller' ? sellerLoggedIn : isLoggedIn);
+
+  useEffect(() => {
+    if (!hydrated) return undefined;
+    return startPushNavigation(audience);
+  }, [audience, hydrated]);
+
+  useEffect(() => {
+    if (!sessionActive) return undefined;
+    return startPushRegistration();
+  }, [sessionActive]);
 
   return null;
 };
@@ -182,6 +208,7 @@ export const AppProviders = ({ children }: AppProvidersProps) => {
                 <BottomSheetModalProvider>
                   <NetworkListener />
                   <NotificationConfigurator />
+                  <PushRegistration />
                   {children}
                   <AppDialogHost />
                   <AppToastHost />

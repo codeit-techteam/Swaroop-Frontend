@@ -210,6 +210,9 @@ export const useSellerStore = create<SellerStore>((set, get) => ({
   },
 
   logoutSeller: () => {
+    void import('@/services/push-token-api').then(({ unregisterCurrentPushToken }) =>
+      unregisterCurrentPushToken(),
+    );
     clearSellerAccess();
     clearCachedSellerAccount();
     resetSellerSession();

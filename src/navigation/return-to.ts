@@ -21,7 +21,17 @@ const GUEST_BROWSE_EXACT = new Set([
   '/(customer)/grades/index',
 ]);
 
-const AUTH_PATH_PREFIXES = ['/(auth)/', '/(onboarding)/', '/(seller)/', '/(public)/'] as const;
+const AUTH_PATH_PREFIXES = ['/(auth)/', '/(onboarding)/', '/(public)/'] as const;
+
+const SELLER_AUTH_PATHS = new Set([
+  '/(seller)/login',
+  '/(seller)/register',
+  '/(seller)/otp',
+  '/(seller)/company',
+  '/(seller)/verification',
+  '/(seller)/verification-submitted',
+  '/(seller)/review',
+]);
 
 const sanitizeParam = (value: string | string[] | undefined): string | undefined => {
   if (typeof value === 'string' && value.trim()) return value.trim();
@@ -51,6 +61,8 @@ export const isSafeInternalReturnTo = (value: string | null | undefined): boolea
   const trimmed = value.trim();
   if (!trimmed.startsWith('/') || trimmed.startsWith('//')) return false;
   if (trimmed.includes('://') || trimmed.includes('\\')) return false;
+  const path = trimmed.split('?')[0] ?? trimmed;
+  if (path.startsWith('/(seller)/')) return !SELLER_AUTH_PATHS.has(path);
   if (AUTH_PATH_PREFIXES.some((prefix) => trimmed.startsWith(prefix))) return false;
   if (trimmed.startsWith('/(customer)') || trimmed.startsWith('/product') || trimmed.startsWith('/grades') || trimmed.startsWith('/market') || trimmed.startsWith('/cart') || trimmed.startsWith('/checkout') || trimmed.startsWith('/profile') || trimmed.startsWith('/order') || trimmed.startsWith('/shipment') || trimmed.startsWith('/import') || trimmed.startsWith('/notifications') || trimmed.startsWith('/credit') || trimmed.startsWith('/payment') || trimmed.startsWith('/procurement') || trimmed.startsWith('/dispatch') || trimmed.startsWith('/delivery') || trimmed.startsWith('/loading') || trimmed.startsWith('/purchase')) {
     return true;

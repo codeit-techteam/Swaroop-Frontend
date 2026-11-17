@@ -5,6 +5,11 @@ export const SPLASH_DURATION_MS = 2000;
 
 export const STORAGE_KEYS = {
   ACCESS_TOKEN: 'swaroop_access_token',
+  EXPO_PUSH_TOKEN: 'swaroop_expo_push_token',
+  FCM_DEVICE_TOKEN: 'swaroop_fcm_device_token',
+  INSTALLATION_ID: 'swaroop_installation_id',
+  PENDING_PUSH_ROUTE: 'swaroop_pending_push_route',
+  PUSH_RESPONSE_ID: 'swaroop_push_response_id',
   REFRESH_TOKEN: 'swaroop_refresh_token',
   SESSION_SOURCE: 'swaroop_session_source',
   THEME_MODE: 'swaroop_theme_mode',

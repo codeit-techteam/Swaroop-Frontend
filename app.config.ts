@@ -4,19 +4,22 @@ const APP_ENV = process.env.EXPO_PUBLIC_APP_ENV ?? 'development';
 // Plain-HTTP (LAN backend on the dev machine) is only allowed in development builds.
 const ALLOW_CLEARTEXT = APP_ENV === 'development';
 const APP_VERSION = process.env.EXPO_PUBLIC_APP_VERSION ?? '3.1.3';
-// Higher than previous production-apk 3114. Do not reuse a shipped code.
-const ANDROID_VERSION_CODE = Number(process.env.ANDROID_VERSION_CODE ?? 3115);
-// PolyStoreX EAS project under polystorexs-team (swaroop.veylorn@gmail.com).
+// Higher than the previously configured 3116. Do not reuse a shipped code.
+const ANDROID_VERSION_CODE = Number(process.env.ANDROID_VERSION_CODE ?? 3117);
+// Permanent PolyStoreX project on the it@polystorex.com account.
+// Confirmed via `eas project:info` as @polystorex-team/polystorex.
+// The previous id (ccf88988-1846-42d3-8944-a10d70252de7) belongs to
+// polystorexs-team and does not match owner polystorex-team.
 const EAS_PROJECT_ID =
-  process.env.EAS_PROJECT_ID ?? 'ccf88988-1846-42d3-8944-a10d70252de7';
+  process.env.EAS_PROJECT_ID ?? 'd7ee56b4-eddd-4799-ad34-19706aa78ebd';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'PolyStoreX',
-  // EAS project slug for account polystorexs-team / project polystorex.
-  // Branding lives in `name`; package id stays com.swaroop.app.
+  // EAS project slug for account polystorex-team / project polystorex.
+  // Android package and iOS bundle id are com.polystorex.app (was com.swaroop.app).
   slug: 'polystorex',
-  owner: 'polystorexs-team',
+  owner: 'polystorex-team',
   version: APP_VERSION,
   orientation: 'portrait',
   icon: './assets/images/icon.png',
@@ -26,7 +29,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   backgroundColor: '#ffffff',
   ios: {
     supportsTablet: true,
-    bundleIdentifier: 'com.swaroop.app',
+    bundleIdentifier: 'com.polystorex.app',
     infoPlist: {
       UIBackgroundModes: ['remote-notification'],
       NSLocationWhenInUseUsageDescription:
@@ -47,7 +50,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       foregroundImage: './assets/images/adaptive-icon.png',
       backgroundColor: '#000000',
     },
-    package: 'com.swaroop.app',
+    package: 'com.polystorex.app',
+    // Android client for Firebase project polystorex-7b42a.
+    // The file must be the com.polystorex.app Android app in that project.
+    googleServicesFile: './google-services.json',
     versionCode: ANDROID_VERSION_CODE,
     permissions: [
       'android.permission.INTERNET',
