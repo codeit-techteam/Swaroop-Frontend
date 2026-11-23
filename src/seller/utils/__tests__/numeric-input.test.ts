@@ -64,7 +64,7 @@ describe('isPublishablePrice', () => {
 describe('isMarketplacePublishablePrice', () => {
   it('requires at least the freight floor for live marketplace', () => {
     assert.equal(isMarketplacePublishablePrice('0.50'), false);
-    assert.equal(isMarketplacePublishablePrice('140'), false);
+    assert.equal(isMarketplacePublishablePrice('140'), true); // ₹140/kg → ₹140,000/MT
     assert.equal(isMarketplacePublishablePrice('1249'), false);
     assert.equal(isMarketplacePublishablePrice('1250'), true);
     assert.equal(isMarketplacePublishablePrice('94500'), true);

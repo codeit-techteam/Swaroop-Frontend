@@ -37,6 +37,7 @@ export function sanitizePriceInput(value: string): string {
 
 /** Matches backend COMMERCE_FREIGHT_PER_MT — live marketplace requires ≥ this ₹/MT. */
 export const MARKETPLACE_FREIGHT_FLOOR_PER_MT = 1250;
+const LIKELY_PER_KG_MAX = 500;
 
 /** True when the string is a finite amount strictly greater than zero (save-ready). */
 export function isPublishablePrice(value: string | null | undefined): boolean {
@@ -46,12 +47,35 @@ export function isPublishablePrice(value: string | null | undefined): boolean {
   return Number.isFinite(n) && n > 0;
 }
 
+/** Convert likely ₹/kg polymer quotes typed into a ₹/MT field. */
+export function normalizeSellerPricePerMt(value: string | number): {
+  pricePerMt: number;
+  convertedFromPerKg: boolean;
+  original: number;
+} {
+  const original = Number(value);
+  if (!Number.isFinite(original) || original <= 0) {
+    return { pricePerMt: original, convertedFromPerKg: false, original };
+  }
+  if (original < MARKETPLACE_FREIGHT_FLOOR_PER_MT && original <= LIKELY_PER_KG_MAX) {
+    return {
+      pricePerMt: original * 1000,
+      convertedFromPerKg: true,
+      original,
+    };
+  }
+  return { pricePerMt: original, convertedFromPerKg: false, original };
+}
+
 /** True when price can go live on Customer App/Web (clears freight floor). */
 export function isMarketplacePublishablePrice(
   value: string | null | undefined,
 ): boolean {
   if (!isPublishablePrice(value)) return false;
-  return Number(String(value).trim()) >= MARKETPLACE_FREIGHT_FLOOR_PER_MT;
+  return (
+    normalizeSellerPricePerMt(String(value).trim()).pricePerMt >=
+    MARKETPLACE_FREIGHT_FLOOR_PER_MT
+  );
 }
 
 /** Prefer empty string over a catalog/API zero so fields stay clear until the seller types. */
