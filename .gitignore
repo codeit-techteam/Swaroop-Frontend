@@ -66,3 +66,6 @@ Thumbs.db
 *.xlsx
 *.xls
 PolyStoreX_TDS*
+
+# Cursor local
+.cursor/
