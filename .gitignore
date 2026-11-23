@@ -43,7 +43,6 @@ firebase-service-account.json
 credentials.json
 
 # Local tooling / reports / caches
-.secrets/
 tmp/
 artifacts/
 coverage/
@@ -69,3 +68,17 @@ PolyStoreX_TDS*
 
 # Cursor local
 .cursor/
+
+# ---------------------------------------------------------------------------
+# Secrets & credentials — never commit real values
+# Keep `.env.example` tracked as the empty/placeholder template only.
+.env.production
+.env.development
+.env.staging
+secrets/
+**/secrets/**
+*.keystore
+*credentials*.json
+id_rsa
+id_ed25519
+*.secret

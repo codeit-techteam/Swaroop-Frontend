@@ -1,8 +1,8 @@
 {
   "project_info": {
     "project_number": "YOUR_FIREBASE_PROJECT_NUMBER",
-    "project_id": "polystorex-7b42a",
-    "storage_bucket": "polystorex-7b42a.firebasestorage.app"
+    "project_id": "your-firebase-project-id",
+    "storage_bucket": "your-firebase-project-id.firebasestorage.app"
   },
   "client": [
     {
