@@ -374,15 +374,6 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
       validateProductForm('publish');
       return;
     }
-    if (!isMarketplacePublishablePrice(pricing.sellingPrice)) {
-      Toast.show({
-        type: 'info',
-        text1: 'Price below marketplace floor',
-        text2: `Enter at least ₹${MARKETPLACE_FREIGHT_FLOOR_PER_MT.toLocaleString('en-IN')}/MT so Customer App and Web can show this grade.`,
-      });
-      validateProductForm('publish');
-      return;
-    }
     if (!validateProductForm('publish')) {
       Toast.show({
         type: 'info',
@@ -396,8 +387,9 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
     setSaving(false);
     if (result.success && result.productId) {
       leavingRef.current = true;
+      const pendingReview = !isMarketplacePublishablePrice(pricing.sellingPrice);
       router.replace(
-        `${ROUTES.SELLER.PRODUCT_PUBLISHED}?id=${encodeURIComponent(result.productId)}` as Href,
+        `${ROUTES.SELLER.PRODUCT_PUBLISHED}?id=${encodeURIComponent(result.productId)}&pending=${pendingReview ? '1' : '0'}` as Href,
       );
       return;
     }
@@ -413,7 +405,8 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
     goToStep(2);
   };
 
-  const canPublish = isMarketplacePublishablePrice(pricing.sellingPrice);
+  const canPublish = isPublishablePrice(pricing.sellingPrice);
+  const priceNeedsApproval = !isMarketplacePublishablePrice(pricing.sellingPrice);
 
   const renderPickerField = (picker: PickerKey, label: string, value: string, error?: string) => (
     <Pressable className="flex-1" onPress={() => setActivePicker(picker)}>
@@ -714,6 +707,13 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
                   <Typography variant="legal" className="mt-md text-left text-brand-body">
                     {POLYSTOREX_CREDIT_NOTE}
                   </Typography>
+                  {priceNeedsApproval && isPublishablePrice(pricing.sellingPrice) ? (
+                    <Typography variant="legal" className="mt-sm text-left text-[12px] text-amber-800">
+                      Below ₹{MARKETPLACE_FREIGHT_FLOOR_PER_MT.toLocaleString('en-IN')}/MT. You can
+                      still publish — Admin must approve the offer before Customer App and Web show
+                      this grade.
+                    </Typography>
+                  ) : null}
                 </SpecificationCard>
               </View>
 

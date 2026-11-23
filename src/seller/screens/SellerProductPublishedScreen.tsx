@@ -12,7 +12,7 @@ import { formatSellerSellingPrice } from '@/seller/utils/pricing';
 
 export const SellerProductPublishedScreen = memo(function SellerProductPublishedScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ id?: string }>();
+  const params = useLocalSearchParams<{ id?: string; pending?: string }>();
   const publishedProducts = useSellerProductStore((state) => state.publishedProducts);
   const clearSelection = useSellerProductStore((state) => state.clearSelection);
 
@@ -26,8 +26,12 @@ export const SellerProductPublishedScreen = memo(function SellerProductPublished
   return (
     <ScreenWrapper className="bg-brand-background">
       <SuccessBanner
-        title="Listing is live"
-        subtitle="Buyers can now see this grade in the customer marketplace."
+        title={params.pending === '1' ? 'Grade added' : 'Listing is live'}
+        subtitle={
+          params.pending === '1'
+            ? 'Admin must approve this offer. It then appears on the Customer App and Web, same as other live grades.'
+            : 'Buyers can now see this grade in the customer marketplace.'
+        }
       />
 
       <View className="mt-lg overflow-hidden rounded-3xl bg-brand-navy p-lg">
