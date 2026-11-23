@@ -35,12 +35,23 @@ export function sanitizePriceInput(value: string): string {
   return sanitizeDecimalInput(raw);
 }
 
-/** True when the string is a finite amount strictly greater than zero (publish-ready). */
+/** Matches backend COMMERCE_FREIGHT_PER_MT — live marketplace requires ≥ this ₹/MT. */
+export const MARKETPLACE_FREIGHT_FLOOR_PER_MT = 1250;
+
+/** True when the string is a finite amount strictly greater than zero (save-ready). */
 export function isPublishablePrice(value: string | null | undefined): boolean {
   const trimmed = String(value ?? '').trim();
   if (!trimmed || trimmed === '.' || trimmed.endsWith('.')) return false;
   const n = Number(trimmed);
   return Number.isFinite(n) && n > 0;
+}
+
+/** True when price can go live on Customer App/Web (clears freight floor). */
+export function isMarketplacePublishablePrice(
+  value: string | null | undefined,
+): boolean {
+  if (!isPublishablePrice(value)) return false;
+  return Number(String(value).trim()) >= MARKETPLACE_FREIGHT_FLOOR_PER_MT;
 }
 
 /** Prefer empty string over a catalog/API zero so fields stay clear until the seller types. */

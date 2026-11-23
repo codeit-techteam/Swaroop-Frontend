@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  isMarketplacePublishablePrice,
   isPublishablePrice,
   positiveOrEmpty,
   sanitizeDecimalInput,
@@ -57,6 +58,16 @@ describe('isPublishablePrice', () => {
     assert.equal(isPublishablePrice('-5'), false);
     assert.equal(isPublishablePrice('0.50'), true);
     assert.equal(isPublishablePrice('104250'), true);
+  });
+});
+
+describe('isMarketplacePublishablePrice', () => {
+  it('requires at least the freight floor for live marketplace', () => {
+    assert.equal(isMarketplacePublishablePrice('0.50'), false);
+    assert.equal(isMarketplacePublishablePrice('140'), false);
+    assert.equal(isMarketplacePublishablePrice('1249'), false);
+    assert.equal(isMarketplacePublishablePrice('1250'), true);
+    assert.equal(isMarketplacePublishablePrice('94500'), true);
   });
 });
 

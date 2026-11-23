@@ -40,7 +40,11 @@ import {
 import { useSellerLocationStore } from '@/seller/store/sellerLocationStore';
 import { useSellerProductStore } from '@/seller/store/sellerProductStore';
 import type { SellerPaymentPricing, SellerProductForm } from '@/seller/types';
-import { isPublishablePrice } from '@/seller/utils/numeric-input';
+import {
+  isMarketplacePublishablePrice,
+  isPublishablePrice,
+  MARKETPLACE_FREIGHT_FLOOR_PER_MT,
+} from '@/seller/utils/numeric-input';
 import { POLYSTOREX_CREDIT_NOTE } from '@/seller/utils/pricing';
 import { getLiveCatalogProduct } from '@/services/catalog';
 import { fetchSellerGradeById } from '@/services/grade-master';
@@ -370,6 +374,15 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
       validateProductForm('publish');
       return;
     }
+    if (!isMarketplacePublishablePrice(pricing.sellingPrice)) {
+      Toast.show({
+        type: 'info',
+        text1: 'Price below marketplace floor',
+        text2: `Enter at least ₹${MARKETPLACE_FREIGHT_FLOOR_PER_MT.toLocaleString('en-IN')}/MT so Customer App and Web can show this grade.`,
+      });
+      validateProductForm('publish');
+      return;
+    }
     if (!validateProductForm('publish')) {
       Toast.show({
         type: 'info',
@@ -400,7 +413,7 @@ export const SellerAddProductScreen = memo(function SellerAddProductScreen({
     goToStep(2);
   };
 
-  const canPublish = isPublishablePrice(pricing.sellingPrice);
+  const canPublish = isMarketplacePublishablePrice(pricing.sellingPrice);
 
   const renderPickerField = (picker: PickerKey, label: string, value: string, error?: string) => (
     <Pressable className="flex-1" onPress={() => setActivePicker(picker)}>
