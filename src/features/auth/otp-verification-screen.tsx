@@ -124,8 +124,13 @@ export const OtpVerificationScreen = () => {
       const previousMobile = useAuthStore.getState().mobileNumber;
       if (previousMobile && previousMobile !== mobileNumber) resetUserScopedState();
       completeLogin(mobileNumber);
+
+      let kycStatusUnknown = false;
       if (role === 'customer') {
-        await refreshKycStatus();
+        // Backend is SoT — retry before routing so logout-cleared local KYC cache
+        // does not dump approved users back into the Business Information wizard.
+        const overview = await refreshKycStatus({ retries: 2, retryDelayMs: 350 });
+        kycStatusUnknown = overview === null;
       }
       setIsVerifying(false);
       verifyingRef.current = false;
@@ -136,7 +141,14 @@ export const OtpVerificationScreen = () => {
         pending && pending.startsWith('/(customer)/') ? pending : null;
       const next = returnTo ?? pendingForCustomer ?? undefined;
       if (kycApproved && next) consumePendingPushRoute('customer');
-      router.replace(resolvePostAuthHref({ returnTo: next, kycApproved, reviewSubmitted }));
+      router.replace(
+        resolvePostAuthHref({
+          returnTo: next,
+          kycApproved,
+          reviewSubmitted,
+          kycStatusUnknown,
+        }),
+      );
     },
     [completeLogin, params.phone, purpose, returnTo, router],
   );

@@ -1,6 +1,13 @@
 import { memo, useCallback, useEffect, useRef } from 'react';
 
-import { Pressable, TextInput, View, type TextInputInstance } from 'react-native';
+import {
+  Platform,
+  Pressable,
+  TextInput,
+  View,
+  type TextInputInstance,
+  type TextStyle,
+} from 'react-native';
 
 import Animated, {
   useAnimatedStyle,
@@ -62,6 +69,7 @@ const OtpBox = memo(function OtpBox({ digit, isActive, isFilled, hasError }: Otp
         hasError && 'border-brand-error',
       )}
       style={animatedStyle}
+      pointerEvents="none"
     >
       <Typography variant="headingLeft" className="text-[20px]">
         {digit}
@@ -69,6 +77,19 @@ const OtpBox = memo(function OtpBox({ digit, isActive, isFilled, hasError }: Otp
     </Animated.View>
   );
 });
+
+/** Full-size transparent input over the digit boxes — Android needs a real hit target to open IME. */
+const overlayInputStyle: TextStyle = {
+  position: 'absolute',
+  top: 0,
+  right: 0,
+  bottom: 0,
+  left: 0,
+  opacity: 0.02,
+  color: brandColors.heading,
+  fontSize: 1,
+  zIndex: 2,
+};
 
 export const OtpInput = memo(function OtpInput({
   value,
@@ -81,13 +102,17 @@ export const OtpInput = memo(function OtpInput({
   const digits = value.padEnd(OTP_LENGTH, ' ').slice(0, OTP_LENGTH).split('');
   const activeIndex = Math.min(value.length, OTP_LENGTH - 1);
 
+  const focusInput = useCallback(() => {
+    inputRef.current?.focus();
+  }, []);
+
   useEffect(() => {
-    if (autoFocus) {
-      const timer = setTimeout(() => inputRef.current?.focus(), 250);
-      return () => clearTimeout(timer);
-    }
-    return undefined;
-  }, [autoFocus]);
+    if (!autoFocus) return undefined;
+    // Android 16 / Expo: focus after the screen transition settles.
+    const delay = Platform.OS === 'android' ? 400 : 200;
+    const timer = setTimeout(focusInput, delay);
+    return () => clearTimeout(timer);
+  }, [autoFocus, focusInput]);
 
   const handleChange = useCallback(
     (text: string) => {
@@ -100,10 +125,11 @@ export const OtpInput = memo(function OtpInput({
   return (
     <View className={cn('w-full items-center', className)}>
       <Pressable
-        onPress={() => inputRef.current?.focus()}
-        className="w-full flex-row justify-between gap-sm"
+        onPress={focusInput}
+        className="relative w-full flex-row justify-between gap-sm"
         accessibilityRole="keyboardkey"
         accessibilityLabel="OTP input"
+        accessibilityHint="Enter the 6-digit verification code"
       >
         {digits.map((digit, index) => (
           <OtpBox
@@ -114,20 +140,27 @@ export const OtpInput = memo(function OtpInput({
             hasError={Boolean(error)}
           />
         ))}
-      </Pressable>
 
-      <TextInput
-        ref={inputRef}
-        value={value}
-        onChangeText={handleChange}
-        keyboardType="number-pad"
-        textContentType="oneTimeCode"
-        autoComplete="sms-otp"
-        maxLength={OTP_LENGTH}
-        caretHidden
-        className="absolute h-px w-px opacity-0"
-        style={{ color: brandColors.heading }}
-      />
+        <TextInput
+          ref={inputRef}
+          value={value}
+          onChangeText={handleChange}
+          onPressIn={focusInput}
+          keyboardType="number-pad"
+          inputMode="numeric"
+          textContentType="oneTimeCode"
+          autoComplete="sms-otp"
+          importantForAutofill="yes"
+          maxLength={OTP_LENGTH}
+          caretHidden
+          showSoftInputOnFocus
+          autoCorrect={false}
+          autoCapitalize="none"
+          blurOnSubmit={false}
+          style={overlayInputStyle}
+          accessibilityLabel="One-time password"
+        />
+      </Pressable>
 
       {error ? (
         <Typography variant="error" className="mt-sm">

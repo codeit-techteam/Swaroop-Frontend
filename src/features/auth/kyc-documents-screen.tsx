@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 
 import { ActivityIndicator, Pressable, View } from 'react-native';
 
@@ -22,6 +22,7 @@ import { LockIcon, TrustIllustration } from '@/icons';
 import { ROUTES } from '@/navigation/routes';
 import { safeGoBack } from '@/navigation/safe-back';
 import { toBackendKycSlot } from '@/services/customer-kyc';
+import { useAuthStore } from '@/store/auth-store';
 import { useKycStore } from '@/store/kyc-store';
 import { brandColors } from '@/theme/colors';
 import type { KycDocumentId } from '@/types/document';
@@ -31,6 +32,7 @@ import { wp } from '@/utils/responsive';
 export const KycDocumentsScreen = () => {
   const router = useRouter();
   const businessInfo = useKycStore((state) => state.businessInfo);
+  const kycApproved = useAuthStore((state) => state.kycApproved);
   const {
     documents,
     pickDocument,
@@ -44,6 +46,16 @@ export const KycDocumentsScreen = () => {
 
   const canContinue = mandatoryReady && !isUploading && !syncing;
   const requestedSlots = new Set(overview?.changeRequest?.slots ?? []);
+
+  useEffect(() => {
+    if (overview?.kycVerified || kycApproved) {
+      router.replace(ROUTES.CUSTOMER.HOME as Href);
+      return;
+    }
+    if (overview?.status === 'SUBMITTED') {
+      router.replace(ROUTES.AUTH.APPLICATION_SUBMITTED as Href);
+    }
+  }, [kycApproved, overview?.kycVerified, overview?.status, router]);
 
   const handleBack = useCallback(() => {
     safeGoBack(router, ROUTES.AUTH.BUSINESS_INFORMATION as Href);

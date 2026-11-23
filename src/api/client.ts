@@ -180,16 +180,22 @@ const responseErrorInterceptor = async (error: AxiosError<ApiErrorResponse>): Pr
   const errorMessage =
     error.response?.data?.message ?? error.message ?? 'An unexpected error occurred';
 
-  // Avoid noisy console errors for expected seller-profile gaps on customer sessions.
+  // Avoid noisy console errors for expected gaps that do not block the session.
+  const path = String(error.config?.url ?? '');
   const isExpectedSellerGap =
     error.response?.status === 404 &&
     typeof errorMessage === 'string' &&
     errorMessage.toLowerCase().includes('seller profile not found');
+  const isPushDeviceCall =
+    path.includes('/notifications/devices') ||
+    path.includes('notifications/devices');
 
   if (!isExpectedSellerGap) {
-    logger.error('API Response Error', {
+    const log = isPushDeviceCall ? logger.warn : logger.error;
+    log('API Response Error', {
       status: error.response?.status,
       message: errorMessage,
+      ...(isPushDeviceCall ? { path: 'notifications/devices' } : {}),
     });
   }
 

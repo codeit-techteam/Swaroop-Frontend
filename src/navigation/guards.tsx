@@ -1,7 +1,10 @@
 import type { ReactNode } from 'react';
 
+import { View } from 'react-native';
+
 import { Redirect, useGlobalSearchParams, usePathname, type Href } from 'expo-router';
 
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import {
   buildLoginHref,
   buildReturnToFromParts,
@@ -14,6 +17,7 @@ import {
   selectKycApproved,
   useAuthStore,
 } from '@/store/auth-store';
+import { brandColors } from '@/theme/colors';
 
 type AuthGuardProps = {
   children: ReactNode;
@@ -42,10 +46,24 @@ const toCustomerReturnTo = (
   return buildReturnToFromParts(pathname, params);
 };
 
+/** Align with getLoggedInRoute — incomplete KYC resumes Business Info, not Documents. */
 const kycIncompleteHref = (reviewSubmitted: boolean): Href =>
   reviewSubmitted
     ? (ROUTES.AUTH.APPLICATION_SUBMITTED as Href)
-    : (ROUTES.AUTH.KYC_DOCUMENTS as Href);
+    : (ROUTES.AUTH.BUSINESS_INFORMATION as Href);
+
+const GuardBootPlaceholder = (): ReactNode => (
+  <View
+    style={{
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: brandColors.white,
+    }}
+  >
+    <LoadingSpinner size={28} strokeWidth={2.5} color={brandColors.primary} />
+  </View>
+);
 
 export const PrivateRouteGuard = ({ children }: AuthGuardProps): ReactNode => {
   const isLoggedIn = useAuthStore(selectIsLoggedIn);
@@ -56,7 +74,7 @@ export const PrivateRouteGuard = ({ children }: AuthGuardProps): ReactNode => {
   const params = useGlobalSearchParams();
 
   if (!isHydrated) {
-    return null;
+    return <GuardBootPlaceholder />;
   }
 
   if (!isLoggedIn) {
@@ -95,7 +113,7 @@ export const CustomerRouteGuard = ({ children }: AuthGuardProps): ReactNode => {
   const params = useGlobalSearchParams();
 
   if (!isHydrated) {
-    return null;
+    return <GuardBootPlaceholder />;
   }
 
   if (!isLoggedIn) {
@@ -129,7 +147,7 @@ export const PublicRouteGuard = ({ children }: AuthGuardProps): ReactNode => {
   const isHydrated = useAuthStore(selectIsHydrated);
 
   if (!isHydrated) {
-    return null;
+    return <GuardBootPlaceholder />;
   }
 
   if (isLoggedIn && kycApproved) {

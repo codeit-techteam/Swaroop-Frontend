@@ -33,7 +33,9 @@ import {
   useCustomerMarketplaceCategories,
 } from '@/hooks/use-grade-master';
 import { useNotificationBadge } from '@/hooks/use-notifications';
+import { buildNotificationsHref } from '@/navigation/return-to';
 import { ROUTES } from '@/navigation/routes';
+import { useAuthStore } from '@/store/auth-store';
 import type { CustomerGrade, GradeBrowseFilters } from '@/types/grade-master';
 import { formatGradeGroupLabel } from '@/utils/master-label';
 
@@ -189,7 +191,9 @@ export const CustomerGradeBrowseScreen = memo(function CustomerGradeBrowseScreen
       <ProductHeader
         onBackPress={handleBack}
         onCartPress={() => router.push(ROUTES.CUSTOMER.CART as Href)}
-        onNotificationPress={() => router.push(ROUTES.CUSTOMER.NOTIFICATIONS as Href)}
+        onNotificationPress={() =>
+          router.push(buildNotificationsHref(useAuthStore.getState().isLoggedIn))
+        }
         hasNotification={unreadCount > 0}
       />
 

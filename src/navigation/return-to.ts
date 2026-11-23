@@ -95,6 +95,17 @@ export const buildLoginHref = (returnTo?: string | null): Href => {
   } as unknown as Href;
 };
 
+/**
+ * Notifications require auth. Guests go straight to login with returnTo —
+ * never mount the blank gated notifications screen first.
+ */
+export const buildNotificationsHref = (isLoggedIn: boolean): Href => {
+  if (isLoggedIn) {
+    return ROUTES.CUSTOMER.NOTIFICATIONS as Href;
+  }
+  return buildLoginHref(ROUTES.CUSTOMER.NOTIFICATIONS);
+};
+
 /** Build current path + query for returnTo (expo-router style). */
 export const buildReturnToFromParts = (
   pathname: string | null | undefined,
@@ -118,6 +129,7 @@ export const resolvePostAuthHref = (input: {
   returnTo?: string | null;
   kycApproved: boolean;
   reviewSubmitted: boolean;
+  kycStatusUnknown?: boolean;
 }): Href => {
   const safe = input.returnTo && isSafeInternalReturnTo(input.returnTo) ? input.returnTo : null;
   if (safe && input.kycApproved) {
@@ -126,5 +138,6 @@ export const resolvePostAuthHref = (input: {
   return getLoggedInRoute({
     kycApproved: input.kycApproved,
     reviewSubmitted: input.reviewSubmitted,
+    kycStatusUnknown: input.kycStatusUnknown,
   });
 };

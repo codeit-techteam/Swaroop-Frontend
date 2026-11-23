@@ -48,13 +48,26 @@ export function buildMarketSearchRows(
 
   const rows: MarketSearchRow[] = [];
   const seenProductIds = new Set<string>();
+  /** Collapse commercially identical offers so search does not show the same card twice. */
+  const seenCommercialKeys = new Set<string>();
+  const commercialKey = (product: MarketProduct): string =>
+    [
+      product.gradeId || product.gradeCode || product.name,
+      product.price,
+      product.moq,
+      (product.origin ?? '').trim().toLowerCase(),
+      (product.eta ?? '').trim().toLowerCase().replace(/\s+/g, ''),
+    ].join('::');
 
   for (const grade of orderedGrades) {
     const live = productsByGradeId.get(grade.id) ?? [];
     if (live.length > 0) {
       for (const product of live) {
         if (seenProductIds.has(product.id)) continue;
+        const fingerprint = commercialKey(product);
+        if (seenCommercialKeys.has(fingerprint)) continue;
         seenProductIds.add(product.id);
+        seenCommercialKeys.add(fingerprint);
         rows.push({ kind: 'product', key: `product:${product.id}`, product });
       }
       continue;
@@ -65,7 +78,10 @@ export function buildMarketSearchRows(
   if (trimmed) {
     for (const product of searchProductsByGrade(liveProducts, trimmed)) {
       if (seenProductIds.has(product.id)) continue;
+      const fingerprint = commercialKey(product);
+      if (seenCommercialKeys.has(fingerprint)) continue;
       seenProductIds.add(product.id);
+      seenCommercialKeys.add(fingerprint);
       rows.push({ kind: 'product', key: `product:${product.id}`, product });
     }
 

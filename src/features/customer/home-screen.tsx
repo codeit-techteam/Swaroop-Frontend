@@ -31,6 +31,7 @@ import { useCustomerKycStatus } from '@/hooks/use-customer-kyc-status';
 import { useDeliveryLocation } from '@/hooks/use-delivery-location';
 import { useNotificationBadge } from '@/hooks/use-notifications';
 import { openCustomerBanner, openCustomerBannerSecondary } from '@/lib/cms-banner';
+import { buildNotificationsHref } from '@/navigation/return-to';
 import { ROUTES } from '@/navigation/routes';
 import { fetchCustomerMarketplaceProducts } from '@/services/catalog';
 import { fetchCustomerHomeBanners, trackCmsBannerEvent } from '@/services/cms';
@@ -225,7 +226,7 @@ export const CustomerHomeScreen = () => {
   }, [router]);
 
   const navigateToNotifications = useCallback(() => {
-    router.push(ROUTES.CUSTOMER.NOTIFICATIONS as Href);
+    router.push(buildNotificationsHref(useAuthStore.getState().isLoggedIn));
   }, [router]);
 
   const navigateToOrders = useCallback(() => {

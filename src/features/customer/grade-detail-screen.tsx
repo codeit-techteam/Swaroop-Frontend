@@ -28,7 +28,7 @@ import {
 } from '@/hooks/use-grade-master';
 import { useNotificationBadge } from '@/hooks/use-notifications';
 import { DocumentFileIcon, DownloadIcon } from '@/icons';
-import { buildLoginHref } from '@/navigation/return-to';
+import { buildLoginHref, buildNotificationsHref } from '@/navigation/return-to';
 import { ROUTES } from '@/navigation/routes';
 import {
   fetchGradeTdsDocumentUrl,
@@ -393,7 +393,7 @@ export const CustomerGradeDetailScreen = memo(function CustomerGradeDetailScreen
     <ProductHeader
       onBackPress={handleBack}
       onCartPress={() => router.push(ROUTES.CUSTOMER.CART as Href)}
-      onNotificationPress={() => router.push(ROUTES.CUSTOMER.NOTIFICATIONS as Href)}
+      onNotificationPress={() => router.push(buildNotificationsHref(isLoggedIn))}
       hasNotification={unreadCount > 0}
     />
   );

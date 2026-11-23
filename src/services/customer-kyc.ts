@@ -218,13 +218,35 @@ function resolveMime(file: DocumentFile): string {
 
 export function customerKycErrorMessage(error: unknown, fallback: string): string {
   if (isAxiosError<{ message?: string | string[] }>(error)) {
-    if (error.response?.status === 429) {
-      return 'Too many attempts. Please wait a few minutes and try again.';
-    }
-    if (error.response && error.response.status >= 500) return fallback;
+    const status = error.response?.status;
     const message = error.response?.data?.message;
-    if (typeof message === 'string' && message) return message;
-    if (Array.isArray(message) && message[0]) return String(message[0]);
+    const backendMessage =
+      typeof message === 'string' && message
+        ? message
+        : Array.isArray(message) && message[0]
+          ? String(message[0])
+          : null;
+
+    if (status === 429) {
+      return (
+        backendMessage ??
+        'Too many attempts. Please wait a few minutes and try again.'
+      );
+    }
+    if (status === 409) {
+      return (
+        backendMessage ??
+        'Verification is already in progress. Please wait a moment and try again.'
+      );
+    }
+    if (status === 400) {
+      return backendMessage ?? 'Invalid details. Please check PAN / GSTIN and try again.';
+    }
+    if (error.code === 'ECONNABORTED' || error.message?.toLowerCase().includes('timeout')) {
+      return 'Verification timed out. Please wait a moment and try again.';
+    }
+    if (status && status >= 500) return fallback;
+    if (backendMessage) return backendMessage;
     if (!error.response) {
       return 'Unable to reach PolyStoreX. Check your connection and try again.';
     }

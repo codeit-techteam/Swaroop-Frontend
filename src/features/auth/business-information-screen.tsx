@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { View } from 'react-native';
 
@@ -32,6 +32,7 @@ import {
   type CustomerKycOverview,
   type KycVerification,
 } from '@/services/customer-kyc';
+import { useAuthStore } from '@/store/auth-store';
 import { useKycStore } from '@/store/kyc-store';
 import type { CompanyType } from '@/types/kyc';
 import { wp } from '@/utils/responsive';
@@ -83,7 +84,9 @@ export const BusinessInformationScreen = () => {
   const businessInfo = useKycStore((state) => state.businessInfo);
   const setBusinessInfo = useKycStore((state) => state.setBusinessInfo);
   const { overview, refresh } = useCustomerKycStatus();
+  const kycApproved = useAuthStore((state) => state.kycApproved);
   const [verifying, setVerifying] = useState<'PAN' | 'GST' | null>(null);
+  const verifyingRef = useRef(false);
   const [verifications, setVerifications] = useState<Verifications | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [verifyError, setVerifyError] = useState<string | null>(null);
@@ -94,6 +97,13 @@ export const BusinessInformationScreen = () => {
     gstNumber: false,
     panNumber: false,
   });
+
+  // Approved users must never stay trapped in the KYC wizard after a late refresh.
+  useEffect(() => {
+    if (overview?.kycVerified || kycApproved) {
+      router.replace(ROUTES.CUSTOMER.HOME as Href);
+    }
+  }, [kycApproved, overview?.kycVerified, router]);
 
   const {
     control,
@@ -145,12 +155,23 @@ export const BusinessInformationScreen = () => {
 
   const onContinue = useCallback(
     async (values: BusinessInfoFormValues) => {
+      if (verifyingRef.current) return;
+
       const pan = normalizeIdentifier(values.panNumber);
       const gstin = normalizeIdentifier(values.gstNumber);
       const next = { ...values, panNumber: pan, gstNumber: gstin };
       setBusinessInfo({ ...next, companyType: values.companyType as CompanyType });
 
+      if (overview?.kycVerified || useAuthStore.getState().kycApproved) {
+        router.replace(ROUTES.CUSTOMER.HOME as Href);
+        return;
+      }
+
       if (locked) {
+        if (overview?.status === 'SUBMITTED' || overview?.status === 'APPROVED') {
+          router.replace(ROUTES.AUTH.APPLICATION_SUBMITTED as Href);
+          return;
+        }
         router.push(ROUTES.AUTH.KYC_DOCUMENTS as Href);
         return;
       }
@@ -170,6 +191,7 @@ export const BusinessInformationScreen = () => {
         return;
       }
       setPanHolderError(undefined);
+      verifyingRef.current = true;
       try {
         if (holderDetails) {
           setVerifying('PAN');
@@ -194,6 +216,7 @@ export const BusinessInformationScreen = () => {
         );
         return;
       } finally {
+        verifyingRef.current = false;
         setVerifying(null);
         setVerifications(results);
         setEditing({ gstNumber: false, panNumber: false });
@@ -286,12 +309,19 @@ export const BusinessInformationScreen = () => {
             ? 'Verifying PAN…'
             : verifying === 'GST'
               ? 'Verifying GST…'
-              : locked
-                ? 'Continue'
-                : 'Verify & Continue'
+              : overview?.kycVerified || kycApproved
+                ? 'Go to Dashboard'
+                : locked
+                  ? overview?.status === 'SUBMITTED'
+                    ? 'View application status'
+                    : 'Continue'
+                  : 'Verify & Continue'
         }
         className="mt-2xl"
-        disabled={!isValid || verifying !== null}
+        disabled={
+          verifying !== null ||
+          (!(overview?.kycVerified || kycApproved || locked) && !isValid)
+        }
         onPress={() => void handleSubmit(onContinue)()}
       />
     </ScreenWrapper>

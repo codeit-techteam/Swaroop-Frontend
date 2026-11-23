@@ -43,7 +43,7 @@ import { useMarketplacePricingEstimate } from '@/hooks/use-marketplace-pricing-e
 import { useNotificationBadge } from '@/hooks/use-notifications';
 import { useProductQuote } from '@/hooks/use-product-quote';
 import { BackArrowIcon, DocumentFileIcon, DownloadIcon } from '@/icons';
-import { buildLoginHref } from '@/navigation/return-to';
+import { buildLoginHref, buildNotificationsHref } from '@/navigation/return-to';
 import { ROUTES } from '@/navigation/routes';
 import { addCustomerCartItem, mapBackendCartItems } from '@/services/cart';
 import {
@@ -784,8 +784,8 @@ export const CustomerProductDetailsScreen = memo(function CustomerProductDetails
   const unreadCount = useNotificationBadge();
 
   const handleNotifications = useCallback(() => {
-    router.push(ROUTES.CUSTOMER.NOTIFICATIONS as Href);
-  }, [router]);
+    router.push(buildNotificationsHref(isLoggedIn));
+  }, [isLoggedIn, router]);
 
   const goToCheckout = useCallback(
     (quoteId: string) => {

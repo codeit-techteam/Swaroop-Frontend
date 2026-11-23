@@ -58,7 +58,7 @@ export const SplashScreen = () => {
       const sellerSnapshot = useSellerStore.getState();
       const sellerSession = sellerSnapshot.sellerLoggedIn && authStore.selectedRole === 'seller';
       if (authStore.isLoggedIn && !sellerSession) {
-        await refreshKycStatus();
+        await refreshKycStatus({ retries: 2, retryDelayMs: 350 });
       }
 
       const { isLoggedIn, kycApproved, reviewSubmitted, onboardingCompleted } =

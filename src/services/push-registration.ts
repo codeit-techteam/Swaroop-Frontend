@@ -169,8 +169,18 @@ export const startPushRegistration = (): (() => void) => {
   configureNotifications();
   openPushRegistration();
 
-  const runSync = (label: string): void => {
+  let lastSyncAt = 0;
+  const MIN_SYNC_GAP_MS = 15_000;
+
+  const runSync = (label: string, force = false): void => {
+    const now = Date.now();
+    if (!force && now - lastSyncAt < MIN_SYNC_GAP_MS) {
+      return;
+    }
+    lastSyncAt = now;
     const work = syncToken().catch((error) => {
+      // Expected when FCM is unavailable or the device endpoint rejects —
+      // keep as warn so login is not flooded with "API Response Error" noise.
       logger.warn(label, {
         message: error instanceof Error ? error.message : 'Unknown error',
       });
@@ -178,7 +188,7 @@ export const startPushRegistration = (): (() => void) => {
     trackPushSync(work);
   };
 
-  runSync('Push registration failed');
+  runSync('Push registration failed', true);
   subscriptions.push(
     Notifications.addPushTokenListener(() => {
       runSync('Push token refresh failed');

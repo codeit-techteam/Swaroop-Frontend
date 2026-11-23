@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 
+import { STORAGE_KEYS } from '@/constants';
 import { isDeliveryLocationChosen } from '@/constants/locations';
 import { verificationAccepted } from '@/services/customer-kyc';
 import {
@@ -24,6 +25,7 @@ import { useKycStore } from '@/store/kyc-store';
 import type { DeliveryLocation } from '@/types/home';
 import type { LoginResult, UserRole } from '@/types/session';
 import type { AuthStore } from '@/types/store';
+import { getStorageItem } from '@/utils/storage';
 
 const initialState = {
   accessToken: null as string | null,
@@ -82,9 +84,14 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       saveAppSettings({ ...settings, location: null });
     }
 
+    const accessToken = getStorageItem(STORAGE_KEYS.ACCESS_TOKEN);
+    const refreshToken = getStorageItem(STORAGE_KEYS.REFRESH_TOKEN);
+
     set({
       isLoggedIn: current.isLoggedIn,
       isAuthenticated: current.isLoggedIn,
+      accessToken: accessToken || null,
+      refreshToken: refreshToken || null,
       mobileNumber: current.mobileNumber,
       kycApproved: current.isKycApproved,
       reviewSubmitted: current.reviewCompleted || current.applicationSubmitted,

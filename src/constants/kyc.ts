@@ -15,6 +15,7 @@ export const COMPANY_TYPE_OPTIONS: CompanyType[] = [
 ];
 
 export const NATURE_OF_BUSINESS_OPTIONS = [
+  'Trading',
   'Petrochemical Trading',
   'Industrial Chemicals',
   'Polymer Distribution',
