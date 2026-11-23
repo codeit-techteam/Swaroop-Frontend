@@ -59,6 +59,7 @@ import {
   type MarketFilters,
 } from '@/utils/market-filters';
 import { buildMarketSearchRows, type MarketSearchRow } from '@/utils/market-search-rows';
+import { deduplicateCatalogueGrades } from '@/utils/marketplace-normalize';
 
 const SEARCH_DEBOUNCE_MS = 220;
 
@@ -120,7 +121,10 @@ export const CustomerMarketScreen = () => {
     enabled: debouncedSearch.length > 0,
   });
   const catalogueGrades = useMemo(
-    () => gradesQuery.data?.pages.flatMap((page) => page.items) ?? [],
+    () =>
+      deduplicateCatalogueGrades(
+        gradesQuery.data?.pages.flatMap((page) => page.items) ?? [],
+      ),
     [gradesQuery.data],
   );
   const catalogueTotal = gradesQuery.data?.pages[0]?.total ?? 0;

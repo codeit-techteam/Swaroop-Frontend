@@ -2,11 +2,15 @@ import { apiClient } from '@/api/client';
 import { ensureDevBackendSession } from '@/services/backend-session';
 import { useAuthStore } from '@/store/auth-store';
 import type { MarketProduct } from '@/types/market';
+import { deduplicateLiveListings } from '@/utils/marketplace-normalize';
 import {
   formatCategoryDisplayName,
   formatGradeGroupLabel,
   isInternalMasterCode,
 } from '@/utils/master-label';
+
+/** B-06: one card per commercially distinct listing (shared marketplace normalizer). */
+export const dedupeMarketProducts = deduplicateLiveListings;
 
 /** Guest browse uses public marketplace; signed-in customers keep customer paths. */
 function productsApiBase(): '/public/marketplace/products' | '/customer/products' {
@@ -299,32 +303,6 @@ export function mapBlindProduct(product: BlindProduct): MarketProduct {
     bulkPricing,
     documents: product.documents ?? [],
   };
-}
-
-/** B-06: one card per commercially distinct listing (grade + price + MOQ + origin + ETA). */
-export function dedupeMarketProducts(products: MarketProduct[]): MarketProduct[] {
-  const byId = new Map<string, MarketProduct>();
-  for (const product of products) {
-    if (!byId.has(product.id)) byId.set(product.id, product);
-  }
-  const unique = [...byId.values()];
-  const best = new Map<string, MarketProduct>();
-  for (const product of unique) {
-    const key = [
-      product.gradeId || product.gradeCode || product.id,
-      product.price,
-      product.moq,
-      (product.origin ?? '').trim().toLowerCase(),
-      (product.warehouseLabel ?? '').trim().toLowerCase(),
-      (product.eta ?? '').trim().toLowerCase().replace(/\s+/g, ''),
-    ].join('::');
-    const previous = best.get(key);
-    if (!previous || product.stock > previous.stock) {
-      best.set(key, product);
-    }
-  }
-  const keep = new Set([...best.values()].map((product) => product.id));
-  return unique.filter((product) => keep.has(product.id));
 }
 
 /** Cap page walks — was 10×100 and caused shared-IP 429 storms with Home+Market. */

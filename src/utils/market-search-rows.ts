@@ -6,6 +6,11 @@ import {
   scoreProductMatch,
   searchProductsByGrade,
 } from '@/utils/grade-search';
+import {
+  commercialListingKey,
+  deduplicateCatalogueGrades,
+  deduplicateLiveListings,
+} from '@/utils/marketplace-normalize';
 
 export type MarketSearchRow =
   | { kind: 'product'; key: string; product: MarketProduct }
@@ -32,10 +37,12 @@ export function buildMarketSearchRows(
   query?: string,
 ): MarketSearchRow[] {
   const trimmed = query?.trim() ?? '';
-  const orderedGrades = trimmed ? rankCustomerGrades(grades, trimmed) : grades;
+  const uniqueGrades = deduplicateCatalogueGrades(grades);
+  const uniqueLive = deduplicateLiveListings(liveProducts);
+  const orderedGrades = trimmed ? rankCustomerGrades(uniqueGrades, trimmed) : uniqueGrades;
 
   const productsByGradeId = new Map<string, MarketProduct[]>();
-  for (const product of liveProducts) {
+  for (const product of uniqueLive) {
     const gradeId = product.gradeId?.trim();
     if (!gradeId) continue;
     const bucket = productsByGradeId.get(gradeId);
@@ -48,23 +55,18 @@ export function buildMarketSearchRows(
 
   const rows: MarketSearchRow[] = [];
   const seenProductIds = new Set<string>();
-  /** Collapse commercially identical offers so search does not show the same card twice. */
   const seenCommercialKeys = new Set<string>();
-  const commercialKey = (product: MarketProduct): string =>
-    [
-      product.gradeId || product.gradeCode || product.name,
-      product.price,
-      product.moq,
-      (product.origin ?? '').trim().toLowerCase(),
-      (product.eta ?? '').trim().toLowerCase().replace(/\s+/g, ''),
-    ].join('::');
+  const seenGradeIds = new Set<string>();
 
   for (const grade of orderedGrades) {
+    if (seenGradeIds.has(grade.id)) continue;
+    seenGradeIds.add(grade.id);
+
     const live = productsByGradeId.get(grade.id) ?? [];
     if (live.length > 0) {
       for (const product of live) {
         if (seenProductIds.has(product.id)) continue;
-        const fingerprint = commercialKey(product);
+        const fingerprint = commercialListingKey(product);
         if (seenCommercialKeys.has(fingerprint)) continue;
         seenProductIds.add(product.id);
         seenCommercialKeys.add(fingerprint);
@@ -76,9 +78,9 @@ export function buildMarketSearchRows(
   }
 
   if (trimmed) {
-    for (const product of searchProductsByGrade(liveProducts, trimmed)) {
+    for (const product of searchProductsByGrade(uniqueLive, trimmed)) {
       if (seenProductIds.has(product.id)) continue;
-      const fingerprint = commercialKey(product);
+      const fingerprint = commercialListingKey(product);
       if (seenCommercialKeys.has(fingerprint)) continue;
       seenProductIds.add(product.id);
       seenCommercialKeys.add(fingerprint);

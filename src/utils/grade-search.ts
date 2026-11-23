@@ -1,6 +1,10 @@
 import type { SellerMaterialFamily } from '@/constants/materials-taxonomy';
 import type { CustomerGrade } from '@/types/grade-master';
 import type { MarketProduct } from '@/types/market';
+import {
+  deduplicateCatalogueGrades,
+  deduplicateLiveListings,
+} from '@/utils/marketplace-normalize';
 
 export const SUGGESTION_PRODUCT_LIMIT = 8;
 export const SUGGESTION_MATERIAL_LIMIT = 4;
@@ -339,7 +343,10 @@ export const getGradeSearchSuggestions = (
     };
   }
 
-  const rankedProducts = products
+  const uniqueProducts = deduplicateLiveListings(products);
+  const uniqueGrades = deduplicateCatalogueGrades(catalogueGrades);
+
+  const rankedProducts = uniqueProducts
     .filter((product) => scoreProductMatch(product, q) > 0 || matchesGradeQuery(product, q))
     .sort((left, right) => {
       const scoreDelta = scoreProductMatch(right, q) - scoreProductMatch(left, q);
@@ -359,7 +366,9 @@ export const getGradeSearchSuggestions = (
       return right.gradeCount - left.gradeCount;
     });
 
-  const rankedGrades = rankCustomerGrades(catalogueGrades, q);
+  const rankedGrades = rankCustomerGrades(uniqueGrades, q);
+  // Grades already represented by a live listing stay visible in Catalogue
+  // (with live-offer counts) — Live Listings section is already deduped above.
 
   return {
     query,
